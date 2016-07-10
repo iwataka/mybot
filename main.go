@@ -47,7 +47,11 @@ type cacheData struct {
 }
 
 func main() {
-	os.Mkdir(filepath.Dir(cacheFile), 0600)
+	err := os.MkdirAll(filepath.Dir(cacheFile), 0600)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	app := cli.NewApp()
 	app.Name = "mybot"
