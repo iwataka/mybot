@@ -147,7 +147,6 @@ func run(c *cli.Context) error {
 	}
 	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
 		text := strings.ToLower(t.Text)
-		println(text)
 		return strings.Contains(text, "heaven's feel") && strings.Contains(text, "劇場版")
 	})
 	if err != nil {
@@ -209,21 +208,15 @@ func githubCommit(user, repo string) error {
 	latest := commits[0]
 	userMap, userExists := cache.LatestCommitSHA[user]
 	sha, repoExists := userMap[repo]
-	if userExists {
-		if repoExists {
-			if sha != *latest.SHA {
-				msg := user + "/" + repo + "\n" + *latest.HTMLURL
-				_, err := twApi.PostTweet(msg, nil)
-				if err != nil && !ignoreTwitterError(err) {
-					return err
-				}
-				userMap[repo] = *latest.SHA
-			}
-		} else {
-			userMap[repo] = *latest.SHA
+	if !userExists || !repoExists || sha != *latest.SHA {
+		msg := user + "/" + repo + "\n" + *latest.HTMLURL
+		_, err := twApi.PostTweet(msg, nil)
+		if err != nil && !ignoreTwitterError(err) {
+			return err
 		}
-	} else {
-		cache.LatestCommitSHA[user] = make(map[string]string)
+		if !userExists {
+			cache.LatestCommitSHA[user] = make(map[string]string)
+		}
 		cache.LatestCommitSHA[user][repo] = *latest.SHA
 	}
 	return nil
@@ -237,19 +230,29 @@ func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool
 		return err
 	}
 	latestId, exists := cache.LatestTweetId[screenName]
-	for _, tweet := range tweets {
+	finds := false
+	updates := false
+	for i := len(tweets) - 1; i >= 0; i-- {
+		tweet := tweets[i]
 		if checker(tweet) {
-			if !exists {
-				cache.LatestTweetId[screenName] = tweet.Id
-				break
-			} else if latestId == tweet.Id {
-				break
+			if exists && latestId == tweet.Id {
+				finds = true
 			} else {
-				_, err := twApi.Retweet(tweet.Id, trimUser)
-				if err != nil {
-					return err
+				updates = true
+				cache.LatestTweetId[screenName] = tweet.Id
+				if finds {
+					_, err := twApi.Retweet(tweet.Id, trimUser)
+					if err != nil {
+						return err
+					}
 				}
 			}
+		}
+	}
+	if !exists && updates {
+		_, err := twApi.Retweet(cache.LatestTweetId[screenName], trimUser)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
