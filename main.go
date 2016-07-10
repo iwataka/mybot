@@ -2,16 +2,12 @@ package main
 
 import (
 	"bufio"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ChimeraCoder/anaconda"
-	"github.com/PuerkitoBio/goquery"
 	"github.com/google/go-github/github"
 	"github.com/urfave/cli"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -32,7 +28,7 @@ var (
 	twApi     *anaconda.TwitterApi
 	cache     = &cacheData{
 		make(map[string]map[string]string),
-		make(map[string]string),
+		make(map[string]int64),
 	}
 	projects = map[string]string{
 		"vim":    "vim",
@@ -43,7 +39,7 @@ var (
 
 type cacheData struct {
 	LatestCommitSHA map[string]map[string]string
-	LatestID        map[string]string
+	LatestTweetId   map[string]int64
 }
 
 func main() {
@@ -144,19 +140,26 @@ func getenv(key string) (string, error) {
 func run(c *cli.Context) error {
 	var err error
 	for user, repo := range projects {
-		err = latestCommit(user, repo)
+		err = githubCommit(user, repo)
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
 	}
-	err = scrapeFateNews()
+	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
+		text := strings.ToLower(t.Text)
+		println(text)
+		return strings.Contains(text, "heaven's feel") && strings.Contains(text, "劇場版")
+	})
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
-	err = scrapeTsuredurechildren()
+	err = retweet("sankakujougi", false, func(t anaconda.Tweet) bool {
+		return strings.Contains(t.Text, "https://t.co/p3Zy7VoPcg")
+	})
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
 	}
+
 	err = marshalCache()
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
@@ -198,117 +201,58 @@ func unmarshalCache() error {
 	return nil
 }
 
-func latestCommit(user, repo string) error {
+func githubCommit(user, repo string) error {
 	commits, _, err := ghClient.Repositories.ListCommits(user, repo, nil)
 	if err != nil {
 		return err
 	}
 	latest := commits[0]
-	if *latest.SHA != cache.LatestCommitSHA[user][repo] {
-		msg := user + "/" + repo + "\n" + *latest.HTMLURL
-		_, err := twApi.PostTweet(msg, nil)
-		if err != nil && !ignoreTwitterError(err) {
-			return err
+	userMap, userExists := cache.LatestCommitSHA[user]
+	sha, repoExists := userMap[repo]
+	if userExists {
+		if repoExists {
+			if sha != *latest.SHA {
+				msg := user + "/" + repo + "\n" + *latest.HTMLURL
+				_, err := twApi.PostTweet(msg, nil)
+				if err != nil && !ignoreTwitterError(err) {
+					return err
+				}
+				userMap[repo] = *latest.SHA
+			}
+		} else {
+			userMap[repo] = *latest.SHA
 		}
-		if cache.LatestCommitSHA[user] == nil {
-			cache.LatestCommitSHA[user] = make(map[string]string)
-		}
+	} else {
+		cache.LatestCommitSHA[user] = make(map[string]string)
 		cache.LatestCommitSHA[user][repo] = *latest.SHA
 	}
 	return nil
 }
 
-func scrapeFateNews() error {
-	doc, err := goquery.NewDocument(fateUrl)
+func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
+	v := url.Values{}
+	v.Set("screen_name", screenName)
+	tweets, err := twApi.GetUserTimeline(v)
 	if err != nil {
 		return err
 	}
-
-	latestDate := ""
-	err = nil
-	result := make(map[string]string)
-	doc.Find(".news-list li").Each(func(i int, s *goquery.Selection) {
-		dateBlock := s.Find(".day")
-		a := s.Find("a")
-		if dateBlock != nil && a != nil {
-			date := dateBlock.Text()
-			if latestDate == "" || latestDate == date {
-				latestDate = date
-				url, exists := a.Attr("href")
-				if !exists {
-					err = errors.New(fmt.Sprintf("%s is not found in %s", "href", a.Html))
-					return
-				}
-				url, err = formatUrl(fateUrl, url)
+	latestId, exists := cache.LatestTweetId[screenName]
+	for _, tweet := range tweets {
+		if checker(tweet) {
+			if !exists {
+				cache.LatestTweetId[screenName] = tweet.Id
+				break
+			} else if latestId == tweet.Id {
+				break
+			} else {
+				_, err := twApi.Retweet(tweet.Id, trimUser)
 				if err != nil {
-					return
+					return err
 				}
-				result[date+" "+a.Text()] = url
-			}
-		}
-	})
-	latestID, exists := cache.LatestID[fateUrl]
-	if !exists || latestID != latestDate {
-		cache.LatestID[fateUrl] = latestDate
-		for title, url := range result {
-			_, err := twApi.PostTweet(title+"\n"+url, nil)
-			if err != nil && !ignoreTwitterError(err) {
-				return err
 			}
 		}
 	}
-	return err
-}
-
-func scrapeTsuredurechildren() error {
-	doc, err := goquery.NewDocument(tsuredurechildrenUrl)
-	if err != nil {
-		return err
-	}
-	article := doc.Find("div .column-one article").First()
-	titleBlock := article.Find(".post-title a")
-	title := titleBlock.Text()
-	contentUrl, exists := titleBlock.Attr("href")
-	if !exists {
-		return errors.New(fmt.Sprintf("%s is not found in %s", "href", titleBlock.Html))
-	}
-	img := article.Find("div .blog-entry div img")
-	imgUrl, exists := img.Attr("src")
-	if !exists {
-		return errors.New(fmt.Sprintf("%s is not found in %s", "src", img.Html))
-	}
-	latestID, exists := cache.LatestID[tsuredurechildrenUrl]
-	if !exists || latestID != title {
-		cache.LatestID[tsuredurechildrenUrl] = title
-		base64Img, err := base64ImageUrl(imgUrl)
-		if err != nil {
-			return err
-		}
-		media, err := twApi.UploadMedia(base64Img)
-		if err != nil {
-			return err
-		}
-		v := url.Values{}
-		v.Add("media_ids", media.MediaIDString)
-		_, err = twApi.PostTweet(title+"\n"+contentUrl, v)
-		if err != nil && !ignoreTwitterError(err) {
-			return err
-		}
-	}
-
 	return nil
-}
-
-func base64ImageUrl(url string) (string, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		return "", err
-	}
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(body), nil
 }
 
 func formatUrl(src, dest string) (string, error) {
