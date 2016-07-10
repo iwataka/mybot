@@ -2,7 +2,9 @@
 
 set -e
 
-docker build -t mybot .
+dir=$(cd $(dirname $0) && pwd)
+
+docker build -t mybot "$dir"
 
 if [[ -z $MYBOT_TWITTER_CONSUMER_KEY ]]; then
     echo -n "MYBOT_TWITTER_CONSUMER_KEY=" && read consumer_key
@@ -25,7 +27,7 @@ else
     access_token_secret=$MYBOT_TWITTER_ACCESS_TOKEN_SECRET
 fi
 
-docker run -d -v $(pwd):/mybot \
+docker run -d -v "$dir":/mybot \
     -e MYBOT_TWITTER_CONSUMER_KEY="$consumer_key" \
     -e MYBOT_TWITTER_CONSUMER_SECRET="$consumer_secret" \
     -e MYBOT_TWITTER_ACCESS_TOKEN="$access_token" \

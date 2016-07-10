@@ -2,21 +2,5 @@
 
 ## Usage
 
-### Local Environment
-
-```
-go get -d ./...
-go build
-./mybot
-```
-
-### Using [Docker](https://www.docker.com/)
-
-```
-cd path/to/mybot
-docker build -t mybot .
-docker run -v $(pwd):/mybot -it sh
-cd /mybot
-```
-
-then run commands in the above
+Run `setup.sh` to deploy on [docker](https://www.docker.com/).
+Make sure that you've installed [docker](https://www.docker.com/) on your machine.
