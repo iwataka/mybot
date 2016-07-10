@@ -132,7 +132,7 @@ func getenv(key string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		result = text
+		result = strings.TrimSpace(text)
 	}
 	return result, nil
 }
