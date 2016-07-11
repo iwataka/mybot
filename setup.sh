@@ -32,4 +32,4 @@ docker run -d -v "$dir":/mybot \
     -e MYBOT_TWITTER_CONSUMER_SECRET="$consumer_secret" \
     -e MYBOT_TWITTER_ACCESS_TOKEN="$access_token" \
     -e MYBOT_TWITTER_ACCESS_TOKEN_SECRET="$access_token_secret" \
-    mybot sh -c "cd /mybot && go get -d ./... && go build && ./mybot s"
+    mybot sh -c "cd /mybot && go get -d ./... && go build && ./mybot s --log-file /mybot/mybot-debug.log"

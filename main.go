@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/urfave/cli"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -53,15 +54,20 @@ func main() {
 	app.Name = "mybot"
 	app.Version = "0.0.1"
 
+	before := func(c *cli.Context) error {
+		err := beforeRunning()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	runCmd := cli.Command{
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
+		Before:  before,
 		Action: func(c *cli.Context) error {
-			err := setup()
-			if err != nil {
-				return err
-			}
 			err = run(c)
 			if err != nil {
 				return err
@@ -74,11 +80,9 @@ func main() {
 		Name:    "server",
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
+		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
+		Before:  before,
 		Action: func(c *cli.Context) error {
-			err := setup()
-			if err != nil {
-				return err
-			}
 			err = server(c)
 			if err != nil {
 				return err
@@ -91,30 +95,27 @@ func main() {
 	app.Run(os.Args)
 }
 
-func setup() error {
-	err := unmarshalCache()
+func exitIfError(err error, code int) {
 	if err != nil {
-		return err
+		fmt.Println(err.Error)
+		os.Exit(code)
 	}
+}
+
+func beforeRunning() error {
+	err := unmarshalCache()
+	exitIfError(err, 1)
 
 	ghClient = github.NewClient(nil)
 
 	consumerKey, err := getenv("MYBOT_TWITTER_CONSUMER_KEY")
-	if err != nil {
-		return err
-	}
+	exitIfError(err, 1)
 	consumerSecret, err := getenv("MYBOT_TWITTER_CONSUMER_SECRET")
-	if err != nil {
-		return err
-	}
+	exitIfError(err, 1)
 	accessToken, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN")
-	if err != nil {
-		return err
-	}
+	exitIfError(err, 1)
 	accessTokenSecret, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN_SECRET")
-	if err != nil {
-		return err
-	}
+	exitIfError(err, 1)
 
 	anaconda.SetConsumerKey(consumerKey)
 	anaconda.SetConsumerSecret(consumerSecret)
@@ -138,40 +139,44 @@ func getenv(key string) (string, error) {
 }
 
 func run(c *cli.Context) error {
+	runOnce(func(err error) { exitIfError(err, 1) })
+	return nil
+}
+
+func runOnce(handleError func(error)) {
 	var err error
 	for user, repo := range projects {
-		err = githubCommit(user, repo)
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
-		}
+		handleError(githubCommit(user, repo))
 	}
 	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
 		text := strings.ToLower(t.Text)
 		return strings.Contains(text, "heaven's feel") && strings.Contains(text, "劇場版")
 	})
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
+	handleError(err)
 	err = retweet("sankakujougi", false, func(t anaconda.Tweet) bool {
 		return strings.Contains(t.Text, "https://t.co/p3Zy7VoPcg")
 	})
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
+	handleError(err)
 
-	err = marshalCache()
-	if err != nil {
-		return cli.NewExitError(err.Error(), 1)
-	}
-	return nil
+	handleError(marshalCache())
 }
 
 func server(c *cli.Context) error {
-	for {
-		err := run(c)
-		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+	logFile := c.String("log-file")
+	output := os.Stdout
+	if logFile != "" {
+		info, err := os.Stat(logFile)
+		if err == nil || info.IsDir() {
+			fmt.Printf("Invalid log file: %s", logFile)
+			os.Exit(1)
+		} else {
+			output, err = os.Create(logFile)
+			exitIfError(err, 1)
 		}
+	}
+	logger := log.New(output, "", log.Ldate|log.Ltime|log.Lshortfile)
+	for {
+		runOnce(func(err error) { logger.Println(err) })
 		time.Sleep(period)
 	}
 	return nil
