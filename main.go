@@ -66,6 +66,7 @@ func main() {
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
+		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
 		Before:  before,
 		Action: func(c *cli.Context) error {
 			err = run(c)
@@ -97,7 +98,7 @@ func main() {
 
 func exitIfError(err error, code int) {
 	if err != nil {
-		fmt.Println(err.Error)
+		fmt.Println(err)
 		os.Exit(code)
 	}
 }
@@ -139,7 +140,12 @@ func getenv(key string) (string, error) {
 }
 
 func run(c *cli.Context) error {
-	runOnce(func(err error) { exitIfError(err, 1) })
+	logger := newFileLogger(c.String("log-file"))
+	runOnce(func(err error) {
+		if err != nil {
+			logger.Println(err)
+		}
+	})
 	return nil
 }
 
@@ -162,11 +168,23 @@ func runOnce(handleError func(error)) {
 }
 
 func server(c *cli.Context) error {
-	logFile := c.String("log-file")
+	logger := newFileLogger(c.String("log-file"))
+	for {
+		runOnce(func(err error) {
+			if err != nil {
+				logger.Println(err)
+			}
+		})
+		time.Sleep(period)
+	}
+	return nil
+}
+
+func newFileLogger(logFile string) *log.Logger {
 	output := os.Stdout
 	if logFile != "" {
 		info, err := os.Stat(logFile)
-		if err == nil || info.IsDir() {
+		if info != nil && info.IsDir() {
 			fmt.Printf("Invalid log file: %s", logFile)
 			os.Exit(1)
 		} else {
@@ -174,12 +192,7 @@ func server(c *cli.Context) error {
 			exitIfError(err, 1)
 		}
 	}
-	logger := log.New(output, "", log.Ldate|log.Ltime|log.Lshortfile)
-	for {
-		runOnce(func(err error) { logger.Println(err) })
-		time.Sleep(period)
-	}
-	return nil
+	return log.New(output, "", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 func marshalCache() error {
@@ -216,7 +229,7 @@ func githubCommit(user, repo string) error {
 	if !userExists || !repoExists || sha != *latest.SHA {
 		msg := user + "/" + repo + "\n" + *latest.HTMLURL
 		_, err := twApi.PostTweet(msg, nil)
-		if err != nil && !ignoreTwitterError(err) {
+		if err != nil {
 			return err
 		}
 		if !userExists {
@@ -279,13 +292,5 @@ func formatUrl(src, dest string) (string, error) {
 		}
 	} else {
 		return dest, nil
-	}
-}
-
-func ignoreTwitterError(err error) bool {
-	if strings.Contains(err.Error(), "Status is a duplicate") {
-		return true
-	} else {
-		return false
 	}
 }
