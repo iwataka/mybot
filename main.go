@@ -20,7 +20,6 @@ import (
 const (
 	fateUrl              = "http://www.fate-sn.com/"
 	tsuredurechildrenUrl = "http://tsuredurechildren.com/"
-	period               = time.Duration(10) * time.Minute
 )
 
 var (
@@ -29,6 +28,7 @@ var (
 	twApi     *anaconda.TwitterApi
 	cache     = &cacheData{
 		make(map[string]map[string]string),
+		make(map[string]int64),
 		make(map[string]int64),
 	}
 	projects = map[string]string{
@@ -41,6 +41,7 @@ var (
 type cacheData struct {
 	LatestCommitSHA map[string]map[string]string
 	LatestTweetId   map[string]int64
+	LatestDM        map[string]int64
 }
 
 func main() {
@@ -169,14 +170,26 @@ func runOnce(handleError func(error)) {
 
 func server(c *cli.Context) error {
 	logger := newFileLogger(c.String("log-file"))
+
+	go func() {
+		for {
+			err := talk()
+			if err != nil {
+				logger.Println(err)
+			}
+			time.Sleep(time.Second * time.Duration(30))
+		}
+	}()
+
 	for {
 		runOnce(func(err error) {
 			if err != nil {
 				logger.Println(err)
 			}
 		})
-		time.Sleep(period)
+		time.Sleep(time.Minute * time.Duration(10))
 	}
+
 	return nil
 }
 
@@ -271,6 +284,34 @@ func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool
 		_, err := twApi.Retweet(cache.LatestTweetId[screenName], trimUser)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func talk() error {
+	dms, err := twApi.GetDirectMessages(nil)
+	if err != nil {
+		return err
+	}
+	userToDM := make(map[string]anaconda.DirectMessage)
+	for _, dm := range dms {
+		sender := dm.SenderScreenName
+		_, exists := userToDM[sender]
+		if !exists {
+			userToDM[sender] = dm
+		}
+	}
+	for user, dm := range userToDM {
+		latest, exists := cache.LatestDM[user]
+		if !exists || latest != dm.Id {
+			if strings.ToLower(dm.Text) == "hey!" {
+				dm, err := twApi.PostDMToScreenName("Hey!", user)
+				if err != nil {
+					return err
+				}
+				cache.LatestDM[user] = dm.Id
+			}
 		}
 	}
 	return nil
