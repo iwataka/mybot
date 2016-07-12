@@ -1,20 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/ChimeraCoder/anaconda"
-	"github.com/google/go-github/github"
-	"github.com/urfave/cli"
-	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/ChimeraCoder/anaconda"
+	"github.com/google/go-github/github"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -23,20 +20,22 @@ const (
 )
 
 var (
-	cacheFile = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
+	cacheFile *os.File
 	ghClient  *github.Client
 	twApi     *anaconda.TwitterApi
-	cache     = &cacheData{
-		make(map[string]map[string]string),
-		make(map[string]int64),
-		make(map[string]int64),
-	}
-	projects = map[string]string{
-		"vim":    "vim",
-		"neovim": "neovim",
-		"golang": "go",
-	}
 )
+
+var cache = &cacheData{
+	make(map[string]map[string]string),
+	make(map[string]int64),
+	make(map[string]int64),
+}
+
+var projects = map[string]string{
+	"vim":    "vim",
+	"neovim": "neovim",
+	"golang": "go",
+}
 
 type cacheData struct {
 	LatestCommitSHA map[string]map[string]string
@@ -45,11 +44,12 @@ type cacheData struct {
 }
 
 func main() {
-	err := os.MkdirAll(filepath.Dir(cacheFile), 0600)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	var err error
+	cachePath := os.ExpandEnv("$HOME/.cache/mybot/cache.json")
+	cacheFile, err = os.Create(cachePath)
+	defer cacheFile.Close()
+	err = os.MkdirAll(filepath.Dir(cachePath), 0600)
+	exit(fmt.Sprintln(err), 1)
 
 	app := cli.NewApp()
 	app.Name = "mybot"
@@ -97,15 +97,9 @@ func main() {
 	app.Run(os.Args)
 }
 
-func exitIfError(err error, code int) {
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(code)
-	}
-}
-
 func beforeRunning() error {
-	err := unmarshalCache()
+	dec := json.NewDecoder(cacheFile)
+	err := dec.Decode(cache)
 	exitIfError(err, 1)
 
 	ghClient = github.NewClient(nil)
@@ -125,23 +119,9 @@ func beforeRunning() error {
 	return nil
 }
 
-func getenv(key string) (string, error) {
-	result := os.Getenv(key)
-	if result == "" {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("%s=", key)
-		text, _ := reader.ReadString('\n')
-		err := os.Setenv(key, text)
-		if err != nil {
-			return "", err
-		}
-		result = strings.TrimSpace(text)
-	}
-	return result, nil
-}
-
 func run(c *cli.Context) error {
-	logger := newFileLogger(c.String("log-file"))
+	logger, err := newFileLogger(c.String("log-file"))
+	exitIfError(err, 1)
 	runOnce(func(err error) {
 		if err != nil {
 			logger.Println(err)
@@ -165,13 +145,16 @@ func runOnce(handleError func(error)) {
 	})
 	handleError(err)
 
-	handleError(marshalCache())
+	enc := json.NewEncoder(cacheFile)
+	handleError(enc.Encode(cache))
 }
 
 func server(c *cli.Context) error {
-	logger := newFileLogger(c.String("log-file"))
+	logger, err := newFileLogger(c.String("log-file"))
+	exitIfError(err, 1)
 
-	go func() {
+	ch1 := make(chan bool)
+	go func(ch chan bool) {
 		for {
 			err := talk()
 			if err != nil {
@@ -179,55 +162,24 @@ func server(c *cli.Context) error {
 			}
 			time.Sleep(time.Second * time.Duration(30))
 		}
-	}()
+		ch <- true
+	}(ch1)
 
-	for {
-		runOnce(func(err error) {
-			if err != nil {
-				logger.Println(err)
-			}
-		})
-		time.Sleep(time.Minute * time.Duration(10))
-	}
-
-	return nil
-}
-
-func newFileLogger(logFile string) *log.Logger {
-	output := os.Stdout
-	if logFile != "" {
-		info, err := os.Stat(logFile)
-		if info != nil && info.IsDir() {
-			fmt.Printf("Invalid log file: %s", logFile)
-			os.Exit(1)
-		} else {
-			output, err = os.Create(logFile)
-			exitIfError(err, 1)
+	ch2 := make(chan bool)
+	go func(ch chan bool) {
+		for {
+			runOnce(func(err error) {
+				if err != nil {
+					logger.Println(err)
+				}
+			})
+			time.Sleep(time.Minute * time.Duration(10))
 		}
-	}
-	return log.New(output, "", log.Ldate|log.Ltime|log.Lshortfile)
-}
+		ch <- true
+	}(ch2)
 
-func marshalCache() error {
-	if cache != nil {
-		data, err := json.MarshalIndent(cache, "", "\t")
-		if err != nil {
-			return err
-		}
-		ioutil.WriteFile(cacheFile, data, 0600)
-	}
-	return nil
-}
-
-func unmarshalCache() error {
-	info, err := os.Stat(cacheFile)
-	if err == nil && info != nil && !info.IsDir() {
-		data, err := ioutil.ReadFile(cacheFile)
-		if err != nil {
-			return err
-		}
-		json.Unmarshal(data, cache)
-	}
+	<-ch1
+	<-ch2
 	return nil
 }
 
@@ -315,23 +267,4 @@ func talk() error {
 		}
 	}
 	return nil
-}
-
-func formatUrl(src, dest string) (string, error) {
-	domainPat, err := regexp.Compile("[^:/]+://[^/]+")
-	if err != nil {
-		return "", err
-	}
-
-	if strings.HasPrefix(dest, "/") {
-		return domainPat.FindString(src) + dest, nil
-	} else if strings.Index(dest, "://") == -1 {
-		if strings.HasSuffix(src, "/") {
-			return src + dest, nil
-		} else {
-			return src + "/" + dest, nil
-		}
-	} else {
-		return dest, nil
-	}
 }
