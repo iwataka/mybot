@@ -3,11 +3,21 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
 )
+
+var (
+	domainPat *regexp.Regexp
+)
+
+func init() {
+	var err error
+	domainPat, err = regexp.Compile("[^:/]+://[^/]+")
+	exitIfError(err, 1)
+
+}
 
 func exitIfError(err error, code int) {
 	if err != nil {
@@ -21,39 +31,28 @@ func exit(msg string, code int) {
 	os.Exit(code)
 }
 
-func getenv(key string) (string, error) {
-	result := os.Getenv(key)
-	if result == "" {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf("%s=", key)
-		text, _ := reader.ReadString('\n')
-		err := os.Setenv(key, text)
+func getenv(k string) (string, error) {
+	v := os.Getenv(k)
+	var err error
+	// If the environment variable is not available, get the value from
+	// user input
+	if v == "" {
+		r := bufio.NewReader(os.Stdin)
+		fmt.Printf("%s=", k)
+		v, err = r.ReadString('\n')
 		if err != nil {
 			return "", err
 		}
-		result = strings.TrimSpace(text)
-	}
-	return result, nil
-}
-
-func newFileLogger(logFile string) (*log.Logger, error) {
-	output := os.Stdout
-	if logFile != "" {
-		var err error
-		output, err = os.Create(logFile)
+		v = strings.TrimSpace(v)
+		err = os.Setenv(k, v)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 	}
-	return log.New(output, "", log.Ldate|log.Ltime|log.Lshortfile), nil
+	return v, nil
 }
 
 func formatUrl(src, dest string) (string, error) {
-	domainPat, err := regexp.Compile("[^:/]+://[^/]+")
-	if err != nil {
-		return "", err
-	}
-
 	if strings.HasPrefix(dest, "/") {
 		return domainPat.FindString(src) + dest, nil
 	} else if strings.Index(dest, "://") == -1 {

@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -20,7 +21,8 @@ const (
 )
 
 var (
-	cacheFile *os.File
+	cacheFile io.ReadWriteCloser
+	logFile   io.ReadWriteCloser
 	ghClient  *github.Client
 	twApi     *anaconda.TwitterApi
 )
@@ -43,39 +45,26 @@ type cacheData struct {
 	LatestDM        map[string]int64
 }
 
-func main() {
+func init() {
 	var err error
 	cachePath := os.ExpandEnv("$HOME/.cache/mybot/cache.json")
 	cacheFile, err = os.Create(cachePath)
-	defer cacheFile.Close()
 	err = os.MkdirAll(filepath.Dir(cachePath), 0600)
-	exit(fmt.Sprintln(err), 1)
+	exitIfError(err, 1)
+}
 
+func main() {
 	app := cli.NewApp()
 	app.Name = "mybot"
 	app.Version = "0.0.1"
-
-	before := func(c *cli.Context) error {
-		err := beforeRunning()
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 
 	runCmd := cli.Command{
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
 		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
-		Before:  before,
-		Action: func(c *cli.Context) error {
-			err = run(c)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
+		Before:  beforeRunning,
+		Action:  run,
 	}
 
 	serverCmd := cli.Command{
@@ -83,21 +72,15 @@ func main() {
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
 		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
-		Before:  before,
-		Action: func(c *cli.Context) error {
-			err = server(c)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
+		Before:  beforeRunning,
+		Action:  server,
 	}
 
 	app.Commands = []cli.Command{runCmd, serverCmd}
 	app.Run(os.Args)
 }
 
-func beforeRunning() error {
+func beforeRunning(c *cli.Context) error {
 	dec := json.NewDecoder(cacheFile)
 	err := dec.Decode(cache)
 	exitIfError(err, 1)
@@ -120,8 +103,9 @@ func beforeRunning() error {
 }
 
 func run(c *cli.Context) error {
-	logger, err := newFileLogger(c.String("log-file"))
+	logger, err := newLogger(c)
 	exitIfError(err, 1)
+
 	runOnce(func(err error) {
 		if err != nil {
 			logger.Println(err)
@@ -149,37 +133,44 @@ func runOnce(handleError func(error)) {
 	handleError(enc.Encode(cache))
 }
 
+func newLogger(c *cli.Context) (*log.Logger, error) {
+	logFlag := log.Ldate | log.Ltime | log.Lshortfile
+	if c.IsSet("log-file") {
+		logFile, err := os.Create(c.String(("log-file")))
+		if err != nil {
+			return nil, err
+		}
+		return log.New(logFile, "", logFlag), nil
+	} else {
+		return log.New(os.Stdout, "", logFlag), nil
+	}
+}
+
 func server(c *cli.Context) error {
-	logger, err := newFileLogger(c.String("log-file"))
+	logger, err := newLogger(c)
 	exitIfError(err, 1)
 
-	ch1 := make(chan bool)
-	go func(ch chan bool) {
+	go func() {
 		for {
-			err := talk()
-			if err != nil {
-				logger.Println(err)
-			}
-			time.Sleep(time.Second * time.Duration(30))
-		}
-		ch <- true
-	}(ch1)
-
-	ch2 := make(chan bool)
-	go func(ch chan bool) {
-		for {
-			runOnce(func(err error) {
+			go func() {
+				err := talk()
 				if err != nil {
 					logger.Println(err)
 				}
-			})
-			time.Sleep(time.Minute * time.Duration(10))
+			}()
+			time.Sleep(time.Second * time.Duration(30))
 		}
-		ch <- true
-	}(ch2)
+	}()
 
-	<-ch1
-	<-ch2
+	for {
+		runOnce(func(err error) {
+			if err != nil {
+				logger.Println(err)
+			}
+		})
+		time.Sleep(time.Minute * time.Duration(10))
+	}
+
 	return nil
 }
 
@@ -257,13 +248,11 @@ func talk() error {
 	for user, dm := range userToDM {
 		latest, exists := cache.LatestDM[user]
 		if !exists || latest != dm.Id {
-			if strings.ToLower(dm.Text) == "hey!" {
-				dm, err := twApi.PostDMToScreenName("Hey!", user)
-				if err != nil {
-					return err
-				}
-				cache.LatestDM[user] = dm.Id
+			res, err := twApi.PostDMToScreenName(dm.Text, user)
+			if err != nil {
+				return err
 			}
+			cache.LatestDM[user] = res.Id
 		}
 	}
 	return nil
