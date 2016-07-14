@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -21,17 +22,12 @@ const (
 )
 
 var (
-	cacheFile io.ReadWriteCloser
+	cachePath = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
 	logFile   io.ReadWriteCloser
-	ghClient  *github.Client
+	ghClient  = github.NewClient(nil)
 	twApi     *anaconda.TwitterApi
+	cache     *cacheData
 )
-
-var cache = &cacheData{
-	make(map[string]map[string]string),
-	make(map[string]int64),
-	make(map[string]int64),
-}
 
 var projects = map[string]string{
 	"vim":    "vim",
@@ -45,12 +41,46 @@ type cacheData struct {
 	LatestDM        map[string]int64
 }
 
-func init() {
+func unmarshalCache(path string) error {
+	if cache == nil {
+		cache = &cacheData{
+			make(map[string]map[string]string),
+			make(map[string]int64),
+			make(map[string]int64),
+		}
+	}
+
+	info, _ := os.Stat(path)
+	if info != nil && !info.IsDir() {
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(data, cache)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func marshalCache(path string) error {
 	var err error
-	cachePath := os.ExpandEnv("$HOME/.cache/mybot/cache.json")
-	cacheFile, err = os.Create(cachePath)
-	err = os.MkdirAll(filepath.Dir(cachePath), 0600)
-	exitIfError(err, 1)
+	err = os.MkdirAll(filepath.Dir(path), 0600)
+	if err != nil {
+		return err
+	}
+	if cache != nil {
+		data, err := json.Marshal(cache)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(path, data, 0600)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func main() {
@@ -81,11 +111,8 @@ func main() {
 }
 
 func beforeRunning(c *cli.Context) error {
-	dec := json.NewDecoder(cacheFile)
-	err := dec.Decode(cache)
+	err := unmarshalCache(cachePath)
 	exitIfError(err, 1)
-
-	ghClient = github.NewClient(nil)
 
 	consumerKey, err := getenv("MYBOT_TWITTER_CONSUMER_KEY")
 	exitIfError(err, 1)
@@ -129,8 +156,7 @@ func runOnce(handleError func(error)) {
 	})
 	handleError(err)
 
-	enc := json.NewEncoder(cacheFile)
-	handleError(enc.Encode(cache))
+	handleError(marshalCache(cachePath))
 }
 
 func newLogger(c *cli.Context) (*log.Logger, error) {

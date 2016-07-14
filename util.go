@@ -21,13 +21,13 @@ func init() {
 
 func exitIfError(err error, code int) {
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Exit: ", err)
 		os.Exit(code)
 	}
 }
 
 func exit(msg string, code int) {
-	fmt.Println(msg)
+	fmt.Println("Exit: ", msg)
 	os.Exit(code)
 }
 
