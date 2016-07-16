@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -97,16 +99,16 @@ func main() {
 		Action:  run,
 	}
 
-	serverCmd := cli.Command{
-		Name:    "server",
+	serveCmd := cli.Command{
+		Name:    "serve",
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
 		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
 		Before:  beforeRunning,
-		Action:  server,
+		Action:  serve,
 	}
 
-	app.Commands = []cli.Command{runCmd, serverCmd}
+	app.Commands = []cli.Command{runCmd, serveCmd}
 	app.Run(os.Args)
 }
 
@@ -172,7 +174,10 @@ func newLogger(c *cli.Context) (*log.Logger, error) {
 	}
 }
 
-func server(c *cli.Context) error {
+func serve(c *cli.Context) error {
+	http.HandleFunc("/", handler)
+	http.ListenAndServe(":8080", nil)
+
 	logger, err := newLogger(c)
 	exitIfError(err, 1)
 
@@ -198,6 +203,10 @@ func server(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Welcome to mybot root!")
 }
 
 func githubCommit(user, repo string) error {
