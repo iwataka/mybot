@@ -208,6 +208,7 @@ func serve(c *cli.Context) error {
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to mybot root!")
 	fmt.Fprintln(w, "This is being under development.")
+	fmt.Fprintln(w, "This domain will be used to provide API.")
 }
 
 func githubCommit(user, repo string) error {
