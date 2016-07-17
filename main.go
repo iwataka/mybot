@@ -207,6 +207,7 @@ func serve(c *cli.Context) error {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to mybot root!")
+	fmt.Fprintln(w, "This is being under development.")
 }
 
 func githubCommit(user, repo string) error {
