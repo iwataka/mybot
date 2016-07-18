@@ -24,11 +24,12 @@ const (
 )
 
 var (
-	cachePath = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
-	logFile   io.ReadWriteCloser
-	ghClient  = github.NewClient(nil)
-	twApi     *anaconda.TwitterApi
-	cache     *cacheData
+	defaultOutput = os.Stdout
+	cachePath     = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
+	logFile       io.ReadWriteCloser
+	ghClient      = github.NewClient(nil)
+	twApi         *anaconda.TwitterApi
+	cache         *cacheData
 )
 
 var projects = map[string]string{
@@ -94,7 +95,7 @@ func main() {
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
-		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
+		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file", Value: ""}},
 		Before:  beforeRunning,
 		Action:  run,
 	}
@@ -103,7 +104,7 @@ func main() {
 		Name:    "serve",
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
-		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file"}},
+		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file", Value: ""}},
 		Before:  beforeRunning,
 		Action:  serve,
 	}
@@ -132,7 +133,7 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	logger, err := newLogger(c)
+	logger, err := newLogger(c.String("log-file"))
 	exitIfError(err, 1)
 
 	runOnce(func(err error) {
@@ -161,24 +162,21 @@ func runOnce(handleError func(error)) {
 	handleError(marshalCache(cachePath))
 }
 
-func newLogger(c *cli.Context) (*log.Logger, error) {
+func newLogger(path string) (*log.Logger, error) {
 	logFlag := log.Ldate | log.Ltime | log.Lshortfile
-	if c.IsSet("log-file") {
-		logFile, err := os.Create(c.String(("log-file")))
+	if path == "" {
+		return log.New(defaultOutput, "", logFlag), nil
+	} else {
+		logFile, err := os.Create(path)
 		if err != nil {
 			return nil, err
 		}
 		return log.New(logFile, "", logFlag), nil
-	} else {
-		return log.New(os.Stdout, "", logFlag), nil
 	}
 }
 
 func serve(c *cli.Context) error {
-	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
-
-	logger, err := newLogger(c)
+	logger, err := newLogger(c.String("log-file"))
 	exitIfError(err, 1)
 
 	go func() {
@@ -193,15 +191,19 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
-	for {
-		runOnce(func(err error) {
-			if err != nil {
-				logger.Println(err)
-			}
-		})
-		time.Sleep(time.Minute * time.Duration(10))
-	}
+	go func() {
+		for {
+			runOnce(func(err error) {
+				if err != nil {
+					logger.Println(err)
+				}
+			})
+			time.Sleep(time.Minute * time.Duration(10))
+		}
+	}()
 
+	http.HandleFunc("/", handler)
+	http.ListenAndServe(":8080", nil)
 	return nil
 }
 
