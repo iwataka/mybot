@@ -236,11 +236,15 @@ func githubCommitTweet(user, repo string) error {
 		if err != nil {
 			return err
 		}
-		_, userExists := cache.LatestCommitSHA[user]
-		if !userExists {
-			cache.LatestCommitSHA[user] = make(map[string]string)
-		}
-		cache.LatestCommitSHA[user][repo] = *commit.SHA
+		updateCommitSHA(user, repo, commit)
 	}
 	return nil
+}
+
+func updateCommitSHA(user, repo string, commit *github.RepositoryCommit) {
+	_, userExists := cache.LatestCommitSHA[user]
+	if !userExists {
+		cache.LatestCommitSHA[user] = make(map[string]string)
+	}
+	cache.LatestCommitSHA[user][repo] = *commit.SHA
 }
