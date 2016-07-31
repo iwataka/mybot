@@ -2,10 +2,10 @@ package main
 
 import "github.com/google/go-github/github"
 
-var githubClient = github.NewClient(nil)
+var githubApi *github.Client
 
 func githubCommit(user, repo string) (*github.RepositoryCommit, error) {
-	commits, _, err := githubClient.Repositories.ListCommits(user, repo, nil)
+	commits, _, err := githubApi.Repositories.ListCommits(user, repo, nil)
 	if err != nil {
 		return nil, err
 	}

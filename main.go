@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
+	"github.com/google/go-github/github"
+	"github.com/nlopes/slack"
 	"github.com/urfave/cli"
 )
 
@@ -28,10 +30,17 @@ var (
 	cache         *cacheData
 )
 
-var projects = map[string]string{
+var githubProjects = map[string]string{
 	"vim":    "vim",
 	"neovim": "neovim",
 	"golang": "go",
+}
+
+var slackChannels = []string{
+	"vim",
+	"neovim",
+	"golang",
+	"twitter",
 }
 
 type cacheData struct {
@@ -113,18 +122,25 @@ func beforeRunning(c *cli.Context) error {
 	err := unmarshalCache(cachePath)
 	exitIfError(err, 1)
 
-	consumerKey, err := getenv("MYBOT_TWITTER_CONSUMER_KEY")
+	twitterConsumerKey, err := getenv("MYBOT_TWITTER_CONSUMER_KEY")
 	exitIfError(err, 1)
-	consumerSecret, err := getenv("MYBOT_TWITTER_CONSUMER_SECRET")
+	twitterConsumerSecret, err := getenv("MYBOT_TWITTER_CONSUMER_SECRET")
 	exitIfError(err, 1)
-	accessToken, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN")
+	twitterAccessToken, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN")
 	exitIfError(err, 1)
-	accessTokenSecret, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN_SECRET")
+	twitterAccessTokenSecret, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN_SECRET")
 	exitIfError(err, 1)
+	anaconda.SetConsumerKey(twitterConsumerKey)
+	anaconda.SetConsumerSecret(twitterConsumerSecret)
+	twitterApi = anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
 
-	anaconda.SetConsumerKey(consumerKey)
-	anaconda.SetConsumerSecret(consumerSecret)
-	twitterApi = anaconda.NewTwitterApi(accessToken, accessTokenSecret)
+	slackToken, err := getenv("MYBOT_SLACK_TOKEN")
+	exitIfError(err, 1)
+	slackApi = slack.New(slackToken)
+
+	githubApi = github.NewClient(nil)
+
+	slackInitChannels(slackChannels)
 	return nil
 }
 
@@ -142,7 +158,7 @@ func run(c *cli.Context) error {
 
 func runOnce(handleError func(error)) {
 	var err error
-	for user, repo := range projects {
+	for user, repo := range githubProjects {
 		handleError(githubCommitTweet(user, repo))
 	}
 	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
