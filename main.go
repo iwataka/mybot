@@ -7,14 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
-	"github.com/google/go-github/github"
 	"github.com/urfave/cli"
 )
 
@@ -27,8 +25,6 @@ var (
 	defaultOutput = os.Stdout
 	cachePath     = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
 	logFile       io.ReadWriteCloser
-	ghClient      = github.NewClient(nil)
-	twApi         *anaconda.TwitterApi
 	cache         *cacheData
 )
 
@@ -128,7 +124,7 @@ func beforeRunning(c *cli.Context) error {
 
 	anaconda.SetConsumerKey(consumerKey)
 	anaconda.SetConsumerSecret(consumerSecret)
-	twApi = anaconda.NewTwitterApi(accessToken, accessTokenSecret)
+	twitterApi = anaconda.NewTwitterApi(accessToken, accessTokenSecret)
 	return nil
 }
 
@@ -147,7 +143,7 @@ func run(c *cli.Context) error {
 func runOnce(handleError func(error)) {
 	var err error
 	for user, repo := range projects {
-		handleError(githubCommit(user, repo))
+		handleError(githubCommitTweet(user, repo))
 	}
 	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
 		text := strings.ToLower(t.Text)
@@ -213,86 +209,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "This domain will be used to provide API.")
 }
 
-func githubCommit(user, repo string) error {
-	commits, _, err := ghClient.Repositories.ListCommits(user, repo, nil)
+func githubCommitTweet(user, repo string) error {
+	commit, err := githubCommit(user, repo)
 	if err != nil {
 		return err
 	}
-	latest := commits[0]
-	userMap, userExists := cache.LatestCommitSHA[user]
-	sha, repoExists := userMap[repo]
-	if !userExists || !repoExists || sha != *latest.SHA {
-		msg := user + "/" + repo + "\n" + *latest.HTMLURL
-		_, err := twApi.PostTweet(msg, nil)
+	if commit != nil {
+		msg := user + "/" + repo + "\n" + *commit.HTMLURL
+		_, err := twitterApi.PostTweet(msg, nil)
 		if err != nil {
 			return err
 		}
+		_, userExists := cache.LatestCommitSHA[user]
 		if !userExists {
 			cache.LatestCommitSHA[user] = make(map[string]string)
 		}
-		cache.LatestCommitSHA[user][repo] = *latest.SHA
-	}
-	return nil
-}
-
-func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
-	v := url.Values{}
-	v.Set("screen_name", screenName)
-	tweets, err := twApi.GetUserTimeline(v)
-	if err != nil {
-		return err
-	}
-	latestId, exists := cache.LatestTweetId[screenName]
-	finds := false
-	updates := false
-	for i := len(tweets) - 1; i >= 0; i-- {
-		tweet := tweets[i]
-		if checker(tweet) {
-			if exists && latestId == tweet.Id {
-				finds = true
-			} else {
-				updates = true
-				cache.LatestTweetId[screenName] = tweet.Id
-				if finds {
-					_, err := twApi.Retweet(tweet.Id, trimUser)
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-	if !exists && updates {
-		_, err := twApi.Retweet(cache.LatestTweetId[screenName], trimUser)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func talk() error {
-	dms, err := twApi.GetDirectMessages(nil)
-	if err != nil {
-		return err
-	}
-	userToDM := make(map[string]anaconda.DirectMessage)
-	for _, dm := range dms {
-		sender := dm.SenderScreenName
-		_, exists := userToDM[sender]
-		if !exists {
-			userToDM[sender] = dm
-		}
-	}
-	for user, dm := range userToDM {
-		latest, exists := cache.LatestDM[user]
-		if !exists || latest != dm.Id {
-			res, err := twApi.PostDMToScreenName(dm.Text, user)
-			if err != nil {
-				return err
-			}
-			cache.LatestDM[user] = res.Id
-		}
+		cache.LatestCommitSHA[user][repo] = *commit.SHA
 	}
 	return nil
 }
