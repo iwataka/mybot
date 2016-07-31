@@ -9,7 +9,7 @@ func githubCommit(user, repo string) (*github.RepositoryCommit, error) {
 	if err != nil {
 		return nil, err
 	}
-	latest := &commits[0]
+	latest := commits[0]
 	userMap, userExists := cache.LatestCommitSHA[user]
 	sha := ""
 	repoExists := false
