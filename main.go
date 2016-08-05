@@ -14,14 +14,10 @@ import (
 
 	"github.com/ChimeraCoder/anaconda"
 	"github.com/google/go-github/github"
-	"github.com/nlopes/slack"
 	"github.com/urfave/cli"
 )
 
-const (
-	fateUrl              = "http://www.fate-sn.com/"
-	tsuredurechildrenUrl = "http://tsuredurechildren.com/"
-)
+const tsuredurechildrenUrl = "http://tsuredurechildren.com/"
 
 var (
 	defaultOutput = os.Stdout
@@ -34,13 +30,6 @@ var githubProjects = map[string]string{
 	"vim":    "vim",
 	"neovim": "neovim",
 	"golang": "go",
-}
-
-var slackChannels = []string{
-	"vim",
-	"neovim",
-	"golang",
-	"twitter",
 }
 
 type cacheData struct {
@@ -134,13 +123,8 @@ func beforeRunning(c *cli.Context) error {
 	anaconda.SetConsumerSecret(twitterConsumerSecret)
 	twitterApi = anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
 
-	slackToken, err := getenv("MYBOT_SLACK_TOKEN")
-	exitIfError(err, 1)
-	slackApi = slack.New(slackToken)
-
 	githubApi = github.NewClient(nil)
 
-	slackInitChannels(slackChannels)
 	return nil
 }
 
