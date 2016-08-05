@@ -8,6 +8,8 @@ import (
 
 var twitterApi *anaconda.TwitterApi
 
+var twitterTalkUsers = [0]string{}
+
 func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
 	v := url.Values{}
 	v.Set("screen_name", screenName)
@@ -49,12 +51,29 @@ func talk() error {
 	if err != nil {
 		return err
 	}
+	self, err := twitterApi.GetSelf(nil)
+	if err != nil {
+		return err
+	}
 	userToDM := make(map[string]anaconda.DirectMessage)
 	for _, dm := range dms {
 		sender := dm.SenderScreenName
-		_, exists := userToDM[sender]
-		if !exists {
-			userToDM[sender] = dm
+		allowed := false
+		if sender == self.ScreenName {
+			allowed = true
+		} else {
+			for _, u := range twitterTalkUsers {
+				if sender == u {
+					allowed = true
+					break
+				}
+			}
+		}
+		if allowed {
+			_, exists := userToDM[sender]
+			if !exists {
+				userToDM[sender] = dm
+			}
 		}
 	}
 	for user, dm := range userToDM {
