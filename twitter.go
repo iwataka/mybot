@@ -75,7 +75,7 @@ func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet)
 		if err != nil {
 			return err
 		}
-		err := twitterPostInfo(t)
+		err = twitterPostInfo(t)
 		if err != nil {
 			return err
 		}
@@ -86,16 +86,21 @@ func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet)
 func twitterPostInfo(t anaconda.Tweet) error {
 	if config.Notification.Place && t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		for _, user := range config.UserGroup.Users {
-			twitterApi.PostDMToScreenName(msg, user)
+		return twitterPost(msg)
+	}
+	return nil
+}
+
+func twitterPost(msg string) error {
+	for _, user := range config.UserGroup.Users {
+		twitterApi.PostDMToScreenName(msg, user)
+	}
+	if config.UserGroup.IncludeSelf {
+		self, err := getTwitterSelf()
+		if err != nil {
+			return err
 		}
-		if config.UserGroup.IncludeSelf {
-			self, err := getTwitterSelf()
-			if err != nil {
-				return err
-			}
-			twitterApi.PostDMToScreenName(msg, self)
-		}
+		twitterApi.PostDMToScreenName(msg, self)
 	}
 	return nil
 }

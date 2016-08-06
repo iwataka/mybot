@@ -14,6 +14,8 @@ import (
 	"github.com/urfave/cli"
 )
 
+var logger *log.Logger
+
 var logFlag = cli.StringFlag{
 	Name:  "log",
 	Value: "",
@@ -72,38 +74,29 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	logger, err := newLogger(c.String("log"))
+	var err error
+	logger, err = newLogger(c.String("log"))
 	exitIfError(err, 1)
 
-	runOnce(c, func(err error) {
-		if err != nil {
-			logger.Println(err)
-		}
-	})
+	runOnce(c, handleError)
 	return nil
 }
 
 func serve(c *cli.Context) error {
-	logger, err := newLogger(c.String("log"))
+	var err error
+	logger, err = newLogger(c.String("log"))
 	exitIfError(err, 1)
 
 	go func() {
 		for {
-			err := twitterTalk()
-			if err != nil {
-				logger.Println(err)
-			}
+			handleError(twitterTalk())
 			time.Sleep(time.Second * time.Duration(config.Talk.Interval))
 		}
 	}()
 
 	go func() {
 		for {
-			runOnce(c, func(err error) {
-				if err != nil {
-					logger.Println(err)
-				}
-			})
+			runOnce(c, handleError)
 			time.Sleep(time.Minute * time.Duration(config.Tweet.Interval))
 		}
 	}()
@@ -113,16 +106,26 @@ func serve(c *cli.Context) error {
 	return nil
 }
 
-func runOnce(c *cli.Context, handleError func(error)) {
+func runOnce(c *cli.Context, handle func(error)) {
 	err := unmarshalConfig(c.String("config"))
-	handleError(err)
+	handle(err)
 	for _, proj := range config.Tweet.Github {
-		handleError(githubCommitTweet(proj.User, proj.Repo))
+		handle(githubCommitTweet(proj.User, proj.Repo))
 	}
 	for _, target := range config.Tweet.Retweet {
-		handleError(retweetTarget(target))
+		handle(retweetTarget(target))
 	}
-	handleError(marshalCache(c.String("cache")))
+	handle(marshalCache(c.String("cache")))
+}
+
+func handleError(err error) {
+	if err != nil {
+		e := twitterPost(err.Error())
+		if e != nil {
+			logger.Println(e)
+		}
+		logger.Println(err)
+	}
 }
 
 func retweetTarget(target retweetConfig) error {
