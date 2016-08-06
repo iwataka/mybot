@@ -7,5 +7,6 @@ Make sure that you've installed [docker](https://www.docker.com/) on your machin
 
 ## ToDo
 
-+ Slack requires two users, the first has administration privilege and the second is for bot usage.
-+ Access token, slack usernames and other configuration should be saved in one .json file under the project root.
++ Create Web interface to edit the configuration
++ Reduce the number of logs
++ Improve notifications (country of tweets, ...)
