@@ -30,6 +30,7 @@ tweet:
         accessTokenSecret: ACCESS_TOKEN_SECRET
 
 talk:
+        enabled: false
         # Response in every 30 seconds
         interval: 30
 

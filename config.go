@@ -37,6 +37,7 @@ type retweetConfig struct {
 }
 
 type talkConfig struct {
+	Enabled  bool
 	Interval int
 }
 
