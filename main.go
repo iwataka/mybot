@@ -15,7 +15,7 @@ import (
 )
 
 var logFlag = cli.StringFlag{
-	Name:  "log-file",
+	Name:  "log",
 	Value: "",
 }
 
@@ -72,10 +72,44 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	logger, err := newLogger(c.String("log-file"))
+	logger, err := newLogger(c.String("log"))
 	exitIfError(err, 1)
 
-	runOnce(c, func(err error) { logIfError(*logger, err) })
+	runOnce(c, func(err error) {
+		if err != nil {
+			logger.Println(err)
+		}
+	})
+	return nil
+}
+
+func serve(c *cli.Context) error {
+	logger, err := newLogger(c.String("log"))
+	exitIfError(err, 1)
+
+	go func() {
+		for {
+			err := twitterTalk()
+			if err != nil {
+				logger.Println(err)
+			}
+			time.Sleep(time.Second * time.Duration(config.Talk.Interval))
+		}
+	}()
+
+	go func() {
+		for {
+			runOnce(c, func(err error) {
+				if err != nil {
+					logger.Println(err)
+				}
+			})
+			time.Sleep(time.Minute * time.Duration(config.Tweet.Interval))
+		}
+	}()
+
+	http.HandleFunc("/", handler)
+	http.ListenAndServe(":8080", nil)
 	return nil
 }
 
@@ -88,7 +122,7 @@ func runOnce(c *cli.Context, handleError func(error)) {
 	for _, target := range config.Tweet.Retweet {
 		handleError(retweetTarget(target))
 	}
-	handleError(marshalCache("cache"))
+	handleError(marshalCache(c.String("cache")))
 }
 
 func retweetTarget(target retweetConfig) error {
@@ -137,32 +171,6 @@ func newLogger(path string) (*log.Logger, error) {
 		return nil, err
 	}
 	return log.New(logFile, "", logFlag), nil
-}
-
-func serve(c *cli.Context) error {
-	logger, err := newLogger(c.String("log-file"))
-	exitIfError(err, 1)
-
-	go func() {
-		for {
-			go func() {
-				err := twitterTalk()
-				logIfError(*logger, err)
-			}()
-			time.Sleep(time.Second * time.Duration(config.Talk.Interval))
-		}
-	}()
-
-	go func() {
-		for {
-			runOnce(c, func(err error) { logIfError(*logger, err) })
-			time.Sleep(time.Minute * time.Duration(config.Tweet.Interval))
-		}
-	}()
-
-	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
-	return nil
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

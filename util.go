@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -17,13 +15,6 @@ func init() {
 	var err error
 	domainPat, err = regexp.Compile("[^:/]+://[^/]+")
 	exitIfError(err, 1)
-
-}
-
-func logIfError(logger log.Logger, err error) {
-	if err != nil {
-		logger.Println(err)
-	}
 }
 
 func exitIfError(err error, code int) {
@@ -36,27 +27,6 @@ func exitIfError(err error, code int) {
 func exit(msg string, code int) {
 	fmt.Println("Exit: ", msg)
 	os.Exit(code)
-}
-
-func getenv(k string) (string, error) {
-	v := os.Getenv(k)
-	var err error
-	// If the environment variable is not available, get the value from
-	// user input
-	if v == "" {
-		r := bufio.NewReader(os.Stdin)
-		fmt.Printf("%s=", k)
-		v, err = r.ReadString('\n')
-		if err != nil {
-			return "", err
-		}
-		v = strings.TrimSpace(v)
-		err = os.Setenv(k, v)
-		if err != nil {
-			return "", err
-		}
-	}
-	return v, nil
 }
 
 func formatUrl(src, dest string) (string, error) {

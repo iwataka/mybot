@@ -8,24 +8,38 @@ import (
 
 var twitterApi *anaconda.TwitterApi
 
-func twitterCheckUser(user string) (bool, error) {
-	self, err := twitterApi.GetSelf(nil)
-	if err != nil {
-		return false, err
-	}
-	if config.UserGroup.IncludeSelf && user == self.ScreenName {
-		return true, nil
-	} else {
-		for _, u := range config.UserGroup.Users {
-			if user == u {
-				return true, nil
-			}
+var twitterSelf string
+
+func getTwitterSelf() (string, error) {
+	if twitterSelf == "" {
+		self, err := twitterApi.GetSelf(nil)
+		if err != nil {
+			return "", err
 		}
-		return false, nil
+		twitterSelf = self.ScreenName
 	}
+	return twitterSelf, nil
 }
 
-func twitterRetweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
+func twitterCheckUser(user string) (bool, error) {
+	if config.UserGroup.IncludeSelf {
+		self, err := getTwitterSelf()
+		if err != nil {
+			return false, err
+		}
+		if user == self {
+			return true, nil
+		}
+	}
+	for _, u := range config.UserGroup.Users {
+		if user == u {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet) bool) error {
 	v := url.Values{}
 	v.Set("screen_name", screenName)
 	tweets, err := twitterApi.GetUserTimeline(v)
@@ -37,7 +51,7 @@ func twitterRetweet(screenName string, trimUser bool, checker func(anaconda.Twee
 	updates := false
 	for i := len(tweets) - 1; i >= 0; i-- {
 		tweet := tweets[i]
-		if checker(tweet) {
+		if check(tweet) {
 			if exists && latestId == tweet.Id {
 				finds = true
 			} else {
