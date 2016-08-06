@@ -1,14 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -16,63 +14,19 @@ import (
 	"github.com/urfave/cli"
 )
 
-var (
-	cachePath = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
-	cache     *cacheData
-)
-
-var githubProjects = map[string]string{
-	"vim":    "vim",
-	"neovim": "neovim",
-	"golang": "go",
+var logFlag = cli.StringFlag{
+	Name:  "log-file",
+	Value: "",
 }
 
-type cacheData struct {
-	LatestCommitSHA map[string]map[string]string
-	LatestTweetId   map[string]int64
-	LatestDM        map[string]int64
+var configFlag = cli.StringFlag{
+	Name:  "config",
+	Value: "",
 }
 
-func unmarshalCache(path string) error {
-	if cache == nil {
-		cache = &cacheData{
-			make(map[string]map[string]string),
-			make(map[string]int64),
-			make(map[string]int64),
-		}
-	}
-
-	info, _ := os.Stat(path)
-	if info != nil && !info.IsDir() {
-		data, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(data, cache)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func marshalCache(path string) error {
-	var err error
-	err = os.MkdirAll(filepath.Dir(path), 0600)
-	if err != nil {
-		return err
-	}
-	if cache != nil {
-		data, err := json.Marshal(cache)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(path, data, 0600)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+var cacheFlag = cli.StringFlag{
+	Name:  "cache",
+	Value: "",
 }
 
 func main() {
@@ -84,7 +38,7 @@ func main() {
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
-		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file", Value: ""}},
+		Flags:   []cli.Flag{logFlag, configFlag, cacheFlag},
 		Before:  beforeRunning,
 		Action:  run,
 	}
@@ -93,7 +47,7 @@ func main() {
 		Name:    "serve",
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
-		Flags:   []cli.Flag{cli.StringFlag{Name: "log-file", Value: ""}},
+		Flags:   []cli.Flag{logFlag, configFlag, cacheFlag},
 		Before:  beforeRunning,
 		Action:  serve,
 	}
@@ -103,20 +57,14 @@ func main() {
 }
 
 func beforeRunning(c *cli.Context) error {
-	err := unmarshalCache(cachePath)
+	err := unmarshalCache(c.String("cache"))
+	exitIfError(err, 1)
+	err = unmarshalConfig(c.String("config"))
 	exitIfError(err, 1)
 
-	twitterConsumerKey, err := getenv("MYBOT_TWITTER_CONSUMER_KEY")
-	exitIfError(err, 1)
-	twitterConsumerSecret, err := getenv("MYBOT_TWITTER_CONSUMER_SECRET")
-	exitIfError(err, 1)
-	twitterAccessToken, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN")
-	exitIfError(err, 1)
-	twitterAccessTokenSecret, err := getenv("MYBOT_TWITTER_ACCESS_TOKEN_SECRET")
-	exitIfError(err, 1)
-	anaconda.SetConsumerKey(twitterConsumerKey)
-	anaconda.SetConsumerSecret(twitterConsumerSecret)
-	twitterApi = anaconda.NewTwitterApi(twitterAccessToken, twitterAccessTokenSecret)
+	anaconda.SetConsumerKey(config.Tweet.ConsumerKey)
+	anaconda.SetConsumerSecret(config.Tweet.ConsumerSecret)
+	twitterApi = anaconda.NewTwitterApi(config.Tweet.AccessToken, config.Tweet.AccessTokenSecret)
 
 	githubApi = github.NewClient(nil)
 
@@ -127,41 +75,62 @@ func run(c *cli.Context) error {
 	logger, err := newLogger(c.String("log-file"))
 	exitIfError(err, 1)
 
-	runOnce(func(err error) {
-		if err != nil {
-			logger.Println(err)
-		}
-	})
+	runOnce(c, func(err error) { logIfError(*logger, err) })
 	return nil
 }
 
-func runOnce(handleError func(error)) {
-	var err error
-	for user, repo := range githubProjects {
-		handleError(githubCommitTweet(user, repo))
+func runOnce(c *cli.Context, handleError func(error)) {
+	err := unmarshalConfig(c.String("config"))
+	handleError(err)
+	for _, proj := range config.Tweet.Github {
+		handleError(githubCommitTweet(proj.User, proj.Repo))
 	}
-	err = retweet("Fate_SN_Anime", false, func(t anaconda.Tweet) bool {
-		text := strings.ToLower(t.Text)
-		return strings.Contains(text, "heaven's feel") && strings.Contains(text, "劇場版")
-	})
-	handleError(err)
-	err = retweet("sankakujougi", false, func(t anaconda.Tweet) bool {
-		return strings.Contains(t.Text, "https://t.co/p3Zy7VoPcg")
-	})
-	handleError(err)
+	for _, target := range config.Tweet.Retweet {
+		handleError(retweetTarget(target))
+	}
+	handleError(marshalCache("cache"))
+}
 
-	handleError(marshalCache(cachePath))
+func retweetTarget(target retweetConfig) error {
+	regexps := make([]*regexp.Regexp, len(target.Patterns), len(target.Patterns))
+	for i, pat := range target.Patterns {
+		r, err := regexp.Compile(pat)
+		if err != nil {
+			return err
+		}
+		regexps[i] = r
+	}
+	return twitterRetweet(target.Name, false, func(t anaconda.Tweet) bool {
+		for _, r := range regexps {
+			if !r.MatchString(t.Text) {
+				return false
+			}
+		}
+		for key, val := range target.Opts {
+			if key == "hasMedia" {
+				if val != (len(t.Entities.Media) != 0) {
+					return false
+				}
+			} else if key == "hasUrl" {
+				if val != (len(t.Entities.Urls) != 0) {
+					return false
+				}
+			} else if key == "retweeted" {
+				if val != t.Retweeted {
+					return false
+				}
+			}
+		}
+		return true
+	})
 }
 
 func newLogger(path string) (*log.Logger, error) {
 	logFlag := log.Ldate | log.Ltime | log.Lshortfile
 	if path == "" {
-		p, err := filepath.Abs(filepath.Dir(os.Args[0]))
-		p = filepath.Join(path, ".mybot-debug.log")
-		if err != nil {
-			return nil, err
-		}
-		path = p
+		path = ".mybot-debug.log"
+	} else if info, err := os.Stat(path); os.IsExist(err) && info.IsDir() {
+		path = filepath.Join(path, ".mybot-debug.log")
 	}
 	logFile, err := os.Create(path)
 	if err != nil {
@@ -177,23 +146,17 @@ func serve(c *cli.Context) error {
 	go func() {
 		for {
 			go func() {
-				err := talk()
-				if err != nil {
-					logger.Println(err)
-				}
+				err := twitterTalk()
+				logIfError(*logger, err)
 			}()
-			time.Sleep(time.Second * time.Duration(30))
+			time.Sleep(time.Second * time.Duration(config.Talk.Interval))
 		}
 	}()
 
 	go func() {
 		for {
-			runOnce(func(err error) {
-				if err != nil {
-					logger.Println(err)
-				}
-			})
-			time.Sleep(time.Minute * time.Duration(10))
+			runOnce(c, func(err error) { logIfError(*logger, err) })
+			time.Sleep(time.Minute * time.Duration(config.Tweet.Interval))
 		}
 	}()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -17,6 +18,12 @@ func init() {
 	domainPat, err = regexp.Compile("[^:/]+://[^/]+")
 	exitIfError(err, 1)
 
+}
+
+func logIfError(logger log.Logger, err error) {
+	if err != nil {
+		logger.Println(err)
+	}
 }
 
 func exitIfError(err error, code int) {

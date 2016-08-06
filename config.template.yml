@@ -1,0 +1,41 @@
+# If you use your own configuration, copy this file into
+# /path/to/mybot/config.yml and edit it.
+
+tweet: 
+        github:
+                # Tweet about the latest commit of vim/vim and golang/go
+                - user: vim
+                  repo: vim
+                - user: golang
+                  repo: go
+
+        retweet:
+                - name: golang
+                  patterns:
+                          - is released!
+                          - #golang
+                  opts:
+                          retweeted: false
+                - name: vimtips
+                  opts:
+                          hasMedia: false
+                          hasUrl: true
+                          retweeted: false
+
+        # Retweet in every 30 minutes
+        interval: 30
+        consumerKey: CONSUMER_KEY
+        consumerSecret: CONSUMER_SECRET
+        accessToken: ACCESS_TOKEN
+        accessTokenSecret: ACCESS_TOKEN_SECRET
+
+talk:
+        # Response in every 30 seconds
+        interval: 30
+
+userGroup:
+        includeSelf: true
+
+notification:
+        # Notify places of the tweets to users in the above userGroup (Not implemented yet)
+        place: true

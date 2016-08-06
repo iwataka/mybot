@@ -8,9 +8,24 @@ import (
 
 var twitterApi *anaconda.TwitterApi
 
-var twitterTalkUsers = [0]string{}
+func twitterCheckUser(user string) (bool, error) {
+	self, err := twitterApi.GetSelf(nil)
+	if err != nil {
+		return false, err
+	}
+	if config.UserGroup.IncludeSelf && user == self.ScreenName {
+		return true, nil
+	} else {
+		for _, u := range config.UserGroup.Users {
+			if user == u {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+}
 
-func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
+func twitterRetweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool) error {
 	v := url.Values{}
 	v.Set("screen_name", screenName)
 	tweets, err := twitterApi.GetUserTimeline(v)
@@ -46,28 +61,17 @@ func retweet(screenName string, trimUser bool, checker func(anaconda.Tweet) bool
 	return nil
 }
 
-func talk() error {
+func twitterTalk() error {
 	dms, err := twitterApi.GetDirectMessages(nil)
-	if err != nil {
-		return err
-	}
-	self, err := twitterApi.GetSelf(nil)
 	if err != nil {
 		return err
 	}
 	userToDM := make(map[string]anaconda.DirectMessage)
 	for _, dm := range dms {
 		sender := dm.SenderScreenName
-		allowed := false
-		if sender == self.ScreenName {
-			allowed = true
-		} else {
-			for _, u := range twitterTalkUsers {
-				if sender == u {
-					allowed = true
-					break
-				}
-			}
+		allowed, err := twitterCheckUser(sender)
+		if err != nil {
+			return err
 		}
 		if allowed {
 			_, exists := userToDM[sender]
