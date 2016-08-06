@@ -10,6 +10,7 @@ import (
 func initHttp() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/config", configHandler)
+	http.HandleFunc("/log", logHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -19,7 +20,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
-	w.Write(bytes)
+	_, err = w.Write(bytes)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +39,19 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err = tmpl.Execute(w, config)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
+}
+
+func logHandler(w http.ResponseWriter, r *http.Request) {
+	bytes, err := ioutil.ReadFile(logFile)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
+	_, err = w.Write(bytes)
 	if err != nil {
 		fmt.Fprintln(w, err)
 		return

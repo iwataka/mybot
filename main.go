@@ -12,7 +12,10 @@ import (
 	"github.com/urfave/cli"
 )
 
-var logger *log.Logger
+var (
+	logger  *log.Logger
+	logFile string
+)
 
 var logFlag = cli.StringFlag{
 	Name:  "log",
@@ -27,6 +30,22 @@ var configFlag = cli.StringFlag{
 var cacheFlag = cli.StringFlag{
 	Name:  "cache",
 	Value: "",
+}
+
+func initLogger(path string) error {
+	logFlag := log.Ldate | log.Ltime | log.Lshortfile
+	logFile = path
+	if logFile == "" {
+		logFile = ".mybot-debug.log"
+	} else if info, err := os.Stat(logFile); os.IsExist(err) && info.IsDir() {
+		logFile = filepath.Join(logFile, ".mybot-debug.log")
+	}
+	file, err := os.Create(logFile)
+	if err != nil {
+		return err
+	}
+	logger = log.New(file, "", logFlag)
+	return nil
 }
 
 func main() {
@@ -72,8 +91,7 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	var err error
-	logger, err = newLogger(c.String("log"))
+	err := initLogger(c.String("log"))
 	exitIfError(err, 1)
 
 	runOnce(c, handleError)
@@ -81,8 +99,7 @@ func run(c *cli.Context) error {
 }
 
 func serve(c *cli.Context) error {
-	var err error
-	logger, err = newLogger(c.String("log"))
+	err := initLogger(c.String("log"))
 	exitIfError(err, 1)
 
 	go func() {
@@ -157,20 +174,6 @@ func retweetTarget(target retweetConfig) error {
 		}
 		return true
 	})
-}
-
-func newLogger(path string) (*log.Logger, error) {
-	logFlag := log.Ldate | log.Ltime | log.Lshortfile
-	if path == "" {
-		path = ".mybot-debug.log"
-	} else if info, err := os.Stat(path); os.IsExist(err) && info.IsDir() {
-		path = filepath.Join(path, ".mybot-debug.log")
-	}
-	logFile, err := os.Create(path)
-	if err != nil {
-		return nil, err
-	}
-	return log.New(logFile, "", logFlag), nil
 }
 
 func githubCommitTweet(user, repo string) error {
