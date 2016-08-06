@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,13 +16,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-const tsuredurechildrenUrl = "http://tsuredurechildren.com/"
-
 var (
-	defaultOutput = os.Stdout
-	cachePath     = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
-	logFile       io.ReadWriteCloser
-	cache         *cacheData
+	cachePath = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
+	cache     *cacheData
 )
 
 var githubProjects = map[string]string{
@@ -161,14 +156,18 @@ func runOnce(handleError func(error)) {
 func newLogger(path string) (*log.Logger, error) {
 	logFlag := log.Ldate | log.Ltime | log.Lshortfile
 	if path == "" {
-		return log.New(defaultOutput, "", logFlag), nil
-	} else {
-		logFile, err := os.Create(path)
+		p, err := filepath.Abs(filepath.Dir(os.Args[0]))
+		p = filepath.Join(path, ".mybot-debug.log")
 		if err != nil {
 			return nil, err
 		}
-		return log.New(logFile, "", logFlag), nil
+		path = p
 	}
+	logFile, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	return log.New(logFile, "", logFlag), nil
 }
 
 func serve(c *cli.Context) error {
