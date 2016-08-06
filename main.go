@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -101,8 +99,7 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
-	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	initHttp()
 	return nil
 }
 
@@ -174,12 +171,6 @@ func newLogger(path string) (*log.Logger, error) {
 		return nil, err
 	}
 	return log.New(logFile, "", logFlag), nil
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to mybot root!")
-	fmt.Fprintln(w, "This is being under development.")
-	fmt.Fprintln(w, "This domain will be used to provide API.")
 }
 
 func githubCommitTweet(user, repo string) error {
