@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -47,6 +48,7 @@ func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet)
 		return err
 	}
 	latestId, exists := cache.LatestTweetId[screenName]
+	nameToTweet := make(map[string]anaconda.Tweet)
 	finds := false
 	updates := false
 	for i := len(tweets) - 1; i >= 0; i-- {
@@ -55,10 +57,11 @@ func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet)
 			if exists && latestId == tweet.Id {
 				finds = true
 			} else {
-				updates = true
-				cache.LatestTweetId[screenName] = tweet.Id
 				if finds {
-					_, err := twitterApi.Retweet(tweet.Id, trimUser)
+					updates = true
+					cache.LatestTweetId[screenName] = tweet.Id
+					t, err := twitterApi.Retweet(tweet.Id, trimUser)
+					nameToTweet[screenName] = t
 					if err != nil {
 						return err
 					}
@@ -67,9 +70,31 @@ func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet)
 		}
 	}
 	if !exists && updates {
-		_, err := twitterApi.Retweet(cache.LatestTweetId[screenName], trimUser)
+		t := nameToTweet[screenName]
+		_, err := twitterApi.Retweet(t.Id, trimUser)
 		if err != nil {
 			return err
+		}
+		err := twitterPostInfo(t)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func twitterPostInfo(t anaconda.Tweet) error {
+	if config.Notification.Place && t.HasCoordinates() {
+		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
+		for _, user := range config.UserGroup.Users {
+			twitterApi.PostDMToScreenName(msg, user)
+		}
+		if config.UserGroup.IncludeSelf {
+			self, err := getTwitterSelf()
+			if err != nil {
+				return err
+			}
+			twitterApi.PostDMToScreenName(msg, self)
 		}
 	}
 	return nil
