@@ -43,17 +43,17 @@ func twitterCheckUser(user string) (bool, error) {
 func twitterRetweet(name string, trimUser bool, check func(anaconda.Tweet) bool) error {
 	v := url.Values{}
 	v.Set("screen_name", name)
+	latestId, exists := cache.LatestTweetId[name]
+	if exists {
+		v.Set("since_id", fmt.Sprintf("%d", latestId))
+	}
 	tweets, err := twitterApi.GetUserTimeline(v)
 	if err != nil {
 		return err
 	}
-	latestId, exists := cache.LatestTweetId[name]
-	found := false
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		if exists && latestId == t.Id {
-			found = true
-		} else if check(t) && (!exists || found) {
+		if check(t) {
 			cache.LatestTweetId[name] = t.Id
 			_, err := twitterApi.Retweet(t.Id, trimUser)
 			if err != nil {
