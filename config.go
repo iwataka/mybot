@@ -53,7 +53,7 @@ type notificationConfig struct {
 
 func unmarshalConfig(path string) error {
 	if path == "" {
-		if info, err := os.Stat("config.yml"); os.IsExist(err) && !info.IsDir() {
+		if info, _ := os.Stat("config.yml"); info != nil && !info.IsDir() {
 			path = "config.yml"
 		} else {
 			path = "config.template.yml"
