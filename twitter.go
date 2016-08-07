@@ -40,44 +40,29 @@ func twitterCheckUser(user string) (bool, error) {
 	return false, nil
 }
 
-func twitterRetweet(screenName string, trimUser bool, check func(anaconda.Tweet) bool) error {
+func twitterRetweet(name string, trimUser bool, check func(anaconda.Tweet) bool) error {
 	v := url.Values{}
-	v.Set("screen_name", screenName)
+	v.Set("screen_name", name)
 	tweets, err := twitterApi.GetUserTimeline(v)
 	if err != nil {
 		return err
 	}
-	latestId, exists := cache.LatestTweetId[screenName]
-	nameToTweet := make(map[string]anaconda.Tweet)
-	finds := false
-	updates := false
+	latestId, exists := cache.LatestTweetId[name]
+	found := false
 	for i := len(tweets) - 1; i >= 0; i-- {
-		tweet := tweets[i]
-		if check(tweet) {
-			if exists && latestId == tweet.Id {
-				finds = true
-			} else {
-				if finds {
-					updates = true
-					cache.LatestTweetId[screenName] = tweet.Id
-					t, err := twitterApi.Retweet(tweet.Id, trimUser)
-					nameToTweet[screenName] = t
-					if err != nil {
-						return err
-					}
-				}
+		t := tweets[i]
+		if exists && latestId == t.Id {
+			found = true
+		} else if check(t) && (!exists || found) {
+			cache.LatestTweetId[name] = t.Id
+			_, err := twitterApi.Retweet(t.Id, trimUser)
+			if err != nil {
+				return err
 			}
-		}
-	}
-	if !exists && updates {
-		t := nameToTweet[screenName]
-		_, err := twitterApi.Retweet(t.Id, trimUser)
-		if err != nil {
-			return err
-		}
-		err = twitterPostInfo(t)
-		if err != nil {
-			return err
+			err = twitterPostInfo(t)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
