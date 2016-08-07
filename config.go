@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -52,7 +53,11 @@ type notificationConfig struct {
 
 func unmarshalConfig(path string) error {
 	if path == "" {
-		path = "config.yml"
+		if info, _ := os.Stat("config.yml"); info != nil && !info.IsDir() {
+			path = "config.yml"
+		} else {
+			path = "config.template.yml"
+		}
 	}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
