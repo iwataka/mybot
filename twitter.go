@@ -106,6 +106,9 @@ func twitterPost(msg string) error {
 }
 
 func twitterTalk() error {
+	if !config.Talk.Enabled {
+		return nil
+	}
 	dms, err := twitterApi.GetDirectMessages(nil)
 	if err != nil {
 		return err
