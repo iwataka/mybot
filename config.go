@@ -2,7 +2,6 @@ package main
 
 import (
 	"io/ioutil"
-	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -10,54 +9,70 @@ import (
 var config = &mybotConfig{}
 
 type mybotConfig struct {
-	Tweet        *tweetConfig
-	Talk         *talkConfig
-	UserGroup    *userGroupConfig `yaml:"userGroup"`
-	Notification *notificationConfig
+	GitHub         *githubConfig `yaml:"github"`
+	Retweet        *retweetConfig
+	Interaction    *interactionConfig
+	Log            *logConfig
+	Authentication *authenticationConfig
+	Option         *optionConfig
 }
 
-type tweetConfig struct {
-	Github            []githubConfig
-	Retweet           []retweetConfig
-	Interval          int
+type githubConfig struct {
+	Projects []projectConfig
+	Duration string
+}
+
+type projectConfig struct {
+	User string
+	Repo string
+}
+
+type retweetConfig struct {
+	Accounts     []accountConfig
+	Notification *notificationConfig
+	Duration     string
+}
+
+type accountConfig struct {
+	Name     string
+	Patterns []string
+	Opts     map[string]bool
+}
+
+type notificationConfig struct {
+	Place *placeConfig
+}
+
+type placeConfig struct {
+	AllowSelf bool `yaml:"allowSelf"`
+	Users     []string
+}
+
+type interactionConfig struct {
+	Duration  string
+	AllowSelf bool `yaml:"allowSelf"`
+	Users     []string
+}
+
+type logConfig struct {
+	AllowSelf bool `yaml:"allowSelf"`
+	Users     []string
+}
+
+type authenticationConfig struct {
 	ConsumerKey       string `yaml:"consumerKey"`
 	ConsumerSecret    string `yaml:"consumerSecret"`
 	AccessToken       string `yaml:"accessToken"`
 	AccessTokenSecret string `yaml:"accessTokenSecret"`
 }
 
-type githubConfig struct {
-	User string
-	Repo string
-}
-
-type retweetConfig struct {
-	Name     string
-	Patterns []string
-	Opts     map[string]bool
-}
-
-type talkConfig struct {
-	Enabled  bool
-	Interval int
-}
-
-type userGroupConfig struct {
-	IncludeSelf bool `yaml:"includeSelf"`
-	Users       []string
-}
-
-type notificationConfig struct {
-	Place bool
+type optionConfig struct {
+	Name string
 }
 
 func unmarshalConfig(path string) error {
 	if path == "" {
-		if info, _ := os.Stat("config.yml"); info != nil && !info.IsDir() {
-			path = "config.yml"
-		} else {
-			path = "config.template.yml"
-		}
+		path = "config.yml"
 	}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {

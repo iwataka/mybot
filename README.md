@@ -1,12 +1,62 @@
-# My bot
+# Mybot
 
 ## Usage
 
-Run `setup.sh` to deploy on [docker](https://www.docker.com/).
-Make sure that you've installed [docker](https://www.docker.com/) on your machine.
+First, you should create `config.yml` in this project root or anywhere else if
+you want to specify the location when executing the command.
 
-## ToDo
+Example configuration is like below:
 
-+ Create Web interface to edit the configuration
-+ Reduce the number of logs
-+ Improve notifications (country of tweets, ...)
+```yaml
+github:
+        projects:
+                - user: vim
+                  repo: vim
+                - user: golang
+                  repo: go
+        duration: 30m
+
+retweet:
+        accounts:
+                - name: golang
+                  patterns
+                          - is released!
+                          - "#golang"
+                  opts:
+                          retweeted: false
+                - name: vimtips
+                  opts:
+                          hasMedia: false
+                          hasUrl: true
+                          retweeted: false
+        notification:
+                place:
+                        allowSelf: true
+                        # users:
+                        #         - foo
+                        #         - bar
+        duration: 30m
+
+interaction:
+        duration: 30s
+        # users:
+        #         - foo
+        #         - bar
+
+log:
+        allowSelf: true
+        # users:
+        #         - foo
+        #         - bar
+
+authentication:
+        consumerKey: TWITTER_CONSUMER_KEY
+        consumerSecret: TWITTER_CONSUMER_SECRET
+        accessToken: TWITTER_ACCESS_TOKEN
+        accessTokenSecret: TWITTER_ACCESS_TOKEN_SECRET
+
+option:
+        name: Iwataka
+```
+
+Then run `mybot serve` and that's all.

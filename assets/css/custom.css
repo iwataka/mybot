@@ -1,0 +1,17 @@
+.jumbotron {
+        background-color: transparent;
+        text-align: center;
+}
+
+.container {
+        max-width: 800px;
+}
+
+.panel-title {
+        text-transform: uppercase;
+}
+
+pre {
+        border: none;
+        background-color: transparent;
+}

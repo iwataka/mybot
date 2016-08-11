@@ -1,18 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <meta charset="UTF-8">
-        <title>Mybot</title>
+    <meta charset="UTF-8">
+    <title>{{ .Title }}</title>
 </head>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+<link rel="stylesheet" href="/assets/css/custom.css">
 <body>
-        <h1>Welcome to Mybot!</h1>
-        <ul>
-                <li>
-                        You can customize Your Mybot <a href="/config">here</a>.
-                </li>
-                <li>
-                        You can see the logs from Your Mybot <a href="/log">here</a>.
-                </li>
-        </ul>
+    <div class="container">
+        <div class="jumbotron transparent">
+            <h1>{{ .Header }}</h1>
+            <h2>automatically collect and broadcast any kinds of information for you</h2>
+            <a href="https://twitter.com/{{ .BotName }}" class="btn btn-social-icon btn-twitter"><span class="fa fa-twitter" style="font-size: 40px;"></span></a>
+        </div>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">Why Mybot?</h3>
+            </div>
+            <div class="panel-body">
+                Firstly I want to make my Twitter doing more intelligence things automatically and As a result, I've published Mybot, which is a framework to create your own bot of Twitter.
+            </div>
+        </div>
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title">Error Log</h3>
+            </div>
+            {{ if .LogExists }}
+            <div class="panel-body"><pre><code>{{ .Log }}</code></pre></div>
+            {{ else }}
+            <div class="panel-body">
+                <em>Nothing to show</em>
+            </div>
+            {{ end }}
+        </div>
+    </div>
 </body>
 </html>

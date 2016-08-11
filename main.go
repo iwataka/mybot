@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -76,14 +77,17 @@ func main() {
 }
 
 func beforeRunning(c *cli.Context) error {
-	err := unmarshalCache(c.String("cache"))
+	err := initLogger(c.String("log"))
+	exitIfError(err, 1)
+
+	err = unmarshalCache(c.String("cache"))
 	exitIfError(err, 1)
 	err = unmarshalConfig(c.String("config"))
 	exitIfError(err, 1)
 
-	anaconda.SetConsumerKey(config.Tweet.ConsumerKey)
-	anaconda.SetConsumerSecret(config.Tweet.ConsumerSecret)
-	twitterApi = anaconda.NewTwitterApi(config.Tweet.AccessToken, config.Tweet.AccessTokenSecret)
+	anaconda.SetConsumerKey(config.Authentication.ConsumerKey)
+	anaconda.SetConsumerSecret(config.Authentication.ConsumerSecret)
+	twitterApi = anaconda.NewTwitterApi(config.Authentication.AccessToken, config.Authentication.AccessTokenSecret)
 
 	githubApi = github.NewClient(nil)
 
@@ -91,28 +95,58 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	err := initLogger(c.String("log"))
-	exitIfError(err, 1)
-
-	runOnce(c, handleError)
+	runOnce(c, logError)
 	return nil
 }
 
 func serve(c *cli.Context) error {
-	err := initLogger(c.String("log"))
-	exitIfError(err, 1)
+	ghMutex := new(sync.Mutex)
+	rtMutex := new(sync.Mutex)
 
 	go func() {
 		for {
-			handleError(twitterTalk())
-			time.Sleep(time.Second * time.Duration(config.Talk.Interval))
+			logError(twitterInteract())
+			d, err := time.ParseDuration(config.Interaction.Duration)
+			logFatal(err)
+			time.Sleep(d)
 		}
 	}()
 
 	go func() {
 		for {
-			runOnce(c, handleError)
-			time.Sleep(time.Minute * time.Duration(config.Tweet.Interval))
+			ghMutex.Lock()
+			runGitHub(c, logError)
+			ghMutex.Unlock()
+
+			d, err := time.ParseDuration(config.GitHub.Duration)
+			logFatal(err)
+			time.Sleep(d)
+		}
+	}()
+
+	go func() {
+		for {
+			rtMutex.Lock()
+			runRetweet(c, logError)
+			rtMutex.Unlock()
+
+			d, err := time.ParseDuration(config.Retweet.Duration)
+			logFatal(err)
+			time.Sleep(d)
+		}
+	}()
+
+	go func() {
+		for {
+			ghMutex.Lock()
+			rtMutex.Lock()
+			unmarshalConfig(c.String("config"))
+			ghMutex.Unlock()
+			rtMutex.Unlock()
+
+			d, err := getMinDuration()
+			logFatal(err)
+			time.Sleep(d)
 		}
 	}()
 
@@ -120,29 +154,63 @@ func serve(c *cli.Context) error {
 	return nil
 }
 
+func getMinDuration() (time.Duration, error) {
+	gd, err := time.ParseDuration(config.GitHub.Duration)
+	if err != nil {
+		return 0, err
+	}
+	rd, err := time.ParseDuration(config.Retweet.Duration)
+	if err != nil {
+		return 0, err
+	}
+	if gd < rd {
+		return time.Duration(gd), nil
+	} else {
+		return time.Duration(rd), nil
+	}
+}
+
+func runGitHub(c *cli.Context, handle func(error)) {
+	for _, proj := range config.GitHub.Projects {
+		handle(githubCommitTweet(proj.User, proj.Repo))
+	}
+}
+
+func runRetweet(c *cli.Context, handle func(error)) {
+	for _, account := range config.Retweet.Accounts {
+		handle(retweetTarget(account))
+	}
+}
+
 func runOnce(c *cli.Context, handle func(error)) {
 	err := unmarshalConfig(c.String("config"))
 	handle(err)
-	for _, proj := range config.Tweet.Github {
-		handle(githubCommitTweet(proj.User, proj.Repo))
-	}
-	for _, target := range config.Tweet.Retweet {
-		handle(retweetTarget(target))
-	}
+	runGitHub(c, handle)
+	runRetweet(c, handle)
 	handle(marshalCache(c.String("cache")))
 }
 
-func handleError(err error) {
+func logError(err error) {
 	if err != nil {
-		e := twitterPost(err.Error())
-		if e != nil {
-			logger.Println(e)
+		l := config.Log
+		if l != nil {
+			e := twitterPost(err.Error(), l.AllowSelf, l.Users)
+			if e != nil {
+				logger.Println(e)
+			}
 		}
 		logger.Println(err)
 	}
 }
 
-func retweetTarget(target retweetConfig) error {
+func logFatal(err error) {
+	logError(err)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func retweetTarget(target accountConfig) error {
 	regexps := make([]*regexp.Regexp, len(target.Patterns), len(target.Patterns))
 	for i, pat := range target.Patterns {
 		r, err := regexp.Compile(pat)

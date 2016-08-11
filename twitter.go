@@ -22,8 +22,8 @@ func getTwitterSelf() (string, error) {
 	return twitterSelf, nil
 }
 
-func twitterCheckUser(user string) (bool, error) {
-	if config.UserGroup.IncludeSelf {
+func twitterCheckUser(user string, allowSelf bool, users []string) (bool, error) {
+	if allowSelf {
 		self, err := getTwitterSelf()
 		if err != nil {
 			return false, err
@@ -32,7 +32,7 @@ func twitterCheckUser(user string) (bool, error) {
 			return true, nil
 		}
 	}
-	for _, u := range config.UserGroup.Users {
+	for _, u := range users {
 		if user == u {
 			return true, nil
 		}
@@ -59,7 +59,7 @@ func twitterRetweet(name string, trimUser bool, check func(anaconda.Tweet) bool)
 			if err != nil {
 				return err
 			}
-			err = twitterPostInfo(t)
+			err = twitterPostInfo(t, config.Retweet)
 			if err != nil {
 				return err
 			}
@@ -68,59 +68,75 @@ func twitterRetweet(name string, trimUser bool, check func(anaconda.Tweet) bool)
 	return nil
 }
 
-func twitterPostInfo(t anaconda.Tweet) error {
-	if config.Notification.Place && t.HasCoordinates() {
+func twitterPostInfo(t anaconda.Tweet, c *retweetConfig) error {
+	if c.Notification.Place != nil && t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		return twitterPost(msg)
+		allowSelf := c.Notification.Place.AllowSelf
+		users := c.Notification.Place.Users
+		return twitterPost(msg, allowSelf, users)
 	}
 	return nil
 }
 
-func twitterPost(msg string) error {
-	for _, user := range config.UserGroup.Users {
-		twitterApi.PostDMToScreenName(msg, user)
+func twitterPost(msg string, allowSelf bool, users []string) error {
+	for _, user := range users {
+		_, err := twitterApi.PostDMToScreenName(msg, user)
+		if err != nil {
+			return err
+		}
 	}
-	if config.UserGroup.IncludeSelf {
+	if allowSelf {
 		self, err := getTwitterSelf()
 		if err != nil {
 			return err
 		}
-		twitterApi.PostDMToScreenName(msg, self)
+		_, err = twitterApi.PostDMToScreenName(msg, self)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func twitterTalk() error {
-	if !config.Talk.Enabled {
+func twitterInteract() error {
+	if config.Interaction == nil {
 		return nil
 	}
 	dms, err := twitterApi.GetDirectMessages(nil)
 	if err != nil {
 		return err
 	}
-	userToDM := make(map[string]anaconda.DirectMessage)
+	senderToDM := make(map[string]anaconda.DirectMessage)
 	for _, dm := range dms {
 		sender := dm.SenderScreenName
-		allowed, err := twitterCheckUser(sender)
+		allowed, err := twitterCheckUser(sender, false, config.Interaction.Users)
 		if err != nil {
 			return err
 		}
 		if allowed {
-			_, exists := userToDM[sender]
+			_, exists := senderToDM[sender]
 			if !exists {
-				userToDM[sender] = dm
+				senderToDM[sender] = dm
 			}
 		}
 	}
-	for user, dm := range userToDM {
-		latest, exists := cache.LatestDM[user]
-		if !exists || latest != dm.Id {
-			res, err := twitterApi.PostDMToScreenName(dm.Text, user)
-			if err != nil {
-				return err
-			}
-			cache.LatestDM[user] = res.Id
+	for sender, dm := range senderToDM {
+		err := twitterResponse(sender, dm)
+		if err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+func twitterResponse(sender string, dm anaconda.DirectMessage) error {
+	latest, exists := cache.LatestDM[sender]
+	if !exists || latest != dm.Id {
+		res, err := twitterApi.PostDMToScreenName(dm.Text, sender)
+		if err != nil {
+			return err
+		}
+		cache.LatestDM[sender] = res.Id
 	}
 	return nil
 }

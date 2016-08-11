@@ -23,7 +23,7 @@ func TestLogger(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	tmp := filepath.Join(dir, "mybot-test-logger.log")
-	_, err = newLogger(tmp)
+	err = initLogger(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
