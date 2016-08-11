@@ -20,7 +20,7 @@ func initHttp() {
 	http.HandleFunc("/", handler)
 	assets := http.FileServer(http.Dir("assets"))
 	http.Handle("/assets/", http.StripPrefix("/assets/", assets))
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+config.Option.Port, nil)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

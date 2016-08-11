@@ -6,7 +6,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var config = &mybotConfig{}
+var config = &mybotConfig{
+	Option: &optionConfig{Port: "8080"},
+}
 
 type mybotConfig struct {
 	GitHub         *githubConfig `yaml:"github"`
@@ -68,6 +70,7 @@ type authenticationConfig struct {
 
 type optionConfig struct {
 	Name string
+	Port string
 }
 
 func unmarshalConfig(path string) error {
