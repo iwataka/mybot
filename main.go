@@ -22,21 +22,25 @@ var (
 var logFlag = cli.StringFlag{
 	Name:  "log",
 	Value: ".mybot-debug.log",
+	Usage: "Log file's location",
 }
 
 var configFlag = cli.StringFlag{
 	Name:  "config",
 	Value: "config.yml",
+	Usage: "Config file's location",
 }
 
 var cacheFlag = cli.StringFlag{
 	Name:  "cache",
 	Value: os.ExpandEnv("$HOME/.cache/mybot/cache.json"),
+	Usage: "Cache file's location",
 }
 
 var visionCredentialFlag = cli.StringFlag{
-	Name:  "vision-credential",
+	Name:  "gcp-credential",
 	Value: "credential.json",
+	Usage: "Location of Google Cloud Platform credential file",
 }
 
 var flags = []cli.Flag{
@@ -49,12 +53,14 @@ var flags = []cli.Flag{
 func main() {
 	app := cli.NewApp()
 	app.Name = "mybot"
-	app.Version = "0.0.1"
+	app.Version = "0.1"
+	app.Usage = "Automatically collect and broadcast information based on your configuration"
+	app.Author = "iwataka"
 
 	runCmd := cli.Command{
 		Name:    "run",
 		Aliases: []string{"r"},
-		Usage:   "send messages once",
+		Usage:   "Runs the non-interactive functions only one time (almost for test usage)",
 		Flags:   flags,
 		Before:  beforeRunning,
 		Action:  run,
@@ -63,7 +69,7 @@ func main() {
 	serveCmd := cli.Command{
 		Name:    "serve",
 		Aliases: []string{"s"},
-		Usage:   "send messages periodically",
+		Usage:   "Runs the all functions (both interactive and non-interactive) periodically",
 		Flags:   flags,
 		Before:  beforeRunning,
 		Action:  serve,
@@ -97,7 +103,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	// visionAPI is nil if there exists no credential file
-	visionAPI, err = NewVisionAPI(c.String("vision-credential"))
+	visionAPI, err = NewVisionAPI(c.String("gcp-credential"))
 	logger.InfoIfError(err)
 
 	return nil
@@ -172,7 +178,7 @@ func serve(c *cli.Context) error {
 			case event := <-w.Events:
 				if event.Op&fsnotify.Write == fsnotify.Write &&
 					event.Op&fsnotify.Create == fsnotify.Create {
-					a, err := NewVisionAPI(c.String("vision-credential"))
+					a, err := NewVisionAPI(c.String("gcp-credential"))
 					logger.InfoIfError(err)
 					if err == nil {
 						visionAPI = a
