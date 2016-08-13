@@ -4,3 +4,4 @@ mybot.exe
 .mybot-debug.log
 config.yml
 credential.json
+bindata.go

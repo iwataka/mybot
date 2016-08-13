@@ -11,6 +11,10 @@
         text-transform: uppercase;
 }
 
+div.jumbotron a span.fa {
+        font-size: 40px;
+}
+
 pre {
         border: none;
         background-color: transparent;

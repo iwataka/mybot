@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -14,10 +12,10 @@ type HTTPServer struct {
 	TwitterAPI *TwitterAPI
 }
 
-func (s *HTTPServer) initHTTP() error {
+func (s *HTTPServer) Init() error {
 	http.HandleFunc("/", s.handler)
-	assets := http.FileServer(http.Dir("assets"))
-	http.Handle("/assets/", http.StripPrefix("/assets/", assets))
+	http.HandleFunc("/assets/css/custom.css", s.customCssHandler)
+	http.HandleFunc("/404", s.notFoundHandler)
 	err := http.ListenAndServe(":"+s.Port, nil)
 	if err != nil {
 		return err
@@ -26,34 +24,57 @@ func (s *HTTPServer) initHTTP() error {
 }
 
 func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
-	index, err := ioutil.ReadFile("index.html")
-	tmpl, err := template.New("index").Parse(string(index))
+	if r.URL.Path == "/" {
+		index, err := Asset("index.html")
+		tmpl, err := template.New("index").Parse(string(index))
+		if err != nil {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+
+		log := s.Logger.ReadString()
+		self, err := s.TwitterAPI.GetSelfCache()
+		if err != nil {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+		botName := self.ScreenName
+
+		data := &struct {
+			UserName string
+			Log      string
+			BotName  string
+		}{
+			s.Name,
+			log,
+			botName,
+		}
+
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			return
+		}
+	} else {
+		http.Redirect(w, r, "/404", http.StatusSeeOther)
+	}
+}
+
+func (s *HTTPServer) notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := Asset("404.html")
 	if err != nil {
-		fmt.Fprintln(w, err)
+		s.Logger.InfoIfError(err)
 		return
 	}
+	w.Write(data)
+}
 
-	log := s.Logger.ReadString()
-	self, err := s.TwitterAPI.GetSelfCache()
+func (s *HTTPServer) customCssHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := Asset("assets/css/custom.css")
 	if err != nil {
-		fmt.Fprintln(w, err)
+		s.Logger.InfoIfError(err)
 		return
 	}
-	botName := self.ScreenName
-
-	data := &struct {
-		UserName string
-		Log      string
-		BotName  string
-	}{
-		s.Name,
-		log,
-		botName,
-	}
-
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		fmt.Fprintln(w, err)
-		return
-	}
+	w.Header().Set("Content-Type", "text/css")
+	w.Write(data)
 }

@@ -8,6 +8,8 @@ import (
 	"github.com/urfave/cli"
 )
 
+//go:generate go-bindata assets/... index.html 404.html
+
 var (
 	twitterAPI *TwitterAPI
 	githubAPI  *GitHubAPI
@@ -165,7 +167,7 @@ func serve(c *cli.Context) error {
 	s := config.Option
 	s.Logger = logger
 	s.TwitterAPI = twitterAPI
-	err := s.initHTTP()
+	err := s.Init()
 	if err != nil {
 		panic(err)
 	}
