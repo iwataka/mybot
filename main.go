@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -18,7 +21,7 @@ var (
 	visionAPI  *VisionAPI
 	config     *MybotConfig
 	cache      *MybotCache
-	logger     *MultiLogger
+	logger     *Logger
 )
 
 var logFlag = cli.StringFlag{
@@ -109,8 +112,7 @@ func beforeRunning(c *cli.Context) error {
 	githubAPI = NewGitHubAPI(nil, cache)
 	twitterAPI = NewTwitterAPI(config.Authentication, cache)
 
-	twitterLogger := NewTwitterLogger(twitterAPI, config.Log)
-	logger, err = NewLogger(c.String("log"), "", -1, []Logger{twitterLogger})
+	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
 		panic(err)
 	}
@@ -165,17 +167,28 @@ func serve(c *cli.Context) error {
 	}()
 
 	go func() {
+		p := c.String("config")
+		f := filepath.Base(p)
+
 		w, err := fsnotify.NewWatcher()
 		logger.InfoIfError(err)
-		w.Add(c.String("config"))
+		err = w.Add(filepath.Dir(p))
+		logger.InfoIfError(err)
 		defer w.Close()
+
 		for {
 			select {
 			case event := <-w.Events:
-				logger.Info(event.String())
-				if event.Op&fsnotify.Chmod != fsnotify.Chmod {
-					err := config.ReadFile(c.String("config"))
+				if event.Op&fsnotify.Chmod != fsnotify.Chmod &&
+					strings.HasSuffix(event.Name, f) {
+					cfg, err := NewMybotConfig(p)
 					logger.InfoIfError(err)
+					if err == nil {
+						if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
+							*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache)
+						}
+						*config = *cfg
+					}
 				}
 			case err := <-w.Errors:
 				logger.InfoIfError(err)
@@ -184,14 +197,20 @@ func serve(c *cli.Context) error {
 	}()
 
 	go func() {
+		p := c.String("gcp-credential")
+		f := filepath.Base(p)
+
 		w, err := fsnotify.NewWatcher()
 		logger.InfoIfError(err)
-		w.Add(c.String("gcp-credential"))
+		err = w.Add(p)
+		logger.InfoIfError(err)
 		defer w.Close()
+
 		for {
 			select {
 			case event := <-w.Events:
-				if event.Op&fsnotify.Chmod != fsnotify.Chmod {
+				if event.Op&fsnotify.Chmod != fsnotify.Chmod &&
+					strings.HasSuffix(event.Name, f) {
 					a, err := NewVisionAPI(c.String("gcp-credential"))
 					logger.InfoIfError(err)
 					if err == nil {

@@ -8,7 +8,7 @@ import (
 type HTTPServer struct {
 	Name       string
 	Port       string
-	Logger     *MultiLogger
+	Logger     *Logger
 	TwitterAPI *TwitterAPI
 	VisionAPI  *VisionAPI
 }

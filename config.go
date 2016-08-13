@@ -24,7 +24,10 @@ type MybotConfig struct {
 		AllowSelf bool `yaml:"allowSelf"`
 		Users     []string
 	}
-	Log            *TwitterLogConfig
+	Log *struct {
+		AllowSelf bool `yaml:"allowSelf"`
+		Users     []string
+	}
 	Authentication *TwitterAuth
 	Option         *HTTPServer
 }
@@ -33,23 +36,15 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 	c := &MybotConfig{
 		Option: &HTTPServer{Port: "8080"},
 	}
-	err := c.ReadFile(path)
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(bytes, c)
 	if err != nil {
 		return nil, err
 	}
 	return c, nil
-}
-
-func (c *MybotConfig) ReadFile(path string) error {
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	err = yaml.Unmarshal(bytes, c)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (c *MybotConfig) Save(path string) error {

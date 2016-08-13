@@ -4,36 +4,32 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 )
 
-type MultiLogger struct {
+type Logger struct {
 	*log.Logger
-	logFile string
-	loggers []Logger
+	logFile    string
+	twitterAPI *TwitterAPI
+	config     *MybotConfig
 }
 
-type Logger func(string) error
-
-func NewLogger(path string, prefix string, flag int, ls []Logger) (*MultiLogger, error) {
+func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, error) {
 	if flag < 0 {
 		flag = log.Ldate | log.Ltime | log.Lshortfile
-	}
-	if info, err := os.Stat(path); os.IsExist(err) && info.IsDir() {
-		path = filepath.Join(path, ".mybot-debug.log")
 	}
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
 	}
-	l := log.New(f, prefix, flag)
-	return &MultiLogger{l, path, ls}, nil
+	l := log.New(f, "", flag)
+	return &Logger{l, path, a, c}, nil
 }
 
-func (l *MultiLogger) Info(msg string) {
-	if l.loggers != nil {
-		for _, logger := range l.loggers {
-			err := logger(msg)
+func (l *Logger) Info(msg string) {
+	if l.twitterAPI != nil {
+		c := l.config.Log
+		if c != nil {
+			err := l.twitterAPI.PostDMToAll(msg, c.AllowSelf, c.Users)
 			if err != nil {
 				l.Println(err)
 			}
@@ -42,20 +38,20 @@ func (l *MultiLogger) Info(msg string) {
 	l.Println(msg)
 }
 
-func (l *MultiLogger) InfoIfError(err error) {
+func (l *Logger) InfoIfError(err error) {
 	if err != nil {
 		l.Info(err.Error())
 	}
 }
 
-func (l *MultiLogger) FatalIfError(err error) {
+func (l *Logger) FatalIfError(err error) {
 	l.InfoIfError(err)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (l *MultiLogger) ReadString() string {
+func (l *Logger) ReadString() string {
 	out, err := ioutil.ReadFile(l.logFile)
 	if err != nil {
 		return ""

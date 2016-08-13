@@ -60,17 +60,3 @@ func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
 		return true, nil
 	}
 }
-
-type TwitterLogConfig struct {
-	AllowSelf bool `yaml:"allowSelf"`
-	Users     []string
-}
-
-func NewTwitterLogger(a *TwitterAPI, c *TwitterLogConfig) Logger {
-	return func(msg string) error {
-		if c != nil {
-			return twitterAPI.PostDMToAll(msg, c.AllowSelf, c.Users)
-		}
-		return nil
-	}
-}
