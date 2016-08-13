@@ -1,32 +1,51 @@
 package main
 
-import "github.com/google/go-github/github"
+import (
+	"net/http"
 
-var githubApi *github.Client
+	"github.com/google/go-github/github"
+)
 
-func githubCommit(user, repo string) (*github.RepositoryCommit, error) {
-	commits, _, err := githubApi.Repositories.ListCommits(user, repo, nil)
+type GitHubAPI struct {
+	*github.Client
+	cache *MybotCache
+}
+
+func NewGitHubAPI(c *http.Client, cache *MybotCache) *GitHubAPI {
+	return &GitHubAPI{
+		github.NewClient(c),
+		cache,
+	}
+}
+
+type GitHubProject struct {
+	User string
+	Repo string
+}
+
+func (a *GitHubAPI) LatestCommit(p GitHubProject) (*github.RepositoryCommit, error) {
+	commits, _, err := a.Repositories.ListCommits(p.User, p.Repo, nil)
 	if err != nil {
 		return nil, err
 	}
 	latest := commits[0]
-	userMap, userExists := cache.LatestCommitSHA[user]
+	userMap, userExists := a.cache.LatestCommitSHA[p.User]
 	sha := ""
 	repoExists := false
 	if userExists {
-		sha, repoExists = userMap[repo]
+		sha, repoExists = userMap[p.Repo]
 	}
 	if !userExists || !repoExists || sha != *latest.SHA {
-		return latest, nil
-		msg := user + "/" + repo + "\n" + *latest.HTMLURL
-		_, err := twitterApi.PostTweet(msg, nil)
+		msg := p.User + "/" + p.Repo + "\n" + *latest.HTMLURL
+		_, err := twitterAPI.PostTweet(msg, nil)
 		if err != nil {
 			return nil, err
 		}
 		if !userExists {
-			cache.LatestCommitSHA[user] = make(map[string]string)
+			a.cache.LatestCommitSHA[p.User] = make(map[string]string)
 		}
-		cache.LatestCommitSHA[user][repo] = *latest.SHA
+		a.cache.LatestCommitSHA[p.User][p.Repo] = *latest.SHA
+		return latest, nil
 	}
 	return nil, nil
 }

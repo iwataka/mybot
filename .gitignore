@@ -3,3 +3,4 @@ mybot
 mybot.exe
 .mybot-debug.log
 config.yml
+credential.json

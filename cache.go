@@ -7,55 +7,46 @@ import (
 	"path/filepath"
 )
 
-var (
-	defaultCachePath = os.ExpandEnv("$HOME/.cache/mybot/cache.json")
-	cache            *mybotCache
-)
-
-type mybotCache struct {
-	LatestCommitSHA map[string]map[string]string
-	LatestTweetId   map[string]int64
-	LatestDM        map[string]int64
+type MybotCache struct {
+	LatestCommitSHA       map[string]map[string]string
+	LatestTweetID         map[string]int64
+	LatestDirectMessageID map[string]int64
 }
 
-func unmarshalCache(path string) error {
-	if path == "" {
-		path = defaultCachePath
-	}
-
-	if cache == nil {
-		cache = &mybotCache{
-			make(map[string]map[string]string),
-			make(map[string]int64),
-			make(map[string]int64),
-		}
+func NewMybotCache(path string) (*MybotCache, error) {
+	c := &MybotCache{
+		make(map[string]map[string]string),
+		make(map[string]int64),
+		make(map[string]int64),
 	}
 
 	info, _ := os.Stat(path)
 	if info != nil && !info.IsDir() {
 		data, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
+
+		// If the specified file is empty, returns empty cache
+		if len(data) == 0 {
+			return c, nil
 		}
-		err = json.Unmarshal(data, cache)
+
 		if err != nil {
-			return err
+			return c, err
+		}
+		err = json.Unmarshal(data, c)
+		if err != nil {
+			return c, err
 		}
 	}
-	return nil
+	return c, nil
 }
 
-func marshalCache(path string) error {
-	var err error
-	if path == "" {
-		path = defaultCachePath
-	}
-	err = os.MkdirAll(filepath.Dir(path), 0600)
+func (c *MybotCache) Save(path string) error {
+	err := os.MkdirAll(filepath.Dir(path), 0600)
 	if err != nil {
 		return err
 	}
-	if cache != nil {
-		data, err := json.Marshal(cache)
+	if c != nil {
+		data, err := json.Marshal(c)
 		if err != nil {
 			return err
 		}

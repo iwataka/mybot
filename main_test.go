@@ -13,9 +13,18 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	unmarshalCache(path)
-	marshalCache(path)
-	unmarshalCache(path)
+	c, err := NewMybotCache(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.Save(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err = NewMybotCache(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestLogger(t *testing.T) {
@@ -23,7 +32,7 @@ func TestLogger(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	tmp := filepath.Join(dir, "mybot-test-logger.log")
-	err = initLogger(tmp)
+	_, err = NewLogger(tmp, "", -1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

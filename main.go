@@ -1,52 +1,47 @@
 package main
 
 import (
-	"log"
 	"os"
-	"path/filepath"
-	"regexp"
 	"sync"
 	"time"
 
-	"github.com/ChimeraCoder/anaconda"
-	"github.com/google/go-github/github"
 	"github.com/urfave/cli"
 )
 
 var (
-	logger  *log.Logger
-	logFile string
+	twitterAPI *TwitterAPI
+	githubAPI  *GitHubAPI
+	visionAPI  *VisionAPI
+	config     *MybotConfig
+	cache      *MybotCache
+	logger     *MultiLogger
 )
 
 var logFlag = cli.StringFlag{
 	Name:  "log",
-	Value: "",
+	Value: ".mybot-debug.log",
 }
 
 var configFlag = cli.StringFlag{
 	Name:  "config",
-	Value: "",
+	Value: "config.yml",
 }
 
 var cacheFlag = cli.StringFlag{
 	Name:  "cache",
-	Value: "",
+	Value: os.ExpandEnv("$HOME/.cache/mybot/cache.json"),
 }
 
-func initLogger(path string) error {
-	logFlag := log.Ldate | log.Ltime | log.Lshortfile
-	logFile = path
-	if logFile == "" {
-		logFile = ".mybot-debug.log"
-	} else if info, err := os.Stat(logFile); os.IsExist(err) && info.IsDir() {
-		logFile = filepath.Join(logFile, ".mybot-debug.log")
-	}
-	file, err := os.Create(logFile)
-	if err != nil {
-		return err
-	}
-	logger = log.New(file, "", logFlag)
-	return nil
+var visionCredentialFlag = cli.StringFlag{
+	Name:  "vision-credential",
+	Value: "credential.json",
+}
+
+var flags = []cli.Flag{
+	logFlag,
+	configFlag,
+	cacheFlag,
+	visionCredentialFlag,
 }
 
 func main() {
@@ -58,7 +53,7 @@ func main() {
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "send messages once",
-		Flags:   []cli.Flag{logFlag, configFlag, cacheFlag},
+		Flags:   flags,
 		Before:  beforeRunning,
 		Action:  run,
 	}
@@ -67,35 +62,49 @@ func main() {
 		Name:    "serve",
 		Aliases: []string{"s"},
 		Usage:   "send messages periodically",
-		Flags:   []cli.Flag{logFlag, configFlag, cacheFlag},
+		Flags:   flags,
 		Before:  beforeRunning,
 		Action:  serve,
 	}
 
 	app.Commands = []cli.Command{runCmd, serveCmd}
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func beforeRunning(c *cli.Context) error {
-	err := initLogger(c.String("log"))
-	exitIfError(err, 1)
+	var err error
+	cache, err = NewMybotCache(c.String("cache"))
+	if err != nil {
+		panic(err)
+	}
+	config, err = NewMybotConfig(c.String("config"))
+	if err != nil {
+		panic(err)
+	}
 
-	err = unmarshalCache(c.String("cache"))
-	exitIfError(err, 1)
-	err = unmarshalConfig(c.String("config"))
-	exitIfError(err, 1)
+	githubAPI = NewGitHubAPI(nil, cache)
+	twitterAPI = NewTwitterAPI(config.Authentication, cache)
 
-	anaconda.SetConsumerKey(config.Authentication.ConsumerKey)
-	anaconda.SetConsumerSecret(config.Authentication.ConsumerSecret)
-	twitterApi = anaconda.NewTwitterApi(config.Authentication.AccessToken, config.Authentication.AccessTokenSecret)
+	twitterLogger := NewTwitterLogger(twitterAPI, config.Log)
+	logger, err = NewLogger(c.String("log"), "", -1, []Logger{twitterLogger})
+	if err != nil {
+		panic(err)
+	}
 
-	githubApi = github.NewClient(nil)
+	// visionAPI is nil if there exists no credential file
+	visionAPI, err = NewVisionAPI(c.String("vision-credential"))
+	logger.InfoIfError(err)
 
 	return nil
 }
 
 func run(c *cli.Context) error {
-	runOnce(c, logError)
+	runGitHub(c, logger.InfoIfError)
+	runRetweet(c, logger.InfoIfError)
+	logger.InfoIfError(cache.Save(c.String("cache")))
 	return nil
 }
 
@@ -105,9 +114,11 @@ func serve(c *cli.Context) error {
 
 	go func() {
 		for {
-			logError(twitterInteract())
+			if config.Interaction != nil {
+				logger.InfoIfError(twitterAPI.Response(config.Interaction.Users))
+			}
 			d, err := time.ParseDuration(config.Interaction.Duration)
-			logFatal(err)
+			logger.FatalIfError(err)
 			time.Sleep(d)
 		}
 	}()
@@ -115,11 +126,11 @@ func serve(c *cli.Context) error {
 	go func() {
 		for {
 			ghMutex.Lock()
-			runGitHub(c, logError)
+			runGitHub(c, logger.InfoIfError)
 			ghMutex.Unlock()
 
 			d, err := time.ParseDuration(config.GitHub.Duration)
-			logFatal(err)
+			logger.FatalIfError(err)
 			time.Sleep(d)
 		}
 	}()
@@ -127,143 +138,76 @@ func serve(c *cli.Context) error {
 	go func() {
 		for {
 			rtMutex.Lock()
-			runRetweet(c, logError)
+			runRetweet(c, logger.InfoIfError)
 			rtMutex.Unlock()
 
 			d, err := time.ParseDuration(config.Retweet.Duration)
-			logFatal(err)
+			logger.FatalIfError(err)
 			time.Sleep(d)
 		}
 	}()
 
 	go func() {
 		for {
+			var err error
 			ghMutex.Lock()
 			rtMutex.Lock()
-			unmarshalConfig(c.String("config"))
+			config, err = NewMybotConfig(c.String("config"))
 			ghMutex.Unlock()
 			rtMutex.Unlock()
 
-			d, err := getMinDuration()
-			logFatal(err)
+			d, err := config.GetReloadDuration()
+			logger.FatalIfError(err)
 			time.Sleep(d)
 		}
 	}()
 
-	initHttp()
+	s := config.Option
+	s.Logger = logger
+	s.TwitterAPI = twitterAPI
+	err := s.initHTTP()
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
-func getMinDuration() (time.Duration, error) {
-	gd, err := time.ParseDuration(config.GitHub.Duration)
-	if err != nil {
-		return 0, err
-	}
-	rd, err := time.ParseDuration(config.Retweet.Duration)
-	if err != nil {
-		return 0, err
-	}
-	if gd < rd {
-		return time.Duration(gd), nil
-	} else {
-		return time.Duration(rd), nil
-	}
-}
-
 func runGitHub(c *cli.Context, handle func(error)) {
-	for _, proj := range config.GitHub.Projects {
-		handle(githubCommitTweet(proj.User, proj.Repo))
+	for _, p := range config.GitHub.Projects {
+		handle(githubCommitTweet(p))
 	}
 }
 
 func runRetweet(c *cli.Context, handle func(error)) {
-	for _, account := range config.Retweet.Accounts {
-		handle(retweetTarget(account))
-	}
-}
-
-func runOnce(c *cli.Context, handle func(error)) {
-	err := unmarshalConfig(c.String("config"))
-	handle(err)
-	runGitHub(c, handle)
-	runRetweet(c, handle)
-	handle(marshalCache(c.String("cache")))
-}
-
-func logError(err error) {
-	if err != nil {
-		l := config.Log
-		if l != nil {
-			e := twitterPost(err.Error(), l.AllowSelf, l.Users)
-			if e != nil {
-				logger.Println(e)
+	for _, a := range config.Retweet.Accounts {
+		ts, err := twitterAPI.RetweetWithChecker(a.Name, false, a.GetChecker(visionAPI))
+		handle(err)
+		if ts != nil {
+			for _, t := range ts {
+				err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Retweet.Notification)
+				handle(err)
 			}
 		}
-		logger.Println(err)
 	}
 }
 
-func logFatal(err error) {
-	logError(err)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func retweetTarget(target accountConfig) error {
-	regexps := make([]*regexp.Regexp, len(target.Patterns), len(target.Patterns))
-	for i, pat := range target.Patterns {
-		r, err := regexp.Compile(pat)
-		if err != nil {
-			return err
-		}
-		regexps[i] = r
-	}
-	return twitterRetweet(target.Name, false, func(t anaconda.Tweet) bool {
-		for _, r := range regexps {
-			if !r.MatchString(t.Text) {
-				return false
-			}
-		}
-		for key, val := range target.Opts {
-			if key == "hasMedia" {
-				if val != (len(t.Entities.Media) != 0) {
-					return false
-				}
-			} else if key == "hasUrl" {
-				if val != (len(t.Entities.Urls) != 0) {
-					return false
-				}
-			} else if key == "retweeted" {
-				if val != t.Retweeted {
-					return false
-				}
-			}
-		}
-		return true
-	})
-}
-
-func githubCommitTweet(user, repo string) error {
-	commit, err := githubCommit(user, repo)
+func githubCommitTweet(p GitHubProject) error {
+	commit, err := githubAPI.LatestCommit(p)
 	if err != nil {
 		return err
 	}
 	if commit != nil {
-		msg := user + "/" + repo + "\n" + *commit.HTMLURL
-		_, err := twitterApi.PostTweet(msg, nil)
+		msg := p.User + "/" + p.Repo + "\n" + *commit.HTMLURL
+		_, err := twitterAPI.PostTweet(msg, nil)
 		if err != nil {
 			return err
 		}
-		updateCommitSHA(user, repo, commit)
+		_, userExists := cache.LatestCommitSHA[p.User]
+		if !userExists {
+			cache.LatestCommitSHA[p.User] = make(map[string]string)
+		}
+		cache.LatestCommitSHA[p.User][p.Repo] = *commit.SHA
 	}
 	return nil
-}
-
-func updateCommitSHA(user, repo string, commit *github.RepositoryCommit) {
-	_, userExists := cache.LatestCommitSHA[user]
-	if !userExists {
-		cache.LatestCommitSHA[user] = make(map[string]string)
-	}
-	cache.LatestCommitSHA[user][repo] = *commit.SHA
 }
