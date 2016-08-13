@@ -30,17 +30,21 @@ func NewLogger(path string, prefix string, flag int, ls []Logger) (*MultiLogger,
 	return &MultiLogger{l, path, ls}, nil
 }
 
-func (l *MultiLogger) InfoIfError(e error) {
-	if e != nil {
-		if l.loggers != nil {
-			for _, logger := range l.loggers {
-				err := logger(e.Error())
-				if err != nil {
-					l.Println(err)
-				}
+func (l *MultiLogger) Info(msg string) {
+	if l.loggers != nil {
+		for _, logger := range l.loggers {
+			err := logger(msg)
+			if err != nil {
+				l.Println(err)
 			}
 		}
-		l.Println(e)
+	}
+	l.Println(msg)
+}
+
+func (l *MultiLogger) InfoIfError(err error) {
+	if err != nil {
+		l.Info(err.Error())
 	}
 }
 

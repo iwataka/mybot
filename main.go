@@ -2,9 +2,9 @@ package main
 
 import (
 	"os"
-	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/urfave/cli"
 )
 
@@ -111,9 +111,6 @@ func run(c *cli.Context) error {
 }
 
 func serve(c *cli.Context) error {
-	ghMutex := new(sync.Mutex)
-	rtMutex := new(sync.Mutex)
-
 	go func() {
 		for {
 			if config.Interaction != nil {
@@ -127,10 +124,7 @@ func serve(c *cli.Context) error {
 
 	go func() {
 		for {
-			ghMutex.Lock()
 			runGitHub(c, logger.InfoIfError)
-			ghMutex.Unlock()
-
 			d, err := time.ParseDuration(config.GitHub.Duration)
 			logger.FatalIfError(err)
 			time.Sleep(d)
@@ -139,10 +133,7 @@ func serve(c *cli.Context) error {
 
 	go func() {
 		for {
-			rtMutex.Lock()
 			runRetweet(c, logger.InfoIfError)
-			rtMutex.Unlock()
-
 			d, err := time.ParseDuration(config.Retweet.Duration)
 			logger.FatalIfError(err)
 			time.Sleep(d)
@@ -150,17 +141,41 @@ func serve(c *cli.Context) error {
 	}()
 
 	go func() {
+		w, err := fsnotify.NewWatcher()
+		logger.InfoIfError(err)
+		defer w.Close()
 		for {
-			var err error
-			ghMutex.Lock()
-			rtMutex.Lock()
-			config, err = NewMybotConfig(c.String("config"))
-			ghMutex.Unlock()
-			rtMutex.Unlock()
+			select {
+			case event := <-w.Events:
+				if event.Op&fsnotify.Write == fsnotify.Write &&
+					event.Op&fsnotify.Create == fsnotify.Create {
+					err := config.ReadFile(c.String("config"))
+					logger.InfoIfError(err)
+				}
+			case err := <-w.Errors:
+				logger.InfoIfError(err)
+			}
+		}
+	}()
 
-			d, err := config.GetReloadDuration()
-			logger.FatalIfError(err)
-			time.Sleep(d)
+	go func() {
+		w, err := fsnotify.NewWatcher()
+		logger.InfoIfError(err)
+		defer w.Close()
+		for {
+			select {
+			case event := <-w.Events:
+				if event.Op&fsnotify.Write == fsnotify.Write &&
+					event.Op&fsnotify.Create == fsnotify.Create {
+					a, err := NewVisionAPI(c.String("vision-credential"))
+					logger.InfoIfError(err)
+					if err == nil {
+						visionAPI = a
+					}
+				}
+			case err := <-w.Errors:
+				logger.InfoIfError(err)
+			}
 		}
 	}()
 

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -31,18 +30,26 @@ type MybotConfig struct {
 }
 
 func NewMybotConfig(path string) (*MybotConfig, error) {
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
 	c := &MybotConfig{
 		Option: &HTTPServer{Port: "8080"},
 	}
-	err = yaml.Unmarshal(bytes, c)
+	err := c.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 	return c, nil
+}
+
+func (c *MybotConfig) ReadFile(path string) error {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(bytes, c)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *MybotConfig) Save(path string) error {
@@ -61,19 +68,4 @@ func (c *MybotConfig) Save(path string) error {
 		}
 	}
 	return nil
-}
-
-func (c *MybotConfig) GetReloadDuration() (time.Duration, error) {
-	gd, err := time.ParseDuration(c.GitHub.Duration)
-	if err != nil {
-		return 0, err
-	}
-	rd, err := time.ParseDuration(c.Retweet.Duration)
-	if err != nil {
-		return 0, err
-	}
-	if gd < rd {
-		return time.Duration(gd), nil
-	}
-	return time.Duration(rd), nil
 }

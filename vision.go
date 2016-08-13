@@ -15,9 +15,6 @@ type VisionAPI struct {
 }
 
 func NewVisionAPI(path string) (*VisionAPI, error) {
-	if path == "" {
-		path = "credential.json"
-	}
 	cred, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
