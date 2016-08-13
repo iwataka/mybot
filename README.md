@@ -8,3 +8,7 @@ you want to specify the location when executing the command.
 See [config.yml](fixture/config.yml) for more details.
 
 Then run `mybot serve` and that's all.
+
+## Development
+
+See [Git-hook scripts](scripts/) to accelerate your development.

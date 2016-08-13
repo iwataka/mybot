@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -e
+
+if [[ ! -d ~/projects/mybot ]]; then
+    git clone ~/repos/mybot ~/projects/mybot
+    cd ~/projects/mybot
+else
+    cd ~/projects/mybot
+    git --git-dir=.git pull ~/repos/mybot master
+fi
+
+set +e
+
+docker exec mybot ps -ef &> /dev/null
+if [[ $? == 0 ]]; then
+    docker restart mybot
+else
+    ./setup.sh
+fi
