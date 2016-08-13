@@ -111,6 +111,11 @@ func run(c *cli.Context) error {
 }
 
 func serve(c *cli.Context) error {
+	s := config.Option
+	s.Logger = logger
+	s.TwitterAPI = twitterAPI
+	s.VisionAPI = visionAPI
+
 	go func() {
 		for {
 			if config.Interaction != nil {
@@ -171,6 +176,7 @@ func serve(c *cli.Context) error {
 					logger.InfoIfError(err)
 					if err == nil {
 						visionAPI = a
+						s.VisionAPI = a
 					}
 				}
 			case err := <-w.Errors:
@@ -179,10 +185,6 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
-	s := config.Option
-	s.Logger = logger
-	s.TwitterAPI = twitterAPI
-	s.VisionAPI = visionAPI
 	err := s.Init()
 	if err != nil {
 		panic(err)
