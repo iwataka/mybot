@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestNewMybotConfig(t *testing.T) {
-	c, err := NewMybotConfig("fixtures/config.yml")
+	c, err := NewMybotConfig("config.template.yml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -14,7 +14,7 @@ func TestNewMybotConfig(t *testing.T) {
 	if p.Repo != "go" {
 		t.Fatalf("%s expected but %s found", "go", p.Repo)
 	}
-	if c.GitHub.Duration != "30m" {
+	if c.GitHub.Duration != "12h" {
 		t.Fatalf("%s expected but %s found", "30m", c.GitHub.Duration)
 	}
 	a := c.Retweet.Accounts[0]
@@ -31,7 +31,7 @@ func TestNewMybotConfig(t *testing.T) {
 	if n.Place.AllowSelf != true {
 		t.Fatalf("%v expected but %v found", true, n.Place.AllowSelf)
 	}
-	if n.Place.Users[0] != "John" {
-		t.Fatalf("%s expected but %s found", "John", n.Place.Users[0])
+	if n.Place.Users[0] != "foo" {
+		t.Fatalf("%s expected but %s found", "foo", n.Place.Users[0])
 	}
 }

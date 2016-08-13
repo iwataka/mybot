@@ -34,12 +34,13 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log := s.Logger.ReadString()
+		var botName string
 		self, err := s.TwitterAPI.GetSelfCache()
-		if err != nil {
-			http.Redirect(w, r, "/404", http.StatusSeeOther)
-			return
+		if err == nil {
+			botName = self.ScreenName
+		} else {
+			botName = ""
 		}
-		botName := self.ScreenName
 
 		pid := ""
 		if s.VisionAPI != nil {

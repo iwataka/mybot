@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -8,7 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-//go:generate go-bindata assets/... index.html 404.html
+//go:generate go-bindata assets/... index.html 404.html config.template.yml
 
 var (
 	twitterAPI *TwitterAPI
@@ -90,7 +92,18 @@ func beforeRunning(c *cli.Context) error {
 	}
 	config, err = NewMybotConfig(c.String("config"))
 	if err != nil {
-		panic(err)
+		fmt.Println("No configuration file detected...")
+		fmt.Printf("Create new sample configuration file: %s\n", c.String("config"))
+		fmt.Println("Edit this file as you want")
+		data, err := Asset("config.template.yml")
+		if err != nil {
+			panic(err)
+		}
+		err = ioutil.WriteFile(c.String("config"), data, 0664)
+		if err != nil {
+			panic(err)
+		}
+		config, err = NewMybotConfig(c.String("config"))
 	}
 
 	githubAPI = NewGitHubAPI(nil, cache)
@@ -154,12 +167,13 @@ func serve(c *cli.Context) error {
 	go func() {
 		w, err := fsnotify.NewWatcher()
 		logger.InfoIfError(err)
+		w.Add(c.String("config"))
 		defer w.Close()
 		for {
 			select {
 			case event := <-w.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write &&
-					event.Op&fsnotify.Create == fsnotify.Create {
+				logger.Info(event.String())
+				if event.Op&fsnotify.Chmod != fsnotify.Chmod {
 					err := config.ReadFile(c.String("config"))
 					logger.InfoIfError(err)
 				}
@@ -172,12 +186,12 @@ func serve(c *cli.Context) error {
 	go func() {
 		w, err := fsnotify.NewWatcher()
 		logger.InfoIfError(err)
+		w.Add(c.String("gcp-credential"))
 		defer w.Close()
 		for {
 			select {
 			case event := <-w.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write &&
-					event.Op&fsnotify.Create == fsnotify.Create {
+				if event.Op&fsnotify.Chmod != fsnotify.Chmod {
 					a, err := NewVisionAPI(c.String("gcp-credential"))
 					logger.InfoIfError(err)
 					if err == nil {
@@ -191,6 +205,7 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
+	fmt.Printf("Open 127.0.0.1:%s to see the detail information\n", s.Port)
 	err := s.Init()
 	if err != nil {
 		panic(err)

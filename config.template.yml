@@ -1,0 +1,73 @@
+# If you don't know much about Mybot featuers, it is better to start from this
+# configuration file and edit as you want to master them.
+
+github:
+        projects:
+                # This checks if there is new commit in the golang/go
+                # repository and broadcast information about it if any
+                - user: golang
+                  repo: go
+        # This checks and broadcasts once per 12 hours.
+        # I think too frequent actions may annoy you, so it is better to keep
+        # this value large.
+        duration: 12h
+
+retweet:
+        accounts:
+                # Twitter account named [foo]@golang is a target to retweet.
+                - name: golang
+                  # Tweets which has a text matching this patterns can be
+                  # retweeted.
+                  patterns:
+                          - is released!
+                          # You should quote a string which has a # character.
+                          - "#golang"
+                  # Tweets which matches this options can be retweeted.
+                  opts:
+                          hasUrl: true
+                          # You can set some other options (see the below
+                          # examples) and if they are not set, both true and
+                          # false accepted.
+                          #
+                          # hasMedia: false
+                          # retweeted: false (deprecated in 2016/08/14)
+                  # Google Cloud Vision API is used for image recognition
+                  image:
+                          descriptions:
+                                  - "cartoon|clip art|artwork"
+        notification:
+                # Place metadata attached with tweets
+                place:
+                        # True if you want to notify to the bot account itself
+                        allowSelf: true
+                        # Users listed below are notified place information
+                        users:
+                                - foo
+        duration: 30m
+
+interaction:
+        # This checks new messages and replies if any once per 30 seconds.
+        duration: 30s
+        # Users listed below are allowed to interact via messages.
+        users:
+                - foo
+                - bar
+
+log:
+        # True if you want the bot account itself to receive log messages
+        allowSelf: true
+        # Users listed below receive log messages
+        users:
+                - foo
+                - bar
+
+# YOU MUST REPLACE THIS VALUES WITH YOUR OWN TWITTER AUTHENTICATION
+authentication:
+        consumerKey: TWITTER_CONSUMER_KEY
+        consumerSecret: TWITTER_CONSUMER_SECRET
+        accessToken: TWITTER_ACCESS_TOKEN
+        accessTokenSecret: TWITTER_ACCESS_TOKEN_SECRET
+
+option:
+        # This is your name and any name is accepted
+        name: Iwataka
