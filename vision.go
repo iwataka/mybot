@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"regexp"
+	"strings"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
@@ -12,6 +13,7 @@ import (
 
 type VisionAPI struct {
 	*vision.Service
+	ProjectID string
 }
 
 func NewVisionAPI(path string) (*VisionAPI, error) {
@@ -23,12 +25,13 @@ func NewVisionAPI(path string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+	projectID := strings.Split(cfg.Email, "@")[1]
 	c := cfg.Client(context.Background())
 	a, err := vision.New(c)
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a}, nil
+	return &VisionAPI{a, projectID}, nil
 }
 
 func (a *VisionAPI) MatchImageDescription(imgData [][]byte, ds []string) (bool, error) {

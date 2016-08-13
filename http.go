@@ -10,6 +10,7 @@ type HTTPServer struct {
 	Port       string
 	Logger     *MultiLogger
 	TwitterAPI *TwitterAPI
+	VisionAPI  *VisionAPI
 }
 
 func (s *HTTPServer) Init() error {
@@ -40,14 +41,21 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 		botName := self.ScreenName
 
+		pid := ""
+		if s.VisionAPI != nil {
+			pid = s.VisionAPI.ProjectID
+		}
+
 		data := &struct {
-			UserName string
-			Log      string
-			BotName  string
+			UserName        string
+			Log             string
+			BotName         string
+			GCloudProjectID string
 		}{
 			s.Name,
 			log,
 			botName,
+			pid,
 		}
 
 		err = tmpl.Execute(w, data)

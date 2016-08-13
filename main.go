@@ -182,6 +182,7 @@ func serve(c *cli.Context) error {
 	s := config.Option
 	s.Logger = logger
 	s.TwitterAPI = twitterAPI
+	s.VisionAPI = visionAPI
 	err := s.Init()
 	if err != nil {
 		panic(err)
