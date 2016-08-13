@@ -25,7 +25,7 @@ func NewVisionAPI(path string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	projectID := strings.Split(cfg.Email, "@")[1]
+	projectID := strings.Split(cfg.Email, "@")[0]
 	c := cfg.Client(context.Background())
 	a, err := vision.New(c)
 	if err != nil {
