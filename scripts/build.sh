@@ -2,6 +2,8 @@
 
 cd $(dirname $0)/..
 
+name="mybot"
+
 build() {
     os=$1
     arch=$2
@@ -9,11 +11,11 @@ build() {
     set +e
     mkdir -p "bin/${os}-${arch}" 2> /dev/null
     set -e
-    exe="mybot"
-    if [[ ${os} -eq "windows" ]]; then
-        exe="mybot.exe"
+    exe="${name}"
+    if [[ ${os} = "windows" ]]; then
+        exe="${name}".exe
     fi
-    GOOS=${os} GOARCH=${arch} go build -o bin/${os}-${arch}/${exe}
+    GOOS=${os} GOARCH=${arch} go build -o "bin/${os}-${arch}/${exe}"
 }
 
 go generate
