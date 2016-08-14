@@ -158,6 +158,7 @@ func serve(c *cli.Context) error {
 	go func() {
 		for {
 			runGitHub(c, logger.InfoIfError)
+			logger.InfoIfError(cache.Save(c.String("cache")))
 			d, err := time.ParseDuration(config.GitHub.Duration)
 			logger.FatalIfError(err)
 			time.Sleep(d)
@@ -167,6 +168,7 @@ func serve(c *cli.Context) error {
 	go func() {
 		for {
 			runRetweet(c, logger.InfoIfError)
+			logger.InfoIfError(cache.Save(c.String("cache")))
 			d, err := time.ParseDuration(config.Retweet.Duration)
 			logger.FatalIfError(err)
 			time.Sleep(d)
