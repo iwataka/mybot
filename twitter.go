@@ -82,8 +82,8 @@ func (a *TwitterAPI) RetweetWithChecker(name string, trimUser bool, cs ...TweetC
 				break
 			}
 		}
+		a.cache.LatestTweetID[name] = t.Id
 		if match {
-			a.cache.LatestTweetID[name] = t.Id
 			rt, err := a.Retweet(t.Id, trimUser)
 			if err != nil {
 				return nil, err

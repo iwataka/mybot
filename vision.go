@@ -47,7 +47,8 @@ func (a *VisionAPI) MatchImageDescription(imgData [][]byte, ds []string) (bool, 
 	}
 
 	feature := &vision.Feature{
-		Type: "LABEL_DETECTION",
+		Type:       "LABEL_DETECTION",
+		MaxResults: 10,
 	}
 
 	reqs := make([]*vision.AnnotateImageRequest, len(imgs))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"net/http"
 	"regexp"
 
@@ -44,10 +45,15 @@ func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
 			imgData := make([][]byte, len(t.Entities.Media))
 			for i, m := range t.Entities.Media {
 				resp, err := http.Get(m.Media_url)
-				_, err = resp.Body.Read(imgData[i])
 				if err != nil {
 					return false, err
 				}
+				data, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return false, err
+				}
+				imgData[i] = data
+				resp.Body.Close()
 			}
 			match, err := a.MatchImageDescription(imgData, c.Image.Descriptions)
 			if err != nil {
