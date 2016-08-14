@@ -57,8 +57,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			buf := new(bytes.Buffer)
 			err := json.Indent(buf, []byte(s.cache.ImageAnalysisResult), "", "  ")
 			if err != nil {
-				http.Redirect(w, r, "/404", http.StatusSeeOther)
-				return
+				imageAnalysisResult = "Error while formatting the result"
 			}
 			imageAnalysisResult = buf.String()
 		}
