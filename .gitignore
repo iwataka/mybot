@@ -5,3 +5,4 @@ mybot.exe
 config.yml
 credential.json
 bindata.go
+bin/
