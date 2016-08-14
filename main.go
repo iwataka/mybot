@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 )
 
@@ -21,38 +23,43 @@ var (
 	logger     *Logger
 )
 
-var logFlag = cli.StringFlag{
-	Name:  "log",
-	Value: os.ExpandEnv("$HOME/.mybot-debug.log"),
-	Usage: "Log file's location",
-}
-
-var configFlag = cli.StringFlag{
-	Name:  "config",
-	Value: "config.yml",
-	Usage: "Config file's location",
-}
-
-var cacheFlag = cli.StringFlag{
-	Name:  "cache",
-	Value: os.ExpandEnv("$HOME/.cache/mybot/cache.json"),
-	Usage: "Cache file's location",
-}
-
-var visionCredentialFlag = cli.StringFlag{
-	Name:  "gcp-credential",
-	Value: "credential.json",
-	Usage: "Location of Google Cloud Platform credential file",
-}
-
-var flags = []cli.Flag{
-	logFlag,
-	configFlag,
-	cacheFlag,
-	visionCredentialFlag,
-}
-
 func main() {
+	home, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
+
+	logFlag := cli.StringFlag{
+		Name:  "log",
+		Value: filepath.Join(home, ".mybot-debug.log"),
+		Usage: "Log file's location",
+	}
+
+	configFlag := cli.StringFlag{
+		Name:  "config",
+		Value: "config.yml",
+		Usage: "Config file's location",
+	}
+
+	cacheFlag := cli.StringFlag{
+		Name:  "cache",
+		Value: filepath.Join(home, ".cache/mybot/cache.json"),
+		Usage: "Cache file's location",
+	}
+
+	visionCredentialFlag := cli.StringFlag{
+		Name:  "gcp-credential",
+		Value: "credential.json",
+		Usage: "Location of Google Cloud Platform credential file",
+	}
+
+	flags := []cli.Flag{
+		logFlag,
+		configFlag,
+		cacheFlag,
+		visionCredentialFlag,
+	}
+
 	app := cli.NewApp()
 	app.Name = "mybot"
 	app.Version = "0.1"
@@ -78,7 +85,7 @@ func main() {
 	}
 
 	app.Commands = []cli.Command{runCmd, serveCmd}
-	err := app.Run(os.Args)
+	err = app.Run(os.Args)
 	if err != nil {
 		panic(err)
 	}
