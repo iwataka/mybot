@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/urfave/cli"
 )
 
@@ -26,7 +23,7 @@ var (
 
 var logFlag = cli.StringFlag{
 	Name:  "log",
-	Value: ".mybot-debug.log",
+	Value: os.ExpandEnv("$HOME/.mybot-debug.log"),
 	Usage: "Log file's location",
 }
 
@@ -119,7 +116,10 @@ func beforeRunning(c *cli.Context) error {
 
 	// visionAPI is nil if there exists no credential file
 	visionAPI, err = NewVisionAPI(c.String("gcp-credential"))
-	logger.InfoIfError(err)
+	if err != nil {
+		logger.InfoIfError(err)
+		visionAPI = new(VisionAPI)
+	}
 
 	return nil
 }
@@ -166,63 +166,32 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
-	go func() {
-		p := c.String("config")
-		f := filepath.Base(p)
-
-		w, err := fsnotify.NewWatcher()
-		logger.InfoIfError(err)
-		err = w.Add(filepath.Dir(p))
-		logger.InfoIfError(err)
-		defer w.Close()
-
-		for {
-			select {
-			case event := <-w.Events:
-				if event.Op&fsnotify.Chmod != fsnotify.Chmod &&
-					strings.HasSuffix(event.Name, f) {
-					cfg, err := NewMybotConfig(p)
-					logger.InfoIfError(err)
-					if err == nil {
-						if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
-							*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache)
-						}
-						*config = *cfg
-					}
+	go monitorFile(
+		c.String("config"),
+		time.Duration(1)*time.Second,
+		func() {
+			cfg, err := NewMybotConfig(c.String("config"))
+			if err == nil {
+				if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
+					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache)
 				}
-			case err := <-w.Errors:
-				logger.InfoIfError(err)
+				*config = *cfg
 			}
-		}
-	}()
+		})
 
-	go func() {
-		p := c.String("gcp-credential")
-		f := filepath.Base(p)
-
-		w, err := fsnotify.NewWatcher()
-		logger.InfoIfError(err)
-		err = w.Add(p)
-		logger.InfoIfError(err)
-		defer w.Close()
-
-		for {
-			select {
-			case event := <-w.Events:
-				if event.Op&fsnotify.Chmod != fsnotify.Chmod &&
-					strings.HasSuffix(event.Name, f) {
-					a, err := NewVisionAPI(c.String("gcp-credential"))
-					logger.InfoIfError(err)
-					if err == nil {
-						visionAPI = a
-						s.VisionAPI = a
-					}
-				}
-			case err := <-w.Errors:
-				logger.InfoIfError(err)
+	go monitorFile(
+		c.String("gcp-credential"),
+		time.Duration(1)*time.Second,
+		// If it fails to read a credential file, it may be better to
+		// execute `*visionAPI = new(VisionAPI)`
+		func() {
+			a, err := NewVisionAPI(c.String("gcp-credential"))
+			logger.InfoIfError(err)
+			if err == nil {
+				*visionAPI = *a
 			}
-		}
-	}()
+
+		})
 
 	fmt.Printf("Open 127.0.0.1:%s to see the detail information\n", s.Port)
 	err := s.Init()
@@ -231,6 +200,25 @@ func serve(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func monitorFile(file string, d time.Duration, f func()) {
+	info, _ := os.Stat(file)
+	modTime := time.Now()
+	if info != nil {
+		modTime = info.ModTime()
+	}
+	for {
+		info, _ := os.Stat(file)
+		if info != nil {
+			mt := info.ModTime()
+			if mt.After(modTime) {
+				modTime = mt
+			}
+			f()
+		}
+		time.Sleep(d)
+	}
 }
 
 func runGitHub(c *cli.Context, handle func(error)) {

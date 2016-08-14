@@ -40,7 +40,7 @@ func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
 				}
 			}
 		}
-		if c.Image != nil && a != nil {
+		if c.Image != nil && a != nil && a.Images != nil {
 			imgData := make([][]byte, len(t.Entities.Media))
 			for i, m := range t.Entities.Media {
 				resp, err := http.Get(m.Media_url)
