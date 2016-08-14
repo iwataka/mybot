@@ -35,6 +35,11 @@ func NewVisionAPI(path string) (*VisionAPI, error) {
 }
 
 func (a *VisionAPI) MatchImageDescription(imgData [][]byte, ds []string) (bool, error) {
+	// No image never match any description
+	if len(imgData) == 0 {
+		return false, nil
+	}
+
 	imgs := make([]*vision.Image, len(imgData))
 	for i, d := range imgData {
 		enc := base64.StdEncoding.EncodeToString(d)
