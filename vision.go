@@ -4,8 +4,8 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"regexp"
-	"strings"
 
+	"github.com/antonholmquist/jason"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/vision/v1"
@@ -25,7 +25,11 @@ func NewVisionAPI(path string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	projectID := strings.Split(cfg.Email, "@")[0]
+	v, err := jason.NewObjectFromBytes(cred)
+	projectID, err := v.GetString("project_id")
+	if err != nil {
+		return nil, err
+	}
 	c := cfg.Client(context.Background())
 	a, err := vision.New(c)
 	if err != nil {

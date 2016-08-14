@@ -15,7 +15,7 @@ type HTTPServer struct {
 
 func (s *HTTPServer) Init() error {
 	http.HandleFunc("/", s.handler)
-	http.HandleFunc("/assets/css/custom.css", s.customCssHandler)
+	http.HandleFunc("/assets/css/custom.css", s.customCSSHandler)
 	http.HandleFunc("/404", s.notFoundHandler)
 	err := http.ListenAndServe(":"+s.Port, nil)
 	if err != nil {
@@ -78,7 +78,7 @@ func (s *HTTPServer) notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func (s *HTTPServer) customCssHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) customCSSHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := Asset("assets/css/custom.css")
 	if err != nil {
 		s.Logger.InfoIfError(err)

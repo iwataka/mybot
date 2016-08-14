@@ -19,3 +19,15 @@ pre {
         border: none;
         background-color: transparent;
 }
+
+.fa-twitter.fa-active {
+        color: #3333ff;
+}
+
+.fa-google.fa-active {
+        color: #ff3333;
+}
+
+.fa-passive {
+        color: gray;
+}
