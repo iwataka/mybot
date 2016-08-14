@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"io/ioutil"
+	"net/http"
 	"regexp"
 
 	"github.com/antonholmquist/jason"
@@ -14,9 +15,10 @@ import (
 type VisionAPI struct {
 	*vision.Service
 	ProjectID string
+	cache     *MybotCache
 }
 
-func NewVisionAPI(path string) (*VisionAPI, error) {
+func NewVisionAPI(path string, cache *MybotCache) (*VisionAPI, error) {
 	cred, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -35,13 +37,27 @@ func NewVisionAPI(path string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, projectID}, nil
+	return &VisionAPI{a, projectID, cache}, nil
 }
 
-func (a *VisionAPI) MatchImageDescription(imgData [][]byte, ds []string) (bool, error) {
+func (a *VisionAPI) MatchImageDescription(urls []string, ds []string) (bool, error) {
 	// No image never match any description
-	if len(imgData) == 0 {
+	if len(urls) == 0 {
 		return false, nil
+	}
+
+	imgData := make([][]byte, len(urls))
+	for i, url := range urls {
+		resp, err := http.Get(url)
+		if err != nil {
+			return false, err
+		}
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return false, err
+		}
+		imgData[i] = data
+		resp.Body.Close()
 	}
 
 	imgs := make([]*vision.Image, len(imgData))
@@ -72,7 +88,14 @@ func (a *VisionAPI) MatchImageDescription(imgData [][]byte, ds []string) (bool, 
 		return false, err
 	}
 
-	for _, r := range res.Responses {
+	for i, r := range res.Responses {
+		result, err := r.MarshalJSON()
+		if err != nil {
+			return false, err
+		}
+		cache.ImageURL = urls[i]
+		cache.ImageAnalysisResult = string(result)
+
 		match, err := a.matchDescription(r.LabelAnnotations, ds)
 		if err != nil {
 			return false, err

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
-	"net/http"
 	"regexp"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -42,20 +40,11 @@ func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
 			}
 		}
 		if c.Image != nil && a != nil && a.Images != nil {
-			imgData := make([][]byte, len(t.Entities.Media))
+			urls := make([]string, len(t.Entities.Media))
 			for i, m := range t.Entities.Media {
-				resp, err := http.Get(m.Media_url)
-				if err != nil {
-					return false, err
-				}
-				data, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					return false, err
-				}
-				imgData[i] = data
-				resp.Body.Close()
+				urls[i] = m.Media_url
 			}
-			match, err := a.MatchImageDescription(imgData, c.Image.Descriptions)
+			match, err := a.MatchImageDescription(urls, c.Image.Descriptions)
 			if err != nil {
 				return false, err
 			}

@@ -122,7 +122,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	// visionAPI is nil if there exists no credential file
-	visionAPI, err = NewVisionAPI(c.String("gcp-credential"))
+	visionAPI, err = NewVisionAPI(c.String("gcp-credential"), cache)
 	if err != nil {
 		logger.InfoIfError(err)
 		visionAPI = new(VisionAPI)
@@ -143,6 +143,7 @@ func serve(c *cli.Context) error {
 	s.Logger = logger
 	s.TwitterAPI = twitterAPI
 	s.VisionAPI = visionAPI
+	s.cache = cache
 
 	go func() {
 		for {
@@ -194,7 +195,7 @@ func serve(c *cli.Context) error {
 		// If it fails to read a credential file, it may be better to
 		// execute `*visionAPI = new(VisionAPI)`
 		func() {
-			a, err := NewVisionAPI(c.String("gcp-credential"))
+			a, err := NewVisionAPI(c.String("gcp-credential"), cache)
 			logger.InfoIfError(err)
 			if err == nil {
 				*visionAPI = *a

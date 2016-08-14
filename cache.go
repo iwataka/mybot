@@ -11,6 +11,8 @@ type MybotCache struct {
 	LatestCommitSHA       map[string]map[string]string
 	LatestTweetID         map[string]int64
 	LatestDirectMessageID map[string]int64
+	ImageURL              string
+	ImageAnalysisResult   string
 }
 
 func NewMybotCache(path string) (*MybotCache, error) {
@@ -18,6 +20,8 @@ func NewMybotCache(path string) (*MybotCache, error) {
 		make(map[string]map[string]string),
 		make(map[string]int64),
 		make(map[string]int64),
+		"",
+		"",
 	}
 
 	info, _ := os.Stat(path)

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"html/template"
 	"net/http"
 )
@@ -11,6 +13,7 @@ type HTTPServer struct {
 	Logger     *Logger
 	TwitterAPI *TwitterAPI
 	VisionAPI  *VisionAPI
+	cache      *MybotCache
 }
 
 func (s *HTTPServer) Init() error {
@@ -47,16 +50,33 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			pid = s.VisionAPI.ProjectID
 		}
 
+		imageURL := ""
+		imageAnalysisResult := ""
+		if s.cache != nil {
+			imageURL = s.cache.ImageURL
+			buf := new(bytes.Buffer)
+			err := json.Indent(buf, []byte(s.cache.ImageAnalysisResult), "", "  ")
+			if err != nil {
+				http.Redirect(w, r, "/404", http.StatusSeeOther)
+				return
+			}
+			imageAnalysisResult = buf.String()
+		}
+
 		data := &struct {
-			UserName        string
-			Log             string
-			BotName         string
-			GCloudProjectID string
+			UserName            string
+			Log                 string
+			BotName             string
+			GCloudProjectID     string
+			ImageURL            string
+			ImageAnalysisResult string
 		}{
 			s.Name,
 			log,
 			botName,
 			pid,
+			imageURL,
+			imageAnalysisResult,
 		}
 
 		err = tmpl.Execute(w, data)
