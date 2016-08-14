@@ -52,12 +52,12 @@
             </div>
             {{ end }}
         </div>
-        {{ if .ImageURL }}
         <div class="panel panel-info">
             <div class="panel-heading">
                 <h3 class="panel-title">Google Vision API Result</h3>
             </div>
             <div class="panel-body">
+                {{ if .ImageURL }}
                 <div class="row">
                     <div class="col-md-6">
                         <img src="{{ .ImageURL }}" class="img-responsive", alt="Image analyzed by Google Vision API">
@@ -66,9 +66,11 @@
                         <pre><code>{{ .ImageAnalysisResult }}</code></pre>
                     </div>
                 </div>
+                {{ else }}
+                <em>Nothing to show</em>
+                {{ end }}
             </div>
         </div>
-        {{ end }}
     </div>
 </body>
 </html>
