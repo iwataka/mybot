@@ -18,23 +18,24 @@ retweet:
                 - name: golang
                   # Tweets which has a text matching this patterns can be
                   # retweeted.
-                  patterns:
-                          - is released!
-                          # You should quote a string which has a # character.
-                          - "#golang"
-                  # Tweets which matches this options can be retweeted.
-                  opts:
-                          hasUrl: true
-                          # You can set some other options (see the below
-                          # examples) and if they are not set, both true and
-                          # false accepted.
-                          #
-                          # hasMedia: false
-                          # retweeted: false (deprecated in 2016/08/14)
-                  # Google Cloud Vision API is used for image recognition
-                  image:
-                          descriptions:
-                                  - "cartoon|clip art|artwork"
+                  filter:
+                          patterns:
+                                  - is released!
+                                  # You should quote a string which has a # character.
+                                  - "#golang"
+                          # Tweets which matches this options can be retweeted.
+                          opts:
+                                  hasUrl: true
+                                  # You can set some other options (see the below
+                                  # examples) and if they are not set, both true and
+                                  # false accepted.
+                                  #
+                                  # hasMedia: false
+                                  # retweeted: false (deprecated in 2016/08/14)
+                          # Google Cloud Vision API is used for image recognition
+                          vision:
+                                  label:
+                                          - "cartoon|clip art|artwork"
         notification:
                 # Place metadata attached with tweets
                 place:

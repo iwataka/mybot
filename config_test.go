@@ -21,11 +21,14 @@ func TestNewMybotConfig(t *testing.T) {
 	if a.Name != "golang" {
 		t.Fatalf("%s expected but %s found", "golang", a.Name)
 	}
-	if a.Patterns[0] != "is released!" {
-		t.Fatalf("%s expected but %s found", "is released!", a.Patterns[0])
+	if a.Filter.Patterns[0] != "is released!" {
+		t.Fatalf("%s expected but %s found", "is released!", a.Filter.Patterns[0])
 	}
-	if a.Opts["retweeted"] != false {
-		t.Fatalf("%v expected but %v found", false, a.Opts["retweeted"])
+	if a.Filter.Opts["retweeted"] != false {
+		t.Fatalf("%v expected but %v found", false, a.Filter.Opts["retweeted"])
+	}
+	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
+		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])
 	}
 	n := c.Retweet.Notification
 	if n.Place.AllowSelf != true {

@@ -54,56 +54,6 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 		return false, nil
 	}
 
-	features := []*vision.Feature{}
-	labelEnabled := false
-	faceEnabled := false
-	textEnabled := false
-	landmarkEnabled := false
-	logoEnabled := false
-	if cond.Label != nil && len(cond.Label) != 0 {
-		labelEnabled = true
-		f := &vision.Feature{
-			Type:       "LABEL_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Face != nil && len(cond.Face) != 0 {
-		faceEnabled = true
-		f := &vision.Feature{
-			Type:       "FACE_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Text != nil && len(cond.Text) != 0 {
-		textEnabled = true
-		f := &vision.Feature{
-			Type:       "TEXT_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Landmark != nil && len(cond.Landmark) != 0 {
-		landmarkEnabled = true
-		f := &vision.Feature{
-			Type:       "LANDMARK_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Logo != nil && len(cond.Logo) != 0 {
-		logoEnabled = true
-		f := &vision.Feature{
-			Type:       "LOGO_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if len(features) == 0 {
-		return true, nil
-	}
-
 	imgData := make([][]byte, len(urls))
 	for i, url := range urls {
 		resp, err := http.Get(url)
@@ -116,6 +66,11 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 		}
 		imgData[i] = data
 		resp.Body.Close()
+	}
+
+	features := getFeatures(cond)
+	if len(features) == 0 {
+		return true, nil
 	}
 
 	imgs := make([]*vision.Image, len(imgData))
@@ -150,36 +105,36 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 		cache.ImageAnalysisResult = string(result)
 
 		match := true
-		if labelEnabled {
-			m, err := a.matchDescription(r.LabelAnnotations, cond.Label)
+		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
+			m, err := matchEntity(r.LabelAnnotations, cond.Label)
 			if err != nil {
 				return false, err
 			}
 			match = match && m
 		}
-		if faceEnabled {
-			m, err := a.matchFace(r.FaceAnnotations, cond.Face)
+		if match && r.FaceAnnotations != nil && len(r.FaceAnnotations) != 0 {
+			m, err := matchFace(r.FaceAnnotations, cond.Face)
 			if err != nil {
 				return false, err
 			}
 			match = match && m
 		}
-		if textEnabled {
-			m, err := a.matchDescription(r.TextAnnotations, cond.Text)
+		if match && r.TextAnnotations != nil && len(r.TextAnnotations) != 0 {
+			m, err := matchEntity(r.TextAnnotations, cond.Text)
 			if err != nil {
 				return false, err
 			}
 			match = match && m
 		}
-		if landmarkEnabled {
-			m, err := a.matchDescription(r.LandmarkAnnotations, cond.Landmark)
+		if match && r.LandmarkAnnotations != nil && len(r.LandmarkAnnotations) != 0 {
+			m, err := matchEntity(r.LandmarkAnnotations, cond.Landmark)
 			if err != nil {
 				return false, err
 			}
 			match = match && m
 		}
-		if logoEnabled {
-			m, err := a.matchDescription(r.LogoAnnotations, cond.Logo)
+		if match && r.LogoAnnotations != nil && len(r.LogoAnnotations) != 0 {
+			m, err := matchEntity(r.LogoAnnotations, cond.Logo)
 			if err != nil {
 				return false, err
 			}
@@ -192,7 +147,47 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 	return false, nil
 }
 
-func (a *VisionAPI) matchDescription(as []*vision.EntityAnnotation, ds []string) (bool, error) {
+func getFeatures(cond *VisionCondition) []*vision.Feature {
+	features := []*vision.Feature{}
+	if cond.Label != nil && len(cond.Label) != 0 {
+		f := &vision.Feature{
+			Type:       "LABEL_DETECTION",
+			MaxResults: 10,
+		}
+		features = append(features, f)
+	}
+	if cond.Face != nil && len(cond.Face) != 0 {
+		f := &vision.Feature{
+			Type:       "FACE_DETECTION",
+			MaxResults: 10,
+		}
+		features = append(features, f)
+	}
+	if cond.Text != nil && len(cond.Text) != 0 {
+		f := &vision.Feature{
+			Type:       "TEXT_DETECTION",
+			MaxResults: 10,
+		}
+		features = append(features, f)
+	}
+	if cond.Landmark != nil && len(cond.Landmark) != 0 {
+		f := &vision.Feature{
+			Type:       "LANDMARK_DETECTION",
+			MaxResults: 10,
+		}
+		features = append(features, f)
+	}
+	if cond.Logo != nil && len(cond.Logo) != 0 {
+		f := &vision.Feature{
+			Type:       "LOGO_DETECTION",
+			MaxResults: 10,
+		}
+		features = append(features, f)
+	}
+	return features
+}
+
+func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 	for _, d := range ds {
 		match := false
 		for _, a := range as {
@@ -212,7 +207,7 @@ func (a *VisionAPI) matchDescription(as []*vision.EntityAnnotation, ds []string)
 	return true, nil
 }
 
-func (a *VisionAPI) matchFace(as []*vision.FaceAnnotation, face map[string]string) (bool, error) {
+func matchFace(as []*vision.FaceAnnotation, face map[string]string) (bool, error) {
 	for key, val := range face {
 		for _, a := range as {
 			match := false
