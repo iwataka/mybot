@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ChimeraCoder/anaconda"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 )
@@ -243,15 +244,20 @@ func runGitHub(c *cli.Context, handle func(error)) {
 }
 
 func runRetweet(c *cli.Context, handle func(error)) {
+	tweets := []anaconda.Tweet{}
 	for _, a := range config.Retweet.Accounts {
-		ts, err := twitterAPI.RetweetWithChecker(a.Name, false, a.GetChecker(visionAPI))
+		ts, err := twitterAPI.RetweetAccount(a.Name, false, a.Filter.GetChecker(visionAPI))
 		handle(err)
-		if ts != nil {
-			for _, t := range ts {
-				err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Retweet.Notification)
-				handle(err)
-			}
-		}
+		tweets = append(tweets, ts...)
+	}
+	for _, a := range config.Retweet.Searches {
+		ts, err := twitterAPI.RetweetSearch(a.Query, false, a.Filter.GetChecker(visionAPI))
+		handle(err)
+		tweets = append(tweets, ts...)
+	}
+	for _, t := range tweets {
+		err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Retweet.Notification)
+		handle(err)
 	}
 }
 

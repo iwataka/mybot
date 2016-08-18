@@ -6,14 +6,13 @@ import (
 	"github.com/ChimeraCoder/anaconda"
 )
 
-type TweetCheckConfig struct {
-	Name     string
+type TweetFilterConfig struct {
 	Patterns []string
 	Opts     map[string]bool
 	Vision   *VisionCondition
 }
 
-func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
+func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 	return func(t anaconda.Tweet) (bool, error) {
 		for _, p := range c.Patterns {
 			match, err := regexp.MatchString(p, t.Text)

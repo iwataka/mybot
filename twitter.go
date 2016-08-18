@@ -57,7 +57,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetWithChecker(name string, trimUser bool, cs ...TweetChecker) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetAccount(name string, trimUser bool, cs ...TweetChecker) ([]anaconda.Tweet, error) {
 	v := url.Values{}
 	v.Set("screen_name", name)
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -68,6 +68,25 @@ func (a *TwitterAPI) RetweetWithChecker(name string, trimUser bool, cs ...TweetC
 	if err != nil {
 		return nil, err
 	}
+	result, err := a.retweetTweets(tweets, trimUser, cs, func(t anaconda.Tweet) {
+		a.cache.LatestTweetID[name] = t.Id
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (a *TwitterAPI) RetweetSearch(query string, trimUser bool, cs ...TweetChecker) ([]anaconda.Tweet, error) {
+	res, err := a.GetSearch(query, nil)
+	result, err := a.retweetTweets(res.Statuses, trimUser, cs, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result, err
+}
+
+func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, trimUser bool, cs []TweetChecker, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
@@ -82,7 +101,9 @@ func (a *TwitterAPI) RetweetWithChecker(name string, trimUser bool, cs ...TweetC
 				break
 			}
 		}
-		a.cache.LatestTweetID[name] = t.Id
+		if f != nil {
+			f(t)
+		}
 		if match {
 			rt, err := a.Retweet(t.Id, trimUser)
 			if err != nil {

@@ -15,7 +15,14 @@ type MybotConfig struct {
 		Duration string
 	} `yaml:"github"`
 	Retweet *struct {
-		Accounts     []TweetCheckConfig
+		Accounts []struct {
+			Name   string
+			Filter TweetFilterConfig
+		}
+		Searches []struct {
+			Query  string
+			Filter TweetFilterConfig
+		}
 		Notification *Notification
 		Duration     string
 	}
