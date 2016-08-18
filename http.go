@@ -58,8 +58,9 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			err := json.Indent(buf, []byte(s.cache.ImageAnalysisResult), "", "  ")
 			if err != nil {
 				imageAnalysisResult = "Error while formatting the result"
+			} else {
+				imageAnalysisResult = buf.String()
 			}
-			imageAnalysisResult = buf.String()
 		}
 
 		data := &struct {
