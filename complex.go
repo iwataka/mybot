@@ -10,7 +10,7 @@ type TweetCheckConfig struct {
 	Name     string
 	Patterns []string
 	Opts     map[string]bool
-	Image    *struct{ Descriptions []string }
+	Vision   *VisionCondition
 }
 
 func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
@@ -39,12 +39,12 @@ func (c *TweetCheckConfig) GetChecker(a *VisionAPI) TweetChecker {
 				}
 			}
 		}
-		if c.Image != nil && a != nil && a.Images != nil {
+		if c.Vision != nil && a != nil && a.Images != nil {
 			urls := make([]string, len(t.Entities.Media))
 			for i, m := range t.Entities.Media {
 				urls[i] = m.Media_url
 			}
-			match, err := a.MatchImageDescription(urls, c.Image.Descriptions)
+			match, err := a.MatchImage(urls, c.Vision)
 			if err != nil {
 				return false, err
 			}
