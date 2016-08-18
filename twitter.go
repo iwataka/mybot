@@ -64,6 +64,7 @@ func (a *TwitterAPI) RetweetAccount(name string, trimUser bool, cs ...TweetCheck
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	}
+	v.Set("exclude_replies", "true")
 	tweets, err := a.GetUserTimeline(v)
 	if err != nil {
 		return nil, err
