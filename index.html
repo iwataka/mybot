@@ -54,7 +54,7 @@
         </div>
         <div class="panel panel-info">
             <div class="panel-heading">
-                {{ .ImageAnalysisDate }}
+                {{ if .ImageAnalysisDate }}
                 <h3 class="panel-title">Google Vision API Result ({{ .ImageAnalysisDate }})</h3>
                 {{ else }}
                 <h3 class="panel-title">Google Vision API Result</h3>
