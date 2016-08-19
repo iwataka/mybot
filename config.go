@@ -55,5 +55,23 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 	if len(md.Undecoded()) != 0 {
 		return nil, errors.New(fmt.Sprintf("%v undecoded in %s", md.Undecoded(), path))
 	}
+	err = validateConfig(c)
+	if err != nil {
+		return nil, err
+	}
 	return c, nil
+}
+
+func validateConfig(config *MybotConfig) error {
+	for _, account := range config.Twitter.Accounts {
+		for _, a := range account.Actions {
+			if a != "retweet" && a != "favorite" {
+				return errors.New(fmt.Sprintf("Invalid action: %s", a))
+			}
+		}
+		if len(account.Actions) == 0 {
+			return errors.New(fmt.Sprintf("Account %s has no action", account.Name))
+		}
+	}
+	return nil
 }
