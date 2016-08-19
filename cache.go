@@ -13,6 +13,7 @@ type MybotCache struct {
 	LatestDirectMessageID map[string]int64
 	ImageURL              string
 	ImageAnalysisResult   string
+	ImageAnalysisDate     string
 }
 
 func NewMybotCache(path string) (*MybotCache, error) {
@@ -20,6 +21,7 @@ func NewMybotCache(path string) (*MybotCache, error) {
 		make(map[string]map[string]string),
 		make(map[string]int64),
 		make(map[string]int64),
+		"",
 		"",
 		"",
 	}

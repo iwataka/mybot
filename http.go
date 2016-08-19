@@ -50,10 +50,8 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			pid = s.VisionAPI.ProjectID
 		}
 
-		imageURL := ""
 		imageAnalysisResult := ""
 		if s.cache != nil {
-			imageURL = s.cache.ImageURL
 			buf := new(bytes.Buffer)
 			err := json.Indent(buf, []byte(s.cache.ImageAnalysisResult), "", "  ")
 			if err != nil {
@@ -70,13 +68,15 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			GCloudProjectID     string
 			ImageURL            string
 			ImageAnalysisResult string
+			ImageAnalysisDate   string
 		}{
 			s.Name,
 			log,
 			botName,
 			pid,
-			imageURL,
+			s.cache.ImageURL,
 			imageAnalysisResult,
+			s.cache.ImageAnalysisDate,
 		}
 
 		err = tmpl.Execute(w, data)

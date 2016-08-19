@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/antonholmquist/jason"
 	"golang.org/x/net/context"
@@ -103,6 +104,7 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 		}
 		cache.ImageURL = urls[i]
 		cache.ImageAnalysisResult = string(result)
+		cache.ImageAnalysisDate = time.Now().String()
 
 		match := true
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
