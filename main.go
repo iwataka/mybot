@@ -260,11 +260,6 @@ func githubCommitTweet(p GitHubProject) error {
 		if err != nil {
 			return err
 		}
-		_, userExists := cache.LatestCommitSHA[p.User]
-		if !userExists {
-			cache.LatestCommitSHA[p.User] = make(map[string]string)
-		}
-		cache.LatestCommitSHA[p.User][p.Repo] = *commit.SHA
 	}
 	return nil
 }

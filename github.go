@@ -30,12 +30,12 @@ func (a *GitHubAPI) LatestCommit(p GitHubProject) (*github.RepositoryCommit, err
 	}
 	latest := commits[0]
 	userMap, userExists := a.cache.LatestCommitSHA[p.User]
-	sha := ""
-	repoExists := false
-	if userExists {
-		sha, repoExists = userMap[p.Repo]
+	if !userExists {
+		cache.LatestCommitSHA[p.User] = make(map[string]string)
 	}
-	if !userExists || !repoExists || sha != *latest.SHA {
+	sha, exists := userMap[p.Repo]
+	if !exists || sha != *latest.SHA {
+		cache.LatestCommitSHA[p.User][p.Repo] = *latest.SHA
 		return latest, nil
 	}
 	return nil, nil
