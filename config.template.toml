@@ -5,22 +5,23 @@ duration = "12h"
 repo = "go"
 user = "golang"
 
-[[retweet.accounts]]
+[[twitter.accounts]]
 name = "golang"
+actions = ["retweet"]
 
-[retweet.accounts.filter]
+[twitter.accounts.filter]
 patterns = ["is released!", "#golang"]
-[retweet.accounts.filter.opts]
+[twitter.accounts.filter.opts]
 hasUrl = true
-[retweet.accounts.filter.vision]
+[twitter.accounts.filter.vision]
 label = ["cartoon|clip art|artwork"]
 
-[retweet.notification]
-[retweet.notification.place]
+[twitter.notification]
+[twitter.notification.place]
 allowSelf = true
 users = ["foo"]
 
-[retweet]
+[twitter]
 duration = "30m"
 
 [interaction]

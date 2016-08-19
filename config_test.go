@@ -17,7 +17,7 @@ func TestNewMybotConfig(t *testing.T) {
 	if c.GitHub.Duration != "12h" {
 		t.Fatalf("%s expected but %s found", "30m", c.GitHub.Duration)
 	}
-	a := c.Retweet.Accounts[0]
+	a := c.Twitter.Accounts[0]
 	if a.Name != "golang" {
 		t.Fatalf("%s expected but %s found", "golang", a.Name)
 	}
@@ -30,7 +30,10 @@ func TestNewMybotConfig(t *testing.T) {
 	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])
 	}
-	n := c.Retweet.Notification
+	if a.Actions[0] != "retweet" {
+		t.Fatalf("%s expected but %s found", "retweet", a.Actions[0])
+	}
+	n := c.Twitter.Notification
 	if n.Place.AllowSelf != true {
 		t.Fatalf("%v expected but %v found", true, n.Place.AllowSelf)
 	}

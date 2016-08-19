@@ -159,7 +159,7 @@ func serve(c *cli.Context) error {
 		for {
 			runRetweet(c, logger.InfoIfError)
 			logger.InfoIfError(cache.Save(c.String("cache")))
-			d, err := time.ParseDuration(config.Retweet.Duration)
+			d, err := time.ParseDuration(config.Twitter.Duration)
 			logger.FatalIfError(err)
 			time.Sleep(d)
 		}
@@ -233,18 +233,20 @@ func runGitHub(c *cli.Context, handle func(error)) {
 
 func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
-	for _, a := range config.Retweet.Accounts {
-		ts, err := twitterAPI.RetweetAccount(a.Name, false, a.Filter.GetChecker(visionAPI))
+	for _, a := range config.Twitter.Accounts {
+		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Actions)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}
-	for _, a := range config.Retweet.Searches {
-		ts, err := twitterAPI.RetweetSearch(a.Query, false, a.Filter.GetChecker(visionAPI))
+	for _, a := range config.Twitter.Searches {
+		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Actions)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}
 	for _, t := range tweets {
-		err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Retweet.Notification)
+		err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Twitter.Notification)
 		handle(err)
 	}
 }

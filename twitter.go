@@ -57,7 +57,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetAccount(name string, trimUser bool, cs ...TweetChecker) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []string) ([]anaconda.Tweet, error) {
 	v := url.Values{}
 	v.Set("screen_name", name)
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -69,7 +69,7 @@ func (a *TwitterAPI) RetweetAccount(name string, trimUser bool, cs ...TweetCheck
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.retweetTweets(tweets, trimUser, cs, func(t anaconda.Tweet) {
+	result, err := a.retweetTweets(tweets, cs, actions, func(t anaconda.Tweet) {
 		a.cache.LatestTweetID[name] = t.Id
 	})
 	if err != nil {
@@ -78,16 +78,16 @@ func (a *TwitterAPI) RetweetAccount(name string, trimUser bool, cs ...TweetCheck
 	return result, nil
 }
 
-func (a *TwitterAPI) RetweetSearch(query string, trimUser bool, cs ...TweetChecker) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, actions []string) ([]anaconda.Tweet, error) {
 	res, err := a.GetSearch(query, nil)
-	result, err := a.retweetTweets(res.Statuses, trimUser, cs, nil)
+	result, err := a.retweetTweets(res.Statuses, cs, actions, nil)
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, trimUser bool, cs []TweetChecker, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, actions []string, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
@@ -106,11 +106,20 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, trimUser bool, cs []
 			f(t)
 		}
 		if match {
-			rt, err := a.Retweet(t.Id, trimUser)
-			if err != nil {
-				return nil, err
+			for _, action := range actions {
+				if action == "retweet" {
+					_, err := a.Retweet(t.Id, false)
+					if err != nil {
+						return nil, err
+					}
+				} else if action == "favorite" {
+					_, err := a.Favorite(t.Id)
+					if err != nil {
+						return nil, err
+					}
+				}
 			}
-			result = append(result, rt)
+			result = append(result, t)
 		}
 	}
 	return result, nil
