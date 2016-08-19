@@ -36,15 +36,6 @@ func (a *GitHubAPI) LatestCommit(p GitHubProject) (*github.RepositoryCommit, err
 		sha, repoExists = userMap[p.Repo]
 	}
 	if !userExists || !repoExists || sha != *latest.SHA {
-		msg := p.User + "/" + p.Repo + "\n" + *latest.HTMLURL
-		_, err := twitterAPI.PostTweet(msg, nil)
-		if err != nil {
-			return nil, err
-		}
-		if !userExists {
-			a.cache.LatestCommitSHA[p.User] = make(map[string]string)
-		}
-		a.cache.LatestCommitSHA[p.User][p.Repo] = *latest.SHA
 		return latest, nil
 	}
 	return nil, nil
