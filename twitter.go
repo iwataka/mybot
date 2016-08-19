@@ -14,10 +14,10 @@ type TwitterAPI struct {
 }
 
 type TwitterAuth struct {
-	ConsumerKey       string `yaml:"consumerKey"`
-	ConsumerSecret    string `yaml:"consumerSecret"`
-	AccessToken       string `yaml:"accessToken"`
-	AccessTokenSecret string `yaml:"accessTokenSecret"`
+	ConsumerKey       string `toml:"consumerKey"`
+	ConsumerSecret    string `toml:"consumerSecret"`
+	AccessToken       string `toml:"accessToken"`
+	AccessTokenSecret string `toml:"accessTokenSecret"`
 }
 
 func NewTwitterAPI(a *TwitterAuth, c *MybotCache) *TwitterAPI {

@@ -1,0 +1,41 @@
+[github]
+duration = "12h"
+
+[[github.projects]]
+repo = "go"
+user = "golang"
+
+[[retweet.accounts]]
+name = "golang"
+
+[retweet.accounts.filter]
+patterns = ["is released!", "#golang"]
+[retweet.accounts.filter.opts]
+hasUrl = true
+[retweet.accounts.filter.vision]
+label = ["cartoon|clip art|artwork"]
+
+[retweet.notification]
+[retweet.notification.place]
+allowSelf = true
+users = ["foo"]
+
+[retweet]
+duration = "30m"
+
+[interaction]
+duration = "30s"
+users = ["foo", "bar"]
+
+[log]
+allowSelf = true
+users = ["foo", "bar"]
+
+[authentication]
+accessToken = "TWITTER_ACCESS_TOKEN"
+accessTokenSecret = "TWITTER_ACCESS_TOKEN_SECRET"
+consumerKey = "TWITTER_CONSUMER_KEY"
+consumerSecret = "TWITTER_CONSUMER_SECRET"
+
+[option]
+name = "Iwataka"

@@ -5,6 +5,6 @@ type Notification struct {
 }
 
 type PlaceNotification struct {
-	AllowSelf bool `yaml:"allowSelf"`
+	AllowSelf bool `toml:"allowSelf"`
 	Users     []string
 }

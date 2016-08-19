@@ -1,19 +1,18 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 
-	"gopkg.in/yaml.v2"
+	"github.com/BurntSushi/toml"
 )
 
 type MybotConfig struct {
 	GitHub *struct {
 		Projects []GitHubProject
 		Duration string
-	} `yaml:"github"`
+	} `toml:"github"`
 	Retweet *struct {
 		Accounts []struct {
 			Name   string
@@ -28,11 +27,11 @@ type MybotConfig struct {
 	}
 	Interaction *struct {
 		Duration  string
-		AllowSelf bool `yaml:"allowSelf"`
+		AllowSelf bool `toml:"allowSelf"`
 		Users     []string
 	}
 	Log *struct {
-		AllowSelf bool `yaml:"allowSelf"`
+		AllowSelf bool `toml:"allowSelf"`
 		Users     []string
 	}
 	Authentication *TwitterAuth
@@ -47,27 +46,12 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = yaml.Unmarshal(bytes, c)
+	md, err := toml.Decode(string(bytes), c)
 	if err != nil {
 		return nil, err
 	}
+	if len(md.Undecoded()) != 0 {
+		return nil, errors.New(fmt.Sprintf("%v undecoded in %s", md.Undecoded(), path))
+	}
 	return c, nil
-}
-
-func (c *MybotConfig) Save(path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0600)
-	if err != nil {
-		return err
-	}
-	if c != nil {
-		data, err := json.Marshal(c)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(path, data, 0600)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

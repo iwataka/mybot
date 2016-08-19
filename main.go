@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-//go:generate go-bindata assets/... index.html 404.html config.template.yml
+//go:generate go-bindata assets/... index.html 404.html
 
 var (
 	twitterAPI *TwitterAPI
@@ -38,7 +37,7 @@ func main() {
 
 	configFlag := cli.StringFlag{
 		Name:  "config",
-		Value: "config.yml",
+		Value: "config.toml",
 		Usage: "Config file's location",
 	}
 
@@ -100,18 +99,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 	config, err = NewMybotConfig(c.String("config"))
 	if err != nil {
-		fmt.Println("No configuration file detected...")
-		fmt.Printf("Create new sample configuration file: %s\n", c.String("config"))
-		fmt.Println("Edit this file as you want")
-		data, err := Asset("config.template.yml")
-		if err != nil {
-			panic(err)
-		}
-		err = ioutil.WriteFile(c.String("config"), data, 0664)
-		if err != nil {
-			panic(err)
-		}
-		config, err = NewMybotConfig(c.String("config"))
+		panic(err)
 	}
 
 	githubAPI = NewGitHubAPI(nil, cache)
