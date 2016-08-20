@@ -22,8 +22,9 @@ func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, e
 		return nil, err
 	}
 	l := log.New(f, "", flag)
-	l.SetOutput(f)
-	return &Logger{l, path, a, c}, nil
+	result := &Logger{l, path, a, c}
+	result.SetOutput(f)
+	return result, nil
 }
 
 func (l *Logger) Info(msg string) {
