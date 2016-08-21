@@ -15,4 +15,4 @@ fi
 docker run -d -v "$dir":/mybot \
     --name "$container_name" \
     -p 8080:8080 \
-    mybot sh -c "cd /mybot && go get -d ./... && go generate && go build && ./mybot s --log .mybot-debug.log >> .mybot-debug.log 2>&1"
+    mybot sh -c "cd /mybot && go get -d ./... && go generate && go build && ./mybot s --log .mybot-debug.log >> .mybot-dump.log 2>&1"
