@@ -29,11 +29,11 @@ type MybotConfig struct {
 	}
 	Interaction *struct {
 		Duration  string
-		AllowSelf bool `toml:"allowSelf"`
+		AllowSelf bool `toml:"allow_self"`
 		Users     []string
 	}
 	Log *struct {
-		AllowSelf bool `toml:"allowSelf"`
+		AllowSelf bool `toml:"allow_self"`
 		Users     []string
 	}
 	Authentication *TwitterAuth

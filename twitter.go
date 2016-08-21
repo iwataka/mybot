@@ -14,10 +14,10 @@ type TwitterAPI struct {
 }
 
 type TwitterAuth struct {
-	ConsumerKey       string `toml:"consumerKey"`
-	ConsumerSecret    string `toml:"consumerSecret"`
-	AccessToken       string `toml:"accessToken"`
-	AccessTokenSecret string `toml:"accessTokenSecret"`
+	ConsumerKey       string `toml:"consumer_key"`
+	ConsumerSecret    string `toml:"consumer_secret"`
+	AccessToken       string `toml:"access_token"`
+	AccessTokenSecret string `toml:"access_token_secret"`
 }
 
 type TwitterAction struct {

@@ -7,9 +7,10 @@ import (
 )
 
 type TweetFilterConfig struct {
-	Patterns []string
-	Opts     map[string]bool
-	Vision   *VisionCondition
+	Patterns    []string
+	UrlPatterns []string `toml:"url_patterns"`
+	Opts        map[string]bool
+	Vision      *VisionCondition
 }
 
 func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
@@ -21,6 +22,17 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 			}
 			if !match {
 				return false, nil
+			}
+		}
+		for _, url := range c.UrlPatterns {
+			for _, u := range t.Entities.Urls {
+				match, err := regexp.MatchString(url, u.Expanded_url)
+				if err != nil {
+					return false, err
+				}
+				if !match {
+					return false, nil
+				}
 			}
 		}
 		for key, val := range c.Opts {

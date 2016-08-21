@@ -246,7 +246,7 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		tweets = append(tweets, ts...)
 	}
 	for _, t := range tweets {
-		err := twitterAPI.NotifyToAll(t.RetweetedStatus, config.Twitter.Notification)
+		err := twitterAPI.NotifyToAll(&t, config.Twitter.Notification)
 		handle(err)
 	}
 }
