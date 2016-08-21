@@ -61,6 +61,14 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		colMap := make(map[string]string)
+		colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
+		if err == nil {
+			for _, c := range colList.Objects.Timelines {
+				colMap[c.Name] = c.CollectionUrl
+			}
+		}
+
 		data := &struct {
 			UserName            string
 			Log                 string
@@ -69,6 +77,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			ImageURL            string
 			ImageAnalysisResult string
 			ImageAnalysisDate   string
+			CollectionMap       map[string]string
 		}{
 			s.Name,
 			log,
@@ -77,6 +86,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			s.cache.ImageURL,
 			imageAnalysisResult,
 			s.cache.ImageAnalysisDate,
+			colMap,
 		}
 
 		err = tmpl.Execute(w, data)
