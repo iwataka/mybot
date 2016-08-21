@@ -7,14 +7,14 @@ user = "golang"
 
 [[twitter.accounts]]
 name = "golang"
-actions = ["retweet"]
-
 [twitter.accounts.filter]
 patterns = ["is released!", "#golang"]
 [twitter.accounts.filter.opts]
 hasUrl = true
 [twitter.accounts.filter.vision]
 label = ["cartoon|clip art|artwork"]
+[twitter.accounts.action]
+retweet = true
 
 [twitter.notification]
 [twitter.notification.place]

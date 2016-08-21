@@ -235,13 +235,13 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Accounts {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Actions, a.Collections)
+		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Action)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Actions, a.Collections)
+		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Action)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}

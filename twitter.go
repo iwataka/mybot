@@ -20,6 +20,12 @@ type TwitterAuth struct {
 	AccessTokenSecret string `toml:"accessTokenSecret"`
 }
 
+type TwitterAction struct {
+	Retweet     bool
+	Favorite    bool
+	Collections []string
+}
+
 func NewTwitterAPI(a *TwitterAuth, c *MybotCache) *TwitterAPI {
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
@@ -57,7 +63,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []string, collections []string) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	v := url.Values{}
 	v.Set("screen_name", name)
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -69,7 +75,7 @@ func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []st
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.retweetTweets(tweets, cs, actions, collections, func(t anaconda.Tweet) {
+	result, err := a.retweetTweets(tweets, cs, action, func(t anaconda.Tweet) {
 		a.cache.LatestTweetID[name] = t.Id
 	})
 	if err != nil {
@@ -78,16 +84,16 @@ func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []st
 	return result, nil
 }
 
-func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, actions []string, collections []string) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.GetSearch(query, nil)
-	result, err := a.retweetTweets(res.Statuses, cs, actions, collections, nil)
+	result, err := a.retweetTweets(res.Statuses, cs, action, nil)
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, actions []string, collections []string, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
@@ -106,21 +112,20 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 			f(t)
 		}
 		if match {
-			for _, action := range actions {
-				if action == "retweet" {
-					_, err := a.Retweet(t.Id, false)
-					if err != nil {
-						return nil, err
-					}
-				} else if action == "favorite" {
-					_, err := a.Favorite(t.Id)
-					if err != nil {
-						return nil, err
-					}
+			if action.Retweet {
+				_, err := a.Retweet(t.Id, false)
+				if err != nil {
+					return nil, err
 				}
 			}
-			for _, collection := range collections {
-				err := a.collectTweet(t, collection)
+			if action.Favorite {
+				_, err := a.Favorite(t.Id)
+				if err != nil {
+					return nil, err
+				}
+			}
+			for _, col := range action.Collections {
+				err := a.collectTweet(t, col)
 				if err != nil {
 					return nil, err
 				}

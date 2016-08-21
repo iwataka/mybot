@@ -15,16 +15,14 @@ type MybotConfig struct {
 	} `toml:"github"`
 	Twitter *struct {
 		Accounts []struct {
-			Name        string
-			Filter      TweetFilterConfig
-			Actions     []string
-			Collections []string
+			Name   string
+			Filter *TweetFilterConfig
+			Action *TwitterAction
 		}
 		Searches []struct {
-			Query       string
-			Filter      TweetFilterConfig
-			Actions     []string
-			Collections []string
+			Query  string
+			Filter *TweetFilterConfig
+			Action *TwitterAction
 		}
 		Notification *Notification
 		Duration     string
@@ -66,12 +64,7 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 
 func validateConfig(config *MybotConfig) error {
 	for _, account := range config.Twitter.Accounts {
-		for _, a := range account.Actions {
-			if a != "retweet" && a != "favorite" {
-				return errors.New(fmt.Sprintf("Invalid action: %s", a))
-			}
-		}
-		if len(account.Actions) == 0 {
+		if account.Action == nil {
 			return errors.New(fmt.Sprintf("Account %s has no action", account.Name))
 		}
 	}

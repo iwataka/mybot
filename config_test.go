@@ -30,8 +30,8 @@ func TestNewMybotConfig(t *testing.T) {
 	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])
 	}
-	if a.Actions[0] != "retweet" {
-		t.Fatalf("%s expected but %s found", "retweet", a.Actions[0])
+	if a.Action.Retweet == false {
+		t.Fatalf("%v expected but %v found", true, a.Action.Retweet)
 	}
 	n := c.Twitter.Notification
 	if n.Place.AllowSelf != true {
