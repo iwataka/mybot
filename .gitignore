@@ -2,6 +2,7 @@ cache.txt
 mybot
 mybot.exe
 .mybot-debug.log
+.mybot-dump.log
 config.toml
 credential.json
 bindata.go
