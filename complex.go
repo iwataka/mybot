@@ -3,7 +3,7 @@ package main
 import (
 	"regexp"
 
-	"github.com/ChimeraCoder/anaconda"
+	"github.com/iwataka/anaconda"
 )
 
 type TweetFilterConfig struct {

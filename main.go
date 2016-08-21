@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/ChimeraCoder/anaconda"
+	"github.com/iwataka/anaconda"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 )
@@ -235,13 +235,13 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Accounts {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Actions)
+		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Actions, a.Collections)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Actions)
+		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Actions, a.Collections)
 		handle(err)
 		tweets = append(tweets, ts...)
 	}

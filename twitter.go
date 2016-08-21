@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/ChimeraCoder/anaconda"
+	"github.com/iwataka/anaconda"
 )
 
 type TwitterAPI struct {
@@ -57,7 +57,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []string) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []string, collections []string) ([]anaconda.Tweet, error) {
 	v := url.Values{}
 	v.Set("screen_name", name)
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -69,7 +69,7 @@ func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []st
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.retweetTweets(tweets, cs, actions, func(t anaconda.Tweet) {
+	result, err := a.retweetTweets(tweets, cs, actions, collections, func(t anaconda.Tweet) {
 		a.cache.LatestTweetID[name] = t.Id
 	})
 	if err != nil {
@@ -78,16 +78,16 @@ func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, actions []st
 	return result, nil
 }
 
-func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, actions []string) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, actions []string, collections []string) ([]anaconda.Tweet, error) {
 	res, err := a.GetSearch(query, nil)
-	result, err := a.retweetTweets(res.Statuses, cs, actions, nil)
+	result, err := a.retweetTweets(res.Statuses, cs, actions, collections, nil)
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, actions []string, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, actions []string, collections []string, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
@@ -119,10 +119,45 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 					}
 				}
 			}
+			for _, collection := range collections {
+				err := a.collectTweet(t, collection)
+				if err != nil {
+					return nil, err
+				}
+			}
 			result = append(result, t)
 		}
 	}
 	return result, nil
+}
+
+func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error {
+	self, err := a.GetSelfCache()
+	if err != nil {
+		return err
+	}
+	list, err := a.GetCollectionListByUserId(self.Id, nil)
+	exists := false
+	var id string
+	for i, t := range list.Objects.Timelines {
+		if collection == t.Name {
+			exists = true
+			id = i
+			break
+		}
+	}
+	if !exists {
+		col, err := a.CreateCollection(collection, nil)
+		if err != nil {
+			return err
+		}
+		id = col.Response.TimelineId
+	}
+	_, err = a.AddEntryToCollection(id, tweet.Id, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // NotifyToAll sends metadata about the specified tweet to the all.
