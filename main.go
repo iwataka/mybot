@@ -235,15 +235,14 @@ func runGitHub(c *cli.Context, handle func(error)) {
 func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
+		v := getTwitterURL(a.Count)
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		if a.ScreenName != nil {
-			v := getTwitterURL(a.Count)
 			ts, err := twitterAPI.RetweetAccount(*a.ScreenName, v, cs, a.Action)
 			tweets = append(tweets, ts...)
 			handle(err)
 		} else {
 			for _, name := range a.ScreenNames {
-				v := getTwitterURL(a.Count)
 				ts, err := twitterAPI.RetweetAccount(name, v, cs, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
@@ -252,14 +251,13 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		v := getTwitterURL(a.Count)
 		if a.Query != nil {
-			v := getTwitterURL(a.Count)
 			ts, err := twitterAPI.RetweetSearch(*a.Query, v, cs, a.Action)
 			handle(err)
 			tweets = append(tweets, ts...)
 		} else {
 			for _, query := range a.Queries {
-				v := getTwitterURL(a.Count)
 				ts, err := twitterAPI.RetweetSearch(query, v, cs, a.Action)
 				handle(err)
 				tweets = append(tweets, ts...)
