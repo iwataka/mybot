@@ -67,7 +67,29 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 func validateConfig(config *MybotConfig) error {
 	for _, account := range config.Twitter.Accounts {
 		if account.Action == nil {
-			msg := fmt.Sprintf("Account %s has no action", account.Name)
+			msg := fmt.Sprintf("%v has no action", account)
+			return errors.New(msg)
+		}
+		if account.Name == nil && (account.Names == nil || len(account.Names) == 0) {
+			msg := fmt.Sprintf("%v has no name", account)
+			return errors.New(msg)
+		}
+		if account.Name != nil && account.Names != nil && len(account.Names) != 0 {
+			msg := fmt.Sprintf("%v has name and names properties, use `names` only.")
+			return errors.New(msg)
+		}
+	}
+	for _, search := range config.Twitter.Searches {
+		if search.Action == nil {
+			msg := fmt.Sprintf("%v has no action", search)
+			return errors.New(msg)
+		}
+		if search.Query == nil && (search.Queries == nil || len(search.Queries) == 0) {
+			msg := fmt.Sprintf("%v has no query", search)
+			return errors.New(msg)
+		}
+		if search.Query != nil && search.Queries != nil && len(search.Queries) != 0 {
+			msg := fmt.Sprintf("%v has query and queries properties, use `query` only.")
 			return errors.New(msg)
 		}
 	}
