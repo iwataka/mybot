@@ -63,9 +63,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
-	v := url.Values{}
-	v.Set("screen_name", name)
+func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
@@ -84,8 +82,8 @@ func (a *TwitterAPI) RetweetAccount(name string, cs []TweetChecker, action *Twit
 	return result, nil
 }
 
-func (a *TwitterAPI) RetweetSearch(query string, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
-	res, err := a.GetSearch(query, nil)
+func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+	res, err := a.GetSearch(query, v)
 	result, err := a.retweetTweets(res.Statuses, cs, action, nil)
 	if err != nil {
 		return nil, err

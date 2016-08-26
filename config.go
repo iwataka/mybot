@@ -14,15 +14,17 @@ type MybotConfig struct {
 		Duration string
 	} `toml:"github"`
 	Twitter *struct {
-		Accounts []struct {
-			Name   *string
-			Names  []string
-			Filter *TweetFilterConfig
-			Action *TwitterAction
+		Timelines []struct {
+			ScreenName  *string  `toml:"screen_name"`
+			ScreenNames []string `toml:"screen_names"`
+			Count       *int
+			Filter      *TweetFilterConfig
+			Action      *TwitterAction
 		}
 		Searches []struct {
 			Query   *string
 			Queries []string
+			Count   *int
 			Filter  *TweetFilterConfig
 			Action  *TwitterAction
 		}
@@ -65,16 +67,16 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 }
 
 func validateConfig(config *MybotConfig) error {
-	for _, account := range config.Twitter.Accounts {
+	for _, account := range config.Twitter.Timelines {
 		if account.Action == nil {
 			msg := fmt.Sprintf("%v has no action", account)
 			return errors.New(msg)
 		}
-		if account.Name == nil && (account.Names == nil || len(account.Names) == 0) {
+		if account.ScreenName == nil && (account.ScreenNames == nil || len(account.ScreenNames) == 0) {
 			msg := fmt.Sprintf("%v has no name", account)
 			return errors.New(msg)
 		}
-		if account.Name != nil && account.Names != nil && len(account.Names) != 0 {
+		if account.ScreenName != nil && account.ScreenNames != nil && len(account.ScreenNames) != 0 {
 			msg := fmt.Sprintf("%v has name and names properties, use `names` only.")
 			return errors.New(msg)
 		}

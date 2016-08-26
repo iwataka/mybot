@@ -5,16 +5,16 @@ duration = "12h"
 repo = "go"
 user = "golang"
 
-[[twitter.accounts]]
-name = "golang"
-[twitter.accounts.filter]
+[[twitter.timelines]]
+screen_name = "golang"
+[twitter.timelines.filter]
 patterns = ["is released!", "#golang"]
 has_url = true
 retweeted = false
 lang = "en"
-[twitter.accounts.filter.vision]
+[twitter.timelines.filter.vision]
 label = ["cartoon|clip art|artwork"]
-[twitter.accounts.action]
+[twitter.timelines.action]
 retweet = true
 
 [[twitter.searches]]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -233,15 +234,17 @@ func runGitHub(c *cli.Context, handle func(error)) {
 
 func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
-	for _, a := range config.Twitter.Accounts {
+	for _, a := range config.Twitter.Timelines {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		if a.Name != nil {
-			ts, err := twitterAPI.RetweetAccount(*a.Name, cs, a.Action)
+		if a.ScreenName != nil {
+			v := getTwitterURL(a.Count)
+			ts, err := twitterAPI.RetweetAccount(*a.ScreenName, v, cs, a.Action)
 			tweets = append(tweets, ts...)
 			handle(err)
 		} else {
-			for _, name := range a.Names {
-				ts, err := twitterAPI.RetweetAccount(name, cs, a.Action)
+			for _, name := range a.ScreenNames {
+				v := getTwitterURL(a.Count)
+				ts, err := twitterAPI.RetweetAccount(name, v, cs, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
 			}
@@ -250,12 +253,14 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		if a.Query != nil {
-			ts, err := twitterAPI.RetweetSearch(*a.Query, cs, a.Action)
+			v := getTwitterURL(a.Count)
+			ts, err := twitterAPI.RetweetSearch(*a.Query, v, cs, a.Action)
 			handle(err)
 			tweets = append(tweets, ts...)
 		} else {
 			for _, query := range a.Queries {
-				ts, err := twitterAPI.RetweetSearch(query, cs, a.Action)
+				v := getTwitterURL(a.Count)
+				ts, err := twitterAPI.RetweetSearch(query, v, cs, a.Action)
 				handle(err)
 				tweets = append(tweets, ts...)
 			}
@@ -265,6 +270,14 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		err := twitterAPI.NotifyToAll(&t, config.Twitter.Notification)
 		handle(err)
 	}
+}
+
+func getTwitterURL(count *int) url.Values {
+	v := url.Values{}
+	if count != nil {
+		v.Set("count", fmt.Sprintf("%d", *count))
+	}
+	return v
 }
 
 func githubCommitTweet(p GitHubProject) error {
