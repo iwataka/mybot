@@ -64,8 +64,15 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 
 func validateConfig(config *MybotConfig) error {
 	for _, account := range config.Twitter.Accounts {
+		for key, _ := range account.Filter.Opts {
+			if key != "has_media" && key != "has_url" && key != "retweeted" {
+				msg := fmt.Sprintf("Account %s has invalid option: %s", account.Name, key)
+				return errors.New(msg)
+			}
+		}
 		if account.Action == nil {
-			return errors.New(fmt.Sprintf("Account %s has no action", account.Name))
+			msg := fmt.Sprintf("Account %s has no action", account.Name)
+			return errors.New(msg)
 		}
 	}
 	return nil
