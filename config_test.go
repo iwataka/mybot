@@ -33,6 +33,9 @@ func TestNewMybotConfig(t *testing.T) {
 	if *a.Filter.RetweetedThreshold != 100 {
 		t.Fatalf("%d expected but %d found", 100, *a.Filter.RetweetedThreshold)
 	}
+	if *a.Filter.Lang != "en" {
+		t.Fatalf("%s expected but %s found", "en", *a.Filter.Lang)
+	}
 	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])
 	}

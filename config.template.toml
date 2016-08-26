@@ -12,6 +12,7 @@ patterns = ["is released!", "#golang"]
 has_url = true
 retweeted = false
 retweeted_threshold = 100
+lang = "en"
 [twitter.accounts.filter.vision]
 label = ["cartoon|clip art|artwork"]
 [twitter.accounts.action]

@@ -14,6 +14,7 @@ type TweetFilterConfig struct {
 	Retweeted          *bool
 	FavoriteThreshold  *int `toml:"favorite_threshold"`
 	RetweetedThreshold *int `toml:"retweeted_threshold"`
+	Lang               *string
 	Vision             *VisionCondition
 }
 
@@ -56,6 +57,9 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 			return false, nil
 		}
 		if c.RetweetedThreshold != nil && *c.RetweetedThreshold > t.RetweetCount {
+			return false, nil
+		}
+		if c.Lang != nil && *c.Lang != t.Lang {
 			return false, nil
 		}
 		if c.Vision != nil && a != nil && a.Images != nil {
