@@ -15,14 +15,16 @@ type MybotConfig struct {
 	} `toml:"github"`
 	Twitter *struct {
 		Accounts []struct {
-			Name   string
+			Name   *string
+			Names  []string
 			Filter *TweetFilterConfig
 			Action *TwitterAction
 		}
 		Searches []struct {
-			Query  string
-			Filter *TweetFilterConfig
-			Action *TwitterAction
+			Query   *string
+			Queries []string
+			Filter  *TweetFilterConfig
+			Action  *TwitterAction
 		}
 		Notification *Notification
 		Duration     string

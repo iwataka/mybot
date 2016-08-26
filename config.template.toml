@@ -11,11 +11,17 @@ name = "golang"
 patterns = ["is released!", "#golang"]
 has_url = true
 retweeted = false
-retweeted_threshold = 100
 lang = "en"
 [twitter.accounts.filter.vision]
 label = ["cartoon|clip art|artwork"]
 [twitter.accounts.action]
+retweet = true
+
+[[twitter.searches]]
+queries = ["foo", "bar"]
+[twitter.searches.filter]
+retweeted_threshold = 100
+[twitter.searches.action]
 retweet = true
 
 [twitter.notification]

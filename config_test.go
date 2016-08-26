@@ -18,29 +18,40 @@ func TestNewMybotConfig(t *testing.T) {
 		t.Fatalf("%s expected but %s found", "30m", c.GitHub.Duration)
 	}
 	a := c.Twitter.Accounts[0]
-	if a.Name != "golang" {
+	if *a.Name != "golang" {
 		t.Fatalf("%s expected but %s found", "golang", a.Name)
 	}
-	if a.Filter.Patterns[0] != "is released!" {
-		t.Fatalf("%s expected but %s found", "is released!", a.Filter.Patterns[0])
+	f := a.Filter
+	if f.Patterns[0] != "is released!" {
+		t.Fatalf("%s expected but %s found", "is released!", f.Patterns[0])
 	}
-	if *a.Filter.HasUrl != true {
-		t.Fatalf("%v expected but %v found", true, *a.Filter.HasUrl)
+	if *f.HasUrl != true {
+		t.Fatalf("%v expected but %v found", true, *f.HasUrl)
 	}
-	if *a.Filter.Retweeted != false {
-		t.Fatalf("%v expected but %v found", false, *a.Filter.Retweeted)
+	if *f.Retweeted != false {
+		t.Fatalf("%v expected but %v found", false, *f.Retweeted)
 	}
-	if *a.Filter.RetweetedThreshold != 100 {
-		t.Fatalf("%d expected but %d found", 100, *a.Filter.RetweetedThreshold)
+	if *f.Lang != "en" {
+		t.Fatalf("%s expected but %s found", "en", *f.Lang)
 	}
-	if *a.Filter.Lang != "en" {
-		t.Fatalf("%s expected but %s found", "en", *a.Filter.Lang)
+	if f.Vision.Label[0] != "cartoon|clip art|artwork" {
+		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", f.Vision.Label[0])
 	}
-	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
-		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])
-	}
-	if a.Action.Retweet == false {
+	if a.Action.Retweet != true {
 		t.Fatalf("%v expected but %v found", true, a.Action.Retweet)
+	}
+	s := c.Twitter.Searches[0]
+	if s.Queries[0] != "foo" {
+		t.Fatalf("%s expected but %s found", "foo", s.Queries[0])
+	}
+	if s.Queries[1] != "bar" {
+		t.Fatalf("%s expected but %s found", "bar", s.Queries[1])
+	}
+	if *s.Filter.RetweetedThreshold != 100 {
+		t.Fatalf("%d expected but %d found", 100, *s.Filter.RetweetedThreshold)
+	}
+	if s.Action.Retweet != true {
+		t.Fatalf("%v expected but %v found", true, s.Action.Retweet)
 	}
 	n := c.Twitter.Notification
 	if n.Place.AllowSelf != true {

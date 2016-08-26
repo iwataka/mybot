@@ -235,15 +235,31 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Accounts {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetAccount(a.Name, cs, a.Action)
-		handle(err)
-		tweets = append(tweets, ts...)
+		if a.Name != nil {
+			ts, err := twitterAPI.RetweetAccount(*a.Name, cs, a.Action)
+			tweets = append(tweets, ts...)
+			handle(err)
+		} else {
+			for _, name := range a.Names {
+				ts, err := twitterAPI.RetweetAccount(name, cs, a.Action)
+				tweets = append(tweets, ts...)
+				handle(err)
+			}
+		}
 	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		ts, err := twitterAPI.RetweetSearch(a.Query, cs, a.Action)
-		handle(err)
-		tweets = append(tweets, ts...)
+		if a.Query != nil {
+			ts, err := twitterAPI.RetweetSearch(*a.Query, cs, a.Action)
+			handle(err)
+			tweets = append(tweets, ts...)
+		} else {
+			for _, query := range a.Queries {
+				ts, err := twitterAPI.RetweetSearch(query, cs, a.Action)
+				handle(err)
+				tweets = append(tweets, ts...)
+			}
+		}
 	}
 	for _, t := range tweets {
 		err := twitterAPI.NotifyToAll(&t, config.Twitter.Notification)
