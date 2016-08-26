@@ -36,16 +36,16 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 			}
 		}
 		for key, val := range c.Opts {
-			if key == "hasMedia" {
+			if key == "has_media" {
 				if val != (len(t.Entities.Media) != 0) {
 					return false, nil
 				}
-			} else if key == "hasUrl" {
+			} else if key == "has_url" {
 				if val != (len(t.Entities.Urls) != 0) {
 					return false, nil
 				}
 			} else if key == "retweeted" {
-				if val != t.Retweeted {
+				if val != (t.RetweetedStatus != nil) {
 					return false, nil
 				}
 			}

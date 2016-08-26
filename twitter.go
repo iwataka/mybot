@@ -112,7 +112,7 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 			f(t)
 		}
 		if match {
-			if action.Retweet {
+			if action.Retweet && !t.Retweeted {
 				_, err := a.Retweet(t.Id, false)
 				if err != nil {
 					return nil, err
