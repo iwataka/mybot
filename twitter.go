@@ -95,6 +95,10 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
+		// Use the original tweet instead of retweeted one
+		if t.RetweetedStatus != nil {
+			t = *t.RetweetedStatus
+		}
 		match := true
 		for _, c := range cs {
 			m, err := c(t)
