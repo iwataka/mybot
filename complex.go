@@ -25,14 +25,18 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 			}
 		}
 		for _, url := range c.UrlPatterns {
+			match := false
 			for _, u := range t.Entities.Urls {
 				match, err := regexp.MatchString(url, u.Display_url)
 				if err != nil {
 					return false, err
 				}
-				if !match {
-					return false, nil
+				if match {
+					break
 				}
+			}
+			if !match {
+				return false, nil
 			}
 		}
 		for key, val := range c.Opts {
