@@ -24,8 +24,14 @@ func TestNewMybotConfig(t *testing.T) {
 	if a.Filter.Patterns[0] != "is released!" {
 		t.Fatalf("%s expected but %s found", "is released!", a.Filter.Patterns[0])
 	}
-	if a.Filter.Opts["retweeted"] != false {
-		t.Fatalf("%v expected but %v found", false, a.Filter.Opts["retweeted"])
+	if *a.Filter.HasUrl != true {
+		t.Fatalf("%v expected but %v found", true, *a.Filter.HasUrl)
+	}
+	if *a.Filter.Retweeted != false {
+		t.Fatalf("%v expected but %v found", false, *a.Filter.Retweeted)
+	}
+	if *a.Filter.RetweetedThreshold != 100 {
+		t.Fatalf("%d expected but %d found", 100, *a.Filter.RetweetedThreshold)
 	}
 	if a.Filter.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", a.Filter.Vision.Label[0])

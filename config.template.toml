@@ -9,8 +9,9 @@ user = "golang"
 name = "golang"
 [twitter.accounts.filter]
 patterns = ["is released!", "#golang"]
-[twitter.accounts.filter.opts]
 has_url = true
+retweeted = false
+retweeted_threshold = 100
 [twitter.accounts.filter.vision]
 label = ["cartoon|clip art|artwork"]
 [twitter.accounts.action]

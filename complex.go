@@ -7,10 +7,14 @@ import (
 )
 
 type TweetFilterConfig struct {
-	Patterns    []string
-	UrlPatterns []string `toml:"url_patterns"`
-	Opts        map[string]bool
-	Vision      *VisionCondition
+	Patterns           []string
+	UrlPatterns        []string `toml:"url_patterns"`
+	HasMedia           *bool    `toml:"has_media"`
+	HasUrl             *bool    `toml:"has_url"`
+	Retweeted          *bool
+	FavoriteThreshold  *int `toml:"favorite_threshold"`
+	RetweetedThreshold *int `toml:"retweeted_threshold"`
+	Vision             *VisionCondition
 }
 
 func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
@@ -39,20 +43,20 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 				return false, nil
 			}
 		}
-		for key, val := range c.Opts {
-			if key == "has_media" {
-				if val != (len(t.Entities.Media) != 0) {
-					return false, nil
-				}
-			} else if key == "has_url" {
-				if val != (len(t.Entities.Urls) != 0) {
-					return false, nil
-				}
-			} else if key == "retweeted" {
-				if val != (t.RetweetedStatus != nil) {
-					return false, nil
-				}
-			}
+		if c.HasMedia != nil && *c.HasMedia != (len(t.Entities.Media) != 0) {
+			return false, nil
+		}
+		if c.HasUrl != nil && *c.HasUrl != (len(t.Entities.Urls) != 0) {
+			return false, nil
+		}
+		if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {
+			return false, nil
+		}
+		if c.FavoriteThreshold != nil && *c.FavoriteThreshold > t.FavoriteCount {
+			return false, nil
+		}
+		if c.RetweetedThreshold != nil && *c.RetweetedThreshold > t.RetweetCount {
+			return false, nil
 		}
 		if c.Vision != nil && a != nil && a.Images != nil {
 			urls := make([]string, len(t.Entities.Media))
