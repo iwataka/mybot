@@ -118,7 +118,7 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 					return nil, err
 				}
 			}
-			if action.Favorite {
+			if action.Favorite && !t.Favorited {
 				_, err := a.Favorite(t.Id)
 				if err != nil {
 					return nil, err
