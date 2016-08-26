@@ -32,14 +32,6 @@
             <a href="https://console.developers.google.com/apis/api/vision.googleapis.com/overview" class="btn btn-social-icon btn-google"><span class="fa fa-google fa-passive"></span></a>
             {{ end }}
         </div>
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title">Why Mybot?</h3>
-            </div>
-            <div class="panel-body">
-                Firstly I want to make my Twitter doing more intelligence things automatically and As a result, I've published Mybot, which is a framework to create your own bot of Twitter.
-            </div>
-        </div>
         <div class="panel panel-danger">
             <div class="panel-heading">
                 <h3 class="panel-title">Error Log</h3>
@@ -51,6 +43,24 @@
                 <em>Nothing to show</em>
             </div>
             {{ end }}
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Twitter Collections</h3>
+            </div>
+            <div class="panel-body">
+                {{ if .CollectionMap }}
+                <ul>
+                    {{ range $key, $val := .CollectionMap }}
+                    <li>
+                        <a href="{{ $val }}">{{ $key }}</a>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <em>Nothing to show</em>
+                {{ end }}
+            </div>
         </div>
         <div class="panel panel-info">
             <div class="panel-heading">
@@ -75,22 +85,6 @@
                 {{ end }}
             </div>
         </div>
-        {{ if .CollectionMap }}
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <h3 class="panel-title">Twitter Collections</h3>
-            </div>
-            <div class="panel-body">
-                <ul>
-                    {{ range $key, $val := .CollectionMap }}
-                    <li>
-                        <a href="{{ $val }}">{{ $key }}</a>
-                    </li>
-                    {{ end }}
-                </ul>
-            </div>
-        </div>
-        {{ end }}
     </div>
 </body>
 </html>
