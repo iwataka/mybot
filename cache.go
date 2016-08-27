@@ -11,7 +11,7 @@ type MybotCache struct {
 	LatestCommitSHA       map[string]map[string]string
 	LatestTweetID         map[string]int64
 	LatestDirectMessageID map[string]int64
-	LatestSearchAction    map[string]map[int64]bool
+	LatestSearchAction    map[string]map[string]bool
 	ImageURL              string
 	ImageAnalysisResult   string
 	ImageAnalysisDate     string
@@ -22,7 +22,7 @@ func NewMybotCache(path string) (*MybotCache, error) {
 		make(map[string]map[string]string),
 		make(map[string]int64),
 		make(map[string]int64),
-		make(map[string]map[int64]bool),
+		make(map[string]map[string]bool),
 		"",
 		"",
 		"",

@@ -86,19 +86,19 @@ func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker
 	res, err := a.GetSearch(query, v)
 	queryMap, exists := a.cache.LatestSearchAction[query]
 	if !exists {
-		a.cache.LatestSearchAction[query] = make(map[int64]bool)
+		a.cache.LatestSearchAction[query] = make(map[string]bool)
 		queryMap = a.cache.LatestSearchAction[query]
 	}
 	statuses := []anaconda.Tweet{}
 	for _, s := range res.Statuses {
-		_, exists := queryMap[s.Id]
+		_, exists := queryMap[s.IdStr]
 		if !exists {
 			statuses = append(statuses, s)
 		}
 	}
 	result, err := a.retweetTweets(statuses, cs, action, func(t anaconda.Tweet, match bool) {
 		if match {
-			a.cache.LatestSearchAction[query][t.Id] = true
+			a.cache.LatestSearchAction[query][t.IdStr] = true
 		}
 	})
 	if err != nil {
