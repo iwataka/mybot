@@ -22,11 +22,12 @@ type MybotConfig struct {
 			Action      *TwitterAction
 		}
 		Searches []struct {
-			Query   *string
-			Queries []string
-			Count   *int
-			Filter  *TweetFilterConfig
-			Action  *TwitterAction
+			Query      *string
+			Queries    []string
+			ResultType *string `toml:"result_type"`
+			Count      *int
+			Filter     *TweetFilterConfig
+			Action     *TwitterAction
 		}
 		Notification *Notification
 		Duration     string

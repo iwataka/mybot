@@ -235,7 +235,10 @@ func runGitHub(c *cli.Context, handle func(error)) {
 func runRetweet(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
-		v := getTwitterURL(a.Count)
+		v := url.Values{}
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
+		}
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		if a.ScreenName != nil {
 			ts, err := twitterAPI.RetweetAccount(*a.ScreenName, v, cs, a.Action)
@@ -251,7 +254,13 @@ func runRetweet(c *cli.Context, handle func(error)) {
 	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
-		v := getTwitterURL(a.Count)
+		v := url.Values{}
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
+		}
+		if a.ResultType != nil {
+			v.Set("result_type", *a.ResultType)
+		}
 		if a.Query != nil {
 			ts, err := twitterAPI.RetweetSearch(*a.Query, v, cs, a.Action)
 			handle(err)
@@ -268,14 +277,6 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		err := twitterAPI.NotifyToAll(&t, config.Twitter.Notification)
 		handle(err)
 	}
-}
-
-func getTwitterURL(count *int) url.Values {
-	v := url.Values{}
-	if count != nil {
-		v.Set("count", fmt.Sprintf("%d", *count))
-	}
-	return v
 }
 
 func githubCommitTweet(p GitHubProject) error {
