@@ -227,8 +227,13 @@ func monitorFile(file string, d time.Duration, f func()) {
 }
 
 func runGitHub(c *cli.Context, handle func(error)) {
-	for _, p := range config.GitHub.Projects {
-		handle(githubCommitTweet(p))
+	if config.GitHub != nil {
+		if config.GitHub.Projects == nil {
+			config.GitHub.Projects = []GitHubProject{}
+		}
+		for _, p := range config.GitHub.Projects {
+			handle(githubCommitTweet(p))
+		}
 	}
 }
 
