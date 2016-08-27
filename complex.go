@@ -8,9 +8,9 @@ import (
 
 type TweetFilterConfig struct {
 	Patterns           []string
-	UrlPatterns        []string `toml:"url_patterns"`
+	URLPatterns        []string `toml:"url_patterns"`
 	HasMedia           *bool    `toml:"has_media"`
-	HasUrl             *bool    `toml:"has_url"`
+	hasURL             *bool    `toml:"has_url"`
 	Retweeted          *bool
 	FavoriteThreshold  *int `toml:"favorite_threshold"`
 	RetweetedThreshold *int `toml:"retweeted_threshold"`
@@ -29,7 +29,7 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 				return false, nil
 			}
 		}
-		for _, url := range c.UrlPatterns {
+		for _, url := range c.URLPatterns {
 			match := false
 			var err error
 			for _, u := range t.Entities.Urls {
@@ -48,7 +48,7 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 		if c.HasMedia != nil && *c.HasMedia != (len(t.Entities.Media) != 0) {
 			return false, nil
 		}
-		if c.HasUrl != nil && *c.HasUrl != (len(t.Entities.Urls) != 0) {
+		if c.hasURL != nil && *c.hasURL != (len(t.Entities.Urls) != 0) {
 			return false, nil
 		}
 		if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {

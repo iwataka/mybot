@@ -81,7 +81,7 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		return nil, err
 	}
 	if len(md.Undecoded()) != 0 {
-		return nil, errors.New(fmt.Sprintf("%v undecoded in %s", md.Undecoded(), path))
+		return nil, fmt.Errorf("%v undecoded in %s", md.Undecoded(), path)
 	}
 	err = validateConfig(c)
 	if err != nil {
@@ -101,7 +101,7 @@ func validateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		if account.ScreenName != nil && account.ScreenNames != nil && len(account.ScreenNames) != 0 {
-			msg := fmt.Sprintf("%v has name and names properties, use `names` only.")
+			msg := fmt.Sprintf("%v has name and names properties, use `names` only.", account)
 			return errors.New(msg)
 		}
 	}
@@ -115,7 +115,7 @@ func validateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		if search.Query != nil && search.Queries != nil && len(search.Queries) != 0 {
-			msg := fmt.Sprintf("%v has query and queries properties, use `query` only.")
+			msg := fmt.Sprintf("%v has query and queries properties, use `query` only.", search)
 			return errors.New(msg)
 		}
 	}

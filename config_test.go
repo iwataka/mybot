@@ -19,14 +19,14 @@ func TestNewMybotConfig(t *testing.T) {
 	}
 	a := c.Twitter.Timelines[0]
 	if *a.ScreenName != "golang" {
-		t.Fatalf("%s expected but %s found", "golang", a.ScreenName)
+		t.Fatalf("%s expected but %s found", "golang", *a.ScreenName)
 	}
 	f := a.Filter
 	if f.Patterns[0] != "is released!" {
 		t.Fatalf("%s expected but %s found", "is released!", f.Patterns[0])
 	}
-	if *f.HasUrl != true {
-		t.Fatalf("%v expected but %v found", true, *f.HasUrl)
+	if *f.hasURL != true {
+		t.Fatalf("%v expected but %v found", true, *f.hasURL)
 	}
 	if *f.Retweeted != false {
 		t.Fatalf("%v expected but %v found", false, *f.Retweeted)

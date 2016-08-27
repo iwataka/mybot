@@ -17,6 +17,6 @@ func TestInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if info, _ := os.Stat(tmp.Name()); info == nil {
-		t.Fatalf("%s expected to exist but not", tmp)
+		t.Fatalf("%s expected to exist but not", tmp.Name())
 	}
 }

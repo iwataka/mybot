@@ -66,7 +66,10 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 			return false, err
 		}
 		imgData[i] = data
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if err != nil {
+			return false, err
+		}
 	}
 
 	features := getFeatures(cond)
