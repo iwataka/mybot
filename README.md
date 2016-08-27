@@ -12,3 +12,8 @@ Then run `mybot serve` and that's all.
 ## Development
 
 See [Git-hook scripts](scripts/) to accelerate your development.
+
+## ToDo
+
++ OAuth Login from Web UI
++ Integrate with Google+, Tumblr and so on
