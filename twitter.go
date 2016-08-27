@@ -73,7 +73,7 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.retweetTweets(tweets, cs, action, func(t anaconda.Tweet) {
+	result, err := a.retweetTweets(tweets, cs, action, func(t anaconda.Tweet, _ bool) {
 		a.cache.LatestTweetID[name] = t.Id
 	})
 	if err != nil {
@@ -84,14 +84,30 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 
 func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.GetSearch(query, v)
-	result, err := a.retweetTweets(res.Statuses, cs, action, nil)
+	queryMap, exists := a.cache.LatestSearchAction[query]
+	if !exists {
+		a.cache.LatestSearchAction[query] = make(map[int64]bool)
+		queryMap = a.cache.LatestSearchAction[query]
+	}
+	statuses := []anaconda.Tweet{}
+	for _, s := range res.Statuses {
+		_, exists := queryMap[s.Id]
+		if !exists {
+			statuses = append(statuses, s)
+		}
+	}
+	result, err := a.retweetTweets(statuses, cs, action, func(t anaconda.Tweet, match bool) {
+		if match {
+			a.cache.LatestSearchAction[query][t.Id] = true
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet, bool)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
@@ -107,7 +123,7 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 			}
 		}
 		if f != nil {
-			f(t)
+			f(t, match)
 		}
 		if match {
 			if action.Retweet && !t.Retweeted {
