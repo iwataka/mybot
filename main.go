@@ -244,6 +244,12 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
+		if a.ExcludeReplies != nil {
+			v.Set("exclude_replies", fmt.Sprintf("%v", *a.ExcludeReplies))
+		}
+		if a.IncludeRts != nil {
+			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
+		}
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		if a.ScreenName != nil {
 			ts, err := twitterAPI.RetweetAccount(*a.ScreenName, v, cs, a.Action)

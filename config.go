@@ -15,11 +15,13 @@ type MybotConfig struct {
 	} `toml:"github"`
 	Twitter *struct {
 		Timelines []struct {
-			ScreenName  *string  `toml:"screen_name"`
-			ScreenNames []string `toml:"screen_names"`
-			Count       *int
-			Filter      *TweetFilterConfig
-			Action      *TwitterAction
+			ScreenName     *string  `toml:"screen_name"`
+			ScreenNames    []string `toml:"screen_names"`
+			ExcludeReplies *bool    `toml:"exclude_replies"`
+			IncludeRts     *bool    `toml:"include_rts"`
+			Count          *int
+			Filter         *TweetFilterConfig
+			Action         *TwitterAction
 		}
 		Searches []struct {
 			Query      *string
