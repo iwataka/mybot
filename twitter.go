@@ -65,6 +65,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 
 func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
+	v.Set("screen_name", name)
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	}
