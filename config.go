@@ -9,47 +9,68 @@ import (
 )
 
 type MybotConfig struct {
-	GitHub *struct {
-		Projects []GitHubProject
-		Duration string
-	} `toml:"github"`
-	Twitter *struct {
-		Timelines []struct {
-			ScreenName     *string  `toml:"screen_name"`
-			ScreenNames    []string `toml:"screen_names"`
-			ExcludeReplies *bool    `toml:"exclude_replies"`
-			IncludeRts     *bool    `toml:"include_rts"`
-			Count          *int
-			Filter         *TweetFilterConfig
-			Action         *TwitterAction
-		}
-		Searches []struct {
-			Query      *string
-			Queries    []string
-			ResultType *string `toml:"result_type"`
-			Count      *int
-			Filter     *TweetFilterConfig
-			Action     *TwitterAction
-		}
-		Notification *Notification
-		Duration     string
-	}
-	Interaction *struct {
-		Duration  string
-		AllowSelf bool `toml:"allow_self"`
-		Users     []string
-	}
-	Log *struct {
-		AllowSelf bool `toml:"allow_self"`
-		Users     []string
-	}
+	GitHub         *GitHubConfig `toml:"github"`
+	Twitter        *TwitterConfig
+	Interaction    *InteractionConfig
+	Log            *LogConfig
 	Authentication *TwitterAuth
-	Option         *HTTPServer
+	HTTP           *HTTPServer `toml:"http"`
+}
+
+type GitHubConfig struct {
+	Projects []GitHubProject
+	Duration string
+}
+
+type TwitterConfig struct {
+	Timelines    []TimelineConfig
+	Searches     []SearchConfig
+	Notification *Notification
+	Duration     string
+}
+
+type TimelineConfig struct {
+	ScreenName     *string  `toml:"screen_name"`
+	ScreenNames    []string `toml:"screen_names"`
+	ExcludeReplies *bool    `toml:"exclude_replies"`
+	IncludeRts     *bool    `toml:"include_rts"`
+	Count          *int
+	Filter         *TweetFilterConfig
+	Action         *TwitterAction
+}
+
+type SearchConfig struct {
+	Query      *string
+	Queries    []string
+	ResultType *string `toml:"result_type"`
+	Count      *int
+	Filter     *TweetFilterConfig
+	Action     *TwitterAction
+}
+
+type InteractionConfig struct {
+	Duration  string
+	AllowSelf bool `toml:"allow_self"`
+	Users     []string
+}
+
+type LogConfig struct {
+	AllowSelf bool `toml:"allow_self"`
+	Users     []string
 }
 
 func NewMybotConfig(path string) (*MybotConfig, error) {
 	c := &MybotConfig{
-		Option: &HTTPServer{Port: "8080"},
+		GitHub: &GitHubConfig{
+			Projects: []GitHubProject{},
+			Duration: "1h",
+		},
+		Twitter: &TwitterConfig{
+			Timelines: []TimelineConfig{},
+			Searches:  []SearchConfig{},
+			Duration:  "1h",
+		},
+		HTTP: &HTTPServer{Port: "8080"},
 	}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {

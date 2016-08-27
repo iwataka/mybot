@@ -129,7 +129,7 @@ func run(c *cli.Context) error {
 }
 
 func serve(c *cli.Context) error {
-	s := config.Option
+	s := config.HTTP
 	s.Logger = logger
 	s.TwitterAPI = twitterAPI
 	s.VisionAPI = visionAPI
@@ -227,13 +227,8 @@ func monitorFile(file string, d time.Duration, f func()) {
 }
 
 func runGitHub(c *cli.Context, handle func(error)) {
-	if config.GitHub != nil {
-		if config.GitHub.Projects == nil {
-			config.GitHub.Projects = []GitHubProject{}
-		}
-		for _, p := range config.GitHub.Projects {
-			handle(githubCommitTweet(p))
-		}
+	for _, p := range config.GitHub.Projects {
+		handle(githubCommitTweet(p))
 	}
 }
 
