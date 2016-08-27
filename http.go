@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 type HTTPServer struct {
@@ -65,7 +66,8 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
 		if err == nil {
 			for _, c := range colList.Objects.Timelines {
-				colMap[c.Name] = c.CollectionUrl
+				name := strings.Replace(c.Name, " ", "-", -1)
+				colMap[name] = c.CollectionUrl
 			}
 		}
 

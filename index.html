@@ -8,9 +8,15 @@
     <title>Mybot Home</title>
     {{ end }}
 </head>
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous" async>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" async>
-<link rel="stylesheet" href="/assets/css/custom.css" async>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+<link rel="stylesheet" href="/assets/css/custom.css">
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+<script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <body>
     <div class="container">
@@ -32,59 +38,79 @@
             <a href="https://console.developers.google.com/apis/api/vision.googleapis.com/overview" class="btn btn-social-icon btn-google"><span class="fa fa-google fa-passive"></span></a>
             {{ end }}
         </div>
-        <div class="panel panel-danger">
-            <div class="panel-heading">
-                <h3 class="panel-title">Error Log</h3>
+
+        <ul class="nav nav-tabs">
+          <li role="presentation" class="active"><a data-toggle="tab" href="#home">Home</a></li>
+          {{ range $key, $val := .CollectionMap }}
+          <li role="presentation"><a data-toggle="tab" href="#{{ $key }}">{{ $key }}</a></li>
+          {{ end }}
+        </ul>
+
+        <div class="tab-content">
+            <div id="home" class="tab-pane fade in active">
+                <div class="panel panel-danger">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Error Log</h3>
+                    </div>
+                    {{ if .Log }}
+                        <div class="panel-body"><pre><code>{{ .Log }}</code></pre></div>
+                    {{ else }}
+                    <div class="panel-body">
+                        <em>Nothing to show</em>
+                    </div>
+                    {{ end }}
+                </div>
+                <div class="panel panel-info">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">Twitter Collections</h3>
+                    </div>
+                    <div class="panel-body">
+                        {{ if .CollectionMap }}
+                        <ul>
+                            {{ range $key, $val := .CollectionMap }}
+                            <li>
+                                <a href="{{ $val }}">{{ $key }}</a>
+                            </li>
+                            {{ end }}
+                        </ul>
+                        {{ else }}
+                        <em>Nothing to show</em>
+                        {{ end }}
+                    </div>
+                </div>
+                <div class="panel panel-info">
+                    <div class="panel-heading">
+                        {{ if .ImageAnalysisDate }}
+                        <h3 class="panel-title">Google Vision API Result ({{ .ImageAnalysisDate }})</h3>
+                        {{ else }}
+                        <h3 class="panel-title">Google Vision API Result</h3>
+                        {{ end }}
+                    </div>
+                    <div class="panel-body">
+                        {{ if .ImageURL }}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <img src="{{ .ImageURL }}" class="img-responsive", alt="Image analyzed by Google Vision API">
+                            </div>
+                            <div class="col-md-6">
+                                <pre><code>{{ .ImageAnalysisResult }}</code></pre>
+                            </div>
+                        </div>
+                    {{ else }}
+                    <em>Nothing to show</em>
+                    {{ end }}
+                    </div>
+                </div>
             </div>
-            {{ if .Log }}
-            <div class="panel-body"><pre><code>{{ .Log }}</code></pre></div>
-            {{ else }}
-            <div class="panel-body">
-                <em>Nothing to show</em>
+            {{ range $key, $val := .CollectionMap }}
+            <div id="{{ $key }}" class="tab-pane fade">
+                <a class="twitter-grid" href="{{ $val }}"></a>
             </div>
             {{ end }}
         </div>
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <h3 class="panel-title">Twitter Collections</h3>
-            </div>
-            <div class="panel-body">
-                {{ if .CollectionMap }}
-                <ul>
-                    {{ range $key, $val := .CollectionMap }}
-                    <li>
-                        <a href="{{ $val }}">{{ $key }}</a>
-                    </li>
-                    {{ end }}
-                </ul>
-                {{ else }}
-                <em>Nothing to show</em>
-                {{ end }}
-            </div>
-        </div>
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                {{ if .ImageAnalysisDate }}
-                <h3 class="panel-title">Google Vision API Result ({{ .ImageAnalysisDate }})</h3>
-                {{ else }}
-                <h3 class="panel-title">Google Vision API Result</h3>
-                {{ end }}
-            </div>
-            <div class="panel-body">
-                {{ if .ImageURL }}
-                <div class="row">
-                    <div class="col-md-6">
-                        <img src="{{ .ImageURL }}" class="img-responsive", alt="Image analyzed by Google Vision API">
-                    </div>
-                    <div class="col-md-6">
-                        <pre><code>{{ .ImageAnalysisResult }}</code></pre>
-                    </div>
-                </div>
-                {{ else }}
-                <em>Nothing to show</em>
-                {{ end }}
-            </div>
-        </div>
+
+
     </div>
+
 </body>
 </html>
