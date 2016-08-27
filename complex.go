@@ -31,8 +31,9 @@ func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
 		}
 		for _, url := range c.UrlPatterns {
 			match := false
+			var err error
 			for _, u := range t.Entities.Urls {
-				match, err := regexp.MatchString(url, u.Display_url)
+				match, err = regexp.MatchString(url, u.Display_url)
 				if err != nil {
 					return false, err
 				}
