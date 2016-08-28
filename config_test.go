@@ -25,8 +25,8 @@ func TestNewMybotConfig(t *testing.T) {
 	if f.Patterns[0] != "is released!" {
 		t.Fatalf("%s expected but %s found", "is released!", f.Patterns[0])
 	}
-	if *f.hasURL != true {
-		t.Fatalf("%v expected but %v found", true, *f.hasURL)
+	if *f.HasURL != true {
+		t.Fatalf("%v expected but %v found", true, *f.HasURL)
 	}
 	if *f.Retweeted != false {
 		t.Fatalf("%v expected but %v found", false, *f.Retweeted)
