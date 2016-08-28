@@ -70,7 +70,10 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 			Searches:  []SearchConfig{},
 			Duration:  "1h",
 		},
-		HTTP: &HTTPServer{Port: "8080"},
+		HTTP: &HTTPServer{
+			Host: "127.0.0.1",
+			Port: "8080",
+		},
 	}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {

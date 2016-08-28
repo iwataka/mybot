@@ -10,6 +10,7 @@ import (
 
 type HTTPServer struct {
 	Name       string
+	Host       string
 	Port       string
 	Logger     *Logger
 	TwitterAPI *TwitterAPI
@@ -21,7 +22,7 @@ func (s *HTTPServer) Init() error {
 	http.HandleFunc("/", s.handler)
 	http.HandleFunc("/assets/css/custom.css", s.customCSSHandler)
 	http.HandleFunc("/404", s.notFoundHandler)
-	err := http.ListenAndServe(":"+s.Port, nil)
+	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 	if err != nil {
 		return err
 	}

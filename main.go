@@ -193,13 +193,8 @@ func serve(c *cli.Context) error {
 
 		})
 
-	ip, err := getGlobalIP()
-	logger.InfoIfError(err)
-	fmt.Printf("Open 127.0.0.1:%s to see the detail information\n", s.Port)
-	if ip != nil {
-		fmt.Printf("You can also open %s:%s to see it from outside\n", ip.String(), s.Port)
-	}
-	err = s.Init()
+	fmt.Printf("Open %s:%s for detailed information\n", s.Host, s.Port)
+	err := s.Init()
 	if err != nil {
 		panic(err)
 	}
