@@ -2,15 +2,22 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"net/url"
+	"strings"
 
 	"github.com/iwataka/anaconda"
 )
 
+// NOTE: This must be fixed because multiple applications having different
+// values cause infinite number of messages.
+const msgPrefix = "<bot message>\n"
+
 type TwitterAPI struct {
-	*anaconda.TwitterApi
-	self  *anaconda.User
-	cache *MybotCache
+	api    *anaconda.TwitterApi
+	self   *anaconda.User
+	cache  *MybotCache
+	config *MybotConfig
 }
 
 type TwitterAuth struct {
@@ -26,17 +33,29 @@ type TwitterAction struct {
 	Collections []string
 }
 
-func NewTwitterAPI(a *TwitterAuth, c *MybotCache) *TwitterAPI {
+func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
 	api := anaconda.NewTwitterApi(a.AccessToken, a.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c}
+	return &TwitterAPI{api, nil, c, cfg}
+}
+
+func (a *TwitterAPI) PostDMToScreenName(msg, name string) (anaconda.DirectMessage, error) {
+	return a.api.PostDMToScreenName(msgPrefix+msg, name)
+}
+
+func (a *TwitterAPI) GetCollectionListByUserId(userId int64, v url.Values) (anaconda.CollectionListResult, error) {
+	return a.api.GetCollectionListByUserId(userId, v)
+}
+
+func (a *TwitterAPI) PostTweet(msg string, v url.Values) (anaconda.Tweet, error) {
+	return a.api.PostTweet(msg, v)
 }
 
 // GetSelfCache returns the user of this client
-func (a *TwitterAPI) GetSelfCache() (anaconda.User, error) {
+func (a *TwitterAPI) GetSelf() (anaconda.User, error) {
 	if a.self == nil {
-		self, err := a.GetSelf(nil)
+		self, err := a.api.GetSelf(nil)
 		if err != nil {
 			return anaconda.User{}, err
 		}
@@ -47,7 +66,7 @@ func (a *TwitterAPI) GetSelfCache() (anaconda.User, error) {
 
 func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (bool, error) {
 	if allowSelf {
-		self, err := a.GetSelfCache()
+		self, err := a.GetSelf()
 		if err != nil {
 			return false, err
 		}
@@ -69,7 +88,7 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	}
-	tweets, err := a.GetUserTimeline(v)
+	tweets, err := a.api.GetUserTimeline(v)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +102,7 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 }
 
 func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
-	res, err := a.GetSearch(query, v)
+	res, err := a.api.GetSearch(query, v)
 	queryMap, exists := a.cache.LatestSearchAction[query]
 	if !exists {
 		a.cache.LatestSearchAction[query] = make(map[string]bool)
@@ -127,13 +146,13 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 		}
 		if match {
 			if action.Retweet && !t.Retweeted {
-				_, err := a.Retweet(t.Id, false)
+				_, err := a.api.Retweet(t.Id, false)
 				if err != nil {
 					return nil, err
 				}
 			}
 			if action.Favorite && !t.Favorited {
-				_, err := a.Favorite(t.Id)
+				_, err := a.api.Favorite(t.Id)
 				if err != nil {
 					return nil, err
 				}
@@ -151,7 +170,7 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 }
 
 func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error {
-	self, err := a.GetSelfCache()
+	self, err := a.GetSelf()
 	if err != nil {
 		return err
 	}
@@ -166,13 +185,13 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 		}
 	}
 	if !exists {
-		col, err := a.CreateCollection(collection, nil)
+		col, err := a.api.CreateCollection(collection, nil)
 		if err != nil {
 			return err
 		}
 		id = col.Response.TimelineId
 	}
-	_, err = a.AddEntryToCollection(id, tweet.Id, nil)
+	_, err = a.api.AddEntryToCollection(id, tweet.Id, nil)
 	if err != nil {
 		return err
 	}
@@ -180,7 +199,8 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 }
 
 // NotifyToAll sends metadata about the specified tweet to the all.
-func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet, n *Notification) error {
+func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
+	n := a.config.Twitter.Notification
 	if n.Place != nil && t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
 		allowSelf := n.Place.AllowSelf
@@ -199,7 +219,7 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 		}
 	}
 	if allowSelf {
-		self, err := a.GetSelfCache()
+		self, err := a.GetSelf()
 		if err != nil {
 			return err
 		}
@@ -211,48 +231,60 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
-func (a *TwitterAPI) Response(users []string, rs ...DirectMessageReceiver) error {
-	dms, err := a.GetDirectMessages(nil)
+func (a *TwitterAPI) Response(rs []DirectMessageReceiver) error {
+	allowSelf := a.config.Interaction.AllowSelf
+	users := a.config.Interaction.Users
+	latestID := a.cache.LatestDMID
+	v := url.Values{}
+	if latestID != 0 {
+		v.Set("since_id", fmt.Sprintf("%d", latestID))
+	}
+	count := a.config.Interaction.Count
+	if count != nil {
+		v.Set("count", fmt.Sprintf("%d", *count))
+	}
+	dms, err := a.api.GetDirectMessages(v)
 	if err != nil {
 		return err
 	}
-	senderToDM := make(map[string]anaconda.DirectMessage)
 	for _, dm := range dms {
-		sender := dm.SenderScreenName
-		allowed, err := a.CheckUser(sender, false, users)
-		if err != nil {
-			return err
+		if dm.Id > latestID {
+			latestID = dm.Id
 		}
-		if allowed {
-			_, exists := senderToDM[sender]
-			if !exists {
-				senderToDM[sender] = dm
+		if latestID != 0 {
+			if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
+				continue
+			}
+			sender := dm.Sender.ScreenName
+			allowed, err := a.CheckUser(sender, allowSelf, users)
+			if err != nil {
+				return err
+			}
+			if allowed {
+				var text string
+				for _, r := range rs {
+					t, err := r(dm)
+					if err != nil {
+						return err
+					}
+					if t != "" {
+						text = t
+						break
+					}
+				}
+				if text != "" {
+					res, err := a.PostDMToScreenName(text, sender)
+					if err != nil {
+						return err
+					}
+					if res.Id > latestID {
+						latestID = res.Id
+					}
+				}
 			}
 		}
 	}
-	for sender, dm := range senderToDM {
-		latest, exists := a.cache.LatestDirectMessageID[sender]
-		if !exists || latest != dm.Id {
-			var text string
-			for _, r := range rs {
-				t, err := r(dm)
-				if err != nil {
-					return err
-				}
-				if t != "" {
-					text = t
-					break
-				}
-			}
-			if text != "" {
-				res, err := a.PostDMToScreenName(text, sender)
-				if err != nil {
-					return err
-				}
-				a.cache.LatestDirectMessageID[sender] = res.Id
-			}
-		}
-	}
+	a.cache.LatestDMID = latestID
 	return nil
 }
 
@@ -269,5 +301,5 @@ type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
 // DirectMessageEchoReceiver receives a direct message and does nothing, but
 // returns the same text as the received one, so this is called `echo` receiver.
 func DirectMessageEchoReceiver(m anaconda.DirectMessage) (string, error) {
-	return m.Text, nil
+	return html.UnescapeString(m.Text), nil
 }

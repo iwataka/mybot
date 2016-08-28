@@ -52,6 +52,7 @@ type InteractionConfig struct {
 	Duration  string
 	AllowSelf bool `toml:"allow_self"`
 	Users     []string
+	Count     *int
 }
 
 type LogConfig struct {
@@ -63,7 +64,7 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 	c := &MybotConfig{
 		GitHub: &GitHubConfig{
 			Projects: []GitHubProject{},
-			Duration: "1h",
+			Duration: "12h",
 		},
 		Twitter: &TwitterConfig{
 			Timelines: []TimelineConfig{},

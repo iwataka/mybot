@@ -104,7 +104,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	githubAPI = NewGitHubAPI(nil, cache)
-	twitterAPI = NewTwitterAPI(config.Authentication, cache)
+	twitterAPI = NewTwitterAPI(config.Authentication, cache, config)
 
 	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
@@ -114,7 +114,7 @@ func beforeRunning(c *cli.Context) error {
 	// visionAPI is nil if there exists no credential file
 	visionAPI, err = NewVisionAPI(c.String("gcp-credential"), cache)
 	if err != nil {
-		logger.InfoIfError(err)
+		logger.Println(err)
 		visionAPI = new(VisionAPI)
 	}
 
@@ -122,9 +122,12 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func run(c *cli.Context) error {
-	runGitHub(c, logger.InfoIfError)
-	runRetweet(c, logger.InfoIfError)
-	logger.InfoIfError(cache.Save(c.String("cache")))
+	runGitHub(c, logger.HandleError)
+	runRetweet(c, logger.HandleError)
+	err := cache.Save(c.String("cache"))
+	if err != nil {
+		logger.Println(err)
+	}
 	return nil
 }
 
@@ -136,32 +139,51 @@ func serve(c *cli.Context) error {
 	s.cache = cache
 
 	go func() {
+		rs := []DirectMessageReceiver{DirectMessageEchoReceiver}
 		for {
 			if config.Interaction != nil {
-				logger.InfoIfError(twitterAPI.Response(config.Interaction.Users))
+				err := twitterAPI.Response(rs)
+				if err != nil {
+					logger.Println(err)
+				}
 			}
 			d, err := time.ParseDuration(config.Interaction.Duration)
-			logger.FatalIfError(err)
+			if err != nil {
+				logger.Println(err)
+				panic(err)
+			}
 			time.Sleep(d)
 		}
 	}()
 
 	go func() {
 		for {
-			runGitHub(c, logger.InfoIfError)
-			logger.InfoIfError(cache.Save(c.String("cache")))
+			runGitHub(c, logger.HandleError)
+			err := cache.Save(c.String("cache"))
+			if err != nil {
+				logger.Println(err)
+			}
 			d, err := time.ParseDuration(config.GitHub.Duration)
-			logger.FatalIfError(err)
+			if err != nil {
+				logger.Println(err)
+				panic(err)
+			}
 			time.Sleep(d)
 		}
 	}()
 
 	go func() {
 		for {
-			runRetweet(c, logger.InfoIfError)
-			logger.InfoIfError(cache.Save(c.String("cache")))
+			runRetweet(c, logger.HandleError)
+			err := cache.Save(c.String("cache"))
+			if err != nil {
+				logger.Println(err)
+			}
 			d, err := time.ParseDuration(config.Twitter.Duration)
-			logger.FatalIfError(err)
+			if err != nil {
+				logger.Println(err)
+				panic(err)
+			}
 			time.Sleep(d)
 		}
 	}()
@@ -173,7 +195,7 @@ func serve(c *cli.Context) error {
 			cfg, err := NewMybotConfig(c.String("config"))
 			if err == nil {
 				if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
-					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache)
+					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache, config)
 				}
 				*config = *cfg
 			}
@@ -186,9 +208,10 @@ func serve(c *cli.Context) error {
 		// execute `*visionAPI = new(VisionAPI)`
 		func() {
 			a, err := NewVisionAPI(c.String("gcp-credential"), cache)
-			logger.InfoIfError(err)
 			if err == nil {
 				*visionAPI = *a
+			} else {
+				logger.Println(err)
 			}
 
 		})
@@ -275,7 +298,7 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		}
 	}
 	for _, t := range tweets {
-		err := twitterAPI.NotifyToAll(&t, config.Twitter.Notification)
+		err := twitterAPI.NotifyToAll(&t)
 		handle(err)
 	}
 }

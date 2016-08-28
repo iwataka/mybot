@@ -1,13 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 )
 
 type Logger struct {
-	*log.Logger
+	logger     *log.Logger
 	logFile    string
 	twitterAPI *TwitterAPI
 	config     *MybotConfig
@@ -22,34 +23,27 @@ func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, e
 		return nil, err
 	}
 	l := log.New(f, "", flag)
+	l.SetOutput(f)
 	result := &Logger{l, path, a, c}
-	result.SetOutput(f)
 	return result, nil
 }
 
-func (l *Logger) Info(msg string) {
+func (l *Logger) Println(v ...interface{}) {
 	if l.twitterAPI != nil {
 		c := l.config.Log
 		if c != nil {
-			err := l.twitterAPI.PostDMToAll(msg, c.AllowSelf, c.Users)
+			err := l.twitterAPI.PostDMToAll(fmt.Sprintln(v...), c.AllowSelf, c.Users)
 			if err != nil {
-				l.Println(err)
+				l.logger.Println(err)
 			}
 		}
 	}
-	l.Println(msg)
+	l.logger.Println(v...)
 }
 
-func (l *Logger) InfoIfError(err error) {
+func (l *Logger) HandleError(err error) {
 	if err != nil {
-		l.Info(err.Error())
-	}
-}
-
-func (l *Logger) FatalIfError(err error) {
-	l.InfoIfError(err)
-	if err != nil {
-		panic(err)
+		l.Println(err)
 	}
 }
 

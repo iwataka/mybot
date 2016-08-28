@@ -40,7 +40,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		log := s.Logger.ReadString()
 		var botName string
-		self, err := s.TwitterAPI.GetSelfCache()
+		self, err := s.TwitterAPI.GetSelf()
 		if err == nil {
 			botName = self.ScreenName
 		} else {
@@ -105,7 +105,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := Asset("404.html")
 	if err != nil {
-		s.Logger.InfoIfError(err)
+		s.Logger.Println(err)
 		return
 	}
 	w.Write(data)
@@ -114,7 +114,7 @@ func (s *HTTPServer) notFoundHandler(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) customCSSHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := Asset("assets/css/custom.css")
 	if err != nil {
-		s.Logger.InfoIfError(err)
+		s.Logger.Println(err)
 		return
 	}
 	w.Header().Set("Content-Type", "text/css")
