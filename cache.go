@@ -11,7 +11,7 @@ type MybotCache struct {
 	LatestCommitSHA     map[string]map[string]string
 	LatestTweetID       map[string]int64
 	LatestSearchAction  map[string]map[string]bool
-	LatestDMID          int64
+	LatestDMID          int64 `json:"-"`
 	ImageURL            string
 	ImageAnalysisResult string
 	ImageAnalysisDate   string
