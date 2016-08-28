@@ -7,15 +7,15 @@ import (
 )
 
 type TweetFilterConfig struct {
-	Patterns           []string
-	URLPatterns        []string `toml:"url_patterns"`
-	HasMedia           *bool    `toml:"has_media"`
-	HasURL             *bool    `toml:"has_url"`
-	Retweeted          *bool
-	FavoriteThreshold  *int `toml:"favorite_threshold"`
-	RetweetedThreshold *int `toml:"retweeted_threshold"`
-	Lang               *string
-	Vision             *VisionCondition
+	Patterns           []string         `toml:"patterns"`
+	URLPatterns        []string         `toml:"url_patterns"`
+	HasMedia           *bool            `toml:"has_media"`
+	HasURL             *bool            `toml:"has_url"`
+	Retweeted          *bool            `toml:"retweeted"`
+	FavoriteThreshold  *int             `toml:"favorite_threshold"`
+	RetweetedThreshold *int             `toml:"retweeted_threshold"`
+	Lang               *string          `toml:"lang"`
+	Vision             *VisionCondition `toml:"vision"`
 }
 
 func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {

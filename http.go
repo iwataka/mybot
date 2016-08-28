@@ -9,13 +9,13 @@ import (
 )
 
 type HTTPServer struct {
-	Name       string
-	Host       string
-	Port       string
-	Logger     *Logger
-	TwitterAPI *TwitterAPI
-	VisionAPI  *VisionAPI
-	cache      *MybotCache
+	Name       string      `toml:"name"`
+	Host       string      `toml:"host"`
+	Port       string      `toml:"port"`
+	Logger     *Logger     `toml:"-"`
+	TwitterAPI *TwitterAPI `toml:"-"`
+	VisionAPI  *VisionAPI  `toml:"-"`
+	cache      *MybotCache `toml:"-"`
 }
 
 func (s *HTTPServer) Init() error {

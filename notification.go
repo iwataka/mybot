@@ -5,6 +5,6 @@ type Notification struct {
 }
 
 type PlaceNotification struct {
-	AllowSelf bool `toml:"allow_self"`
-	Users     []string
+	AllowSelf bool     `toml:"allow_self"`
+	Users     []string `toml:"users"`
 }

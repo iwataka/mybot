@@ -42,11 +42,11 @@ func NewVisionAPI(path string, cache *MybotCache) (*VisionAPI, error) {
 }
 
 type VisionCondition struct {
-	Label    []string
-	Face     map[string]string
-	Text     []string
-	Landmark []string
-	Logo     []string
+	Label    []string          `toml:"label"`
+	Face     map[string]string `toml:"face"`
+	Text     []string          `toml:"text"`
+	Landmark []string          `toml:"landmark"`
+	Logo     []string          `toml:"logo"`
 }
 
 func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, error) {

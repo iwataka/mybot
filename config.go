@@ -10,55 +10,55 @@ import (
 )
 
 type MybotConfig struct {
-	GitHub         *GitHubConfig `toml:"github"`
-	Twitter        *TwitterConfig
-	Interaction    *InteractionConfig
-	Log            *LogConfig
-	Authentication *TwitterAuth
-	HTTP           *HTTPServer `toml:"http"`
+	GitHub         *GitHubConfig      `toml:"github"`
+	Twitter        *TwitterConfig     `toml:"twitter"`
+	Interaction    *InteractionConfig `toml:"interaction"`
+	Log            *LogConfig         `toml:"log"`
+	Authentication *TwitterAuth       `toml:"authentication"`
+	HTTP           *HTTPServer        `toml:"http"`
 }
 
 type GitHubConfig struct {
-	Projects []GitHubProject
-	Duration string
+	Projects []GitHubProject `toml:"projects"`
+	Duration string          `toml:"duration"`
 }
 
 type TwitterConfig struct {
-	Timelines    []TimelineConfig
-	Searches     []SearchConfig
-	Notification *Notification
-	Duration     string
+	Timelines    []TimelineConfig `toml:"timelines"`
+	Searches     []SearchConfig   `toml:"searches"`
+	Notification *Notification    `toml:"notification"`
+	Duration     string           `toml:"duration"`
 }
 
 type TimelineConfig struct {
-	ScreenName     *string  `toml:"screen_name"`
-	ScreenNames    []string `toml:"screen_names"`
-	ExcludeReplies *bool    `toml:"exclude_replies"`
-	IncludeRts     *bool    `toml:"include_rts"`
-	Count          *int
-	Filter         *TweetFilterConfig
-	Action         *TwitterAction
+	ScreenName     *string            `toml:"screen_name"`
+	ScreenNames    []string           `toml:"screen_names"`
+	ExcludeReplies *bool              `toml:"exclude_replies"`
+	IncludeRts     *bool              `toml:"include_rts"`
+	Count          *int               `toml:"count"`
+	Filter         *TweetFilterConfig `toml:"filter"`
+	Action         *TwitterAction     `toml:"action"`
 }
 
 type SearchConfig struct {
-	Query      *string
-	Queries    []string
-	ResultType *string `toml:"result_type"`
-	Count      *int
-	Filter     *TweetFilterConfig
-	Action     *TwitterAction
+	Query      *string            `toml:"query"`
+	Queries    []string           `toml:"queries"`
+	ResultType *string            `toml:"result_type"`
+	Count      *int               `toml:"count"`
+	Filter     *TweetFilterConfig `toml:"filter"`
+	Action     *TwitterAction     `toml:"action"`
 }
 
 type InteractionConfig struct {
-	Duration  string
-	AllowSelf bool `toml:"allow_self"`
-	Users     []string
-	Count     *int
+	Duration  string   `toml:"duration"`
+	AllowSelf bool     `toml:"allow_self"`
+	Users     []string `toml:"users"`
+	Count     *int     `toml:"count"`
 }
 
 type LogConfig struct {
-	AllowSelf bool `toml:"allow_self"`
-	Users     []string
+	AllowSelf bool     `toml:"allow_self"`
+	Users     []string `toml:"users"`
 }
 
 func NewMybotConfig(path string) (*MybotConfig, error) {

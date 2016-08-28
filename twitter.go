@@ -28,9 +28,9 @@ type TwitterAuth struct {
 }
 
 type TwitterAction struct {
-	Retweet     bool
-	Favorite    bool
-	Collections []string
+	Retweet     bool     `toml:"retweet"`
+	Favorite    bool     `toml:"favorite"`
+	Collections []string `toml:"collections"`
 }
 
 func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {

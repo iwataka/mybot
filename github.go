@@ -19,8 +19,8 @@ func NewGitHubAPI(c *http.Client, cache *MybotCache) *GitHubAPI {
 }
 
 type GitHubProject struct {
-	User string
-	Repo string
+	User string `toml:"user"`
+	Repo string `toml:"repo"`
 }
 
 func (a *GitHubAPI) LatestCommit(p GitHubProject) (*github.RepositoryCommit, error) {
