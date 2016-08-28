@@ -32,12 +32,18 @@ Twitter is one of the most famous `SNS`s and the largest information sources in 
     + Favorite
     + Add to the specified collection (See [Collection API](https://dev.twitter.com/rest/collections) for more details)
 
+## Interact with you via Direct Message
+
+These commands are now available:
+
++ `collections` (`cols`): returns your own collection list
++ `configuration` (`config`, `conf`): returns your `Mybot` configuration
+
 ## Other useful features
 
 + Shows some useful pieces of information via built-in Web UI
 + Sends error messages via Direct Message
 + Notifies the place of tweets via Direct Message if available
-+ Interacts with you via Direct Message (experimental)
 
 ## Usage
 

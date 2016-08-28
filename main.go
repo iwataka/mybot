@@ -139,7 +139,7 @@ func serve(c *cli.Context) error {
 	s.cache = cache
 
 	go func() {
-		rs := []DirectMessageReceiver{DirectMessageEchoReceiver}
+		rs := []DirectMessageReceiver{twitterAPI.DefaultDirectMessageReceiver}
 		for {
 			if config.Interaction != nil {
 				err := twitterAPI.Response(rs)

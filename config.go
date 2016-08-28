@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -124,4 +125,15 @@ func validateConfig(config *MybotConfig) error {
 		}
 	}
 	return nil
+}
+
+func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := toml.NewEncoder(buf)
+	enc.Indent = indent
+	err := enc.Encode(c)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf.Bytes(), nil
 }

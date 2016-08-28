@@ -299,8 +299,31 @@ type TweetChecker func(anaconda.Tweet) (bool, error)
 // Returning an empty string means this function does nothing.
 type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
 
-// DirectMessageEchoReceiver receives a direct message and does nothing, but
-// returns the same text as the received one, so this is called `echo` receiver.
-func DirectMessageEchoReceiver(m anaconda.DirectMessage) (string, error) {
-	return html.UnescapeString(m.Text), nil
+func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
+	text := html.UnescapeString(m.Text)
+	if text == "collection" || text == "cols" {
+		self, err := a.GetSelf()
+		if err != nil {
+			return "", err
+		}
+		res, err := a.GetCollectionListByUserId(self.Id, nil)
+		if err != nil {
+			return "", err
+		}
+		timelines := res.Objects.Timelines
+		lines := []string{}
+		for _, col := range timelines {
+			line := fmt.Sprintf("%s: %s", col.Name, col.CollectionUrl)
+			lines = append(lines, line)
+		}
+		return strings.Join(lines, "\n"), nil
+	} else if text == "configuration" || text == "config" || text == "conf" {
+		bytes, err := a.config.TomlText(strings.Repeat(" ", 4))
+		if err != nil {
+			return "", err
+		}
+		return string(bytes), nil
+	} else {
+		return fmt.Sprintf("Unknow command: %s", text), nil
+	}
 }
