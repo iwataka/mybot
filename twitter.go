@@ -247,11 +247,12 @@ func (a *TwitterAPI) Response(rs []DirectMessageReceiver) error {
 	if err != nil {
 		return err
 	}
+	first := latestID == 0
 	for _, dm := range dms {
 		if dm.Id > latestID {
 			latestID = dm.Id
 		}
-		if latestID != 0 {
+		if !first {
 			if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
 				continue
 			}
