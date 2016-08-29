@@ -318,7 +318,10 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 		}
 		return strings.Join(lines, "\n"), nil
 	} else if text == "configuration" || text == "config" || text == "conf" {
-		bytes, err := a.config.TomlText(strings.Repeat(" ", 4))
+		cfg := new(MybotConfig)
+		*cfg = *config
+		cfg.Authentication = nil
+		bytes, err := cfg.TomlText(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err
 		}
