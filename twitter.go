@@ -87,7 +87,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
 	v.Set("screen_name", name)
 	if exists {
@@ -97,7 +97,7 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.retweetTweets(tweets, cs, action, func(t anaconda.Tweet, _ bool) {
+	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, _ bool) {
 		a.cache.LatestTweetID[name] = t.Id
 	})
 	if err != nil {
@@ -106,7 +106,7 @@ func (a *TwitterAPI) RetweetAccount(name string, v url.Values, cs []TweetChecker
 	return result, nil
 }
 
-func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	queryMap, exists := a.cache.LatestSearchAction[query]
 	if !exists {
@@ -120,7 +120,7 @@ func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker
 			statuses = append(statuses, s)
 		}
 	}
-	result, err := a.retweetTweets(statuses, cs, action, func(t anaconda.Tweet, match bool) {
+	result, err := a.doForTweets(statuses, cs, action, func(t anaconda.Tweet, match bool) {
 		if match {
 			a.cache.LatestSearchAction[query][t.IdStr] = true
 		}
@@ -131,7 +131,7 @@ func (a *TwitterAPI) RetweetSearch(query string, v url.Values, cs []TweetChecker
 	return result, err
 }
 
-func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet, bool)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet, bool)) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]

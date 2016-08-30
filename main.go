@@ -123,7 +123,7 @@ func beforeRunning(c *cli.Context) error {
 
 func run(c *cli.Context) error {
 	runGitHub(c, logger.HandleError)
-	runRetweet(c, logger.HandleError)
+	runTwitter(c, logger.HandleError)
 	err := cache.Save(c.String("cache"))
 	if err != nil {
 		logger.Println(err)
@@ -175,7 +175,7 @@ func serve(c *cli.Context) error {
 
 	go func() {
 		for {
-			runRetweet(c, logger.HandleError)
+			runTwitter(c, logger.HandleError)
 			err := cache.Save(c.String("cache"))
 			if err != nil {
 				logger.Println(err)
@@ -252,7 +252,7 @@ func runGitHub(c *cli.Context, handle func(error)) {
 	}
 }
 
-func runRetweet(c *cli.Context, handle func(error)) {
+func runTwitter(c *cli.Context, handle func(error)) {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
 		v := url.Values{}
@@ -267,12 +267,12 @@ func runRetweet(c *cli.Context, handle func(error)) {
 		}
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		if a.ScreenName != nil {
-			ts, err := twitterAPI.RetweetAccount(*a.ScreenName, v, cs, a.Action)
+			ts, err := twitterAPI.DoForAccount(*a.ScreenName, v, cs, a.Action)
 			tweets = append(tweets, ts...)
 			handle(err)
 		} else {
 			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.RetweetAccount(name, v, cs, a.Action)
+				ts, err := twitterAPI.DoForAccount(name, v, cs, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
 			}
@@ -288,12 +288,12 @@ func runRetweet(c *cli.Context, handle func(error)) {
 			v.Set("result_type", *a.ResultType)
 		}
 		if a.Query != nil {
-			ts, err := twitterAPI.RetweetSearch(*a.Query, v, cs, a.Action)
+			ts, err := twitterAPI.DoForSearch(*a.Query, v, cs, a.Action)
 			handle(err)
 			tweets = append(tweets, ts...)
 		} else {
 			for _, query := range a.Queries {
-				ts, err := twitterAPI.RetweetSearch(query, v, cs, a.Action)
+				ts, err := twitterAPI.DoForSearch(query, v, cs, a.Action)
 				handle(err)
 				tweets = append(tweets, ts...)
 			}
