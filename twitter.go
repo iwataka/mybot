@@ -164,14 +164,16 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 			}
 			if action.Follow {
 				_, err := a.api.FollowUser(t.User.ScreenName)
-				e, ok := err.(anaconda.ApiError)
-				if ok {
-					// He/She is already friend
-					if e.StatusCode != 403 {
-						return nil, e
+				if err != nil {
+					e, ok := err.(anaconda.ApiError)
+					if ok {
+						// He/She is already friend
+						if e.StatusCode != 403 {
+							return nil, e
+						}
+					} else {
+						return nil, err
 					}
-				} else {
-					return nil, e
 				}
 			}
 			for _, col := range action.Collections {
