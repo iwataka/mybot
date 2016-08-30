@@ -30,6 +30,7 @@ Twitter is one of the most famous `SNS`s and the largest information sources in 
 
     + Retweet
     + Favorite
+    + Follow
     + Add to the specified collection (See [Collection API](https://dev.twitter.com/rest/collections) for more details)
 
 ## Interact with you via Direct Message
