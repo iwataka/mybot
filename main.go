@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-//go:generate go-bindata assets/... index.html 404.html
+//go:generate go-bindata assets/... index.html
 
 var (
 	twitterAPI *TwitterAPI
@@ -137,6 +137,7 @@ func serve(c *cli.Context) error {
 	s.TwitterAPI = twitterAPI
 	s.VisionAPI = visionAPI
 	s.cache = cache
+	ch := make(chan bool)
 
 	go func() {
 		rs := []DirectMessageReceiver{twitterAPI.DefaultDirectMessageReceiver}
@@ -213,15 +214,16 @@ func serve(c *cli.Context) error {
 			} else {
 				logger.Println(err)
 			}
-
 		})
 
-	fmt.Printf("Open %s:%s for detailed information\n", s.Host, s.Port)
-	err := s.Init()
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		err := s.Init()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
+	<-ch
 	return nil
 }
 

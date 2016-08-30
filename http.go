@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ type HTTPServer struct {
 	Name       string      `toml:"name"`
 	Host       string      `toml:"host"`
 	Port       string      `toml:"port"`
+	Enabled    bool        `toml:"enabled"`
 	Logger     *Logger     `toml:"-"`
 	TwitterAPI *TwitterAPI `toml:"-"`
 	VisionAPI  *VisionAPI  `toml:"-"`
@@ -19,12 +21,14 @@ type HTTPServer struct {
 }
 
 func (s *HTTPServer) Init() error {
-	http.HandleFunc("/", s.handler)
-	http.HandleFunc("/assets/css/custom.css", s.customCSSHandler)
-	http.HandleFunc("/404", s.notFoundHandler)
-	err := http.ListenAndServe(s.Host+":"+s.Port, nil)
-	if err != nil {
-		return err
+	if s.Enabled {
+		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
+		http.HandleFunc("/", s.handler)
+		http.HandleFunc("/assets/", s.customCSSHandler)
+		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -34,7 +38,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		index, err := Asset("index.html")
 		tmpl, err := template.New("index").Parse(string(index))
 		if err != nil {
-			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -94,25 +98,16 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		err = tmpl.Execute(w, data)
 		if err != nil {
-			http.Redirect(w, r, "/404", http.StatusSeeOther)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
-		http.Redirect(w, r, "/404", http.StatusSeeOther)
+		http.NotFound(w, r)
 	}
-}
-
-func (s *HTTPServer) notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset("404.html")
-	if err != nil {
-		s.Logger.Println(err)
-		return
-	}
-	w.Write(data)
 }
 
 func (s *HTTPServer) customCSSHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset("assets/css/custom.css")
+	data, err := Asset(r.URL.Path[1:])
 	if err != nil {
 		s.Logger.Println(err)
 		return
