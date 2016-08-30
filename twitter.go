@@ -30,6 +30,7 @@ type TwitterAuth struct {
 type TwitterAction struct {
 	Retweet     bool     `toml:"retweet"`
 	Favorite    bool     `toml:"favorite"`
+	Follow      bool     `toml:"follow"`
 	Collections []string `toml:"collections"`
 }
 
@@ -50,6 +51,10 @@ func (a *TwitterAPI) GetCollectionListByUserId(userId int64, v url.Values) (anac
 
 func (a *TwitterAPI) PostTweet(msg string, v url.Values) (anaconda.Tweet, error) {
 	return a.api.PostTweet(msg, v)
+}
+
+func (a *TwitterAPI) GetFriendsList(v url.Values) (anaconda.UserCursor, error) {
+	return a.api.GetFriendsList(v)
 }
 
 // GetSelfCache returns the user of this client
@@ -155,6 +160,18 @@ func (a *TwitterAPI) retweetTweets(tweets []anaconda.Tweet, cs []TweetChecker, a
 				_, err := a.api.Favorite(t.Id)
 				if err != nil {
 					return nil, err
+				}
+			}
+			if action.Follow {
+				_, err := a.api.FollowUser(t.User.ScreenName)
+				e, ok := err.(anaconda.ApiError)
+				if ok {
+					// He/She is already friend
+					if e.StatusCode != 403 {
+						return nil, e
+					}
+				} else {
+					return nil, e
 				}
 			}
 			for _, col := range action.Collections {
