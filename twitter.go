@@ -109,7 +109,11 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, 
 func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	queryMap, exists := a.cache.LatestSearchAction[query]
-	if !exists {
+	if exists {
+		if queryMap[query] {
+			return []anaconda.Tweet{}, nil
+		}
+	} else {
 		a.cache.LatestSearchAction[query] = make(map[string]bool)
 		queryMap = a.cache.LatestSearchAction[query]
 	}
@@ -153,13 +157,29 @@ func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, act
 			if action.Retweet && !t.Retweeted {
 				_, err := a.api.Retweet(t.Id, false)
 				if err != nil {
-					return nil, err
+					e, ok := err.(anaconda.ApiError)
+					if ok {
+						// Already retweeted
+						if e.StatusCode != 403 {
+							return nil, e
+						}
+					} else {
+						return nil, err
+					}
 				}
 			}
 			if action.Favorite && !t.Favorited {
 				_, err := a.api.Favorite(t.Id)
 				if err != nil {
-					return nil, err
+					e, ok := err.(anaconda.ApiError)
+					if ok {
+						// Already favorited
+						if e.StatusCode != 403 {
+							return nil, e
+						}
+					} else {
+						return nil, err
+					}
 				}
 			}
 			if action.Follow {
