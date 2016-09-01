@@ -118,6 +118,30 @@ func validateConfig(config *MybotConfig) error {
 			msg := fmt.Sprintf("%v has name and names properties, use `names` only.", account)
 			return errors.New(msg)
 		}
+		filter := account.Filter
+		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			msg := "Don't use Vision API and retweeted/favorite threshold"
+			return errors.New(msg)
+		}
+	}
+	for _, favorite := range config.Twitter.Favorites {
+		if favorite.Action == nil {
+			msg := fmt.Sprintf("%v has no action", favorite)
+			return errors.New(msg)
+		}
+		if favorite.ScreenName == nil && (favorite.ScreenNames == nil || len(favorite.ScreenNames) == 0) {
+			msg := fmt.Sprintf("%v has no name", favorite)
+			return errors.New(msg)
+		}
+		if favorite.ScreenName != nil && favorite.ScreenNames != nil && len(favorite.ScreenNames) != 0 {
+			msg := fmt.Sprintf("%v has name and names properties, use `names` only.", favorite)
+			return errors.New(msg)
+		}
+		filter := favorite.Filter
+		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			msg := "Don't use Vision API and retweeted/favorite threshold"
+			return errors.New(msg)
+		}
 	}
 	for _, search := range config.Twitter.Searches {
 		if search.Action == nil {
@@ -130,6 +154,11 @@ func validateConfig(config *MybotConfig) error {
 		}
 		if search.Query != nil && search.Queries != nil && len(search.Queries) != 0 {
 			msg := fmt.Sprintf("%v has query and queries properties, use `query` only.", search)
+			return errors.New(msg)
+		}
+		filter := search.Filter
+		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
 	}

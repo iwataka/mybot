@@ -125,7 +125,7 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
 	v.Set("screen_name", name)
 	if exists {
@@ -135,20 +135,20 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, 
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, match bool) error {
-		id, exists := a.cache.LatestTweetID[name]
-		if (exists && t.Id > id) || !exists {
-			a.cache.LatestTweetID[name] = t.Id
-		}
-		return nil
-	})
+	var post postProcessor
+	if c.shouldRepeat() {
+		post = a.postProcessEach(action)
+	} else {
+		post = a.postProcess(name)
+	}
+	result, err := a.doForTweets(tweets, c, action, post)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (a *TwitterAPI) DoForFavorites(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
 	v.Set("screen_name", name)
 	if exists {
@@ -158,25 +158,45 @@ func (a *TwitterAPI) DoForFavorites(name string, v url.Values, cs []TweetChecker
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, match bool) error {
-		id, exists := a.cache.LatestFavoriteID[name]
-		if (exists && t.Id > id) || !exists {
-			a.cache.LatestFavoriteID[name] = t.Id
-		}
-		return nil
-	})
+	var post postProcessor
+	if c.shouldRepeat() {
+		post = a.postProcessEach(action)
+	} else {
+		post = a.postProcess(name)
+	}
+	result, err := a.doForTweets(tweets, c, action, post)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForSearch(query string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(res.Statuses, cs, action, func(t anaconda.Tweet, match bool) error {
+	result, err := a.doForTweets(res.Statuses, c, action, a.postProcessEach(action))
+	if err != nil {
+		return nil, err
+	}
+	return result, err
+}
+
+type postProcessor func(anaconda.Tweet, bool) error
+
+func (a *TwitterAPI) postProcess(name string) postProcessor {
+	return func(t anaconda.Tweet, match bool) error {
+		id, exists := a.cache.LatestFavoriteID[name]
+		if (exists && t.Id > id) || !exists {
+			a.cache.LatestFavoriteID[name] = t.Id
+		}
+		return nil
+	}
+}
+
+func (a *TwitterAPI) postProcessEach(action *TwitterAction) postProcessor {
+	return func(t anaconda.Tweet, match bool) error {
 		if match {
 			ac, exists := a.cache.Tweet2Action[t.IdStr]
 			if exists {
@@ -186,28 +206,17 @@ func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, 
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
-	return result, err
 }
 
-func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, post func(anaconda.Tweet, bool) error) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, c TweetChecker, action *TwitterAction, post postProcessor) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match := true
-		for _, c := range cs {
-			m, err := c(t)
-			if err != nil {
-				return nil, err
-			}
-			if !m {
-				match = false
-				break
-			}
+		match, err := c.check(t)
+		if err != nil {
+			return nil, err
 		}
 		if match {
 			done := a.cache.Tweet2Action[t.IdStr]
@@ -217,7 +226,7 @@ func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, act
 			}
 			result = append(result, t)
 		}
-		err := post(t, match)
+		err = post(t, match)
 		if err != nil {
 			return nil, err
 		}
@@ -403,7 +412,10 @@ func (a *TwitterAPI) Response(rs []DirectMessageReceiver) error {
 
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
-type TweetChecker func(anaconda.Tweet) (bool, error)
+type TweetChecker interface {
+	check(t anaconda.Tweet) (bool, error)
+	shouldRepeat() bool
+}
 
 // DirectMessageReceiver function receives the specified direct message and
 // does something according to the received message.

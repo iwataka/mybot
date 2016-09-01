@@ -265,14 +265,14 @@ func runTwitter(c *cli.Context, handle func(error)) {
 		if a.IncludeRts != nil {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
-		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		a.Filter.visionAPI = visionAPI
 		if a.ScreenName != nil {
-			ts, err := twitterAPI.DoForAccount(*a.ScreenName, v, cs, a.Action)
+			ts, err := twitterAPI.DoForAccount(*a.ScreenName, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
 			handle(err)
 		} else {
 			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.DoForAccount(name, v, cs, a.Action)
+				ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
 			}
@@ -283,21 +283,21 @@ func runTwitter(c *cli.Context, handle func(error)) {
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
-		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		a.Filter.visionAPI = visionAPI
 		if a.ScreenName != nil {
-			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, cs, a.Action)
+			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
 			handle(err)
 		} else {
 			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.DoForFavorites(name, v, cs, a.Action)
+				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
 			}
 		}
 	}
 	for _, a := range config.Twitter.Searches {
-		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		a.Filter.visionAPI = visionAPI
 		v := url.Values{}
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
@@ -306,12 +306,12 @@ func runTwitter(c *cli.Context, handle func(error)) {
 			v.Set("result_type", *a.ResultType)
 		}
 		if a.Query != nil {
-			ts, err := twitterAPI.DoForSearch(*a.Query, v, cs, a.Action)
+			ts, err := twitterAPI.DoForSearch(*a.Query, v, a.Filter, a.Action)
 			handle(err)
 			tweets = append(tweets, ts...)
 		} else {
 			for _, query := range a.Queries {
-				ts, err := twitterAPI.DoForSearch(query, v, cs, a.Action)
+				ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
 				handle(err)
 				tweets = append(tweets, ts...)
 			}

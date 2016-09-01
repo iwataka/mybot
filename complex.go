@@ -16,66 +16,69 @@ type TweetFilterConfig struct {
 	RetweetedThreshold *int             `toml:"retweeted_threshold"`
 	Lang               *string          `toml:"lang"`
 	Vision             *VisionCondition `toml:"vision"`
+	visionAPI          *VisionAPI
 }
 
-func (c *TweetFilterConfig) GetChecker(a *VisionAPI) TweetChecker {
-	return func(t anaconda.Tweet) (bool, error) {
-		for _, p := range c.Patterns {
-			match, err := regexp.MatchString(p, t.Text)
-			if err != nil {
-				return false, err
-			}
-			if !match {
-				return false, nil
-			}
+func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
+	for _, p := range c.Patterns {
+		match, err := regexp.MatchString(p, t.Text)
+		if err != nil {
+			return false, err
 		}
-		for _, url := range c.URLPatterns {
-			match := false
-			var err error
-			for _, u := range t.Entities.Urls {
-				match, err = regexp.MatchString(url, u.Display_url)
-				if err != nil {
-					return false, err
-				}
-				if match {
-					break
-				}
-			}
-			if !match {
-				return false, nil
-			}
-		}
-		if c.HasMedia != nil && *c.HasMedia != (len(t.Entities.Media) != 0) {
+		if !match {
 			return false, nil
 		}
-		if c.HasURL != nil && *c.HasURL != (len(t.Entities.Urls) != 0) {
-			return false, nil
-		}
-		if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {
-			return false, nil
-		}
-		if c.FavoriteThreshold != nil && *c.FavoriteThreshold > t.FavoriteCount {
-			return false, nil
-		}
-		if c.RetweetedThreshold != nil && *c.RetweetedThreshold > t.RetweetCount {
-			return false, nil
-		}
-		if c.Lang != nil && *c.Lang != t.Lang {
-			return false, nil
-		}
-		if c.Vision != nil && a != nil && a.Images != nil {
-			urls := make([]string, len(t.Entities.Media))
-			for i, m := range t.Entities.Media {
-				urls[i] = m.Media_url
-			}
-			match, err := a.MatchImage(urls, c.Vision)
-			if err != nil {
-				return false, err
-			}
-			if !match {
-				return false, nil
-			}
-		}
-		return true, nil
 	}
+	for _, url := range c.URLPatterns {
+		match := false
+		var err error
+		for _, u := range t.Entities.Urls {
+			match, err = regexp.MatchString(url, u.Display_url)
+			if err != nil {
+				return false, err
+			}
+			if match {
+				break
+			}
+		}
+		if !match {
+			return false, nil
+		}
+	}
+	if c.HasMedia != nil && *c.HasMedia != (len(t.Entities.Media) != 0) {
+		return false, nil
+	}
+	if c.HasURL != nil && *c.HasURL != (len(t.Entities.Urls) != 0) {
+		return false, nil
+	}
+	if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {
+		return false, nil
+	}
+	if c.FavoriteThreshold != nil && *c.FavoriteThreshold > t.FavoriteCount {
+		return false, nil
+	}
+	if c.RetweetedThreshold != nil && *c.RetweetedThreshold > t.RetweetCount {
+		return false, nil
+	}
+	if c.Lang != nil && *c.Lang != t.Lang {
+		return false, nil
+	}
+	if c.Vision != nil && c.visionAPI != nil && c.visionAPI.Images != nil {
+		urls := make([]string, len(t.Entities.Media))
+		for i, m := range t.Entities.Media {
+			urls[i] = m.Media_url
+		}
+		match, err := c.visionAPI.MatchImage(urls, c.Vision)
+		if err != nil {
+			return false, err
+		}
+		if !match {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func (c *TweetFilterConfig) shouldRepeat() bool {
+	return c.RetweetedThreshold != nil || c.FavoriteThreshold != nil
 }
