@@ -34,6 +34,44 @@ type TwitterAction struct {
 	Collections []string `toml:"collections"`
 }
 
+func (a *TwitterAction) add(action *TwitterAction) {
+	a.Retweet = a.Retweet || action.Retweet
+	a.Favorite = a.Favorite || action.Favorite
+	a.Follow = a.Follow || action.Follow
+	cols := a.Collections
+	for _, col := range a.Collections {
+		exists := false
+		for _, c := range action.Collections {
+			if col == c {
+				exists = true
+			}
+		}
+		if !exists {
+			cols = append(cols, col)
+		}
+	}
+	a.Collections = cols
+}
+
+func (a *TwitterAction) sub(action *TwitterAction) {
+	a.Retweet = a.Retweet && !action.Retweet
+	a.Favorite = a.Favorite && !action.Favorite
+	a.Follow = a.Follow && !action.Follow
+	cols := []string{}
+	for _, col := range a.Collections {
+		exists := false
+		for _, c := range action.Collections {
+			if col == c {
+				exists = true
+			}
+		}
+		if !exists {
+			cols = append(cols, col)
+		}
+	}
+	a.Collections = cols
+}
+
 func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
@@ -97,8 +135,12 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, 
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, _ bool) {
-		a.cache.LatestTweetID[name] = t.Id
+	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, match bool) error {
+		id, exists := a.cache.LatestTweetID[name]
+		if (exists && t.Id > id) || !exists {
+			a.cache.LatestTweetID[name] = t.Id
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -108,26 +150,19 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, 
 
 func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
-	queryMap, exists := a.cache.LatestSearchAction[query]
-	if exists {
-		if queryMap[query] {
-			return []anaconda.Tweet{}, nil
-		}
-	} else {
-		a.cache.LatestSearchAction[query] = make(map[string]bool)
-		queryMap = a.cache.LatestSearchAction[query]
+	if err != nil {
+		return nil, err
 	}
-	statuses := []anaconda.Tweet{}
-	for _, s := range res.Statuses {
-		_, exists := queryMap[s.IdStr]
-		if !exists {
-			statuses = append(statuses, s)
-		}
-	}
-	result, err := a.doForTweets(statuses, cs, action, func(t anaconda.Tweet, match bool) {
+	result, err := a.doForTweets(res.Statuses, cs, action, func(t anaconda.Tweet, match bool) error {
 		if match {
-			a.cache.LatestSearchAction[query][t.IdStr] = true
+			ac, exists := a.cache.Tweet2Action[t.IdStr]
+			if exists {
+				ac.add(action)
+			} else {
+				a.cache.Tweet2Action[t.IdStr] = action
+			}
 		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -135,8 +170,9 @@ func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, 
 	return result, err
 }
 
-func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, f func(anaconda.Tweet, bool)) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, action *TwitterAction, post func(anaconda.Tweet, bool) error) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
+	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
 		match := true
@@ -150,62 +186,76 @@ func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, cs []TweetChecker, act
 				break
 			}
 		}
-		if f != nil {
-			f(t, match)
-		}
 		if match {
-			if action.Retweet && !t.Retweeted {
-				_, err := a.api.Retweet(t.Id, false)
-				if err != nil {
-					e, ok := err.(anaconda.ApiError)
-					if ok {
-						// Already retweeted
-						if e.StatusCode != 403 {
-							return nil, e
-						}
-					} else {
-						return nil, err
-					}
-				}
-			}
-			if action.Favorite && !t.Favorited {
-				_, err := a.api.Favorite(t.Id)
-				if err != nil {
-					e, ok := err.(anaconda.ApiError)
-					if ok {
-						// Already favorited
-						if e.StatusCode != 403 {
-							return nil, e
-						}
-					} else {
-						return nil, err
-					}
-				}
-			}
-			if action.Follow {
-				_, err := a.api.FollowUser(t.User.ScreenName)
-				if err != nil {
-					e, ok := err.(anaconda.ApiError)
-					if ok {
-						// He/She is already friend
-						if e.StatusCode != 403 {
-							return nil, e
-						}
-					} else {
-						return nil, err
-					}
-				}
-			}
-			for _, col := range action.Collections {
-				err := a.collectTweet(t, col)
-				if err != nil {
-					return nil, err
-				}
+			done := a.cache.Tweet2Action[t.IdStr]
+			err := a.processTweet(t, action, done)
+			if err != nil {
+				return nil, err
 			}
 			result = append(result, t)
 		}
+		err := post(t, match)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return result, nil
+}
+
+func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done *TwitterAction) error {
+	ac := *action
+	if done != nil {
+		ac.sub(done)
+	}
+	if ac.Retweet && !t.Retweeted {
+		_, err := a.api.Retweet(t.Id, false)
+		if err != nil {
+			e, ok := err.(*anaconda.ApiError)
+			if ok {
+				// Already retweeted
+				if e.StatusCode != 403 {
+					return e
+				}
+			} else {
+				return err
+			}
+		}
+	}
+	if ac.Favorite && !t.Favorited {
+		_, err := a.api.Favorite(t.Id)
+		if err != nil {
+			e, ok := err.(*anaconda.ApiError)
+			if ok {
+				// Already favorited
+				if e.StatusCode != 403 {
+					return e
+				}
+			} else {
+				return err
+			}
+		}
+	}
+	if ac.Follow {
+		_, err := a.api.FollowUser(t.User.ScreenName)
+		if err != nil {
+			e, ok := err.(*anaconda.ApiError)
+			if ok {
+				// He/She is already friend
+				if e.StatusCode != 403 {
+					return e
+				}
+			} else {
+				return err
+			}
+		}
+	}
+	for _, col := range ac.Collections {
+		err := a.collectTweet(t, col)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error {
