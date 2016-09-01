@@ -10,6 +10,7 @@ import (
 type MybotCache struct {
 	LatestCommitSHA     map[string]map[string]string
 	LatestTweetID       map[string]int64
+	LatestFavoriteID    map[string]int64
 	LatestDMID          int64 `json:"-"`
 	Tweet2Action        map[string]*TwitterAction
 	ImageURL            string
@@ -20,6 +21,7 @@ type MybotCache struct {
 func NewMybotCache(path string) (*MybotCache, error) {
 	c := &MybotCache{
 		make(map[string]map[string]string),
+		make(map[string]int64),
 		make(map[string]int64),
 		0,
 		make(map[string]*TwitterAction),

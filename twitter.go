@@ -148,6 +148,29 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, cs []TweetChecker, 
 	return result, nil
 }
 
+func (a *TwitterAPI) DoForFavorites(name string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+	latestID, exists := a.cache.LatestFavoriteID[name]
+	v.Set("screen_name", name)
+	if exists {
+		v.Set("since_id", fmt.Sprintf("%d", latestID))
+	}
+	tweets, err := a.api.GetFavorites(v)
+	if err != nil {
+		return nil, err
+	}
+	result, err := a.doForTweets(tweets, cs, action, func(t anaconda.Tweet, match bool) error {
+		id, exists := a.cache.LatestFavoriteID[name]
+		if (exists && t.Id > id) || !exists {
+			a.cache.LatestFavoriteID[name] = t.Id
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (a *TwitterAPI) DoForSearch(query string, v url.Values, cs []TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {

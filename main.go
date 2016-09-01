@@ -278,6 +278,24 @@ func runTwitter(c *cli.Context, handle func(error)) {
 			}
 		}
 	}
+	for _, a := range config.Twitter.Favorites {
+		v := url.Values{}
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
+		}
+		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
+		if a.ScreenName != nil {
+			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, cs, a.Action)
+			tweets = append(tweets, ts...)
+			handle(err)
+		} else {
+			for _, name := range a.ScreenNames {
+				ts, err := twitterAPI.DoForFavorites(name, v, cs, a.Action)
+				tweets = append(tweets, ts...)
+				handle(err)
+			}
+		}
+	}
 	for _, a := range config.Twitter.Searches {
 		cs := []TweetChecker{a.Filter.GetChecker(visionAPI)}
 		v := url.Values{}

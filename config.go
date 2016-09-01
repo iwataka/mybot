@@ -25,6 +25,7 @@ type GitHubConfig struct {
 
 type TwitterConfig struct {
 	Timelines    []TimelineConfig `toml:"timelines"`
+	Favorites    []FavoriteConfig `toml:"favorites"`
 	Searches     []SearchConfig   `toml:"searches"`
 	Notification *Notification    `toml:"notification"`
 	Duration     string           `toml:"duration"`
@@ -38,6 +39,14 @@ type TimelineConfig struct {
 	Count          *int               `toml:"count"`
 	Filter         *TweetFilterConfig `toml:"filter"`
 	Action         *TwitterAction     `toml:"action"`
+}
+
+type FavoriteConfig struct {
+	ScreenName  *string            `toml:"screen_name"`
+	ScreenNames []string           `toml:"screen_names"`
+	Count       *int               `toml:"count"`
+	Filter      *TweetFilterConfig `toml:"filter"`
+	Action      *TwitterAction     `toml:"action"`
 }
 
 type SearchConfig struct {
