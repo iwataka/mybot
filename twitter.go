@@ -352,9 +352,25 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
-func (a *TwitterAPI) Response(rs []DirectMessageReceiver) error {
-	allowSelf := a.config.Interaction.AllowSelf
-	users := a.config.Interaction.Users
+func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver) error {
+	stream := a.api.UserStream(v)
+	for {
+		switch c := (<-stream.C).(type) {
+		case anaconda.DirectMessage:
+			if a.cache.LatestDMID < c.Id {
+				a.cache.LatestDMID = c.Id
+			}
+			err := a.responseForDirectMessage(c, receiver)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Response is replaced with Listen
+func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 	latestID := a.cache.LatestDMID
 	v := url.Values{}
 	if latestID != 0 {
@@ -374,39 +390,39 @@ func (a *TwitterAPI) Response(rs []DirectMessageReceiver) error {
 			latestID = dm.Id
 		}
 		if !first {
-			if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
-				continue
-			}
-			sender := dm.Sender.ScreenName
-			allowed, err := a.CheckUser(sender, allowSelf, users)
+			err := a.responseForDirectMessage(dm, receiver)
 			if err != nil {
 				return err
-			}
-			if allowed {
-				var text string
-				for _, r := range rs {
-					t, err := r(dm)
-					if err != nil {
-						return err
-					}
-					if t != "" {
-						text = t
-						break
-					}
-				}
-				if text != "" {
-					res, err := a.PostDMToScreenName(text, sender)
-					if err != nil {
-						return err
-					}
-					if res.Id > latestID {
-						latestID = res.Id
-					}
-				}
 			}
 		}
 	}
 	a.cache.LatestDMID = latestID
+	return nil
+}
+
+func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
+	allowSelf := a.config.Interaction.AllowSelf
+	users := a.config.Interaction.Users
+	if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
+		return nil
+	}
+	sender := dm.Sender.ScreenName
+	allowed, err := a.CheckUser(sender, allowSelf, users)
+	if err != nil {
+		return err
+	}
+	if allowed {
+		text, err := receiver(dm)
+		if err != nil {
+			return err
+		}
+		if text != "" {
+			_, err := a.PostDMToScreenName(text, sender)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

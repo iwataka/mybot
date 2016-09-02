@@ -140,20 +140,23 @@ func serve(c *cli.Context) error {
 	ch := make(chan bool)
 
 	go func() {
-		rs := []DirectMessageReceiver{twitterAPI.DefaultDirectMessageReceiver}
-		for {
-			if config.Interaction != nil {
-				err := twitterAPI.Response(rs)
+		// Abort if there are more than 15 connections in 15 minutes
+		t := time.Now()
+		count := 0
+		if config.Interaction != nil {
+			for {
+				err := twitterAPI.Listen(nil, twitterAPI.DefaultDirectMessageReceiver)
 				if err != nil {
 					logger.Println(err)
 				}
+				if t.Sub(time.Now()) >= 15*time.Minute {
+					count = 0
+				}
+				count++
+				if count >= 15 {
+					break
+				}
 			}
-			d, err := time.ParseDuration(config.Interaction.Duration)
-			if err != nil {
-				logger.Println(err)
-				panic(err)
-			}
-			time.Sleep(d)
 		}
 	}()
 
