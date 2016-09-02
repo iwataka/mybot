@@ -158,6 +158,7 @@ func serve(c *cli.Context) error {
 				}
 			}
 		}
+		logger.Println("Interaction feature is now disabled. Please restart.")
 	}()
 
 	go func() {
