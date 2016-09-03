@@ -139,7 +139,7 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, act
 	if c.shouldRepeat() {
 		post = a.postProcessEach(action)
 	} else {
-		post = a.postProcess(name)
+		post = a.postProcess(name, a.cache.LatestTweetID)
 	}
 	result, err := a.doForTweets(tweets, c, action, post)
 	if err != nil {
@@ -162,7 +162,7 @@ func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, a
 	if c.shouldRepeat() {
 		post = a.postProcessEach(action)
 	} else {
-		post = a.postProcess(name)
+		post = a.postProcess(name, a.cache.LatestFavoriteID)
 	}
 	result, err := a.doForTweets(tweets, c, action, post)
 	if err != nil {
@@ -185,11 +185,11 @@ func (a *TwitterAPI) DoForSearch(query string, v url.Values, c TweetChecker, act
 
 type postProcessor func(anaconda.Tweet, bool) error
 
-func (a *TwitterAPI) postProcess(name string) postProcessor {
+func (a *TwitterAPI) postProcess(name string, m map[string]int64) postProcessor {
 	return func(t anaconda.Tweet, match bool) error {
-		id, exists := a.cache.LatestFavoriteID[name]
+		id, exists := m[name]
 		if (exists && t.Id > id) || !exists {
-			a.cache.LatestFavoriteID[name] = t.Id
+			m[name] = t.Id
 		}
 		return nil
 	}
