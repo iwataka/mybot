@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// HTTPServer contains values for providing various pieces of information, such
+// as the error log and Google Vision API result, via HTTP to users.
 type HTTPServer struct {
 	Name       string      `toml:"name"`
 	Host       string      `toml:"host"`
@@ -20,11 +22,12 @@ type HTTPServer struct {
 	cache      *MybotCache `toml:"-"`
 }
 
+// Init initializes HTTP server if HTTPServer#Enabled is true.
 func (s *HTTPServer) Init() error {
 	if s.Enabled {
 		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
 		http.HandleFunc("/", s.handler)
-		http.HandleFunc("/assets/", s.customCSSHandler)
+		http.HandleFunc("/assets/", s.assetHandler)
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 		if err != nil {
 			return err
@@ -68,7 +71,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		colMap := make(map[string]string)
-		colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
+		colList, err := s.TwitterAPI.api.GetCollectionListByUserId(self.Id, nil)
 		if err == nil {
 			for _, c := range colList.Objects.Timelines {
 				name := strings.Replace(c.Name, " ", "-", -1)
@@ -106,7 +109,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) customCSSHandler(w http.ResponseWriter, r *http.Request) {
+func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := Asset(r.URL.Path[1:])
 	if err != nil {
 		s.Logger.Println(err)

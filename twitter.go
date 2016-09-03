@@ -13,6 +13,7 @@ import (
 // values cause infinite number of messages.
 const msgPrefix = "<bot message>\n"
 
+// TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
 	api    *anaconda.TwitterApi
 	self   *anaconda.User
@@ -20,6 +21,7 @@ type TwitterAPI struct {
 	config *MybotConfig
 }
 
+// TwitterAuth contains values required for Twitter's user authentication.
 type TwitterAuth struct {
 	ConsumerKey       string `toml:"consumer_key"`
 	ConsumerSecret    string `toml:"consumer_secret"`
@@ -27,6 +29,7 @@ type TwitterAuth struct {
 	AccessTokenSecret string `toml:"access_token_secret"`
 }
 
+// TwitterAction can indicate for various actions for Twitter's tweets.
 type TwitterAction struct {
 	Retweet     bool     `toml:"retweet"`
 	Favorite    bool     `toml:"favorite"`
@@ -72,6 +75,8 @@ func (a *TwitterAction) sub(action *TwitterAction) {
 	a.Collections = cols
 }
 
+// NewTwitterAPI takes a user's authentication, cache and configuration and
+// returns TwitterAPI instance for that user
 func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
@@ -79,23 +84,30 @@ func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI 
 	return &TwitterAPI{api, nil, c, cfg}
 }
 
+// PostDMToScreenName wraps anaconda.TwitterApi#PostDMToScreenName and has
+// almost same function as the wrapped one, but posts messages with the
+// specified prefix.
 func (a *TwitterAPI) PostDMToScreenName(msg, name string) (anaconda.DirectMessage, error) {
 	return a.api.PostDMToScreenName(msgPrefix+msg, name)
 }
 
+// GetCollectionListByUserId is just a wrapper of anaconda.TwitterApi#GetCollectionListByUserId
 func (a *TwitterAPI) GetCollectionListByUserId(userId int64, v url.Values) (anaconda.CollectionListResult, error) {
 	return a.api.GetCollectionListByUserId(userId, v)
 }
 
+// PostTweet is just a wrapper of anaconda.TwitterApi#PostTweet
 func (a *TwitterAPI) PostTweet(msg string, v url.Values) (anaconda.Tweet, error) {
 	return a.api.PostTweet(msg, v)
 }
 
+// GetFriendsList is just a wrapper of anaconda.TwitterApi#GetFriendsList
 func (a *TwitterAPI) GetFriendsList(v url.Values) (anaconda.UserCursor, error) {
 	return a.api.GetFriendsList(v)
 }
 
-// GetSelfCache returns the user of this client
+// GetSelf gets the authenticated user's information and stores it as a cache,
+// then returns it.
 func (a *TwitterAPI) GetSelf() (anaconda.User, error) {
 	if a.self == nil {
 		self, err := a.api.GetSelf(nil)
@@ -107,6 +119,8 @@ func (a *TwitterAPI) GetSelf() (anaconda.User, error) {
 	return *a.self, nil
 }
 
+// CheckUser cheks if user is matched for the given allowSelf and users
+// arguments.
 func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (bool, error) {
 	if allowSelf {
 		self, err := a.GetSelf()
@@ -125,6 +139,8 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
+// DoForAccount gets tweets from the specified user's timeline and do action
+// for tweets filtered by c.
 func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
 	v.Set("screen_name", name)
@@ -148,6 +164,8 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, act
 	return result, nil
 }
 
+// DoForFavorites gets tweets from the specified user's favorite list and do
+// action for tweets filtered by c.
 func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
 	v.Set("screen_name", name)
@@ -171,6 +189,8 @@ func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, a
 	return result, nil
 }
 
+// DoForSearch gets tweets from search result by the specified query and do
+// action for tweets filtered by c.
 func (a *TwitterAPI) DoForSearch(query string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
@@ -319,7 +339,8 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 	return nil
 }
 
-// NotifyToAll sends metadata about the specified tweet to the all.
+// NotifyToAll sends metadata about the specified tweet, such as place, to the
+// all users specified in the configuration.
 func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
 	n := a.config.Twitter.Notification
 	if n.Place != nil && t.HasCoordinates() {
@@ -331,7 +352,8 @@ func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
 	return nil
 }
 
-// PostDMToAll posts the specified message to the all.
+// PostDMToAll posts the specified message to the all users specified in the
+// configuration.
 func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) error {
 	for _, user := range users {
 		_, err := a.PostDMToScreenName(msg, user)
@@ -352,6 +374,8 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
+// Listen listens to the authenticated user by Twitter's User Streaming API and
+// reacts with direct messages.
 func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver) error {
 	if v == nil {
 		v = url.Values{}
@@ -373,7 +397,9 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver) error 
 	return nil
 }
 
-// Response is replaced with Listen
+// Response gets direct messages sent to the authenticated user and react with
+// them.
+// This is currently DEPRECATED and replaced with Listen.
 func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 	latestID := a.cache.LatestDMID
 	v := url.Values{}
@@ -443,6 +469,8 @@ type TweetChecker interface {
 // Returning an empty string means this function does nothing.
 type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
 
+// DefaultDirectMessageReceiver returns a reply from the specified direct
+// message.
 func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
 	text := html.UnescapeString(m.Text)
 	if text == "collection" || text == "cols" {

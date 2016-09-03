@@ -13,12 +13,15 @@ import (
 	"google.golang.org/api/vision/v1"
 )
 
+// VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
-	*vision.Service
+	api       *vision.Service
 	ProjectID string
 	cache     *MybotCache
 }
 
+// NewVisionAPI takes a path of a user's google-cloud credential file and cache
+// and returns a VisionAPI instance for that user.
 func NewVisionAPI(path string, cache *MybotCache) (*VisionAPI, error) {
 	cred, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -41,6 +44,8 @@ func NewVisionAPI(path string, cache *MybotCache) (*VisionAPI, error) {
 	return &VisionAPI{a, projectID, cache}, nil
 }
 
+// VisionCondition is a condition to check whether images match or not by using
+// Google Vision API.
 type VisionCondition struct {
 	Label    []string          `toml:"label"`
 	Face     map[string]string `toml:"face"`
@@ -49,7 +54,9 @@ type VisionCondition struct {
 	Logo     []string          `toml:"logo"`
 }
 
-func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, error) {
+// MatchImages takes image URLs and a Vision condition and returns whether the
+// specified images match or not.
+func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, error) {
 	// No image never match any conditions
 	if len(urls) == 0 {
 		return false, nil
@@ -95,7 +102,7 @@ func (a *VisionAPI) MatchImage(urls []string, cond *VisionCondition) (bool, erro
 		Requests: reqs,
 	}
 
-	res, err := a.Images.Annotate(batch).Do()
+	res, err := a.api.Images.Annotate(batch).Do()
 	if err != nil {
 		return false, err
 	}

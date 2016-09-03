@@ -63,12 +63,12 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 	if c.Lang != nil && *c.Lang != t.Lang {
 		return false, nil
 	}
-	if c.Vision != nil && c.visionAPI != nil && c.visionAPI.Images != nil {
+	if c.Vision != nil && c.visionAPI != nil && c.visionAPI.api != nil {
 		urls := make([]string, len(t.Entities.Media))
 		for i, m := range t.Entities.Media {
 			urls[i] = m.Media_url
 		}
-		match, err := c.visionAPI.MatchImage(urls, c.Vision)
+		match, err := c.visionAPI.MatchImages(urls, c.Vision)
 		if err != nil {
 			return false, err
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// MybotConfig is a root of the all configurations.
 type MybotConfig struct {
 	GitHub         *GitHubConfig      `toml:"github"`
 	Twitter        *TwitterConfig     `toml:"twitter"`
@@ -72,6 +73,8 @@ type LogConfig struct {
 	Users     []string `toml:"users"`
 }
 
+// NewMybotConfig takes the configuration file path and returns a configuration
+// instance.
 func NewMybotConfig(path string) (*MybotConfig, error) {
 	c := &MybotConfig{
 		GitHub: &GitHubConfig{
@@ -167,6 +170,8 @@ func validateConfig(config *MybotConfig) error {
 	return nil
 }
 
+// TomlText returns a toml text encoded from the configuration. If error occurs
+// while encoding, this returns an empty string.
 func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := toml.NewEncoder(buf)
