@@ -353,6 +353,10 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 }
 
 func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver) error {
+	if v == nil {
+		v = url.Values{}
+	}
+	v.Set("with", "user")
 	stream := a.api.UserStream(v)
 	for {
 		switch c := (<-stream.C).(type) {
