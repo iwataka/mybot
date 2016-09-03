@@ -23,6 +23,11 @@ type GitHubConfig struct {
 	Duration string          `toml:"duration"`
 }
 
+type SourceConfig struct {
+	Filter *TweetFilterConfig `toml:"filter"`
+	Action *TwitterAction     `toml:"action"`
+}
+
 type TwitterConfig struct {
 	Timelines    []TimelineConfig `toml:"timelines"`
 	Favorites    []FavoriteConfig `toml:"favorites"`
@@ -32,30 +37,27 @@ type TwitterConfig struct {
 }
 
 type TimelineConfig struct {
-	ScreenName     *string            `toml:"screen_name"`
-	ScreenNames    []string           `toml:"screen_names"`
-	ExcludeReplies *bool              `toml:"exclude_replies"`
-	IncludeRts     *bool              `toml:"include_rts"`
-	Count          *int               `toml:"count"`
-	Filter         *TweetFilterConfig `toml:"filter"`
-	Action         *TwitterAction     `toml:"action"`
+	*SourceConfig
+	ScreenName     *string  `toml:"screen_name"`
+	ScreenNames    []string `toml:"screen_names"`
+	ExcludeReplies *bool    `toml:"exclude_replies"`
+	IncludeRts     *bool    `toml:"include_rts"`
+	Count          *int     `toml:"count"`
 }
 
 type FavoriteConfig struct {
-	ScreenName  *string            `toml:"screen_name"`
-	ScreenNames []string           `toml:"screen_names"`
-	Count       *int               `toml:"count"`
-	Filter      *TweetFilterConfig `toml:"filter"`
-	Action      *TwitterAction     `toml:"action"`
+	*SourceConfig
+	ScreenName  *string  `toml:"screen_name"`
+	ScreenNames []string `toml:"screen_names"`
+	Count       *int     `toml:"count"`
 }
 
 type SearchConfig struct {
-	Query      *string            `toml:"query"`
-	Queries    []string           `toml:"queries"`
-	ResultType *string            `toml:"result_type"`
-	Count      *int               `toml:"count"`
-	Filter     *TweetFilterConfig `toml:"filter"`
-	Action     *TwitterAction     `toml:"action"`
+	*SourceConfig
+	Query      *string  `toml:"query"`
+	Queries    []string `toml:"queries"`
+	ResultType *string  `toml:"result_type"`
+	Count      *int     `toml:"count"`
 }
 
 type InteractionConfig struct {
