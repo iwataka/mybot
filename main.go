@@ -251,8 +251,8 @@ func monitorFile(file string, d time.Duration, f func()) {
 			mt := info.ModTime()
 			if mt.After(modTime) {
 				modTime = mt
+				f()
 			}
-			f()
 		}
 		time.Sleep(d)
 	}

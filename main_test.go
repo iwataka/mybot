@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestCache(t *testing.T) {
@@ -38,5 +40,52 @@ func TestLogger(t *testing.T) {
 	}
 	if info, err := os.Stat(tmp); os.IsNotExist(err) || info.IsDir() {
 		t.Fatalf("%s not exist.", tmp)
+	}
+}
+
+func TestMonitorFile(t *testing.T) {
+	file, err := ioutil.TempFile("", "mybot")
+	defer os.Remove(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	modified := false
+	ch := make(chan bool)
+	dur := time.Second / 10.0
+	go monitorFile(file.Name(), dur, func() {
+		modified = true
+	})
+	var e string = ""
+	go func() {
+		time.Sleep(dur * 3)
+		if modified {
+			e = fmt.Sprintf("%s is not modified", file.Name())
+			ch <- true
+			return
+		}
+		_, err = file.WriteString("foo")
+		if err != nil {
+			e = err.Error()
+			ch <- true
+			return
+		}
+		time.Sleep(dur * 3)
+		if !modified {
+			e = fmt.Sprintf("%s is now modified", file.Name())
+			ch <- true
+			return
+		}
+		modified = false
+		time.Sleep(dur * 3)
+		if modified {
+			e = fmt.Sprintf("%s is not modified", file.Name())
+			ch <- true
+			return
+		}
+		ch <- true
+	}()
+	<-ch
+	if e != "" {
+		t.Fatalf(e)
 	}
 }
