@@ -98,7 +98,15 @@ func beforeRunning(c *cli.Context) error {
 	if err != nil {
 		panic(err)
 	}
-	config, err = NewMybotConfig(c.String("config"))
+
+	// visionAPI is nil if there exists no credential file
+	visionAPI, err = NewVisionAPI(c.String("gcp-credential"), cache)
+	if err != nil {
+		logger.Println(err)
+		visionAPI = new(VisionAPI)
+	}
+
+	config, err = NewMybotConfig(c.String("config"), visionAPI)
 	if err != nil {
 		panic(err)
 	}
@@ -111,19 +119,12 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	// visionAPI is nil if there exists no credential file
-	visionAPI, err = NewVisionAPI(c.String("gcp-credential"), cache)
-	if err != nil {
-		logger.Println(err)
-		visionAPI = new(VisionAPI)
-	}
-
 	return nil
 }
 
 func run(c *cli.Context) error {
 	runGitHub(c, logger.HandleError)
-	runTwitter(c, logger.HandleError)
+	runTwitterWithoutStream(c, logger.HandleError)
 	err := cache.Save(c.String("cache"))
 	if err != nil {
 		logger.Println(err)
@@ -143,19 +144,22 @@ func serve(c *cli.Context) error {
 		// Abort if there are more than 15 connections in 15 minutes
 		t := time.Now()
 		count := 0
-		if config.Interaction != nil {
-			for {
-				err := twitterAPI.Listen(nil, twitterAPI.DefaultDirectMessageReceiver)
-				if err != nil {
-					logger.Println(err)
-				}
-				if t.Sub(time.Now()) >= 15*time.Minute {
-					count = 0
-				}
-				count++
-				if count >= 15 {
-					break
-				}
+		err := twitterAPI.FollowAll()
+		if err != nil {
+			logger.Println(err)
+		}
+		for {
+			err := twitterAPI.Listen(nil, twitterAPI.DefaultDirectMessageReceiver, c.String("cache"))
+			if err != nil {
+				logger.Println(err)
+			}
+			if time.Now().Sub(t) >= 15*time.Minute {
+				count = 0
+				t = time.Now()
+			}
+			count++
+			if count >= 15 {
+				break
 			}
 		}
 		logger.Println("Interaction feature is now disabled. Please restart.")
@@ -179,7 +183,7 @@ func serve(c *cli.Context) error {
 
 	go func() {
 		for {
-			runTwitter(c, logger.HandleError)
+			runTwitterWithStream(c, logger.HandleError)
 			err := cache.Save(c.String("cache"))
 			if err != nil {
 				logger.Println(err)
@@ -197,10 +201,14 @@ func serve(c *cli.Context) error {
 		c.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
-			cfg, err := NewMybotConfig(c.String("config"))
+			cfg, err := NewMybotConfig(c.String("config"), visionAPI)
 			if err == nil {
 				if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
 					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache, config)
+					err := twitterAPI.FollowAll()
+					if err != nil {
+						logger.Println(err)
+					}
 				}
 				*config = *cfg
 			}
@@ -256,7 +264,37 @@ func runGitHub(c *cli.Context, handle func(error)) {
 	}
 }
 
-func runTwitter(c *cli.Context, handle func(error)) {
+func runTwitterWithStream(c *cli.Context, handle func(error)) {
+	tweets := []anaconda.Tweet{}
+	for _, a := range config.Twitter.Searches {
+		a.Filter.visionAPI = visionAPI
+		v := url.Values{}
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
+		}
+		if a.ResultType != nil {
+			v.Set("result_type", *a.ResultType)
+		}
+		if a.Query != nil {
+			ts, err := twitterAPI.DoForSearch(*a.Query, v, a.Filter, a.Action)
+			handle(err)
+			tweets = append(tweets, ts...)
+		} else {
+			for _, query := range a.Queries {
+				ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
+				handle(err)
+				tweets = append(tweets, ts...)
+			}
+		}
+	}
+	for _, t := range tweets {
+		err := twitterAPI.NotifyToAll(&t)
+		handle(err)
+	}
+}
+
+func runTwitterWithoutStream(c *cli.Context, handle func(error)) {
+	runTwitterWithStream(c, handle)
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
 		v := url.Values{}
@@ -297,27 +335,6 @@ func runTwitter(c *cli.Context, handle func(error)) {
 				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
-			}
-		}
-	}
-	for _, a := range config.Twitter.Searches {
-		a.Filter.visionAPI = visionAPI
-		v := url.Values{}
-		if a.Count != nil {
-			v.Set("count", fmt.Sprintf("%d", *a.Count))
-		}
-		if a.ResultType != nil {
-			v.Set("result_type", *a.ResultType)
-		}
-		if a.Query != nil {
-			ts, err := twitterAPI.DoForSearch(*a.Query, v, a.Filter, a.Action)
-			handle(err)
-			tweets = append(tweets, ts...)
-		} else {
-			for _, query := range a.Queries {
-				ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
-				handle(err)
-				tweets = append(tweets, ts...)
 			}
 		}
 	}

@@ -75,7 +75,7 @@ type LogConfig struct {
 
 // NewMybotConfig takes the configuration file path and returns a configuration
 // instance.
-func NewMybotConfig(path string) (*MybotConfig, error) {
+func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 	c := &MybotConfig{
 		GitHub: &GitHubConfig{
 			Projects: []GitHubProject{},
@@ -105,6 +105,15 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 	err = validateConfig(c)
 	if err != nil {
 		return nil, err
+	}
+	for _, t := range c.Twitter.Timelines {
+		t.Filter.visionAPI = vision
+	}
+	for _, f := range c.Twitter.Favorites {
+		f.Filter.visionAPI = vision
+	}
+	for _, s := range c.Twitter.Searches {
+		s.Filter.visionAPI = vision
 	}
 	return c, nil
 }

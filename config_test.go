@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestNewMybotConfig(t *testing.T) {
-	c, err := NewMybotConfig("config.template.toml")
+	c, err := NewMybotConfig("config.template.toml", nil)
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}

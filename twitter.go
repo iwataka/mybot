@@ -376,21 +376,112 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 
 // Listen listens to the authenticated user by Twitter's User Streaming API and
 // reacts with direct messages.
-func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver) error {
+func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file string) error {
 	if v == nil {
 		v = url.Values{}
 	}
-	v.Set("with", "user")
+	v.Set("with", "followings")
 	stream := a.api.UserStream(v)
 	for {
 		switch c := (<-stream.C).(type) {
 		case anaconda.DirectMessage:
-			if a.cache.LatestDMID < c.Id {
-				a.cache.LatestDMID = c.Id
+			if a.config.Interaction != nil {
+				conf := a.config.Interaction
+				match, err := a.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
+				if err != nil {
+					return err
+				}
+				if match {
+					if a.cache.LatestDMID < c.Id {
+						a.cache.LatestDMID = c.Id
+					}
+					err := a.responseForDirectMessage(c, receiver)
+					if err != nil {
+						return err
+					}
+				}
+				a.cache.Save(file)
 			}
-			err := a.responseForDirectMessage(c, receiver)
+		case anaconda.Tweet:
+			name := c.User.ScreenName
+			var timeline TimelineConfig
+			exists := false
+			for _, t := range a.config.Twitter.Timelines {
+				if t.ScreenName != nil && *t.ScreenName == name {
+					timeline = t
+					exists = true
+				} else if t.ScreenNames != nil {
+					for _, n := range t.ScreenNames {
+						if n == name {
+							timeline = t
+							exists = true
+						}
+					}
+				}
+				if exists {
+					break
+				}
+			}
+			if !exists {
+				continue
+			}
+			if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
+				continue
+			}
+			if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
+				continue
+			}
+			match, err := timeline.Filter.check(c)
 			if err != nil {
 				return err
+			}
+			if match {
+				done := a.cache.Tweet2Action[c.IdStr]
+				err := a.processTweet(c, timeline.Action, done)
+				if err != nil {
+					return err
+				}
+				a.cache.LatestTweetID[name] = c.Id
+				a.cache.Save(file)
+			}
+		case anaconda.EventTweet:
+			if c.Event.Event == "favorite" {
+				name := c.Source.ScreenName
+				var favorite FavoriteConfig
+				exists := false
+				for _, f := range a.config.Twitter.Favorites {
+					if f.ScreenName != nil && *f.ScreenName == name {
+						favorite = f
+						exists = true
+					} else if f.ScreenNames != nil {
+						for _, n := range f.ScreenNames {
+							if n == name {
+								favorite = f
+								exists = true
+							}
+						}
+					}
+					if exists {
+						break
+					}
+				}
+				if !exists {
+					continue
+				}
+				tweet := *c.TargetObject
+				match, err := favorite.Filter.check(tweet)
+				if err != nil {
+					return err
+				}
+				if match {
+					done := a.cache.Tweet2Action[tweet.IdStr]
+					err := a.processTweet(tweet, favorite.Action, done)
+					if err != nil {
+						return err
+					}
+					a.cache.LatestFavoriteID[name] = tweet.Id
+					a.cache.Save(file)
+				}
 			}
 		}
 	}
@@ -427,6 +518,25 @@ func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 		}
 	}
 	a.cache.LatestDMID = latestID
+	return nil
+}
+
+func (a *TwitterAPI) FollowAll() error {
+	for _, t := range a.config.Twitter.Timelines {
+		if t.ScreenName != nil {
+			_, err := a.api.FollowUser(*t.ScreenName)
+			if err != nil {
+				return err
+			}
+		} else if t.ScreenNames != nil {
+			for _, n := range t.ScreenNames {
+				_, err := a.api.FollowUser(n)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }
 
