@@ -404,83 +404,70 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 			}
 		case anaconda.Tweet:
 			name := c.User.ScreenName
-			var timeline TimelineConfig
-			exists := false
+			timelines := []TimelineConfig{}
 			for _, t := range a.config.Twitter.Timelines {
 				if t.ScreenName != nil && *t.ScreenName == name {
-					timeline = t
-					exists = true
+					timelines = append(timelines, t)
 				} else if t.ScreenNames != nil {
 					for _, n := range t.ScreenNames {
 						if n == name {
-							timeline = t
-							exists = true
+							timelines = append(timelines, t)
+							break
 						}
 					}
 				}
-				if exists {
-					break
-				}
 			}
-			if !exists {
-				continue
-			}
-			if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
-				continue
-			}
-			if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
-				continue
-			}
-			match, err := timeline.Filter.check(c)
-			if err != nil {
-				return err
-			}
-			if match {
-				done := a.cache.Tweet2Action[c.IdStr]
-				err := a.processTweet(c, timeline.Action, done)
-				if err != nil {
-					return err
-				}
-				a.cache.LatestTweetID[name] = c.Id
-				a.cache.Save(file)
-			}
-		case anaconda.EventTweet:
-			if c.Event.Event == "favorite" {
-				name := c.Source.ScreenName
-				var favorite FavoriteConfig
-				exists := false
-				for _, f := range a.config.Twitter.Favorites {
-					if f.ScreenName != nil && *f.ScreenName == name {
-						favorite = f
-						exists = true
-					} else if f.ScreenNames != nil {
-						for _, n := range f.ScreenNames {
-							if n == name {
-								favorite = f
-								exists = true
-							}
-						}
-					}
-					if exists {
-						break
-					}
-				}
-				if !exists {
+			for _, timeline := range timelines {
+				if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
 					continue
 				}
-				tweet := *c.TargetObject
-				match, err := favorite.Filter.check(tweet)
+				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
+					continue
+				}
+				match, err := timeline.Filter.check(c)
 				if err != nil {
 					return err
 				}
 				if match {
-					done := a.cache.Tweet2Action[tweet.IdStr]
-					err := a.processTweet(tweet, favorite.Action, done)
+					done := a.cache.Tweet2Action[c.IdStr]
+					err := a.processTweet(c, timeline.Action, done)
 					if err != nil {
 						return err
 					}
-					a.cache.LatestFavoriteID[name] = tweet.Id
+					a.cache.LatestTweetID[name] = c.Id
 					a.cache.Save(file)
+				}
+			}
+		case anaconda.EventTweet:
+			if c.Event.Event == "favorite" {
+				name := c.Source.ScreenName
+				favorites := []FavoriteConfig{}
+				for _, f := range a.config.Twitter.Favorites {
+					if f.ScreenName != nil && *f.ScreenName == name {
+						favorites = append(favorites, f)
+					} else if f.ScreenNames != nil {
+						for _, n := range f.ScreenNames {
+							if n == name {
+								favorites = append(favorites, f)
+							}
+						}
+					}
+				}
+				for _, favorite := range favorites {
+					tweet := *c.TargetObject
+					match, err := favorite.Filter.check(tweet)
+					if err != nil {
+						return err
+					}
+					if match {
+						done := a.cache.Tweet2Action[tweet.IdStr]
+						err := a.processTweet(tweet, favorite.Action, done)
+						if err != nil {
+							return err
+						}
+						a.cache.LatestFavoriteID[name] = tweet.Id
+						a.cache.Save(file)
+					}
 				}
 			}
 		}
