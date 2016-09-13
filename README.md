@@ -54,3 +54,9 @@ you want to specify the location when executing the command.
 See [config.template.toml](config.template.toml) for more details.
 
 Then run `mybot serve` and that's all.
+
+## ToDo
+
++ Plug-in architecture
++ Apply other SNSs
++ Make deployment easier
