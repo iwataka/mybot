@@ -400,7 +400,10 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 						return err
 					}
 				}
-				a.cache.Save(file)
+				err = a.cache.Save(file)
+				if err != nil {
+					return err
+				}
 			}
 		case anaconda.Tweet:
 			name := c.User.ScreenName
@@ -435,7 +438,10 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 						return err
 					}
 					a.cache.LatestTweetID[name] = c.Id
-					a.cache.Save(file)
+					err = a.cache.Save(file)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		case anaconda.EventTweet:
@@ -466,7 +472,10 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 							return err
 						}
 						a.cache.LatestFavoriteID[name] = tweet.Id
-						a.cache.Save(file)
+						err = a.cache.Save(file)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}

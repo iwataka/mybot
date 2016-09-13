@@ -32,7 +32,6 @@ func (a *IamAPI) GetLatestKey(projectId, account string) ([]byte, error) {
 	}
 	keys := listRes.Keys
 	if len(keys) != 0 {
-		return keys[0].MarshalJSON()
 		var validKey *iam.ServiceAccountKey
 		now := time.Now()
 		for _, key := range keys {
