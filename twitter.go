@@ -260,7 +260,13 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 		ac.sub(done)
 	}
 	if ac.Retweet && !t.Retweeted {
-		_, err := a.api.Retweet(t.Id, false)
+		var id int64
+		if t.RetweetedStatus == nil {
+			id = t.Id
+		} else {
+			id = t.RetweetedStatus.Id
+		}
+		_, err := a.api.Retweet(id, false)
 		if err != nil {
 			e, ok := err.(*anaconda.ApiError)
 			if ok {
@@ -288,7 +294,13 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 		}
 	}
 	if ac.Follow {
-		_, err := a.api.FollowUser(t.User.ScreenName)
+		var screenName string
+		if t.RetweetedStatus == nil {
+			screenName = t.User.ScreenName
+		} else {
+			screenName = t.RetweetedStatus.User.ScreenName
+		}
+		_, err := a.api.FollowUser(screenName)
 		if err != nil {
 			e, ok := err.(*anaconda.ApiError)
 			if ok {
