@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/antonholmquist/jason"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/vision/v1"
@@ -15,33 +14,22 @@ import (
 
 // VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
-	api       *vision.Service
-	ProjectID string
-	cache     *MybotCache
+	api   *vision.Service
+	cache *MybotCache
 }
 
 // NewVisionAPI takes a path of a user's google-cloud credential file and cache
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(path string, cache *MybotCache) (*VisionAPI, error) {
-	cred, err := ioutil.ReadFile(path)
+func NewVisionAPI(cache *MybotCache) (*VisionAPI, error) {
+	c, err := google.DefaultClient(context.Background(), vision.CloudPlatformScope)
 	if err != nil {
 		return nil, err
 	}
-	cfg, err := google.JWTConfigFromJSON(cred, vision.CloudPlatformScope)
-	if err != nil {
-		return nil, err
-	}
-	v, err := jason.NewObjectFromBytes(cred)
-	projectID, err := v.GetString("project_id")
-	if err != nil {
-		return nil, err
-	}
-	c := cfg.Client(context.Background())
 	a, err := vision.New(c)
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, projectID, cache}, nil
+	return &VisionAPI{a, cache}, nil
 }
 
 // VisionCondition is a condition to check whether images match or not by using

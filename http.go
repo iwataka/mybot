@@ -54,11 +54,6 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			botName = ""
 		}
 
-		pid := ""
-		if s.VisionAPI != nil {
-			pid = s.VisionAPI.ProjectID
-		}
-
 		imageAnalysisResult := ""
 		if s.cache != nil {
 			buf := new(bytes.Buffer)
@@ -83,7 +78,6 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			UserName            string
 			Log                 string
 			BotName             string
-			GCloudProjectID     string
 			ImageURL            string
 			ImageAnalysisResult string
 			ImageAnalysisDate   string
@@ -92,7 +86,6 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			s.Name,
 			log,
 			botName,
-			pid,
 			s.cache.ImageURL,
 			imageAnalysisResult,
 			s.cache.ImageAnalysisDate,

@@ -48,17 +48,10 @@ func main() {
 		Usage: "Cache file's location",
 	}
 
-	visionCredentialFlag := cli.StringFlag{
-		Name:  "gcp-credential",
-		Value: "credential.json",
-		Usage: "Location of Google Cloud Platform credential file",
-	}
-
 	flags := []cli.Flag{
 		logFlag,
 		configFlag,
 		cacheFlag,
-		visionCredentialFlag,
 	}
 
 	app := cli.NewApp()
@@ -99,11 +92,9 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	// visionAPI is nil if there exists no credential file
-	visionAPI, err = NewVisionAPI(c.String("gcp-credential"), cache)
+	visionAPI, err = NewVisionAPI(cache)
 	if err != nil {
-		logger.Println(err)
-		visionAPI = new(VisionAPI)
+		panic(err)
 	}
 
 	config, err = NewMybotConfig(c.String("config"), visionAPI)
@@ -113,6 +104,13 @@ func beforeRunning(c *cli.Context) error {
 
 	githubAPI = NewGitHubAPI(nil, cache)
 	twitterAPI = NewTwitterAPI(config.Authentication, cache, config)
+	ok, err := twitterAPI.api.VerifyCredentials()
+	if err != nil {
+		panic(err)
+	}
+	if !ok {
+		panic("Twitter authentication failed")
+	}
 
 	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
@@ -211,20 +209,6 @@ func serve(c *cli.Context) error {
 					}
 				}
 				*config = *cfg
-			}
-		})
-
-	go monitorFile(
-		c.String("gcp-credential"),
-		time.Duration(1)*time.Second,
-		// If it fails to read a credential file, it may be better to
-		// execute `*visionAPI = new(VisionAPI)`
-		func() {
-			a, err := NewVisionAPI(c.String("gcp-credential"), cache)
-			if err == nil {
-				*visionAPI = *a
-			} else {
-				logger.Println(err)
 			}
 		})
 
