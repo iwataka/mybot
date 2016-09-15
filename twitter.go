@@ -591,7 +591,8 @@ type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
 // message.
 func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
 	text := html.UnescapeString(m.Text)
-	if text == "collection" || text == "cols" {
+	lowers := strings.ToLower(text)
+	if lowers == "collection" || lowers == "cols" {
 		self, err := a.GetSelf()
 		if err != nil {
 			return "", err
@@ -607,7 +608,7 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 			lines = append(lines, line)
 		}
 		return strings.Join(lines, "\n"), nil
-	} else if text == "configuration" || text == "config" || text == "conf" {
+	} else if lowers == "configuration" || lowers == "config" || lowers == "conf" {
 		cfg := new(MybotConfig)
 		*cfg = *config
 		cfg.Authentication = nil
