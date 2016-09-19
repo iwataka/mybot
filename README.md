@@ -4,8 +4,12 @@ Standalone Twitter bot written in Go
 
 ## Why `Mybot`
 
-Twitter is one of the most famous `SNS`s and the largest information sources in the world, but we still can't receive its benefit enough because collecting and broadcasting information relies on your hands and you don't have enough time to do it.
-`Mybot` does this kind of things automatically, only what you have to do is writing the configuration file for your own `Mybot`.
+Twitter is one of the most famous `SNS`s and the largest information sources in
+the world, but we still can't receive its benefit enough because collecting and
+broadcasting information relies on your hands and you don't have enough time to
+do it.
+`Mybot` does this kind of things automatically, only what you have to do is
+writing the configuration file for your own `Mybot`.
 `Mybot` does things exactly as you ordered.
 
 ## How to collect and broadcast information
@@ -40,9 +44,18 @@ These commands are now available:
 + `collections` (`cols`): returns your own collection list
 + `configuration` (`config`, `conf`): returns your `Mybot` configuration
 
+## View status via built-in Web page
+
+`Mybot` has built-in Web page showing the current status like these things
+
++ Error logs
++ Twitter collection list 
++ Google Vision API's result.
+
 ## Other useful features
 
-+ Shows some useful pieces of information via built-in Web UI
+More features availble:
+
 + Sends error messages via Direct Message
 + Notifies the place of tweets via Direct Message if available
 
@@ -55,8 +68,8 @@ See [config.template.toml](config.template.toml) for more details.
 
 Then run `mybot serve` and that's all.
 
-## ToDo
+## Planned to be implemented
 
 + Plug-in architecture
-+ Apply other SNSs
++ Apply this to other SNSs (like Facebook, Google+, Tumblr,...)
 + Make deployment easier
