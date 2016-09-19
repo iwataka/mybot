@@ -73,3 +73,4 @@ Then run `mybot serve` and that's all.
 + Plug-in architecture
 + Apply this to other SNSs (like Facebook, Google+, Tumblr,...)
 + Make deployment easier
++ User authentication and user-specific configuration
