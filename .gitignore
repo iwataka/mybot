@@ -5,3 +5,4 @@ mybot.exe
 config.toml
 bindata.go
 bin/
+google_application_credentials.json

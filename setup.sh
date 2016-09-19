@@ -18,7 +18,10 @@ else
     port=$MYBOT_PORT
 fi
 
-docker run -d -v "$dir":/mybot \
+docker run -d \
+    -v "$dir":/mybot \
+    -v "$HOME/.config/gcloud":/root/.config/gcloud \
+    -v "$HOME/.cache/mybot":/root/.cache/mybot \
     --name "$container_name" \
     -p "$port":8080 \
     mybot sh -c "cd /mybot && go get -d ./... && go generate && go build && ./mybot s --log .mybot-debug.log > .mybot-dump.log 2>&1"
