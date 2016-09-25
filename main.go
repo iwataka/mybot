@@ -111,6 +111,9 @@ func beforeRunning(c *cli.Context) error {
 	if !ok {
 		panic("Twitter authentication failed")
 	}
+	if config.Twitter.Debug != nil {
+		twitterAPI.SetDebug(*config.Twitter.Debug)
+	}
 
 	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {

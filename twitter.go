@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"log"
 	"net/url"
 	"strings"
 
@@ -19,6 +20,7 @@ type TwitterAPI struct {
 	self   *anaconda.User
 	cache  *MybotCache
 	config *MybotConfig
+	debug  bool
 }
 
 // TwitterAuth contains values required for Twitter's user authentication.
@@ -81,7 +83,12 @@ func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI 
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
 	api := anaconda.NewTwitterApi(a.AccessToken, a.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg}
+	return &TwitterAPI{api, nil, c, cfg, false}
+}
+
+// SetDebug enables/disables TwitterAPI's debug mode.
+func (a *TwitterAPI) SetDebug(val bool) {
+	a.debug = val
 }
 
 // PostDMToScreenName wraps anaconda.TwitterApi#PostDMToScreenName and has
@@ -397,6 +404,9 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 	for {
 		switch c := (<-stream.C).(type) {
 		case anaconda.DirectMessage:
+			if a.debug {
+				log.Printf("[Receive direct message]\n%v\n", c)
+			}
 			if a.config.Interaction != nil {
 				conf := a.config.Interaction
 				match, err := a.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
@@ -418,6 +428,9 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 				}
 			}
 		case anaconda.Tweet:
+			if a.debug {
+				log.Printf("[Receive tweet]\n%s\n", c)
+			}
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
 			for _, t := range a.config.Twitter.Timelines {
@@ -458,6 +471,9 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 			}
 		case anaconda.EventTweet:
 			if c.Event.Event == "favorite" {
+				if a.debug {
+					log.Printf("[Receive event]\n%v\n", c)
+				}
 				name := c.Source.ScreenName
 				favorites := []FavoriteConfig{}
 				for _, f := range a.config.Twitter.Favorites {

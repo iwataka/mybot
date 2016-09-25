@@ -35,6 +35,7 @@ type TwitterConfig struct {
 	Searches     []SearchConfig   `toml:"searches"`
 	Notification *Notification    `toml:"notification"`
 	Duration     string           `toml:"duration"`
+	Debug        *bool            `toml:"debug"`
 }
 
 type TimelineConfig struct {
