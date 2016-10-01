@@ -74,6 +74,25 @@ type LogConfig struct {
 	Users     []string `toml:"users"`
 }
 
+func (tc *TwitterConfig) GetScreenNames() []string {
+	result := []string{}
+	for _, t := range tc.Timelines {
+		if t.ScreenName != nil {
+			result = append(result, *t.ScreenName)
+		} else {
+			result = append(result, t.ScreenNames...)
+		}
+	}
+	for _, f := range tc.Favorites {
+		if f.ScreenName != nil {
+			result = append(result, *f.ScreenName)
+		} else {
+			result = append(result, f.ScreenNames...)
+		}
+	}
+	return result
+}
+
 // NewMybotConfig takes the configuration file path and returns a configuration
 // instance.
 func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {

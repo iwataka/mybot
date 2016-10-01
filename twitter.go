@@ -393,40 +393,23 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
-// Listen listens to the authenticated user by Twitter's User Streaming API and
-// reacts with direct messages.
-func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file string) error {
+func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 	if v == nil {
 		v = url.Values{}
 	}
-	v.Set("with", "followings")
-	stream := a.api.UserStream(v)
+	usernames := strings.Join(a.config.Twitter.GetScreenNames(), ",")
+	users, err := a.api.GetUsersLookup(usernames, nil)
+	if err != nil {
+		return err
+	}
+	userids := []string{}
+	for _, u := range users {
+		userids = append(userids, u.IdStr)
+	}
+	v.Set("follow", strings.Join(userids, ","))
+	stream := a.api.PublicStreamFilter(v)
 	for {
 		switch c := (<-stream.C).(type) {
-		case anaconda.DirectMessage:
-			if a.debug {
-				log.Printf("[Receive direct message]\n%v\n", c)
-			}
-			if a.config.Interaction != nil {
-				conf := a.config.Interaction
-				match, err := a.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
-				if err != nil {
-					return err
-				}
-				if match {
-					if a.cache.LatestDMID < c.Id {
-						a.cache.LatestDMID = c.Id
-					}
-					err := a.responseForDirectMessage(c, receiver)
-					if err != nil {
-						return err
-					}
-				}
-				err = a.cache.Save(file)
-				if err != nil {
-					return err
-				}
-			}
 		case anaconda.Tweet:
 			if a.debug {
 				log.Printf("[Receive tweet]\n%s\n", c)
@@ -505,6 +488,40 @@ func (a *TwitterAPI) Listen(v url.Values, receiver DirectMessageReceiver, file s
 							return err
 						}
 					}
+				}
+			}
+		}
+	}
+}
+
+// ListenMyself listens to the authenticated user by Twitter's User Streaming
+// API and reacts with direct messages.
+func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) error {
+	stream := a.api.UserStream(v)
+	for {
+		switch c := (<-stream.C).(type) {
+		case anaconda.DirectMessage:
+			if a.debug {
+				log.Printf("[Receive direct message]\n%v\n", c)
+			}
+			if a.config.Interaction != nil {
+				conf := a.config.Interaction
+				match, err := a.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
+				if err != nil {
+					return err
+				}
+				if match {
+					if a.cache.LatestDMID < c.Id {
+						a.cache.LatestDMID = c.Id
+					}
+					err := a.responseForDirectMessage(c, receiver)
+					if err != nil {
+						return err
+					}
+				}
+				err = a.cache.Save(file)
+				if err != nil {
+					return err
 				}
 			}
 		}

@@ -133,6 +133,27 @@ func run(c *cli.Context) error {
 	return nil
 }
 
+func keepConnection(f func() error) {
+	// Abort if there are more than 15 connections in 15 minutes
+	t := time.Now()
+	count := 0
+	for {
+		err := f()
+		if err != nil {
+			logger.Println(err)
+		}
+		if time.Now().Sub(t) >= 15*time.Minute {
+			count = 0
+			t = time.Now()
+		}
+		count++
+		if count >= 15 {
+			break
+		}
+	}
+	logger.Println("Interaction feature is now disabled. Please restart.")
+}
+
 func serve(c *cli.Context) error {
 	s := config.HTTP
 	s.Logger = logger
@@ -141,30 +162,14 @@ func serve(c *cli.Context) error {
 	s.cache = cache
 	ch := make(chan bool)
 
-	go func() {
-		// Abort if there are more than 15 connections in 15 minutes
-		t := time.Now()
-		count := 0
-		err := twitterAPI.FollowAll()
-		if err != nil {
-			logger.Println(err)
-		}
-		for {
-			err := twitterAPI.Listen(nil, twitterAPI.DefaultDirectMessageReceiver, c.String("cache"))
-			if err != nil {
-				logger.Println(err)
-			}
-			if time.Now().Sub(t) >= 15*time.Minute {
-				count = 0
-				t = time.Now()
-			}
-			count++
-			if count >= 15 {
-				break
-			}
-		}
-		logger.Println("Interaction feature is now disabled. Please restart.")
-	}()
+	go keepConnection(func() error {
+		r := twitterAPI.DefaultDirectMessageReceiver
+		return twitterAPI.ListenMyself(nil, r, c.String("cache"))
+	})
+
+	go keepConnection(func() error {
+		return twitterAPI.ListenUsers(nil, c.String("cache"))
+	})
 
 	go func() {
 		for {
@@ -206,10 +211,6 @@ func serve(c *cli.Context) error {
 			if err == nil {
 				if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
 					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache, config)
-					err := twitterAPI.FollowAll()
-					if err != nil {
-						logger.Println(err)
-					}
 				}
 				*config = *cfg
 			}
