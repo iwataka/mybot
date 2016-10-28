@@ -16,6 +16,7 @@ type HTTPServer struct {
 	Host       string      `toml:"host"`
 	Port       string      `toml:"port"`
 	Enabled    bool        `toml:"enabled"`
+	LogLines   *int        `toml:logLines`
 	Logger     *Logger     `toml:"-"`
 	TwitterAPI *TwitterAPI `toml:"-"`
 	VisionAPI  *VisionAPI  `toml:"-"`
@@ -28,6 +29,7 @@ func (s *HTTPServer) Init() error {
 		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
 		http.HandleFunc("/", s.handler)
 		http.HandleFunc("/assets/", s.assetHandler)
+		http.HandleFunc("/log/", s.logHandler)
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 		if err != nil {
 			return err
@@ -46,6 +48,16 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log := s.Logger.ReadString()
+		lines := strings.Split(log, "\n")
+		lineNum := 10
+		if s.LogLines != nil {
+			lineNum = *s.LogLines
+		}
+		head := len(lines) - lineNum
+		if head < 0 {
+			head = 0
+		}
+		log = strings.Join(lines[head:len(lines)], "\n")
 		var botName string
 		self, err := s.TwitterAPI.GetSelf()
 		if err == nil {
@@ -110,4 +122,10 @@ func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/css")
 	w.Write(data)
+}
+
+func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
+	log := logger.ReadString()
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(log))
 }
