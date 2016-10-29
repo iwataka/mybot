@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/iwataka/anaconda"
@@ -68,12 +69,15 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 		for i, m := range t.Entities.Media {
 			urls[i] = m.Media_url
 		}
-		match, err := c.visionAPI.MatchImages(urls, c.Vision)
-		if err != nil {
-			return false, err
-		}
-		if !match {
-			return false, nil
+		if len(urls) != 0 {
+			match, err := c.visionAPI.MatchImages(urls, c.Vision)
+			c.visionAPI.cache.ImageSource = fmt.Sprintf("https://twitter.com/%s/status/%s", t.User.IdStr, t.IdStr)
+			if err != nil {
+				return false, err
+			}
+			if !match {
+				return false, nil
+			}
 		}
 	}
 	return true, nil

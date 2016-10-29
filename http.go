@@ -91,6 +91,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			Log                 string
 			BotName             string
 			ImageURL            string
+			ImageSource         string
 			ImageAnalysisResult string
 			ImageAnalysisDate   string
 			CollectionMap       map[string]string
@@ -99,6 +100,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			log,
 			botName,
 			s.cache.ImageURL,
+			s.cache.ImageSource,
 			imageAnalysisResult,
 			s.cache.ImageAnalysisDate,
 			colMap,

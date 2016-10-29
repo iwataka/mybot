@@ -14,6 +14,7 @@ type MybotCache struct {
 	LatestDMID          int64 `json:"-"`
 	Tweet2Action        map[string]*TwitterAction
 	ImageURL            string
+	ImageSource         string
 	ImageAnalysisResult string
 	ImageAnalysisDate   string
 }
@@ -25,6 +26,7 @@ func NewMybotCache(path string) (*MybotCache, error) {
 		make(map[string]int64),
 		0,
 		make(map[string]*TwitterAction),
+		"",
 		"",
 		"",
 		"",

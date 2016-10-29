@@ -86,7 +86,7 @@
                         {{ if .ImageURL }}
                         <div class="row">
                             <div class="col-md-6">
-                                <img src="{{ .ImageURL }}" class="img-responsive", alt="Image analyzed by Google Vision API">
+                                <a href="{{ .ImageSource }}"><img src="{{ .ImageURL }}" class="img-responsive", alt="Image analyzed by Google Vision API"></a>
                             </div>
                             <div class="col-md-6">
                                 <pre><code>{{ .ImageAnalysisResult }}</code></pre>
