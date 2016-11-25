@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/iwataka/anaconda"
@@ -48,10 +49,23 @@ func main() {
 		Usage: "Cache file's location",
 	}
 
-	flags := []cli.Flag{
+	credFlag := cli.StringFlag{
+		Name:  "credential,c",
+		Value: "",
+		Usage: "Credential for Basic Authentication (ex: user:password)",
+	}
+
+	runFlags := []cli.Flag{
 		logFlag,
 		configFlag,
 		cacheFlag,
+	}
+
+	serveFlags := []cli.Flag{
+		logFlag,
+		configFlag,
+		cacheFlag,
+		credFlag,
 	}
 
 	app := cli.NewApp()
@@ -64,7 +78,7 @@ func main() {
 		Name:    "run",
 		Aliases: []string{"r"},
 		Usage:   "Runs the non-interactive functions only one time (almost for test usage)",
-		Flags:   flags,
+		Flags:   runFlags,
 		Before:  beforeRunning,
 		Action:  run,
 	}
@@ -73,7 +87,7 @@ func main() {
 		Name:    "serve",
 		Aliases: []string{"s"},
 		Usage:   "Runs the all functions (both interactive and non-interactive) periodically",
-		Flags:   flags,
+		Flags:   serveFlags,
 		Before:  beforeRunning,
 		Action:  serve,
 	}
@@ -217,7 +231,15 @@ func serve(c *cli.Context) error {
 		})
 
 	go func() {
-		err := s.Init()
+		cred := c.String("credential")
+		userAndPassword := strings.SplitN(cred, ":", 2)
+		user := ""
+		password := ""
+		if len(userAndPassword) == 2 {
+			user = userAndPassword[0]
+			password = userAndPassword[1]
+		}
+		err := s.Init(user, password)
 		if err != nil {
 			panic(err)
 		}

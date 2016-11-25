@@ -23,11 +23,37 @@ type HTTPServer struct {
 	cache      *MybotCache `toml:"-"`
 }
 
+type httpHandler func(http.ResponseWriter, *http.Request)
+
+func checkAuth(r *http.Request, user, password string) bool {
+	u, p, ok := r.BasicAuth()
+	if !ok {
+		return false
+	}
+	return u == user && p == password
+}
+
+func wrapHandlerWithBasicAuth(f httpHandler, user, password string) httpHandler {
+	if len(user) != 0 && len(password) != 0 {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if !checkAuth(r, user, password) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Enter username and password"`)
+				w.WriteHeader(401)
+				w.Write([]byte("401 Unauthorized\n"))
+				return
+			}
+			f(w, r)
+		}
+	} else {
+		return f
+	}
+}
+
 // Init initializes HTTP server if HTTPServer#Enabled is true.
-func (s *HTTPServer) Init() error {
+func (s *HTTPServer) Init(user, password string) error {
 	if s.Enabled {
 		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
-		http.HandleFunc("/", s.handler)
+		http.HandleFunc("/", wrapHandlerWithBasicAuth(s.handler, user, password))
 		http.HandleFunc("/assets/", s.assetHandler)
 		http.HandleFunc("/log/", s.logHandler)
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
