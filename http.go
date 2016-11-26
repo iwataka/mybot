@@ -171,9 +171,23 @@ func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
-	log := logger.ReadString()
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(log))
+	tmpl, err := generateTemplate("log", "pages/log.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := &struct {
+		UserName string
+		Log      string
+	}{
+		s.Name,
+		logger.ReadString(),
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func generateTemplate(name, path string) (*template.Template, error) {

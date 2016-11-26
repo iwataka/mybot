@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header" .}}
+<body>
+    <div class="container">
+        {{template "navbar" .}}
+        <h2>Current Log</h2>
+        <pre>
+            {{if .Log}}
+            {{.Log}}
+            {{else}}
+            <strong>Nothing to show</strong>
+            {{end}}
+        </pre>
+    </div>
+</body>
+</html>
