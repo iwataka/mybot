@@ -297,6 +297,24 @@ func runTwitterWithStream(c *cli.Context, handle func(error)) {
 			}
 		}
 	}
+	for _, a := range config.Twitter.Favorites {
+		v := url.Values{}
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
+		}
+		a.Filter.visionAPI = visionAPI
+		if a.ScreenName != nil {
+			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, a.Filter, a.Action)
+			tweets = append(tweets, ts...)
+			handle(err)
+		} else {
+			for _, name := range a.ScreenNames {
+				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
+				tweets = append(tweets, ts...)
+				handle(err)
+			}
+		}
+	}
 	for _, t := range tweets {
 		err := twitterAPI.NotifyToAll(&t)
 		handle(err)
@@ -325,24 +343,6 @@ func runTwitterWithoutStream(c *cli.Context, handle func(error)) {
 		} else {
 			for _, name := range a.ScreenNames {
 				ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
-				tweets = append(tweets, ts...)
-				handle(err)
-			}
-		}
-	}
-	for _, a := range config.Twitter.Favorites {
-		v := url.Values{}
-		if a.Count != nil {
-			v.Set("count", fmt.Sprintf("%d", *a.Count))
-		}
-		a.Filter.visionAPI = visionAPI
-		if a.ScreenName != nil {
-			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, a.Filter, a.Action)
-			tweets = append(tweets, ts...)
-			handle(err)
-		} else {
-			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
 				handle(err)
 			}

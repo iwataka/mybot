@@ -452,44 +452,6 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 					}
 				}
 			}
-		case anaconda.EventTweet:
-			if c.Event.Event == "favorite" {
-				if a.debug {
-					log.Printf("[Receive event]\n%v\n", c)
-				}
-				name := c.Source.ScreenName
-				favorites := []FavoriteConfig{}
-				for _, f := range a.config.Twitter.Favorites {
-					if f.ScreenName != nil && *f.ScreenName == name {
-						favorites = append(favorites, f)
-					} else if f.ScreenNames != nil {
-						for _, n := range f.ScreenNames {
-							if n == name {
-								favorites = append(favorites, f)
-							}
-						}
-					}
-				}
-				for _, favorite := range favorites {
-					tweet := *c.TargetObject
-					match, err := favorite.Filter.check(tweet)
-					if err != nil {
-						return err
-					}
-					if match {
-						done := a.cache.Tweet2Action[tweet.IdStr]
-						err := a.processTweet(tweet, favorite.Action, done)
-						if err != nil {
-							return err
-						}
-						a.cache.LatestFavoriteID[name] = tweet.Id
-						err = a.cache.Save(file)
-						if err != nil {
-							return err
-						}
-					}
-				}
-			}
 		}
 	}
 }
