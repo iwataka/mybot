@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-//go:generate go-bindata assets/... index.html
+//go:generate go-bindata assets/... pages/...
 
 var (
 	twitterAPI *TwitterAPI

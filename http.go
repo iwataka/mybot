@@ -54,6 +54,7 @@ func (s *HTTPServer) Init(user, password string) error {
 	if s.Enabled {
 		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
 		http.HandleFunc("/", wrapHandlerWithBasicAuth(s.handler, user, password))
+		http.HandleFunc("/config/", s.configHandler)
 		http.HandleFunc("/assets/", s.assetHandler)
 		http.HandleFunc("/log/", s.logHandler)
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
@@ -66,8 +67,7 @@ func (s *HTTPServer) Init(user, password string) error {
 
 func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		index, err := Asset("index.html")
-		tmpl, err := template.New("index").Parse(string(index))
+		tmpl, err := generateTemplate("index", "pages/index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -142,6 +142,24 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := generateTemplate("config", "pages/config.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := &struct {
+		UserName string
+	}{
+		s.Name,
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := Asset(r.URL.Path[1:])
 	if err != nil {
@@ -156,4 +174,20 @@ func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
 	log := logger.ReadString()
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(log))
+}
+
+func generateTemplate(name, path string) (*template.Template, error) {
+	index, err := Asset(path)
+	if err != nil {
+		return nil, err
+	}
+	header, err := Asset("pages/header.html")
+	if err != nil {
+		return nil, err
+	}
+	navbar, err := Asset("pages/navbar.html")
+	if err != nil {
+		return nil, err
+	}
+	return template.New("index").Parse(string(index) + string(header) + string(navbar))
 }
