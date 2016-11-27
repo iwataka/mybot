@@ -54,9 +54,9 @@ func (s *HTTPServer) Init(user, password string) error {
 	if s.Enabled {
 		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
 		http.HandleFunc("/", wrapHandlerWithBasicAuth(s.handler, user, password))
-		http.HandleFunc("/config/", s.configHandler)
-		http.HandleFunc("/assets/", s.assetHandler)
-		http.HandleFunc("/log/", s.logHandler)
+		http.HandleFunc("/config/", wrapHandlerWithBasicAuth(s.configHandler, user, password))
+		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
+		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 		if err != nil {
 			return err
