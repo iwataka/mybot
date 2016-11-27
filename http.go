@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -12,15 +13,16 @@ import (
 // HTTPServer contains values for providing various pieces of information, such
 // as the error log and Google Vision API result, via HTTP to users.
 type HTTPServer struct {
-	Name       string      `toml:"name"`
-	Host       string      `toml:"host"`
-	Port       string      `toml:"port"`
-	Enabled    bool        `toml:"enabled"`
-	LogLines   *int        `toml:logLines`
-	Logger     *Logger     `toml:"-"`
-	TwitterAPI *TwitterAPI `toml:"-"`
-	VisionAPI  *VisionAPI  `toml:"-"`
-	cache      *MybotCache `toml:"-"`
+	Name       string       `toml:"name"`
+	Host       string       `toml:"host"`
+	Port       string       `toml:"port"`
+	Enabled    bool         `toml:"enabled"`
+	LogLines   *int         `toml:logLines`
+	Logger     *Logger      `toml:"-"`
+	TwitterAPI *TwitterAPI  `toml:"-"`
+	VisionAPI  *VisionAPI   `toml:"-"`
+	cache      *MybotCache  `toml:"-"`
+	config     *MybotConfig `toml:"-"`
 }
 
 type httpHandler func(http.ResponseWriter, *http.Request)
@@ -57,6 +59,7 @@ func (s *HTTPServer) Init(user, password string) error {
 		http.HandleFunc("/config/", wrapHandlerWithBasicAuth(s.configHandler, user, password))
 		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
 		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
+		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
 		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
 		if err != nil {
 			return err
@@ -161,7 +164,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset(r.URL.Path[1:])
+	data, err := Asset(r.URL.Path[len("/"):])
 	if err != nil {
 		s.Logger.Println(err)
 		return
@@ -187,6 +190,33 @@ func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+func (s *HTTPServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "text/json")
+		bytes, err := json.Marshal(s.config)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(bytes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if r.Method == http.MethodPost {
+		bytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = json.Unmarshal(bytes, s.config)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 

@@ -195,6 +195,7 @@ func serve(c *cli.Context) error {
 	s.TwitterAPI = twitterAPI
 	s.VisionAPI = visionAPI
 	s.cache = cache
+	s.config = config
 	ch := make(chan bool)
 
 	go keepConnection(func() error {
