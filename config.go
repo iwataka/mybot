@@ -11,12 +11,11 @@ import (
 
 // MybotConfig is a root of the all configurations.
 type MybotConfig struct {
-	GitHub         *GitHubConfig      `toml:"github"`
-	Twitter        *TwitterConfig     `toml:"twitter"`
-	Interaction    *InteractionConfig `toml:"interaction"`
-	Log            *LogConfig         `toml:"log"`
-	Authentication *TwitterAuth       `toml:"authentication"`
-	HTTP           *HTTPServer        `toml:"http"`
+	GitHub      *GitHubConfig      `toml:"github"`
+	Twitter     *TwitterConfig     `toml:"twitter"`
+	Interaction *InteractionConfig `toml:"interaction"`
+	Log         *LogConfig         `toml:"log"`
+	HTTP        *HTTPServer        `toml:"http"`
 }
 
 type GitHubConfig struct {

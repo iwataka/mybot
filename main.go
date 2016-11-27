@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
@@ -55,10 +54,24 @@ func main() {
 		Usage: "Credential for Basic Authentication (ex: user:password)",
 	}
 
+	gcloudFlag := cli.StringFlag{
+		Name:  "gcloud",
+		Value: "google_application_credentials.json",
+		Usage: "Credential file for Google Cloud Platform",
+	}
+
+	twitterFlag := cli.StringFlag{
+		Name:  "twitter",
+		Value: "twitter_authentication.json",
+		Usage: "Credential file for Twitter API",
+	}
+
 	runFlags := []cli.Flag{
 		logFlag,
 		configFlag,
 		cacheFlag,
+		gcloudFlag,
+		twitterFlag,
 	}
 
 	serveFlags := []cli.Flag{
@@ -66,6 +79,8 @@ func main() {
 		configFlag,
 		cacheFlag,
 		credFlag,
+		gcloudFlag,
+		twitterFlag,
 	}
 
 	app := cli.NewApp()
@@ -106,7 +121,7 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	visionAPI, err = NewVisionAPI(cache)
+	visionAPI, err = NewVisionAPI(cache, c.String("gcloud"))
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +132,13 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	githubAPI = NewGitHubAPI(nil, cache)
-	twitterAPI = NewTwitterAPI(config.Authentication, cache, config)
+
+	twitterAuth := &TwitterAuth{}
+	err = twitterAuth.fromJson(c.String("twitter"))
+	if err != nil {
+		panic(err)
+	}
+	twitterAPI = NewTwitterAPI(twitterAuth, cache, config)
 	ok, err := twitterAPI.api.VerifyCredentials()
 	if err != nil {
 		panic(err)
@@ -223,9 +244,6 @@ func serve(c *cli.Context) error {
 		func() {
 			cfg, err := NewMybotConfig(c.String("config"), visionAPI)
 			if err == nil {
-				if !reflect.DeepEqual(cfg.Authentication, config.Authentication) {
-					*twitterAPI = *NewTwitterAPI(cfg.Authentication, cache, config)
-				}
 				*config = *cfg
 			}
 		})

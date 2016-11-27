@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"strings"
@@ -25,10 +27,22 @@ type TwitterAPI struct {
 
 // TwitterAuth contains values required for Twitter's user authentication.
 type TwitterAuth struct {
-	ConsumerKey       string `toml:"consumer_key"`
-	ConsumerSecret    string `toml:"consumer_secret"`
-	AccessToken       string `toml:"access_token"`
-	AccessTokenSecret string `toml:"access_token_secret"`
+	ConsumerKey       string `json:"consumer_key",toml:"consumer_key"`
+	ConsumerSecret    string `json:"consumer_secret",toml:"consumer_secret"`
+	AccessToken       string `json:"access_token",toml:"access_token"`
+	AccessTokenSecret string `json:"access_token_secret",toml:"access_token_secret"`
+}
+
+func (a *TwitterAuth) fromJson(file string) error {
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(bytes, a)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // TwitterAction can indicate for various actions for Twitter's tweets.
@@ -606,7 +620,6 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 	} else if lowers == "configuration" || lowers == "config" || lowers == "conf" {
 		cfg := new(MybotConfig)
 		*cfg = *config
-		cfg.Authentication = nil
 		bytes, err := cfg.TomlText(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err

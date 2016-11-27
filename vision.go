@@ -21,9 +21,9 @@ type VisionAPI struct {
 
 // NewVisionAPI takes a path of a user's google-cloud credential file and cache
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(cache *MybotCache) (*VisionAPI, error) {
+func NewVisionAPI(cache *MybotCache, file string) (*VisionAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
-		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "google_application_credentials.json")
+		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
 			return nil, err
 		}
