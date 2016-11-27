@@ -4,10 +4,12 @@
 <body>
     <div class="container">
         {{template "navbar" .}}
-        <div class="form-group">
-            <label for="config">Current configuration</label>
-            <textarea class="form-control" rows="5" id="config"></textarea>
-        </div>
+        <h2>Current Config</h2>
+        <div id="config"></div>
     </div>
+    <script src="/assets/js/config.js"></script>
+    <script>
+        loadConfig('config')
+    </script>
 </body>
 </html>
