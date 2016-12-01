@@ -18,6 +18,7 @@ type HTTPServer struct {
 	Port       string       `toml:"port"`
 	Enabled    bool         `toml:"enabled"`
 	LogLines   *int         `toml:logLines`
+	HTTPS      bool         `toml:https`
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
@@ -60,7 +61,13 @@ func (s *HTTPServer) Init(user, password string) error {
 		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
 		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
 		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
-		err := http.ListenAndServe(s.Host+":"+s.Port, nil)
+		var err error
+		addr := s.Host + ":" + s.Port
+		if s.HTTPS {
+			err = http.ListenAndServeTLS(addr, "mybot.crt", "mybot.key", nil)
+		} else {
+			err = http.ListenAndServe(addr, nil)
+		}
 		if err != nil {
 			return err
 		}

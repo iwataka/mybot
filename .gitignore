@@ -7,3 +7,7 @@ bindata.go
 bin/
 google_application_credentials.json
 twitter_authentication.json
+
+*.crt
+*.csr
+*.key

@@ -12,10 +12,10 @@ else
     container_name=$MYBOT_CONTAINER_NAME
 fi
 
-if [[ -z $MYBOT_PORT ]]; then
-    port="8080"
+if [[ -z $MYBOT_NETWORK ]]; then
+    network="host"
 else
-    port=$MYBOT_PORT
+    network=$MYBOT_NETWORK
 fi
 
 docker run -d \
@@ -23,5 +23,5 @@ docker run -d \
     -v "$HOME/.config/gcloud":/root/.config/gcloud \
     -v "$HOME/.cache/mybot":/root/.cache/mybot \
     --name "$container_name" \
-    -p "$port":8080 \
+    --net=$network \
     mybot sh -c "cd /mybot && go get -d ./... && go generate && go build && ./mybot s --log .mybot-debug.log > .mybot-dump.log 2>&1"
