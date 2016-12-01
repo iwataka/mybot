@@ -66,6 +66,18 @@ func main() {
 		Usage: "Credential file for Twitter API",
 	}
 
+	certFlag := cli.StringFlag{
+		Name:  "cert",
+		Value: "mybot.crt",
+		Usage: "Certification file for HTTPS",
+	}
+
+	keyFlag := cli.StringFlag{
+		Name:  "key",
+		Value: "mybot.key",
+		Usage: "Key file for HTTPS",
+	}
+
 	runFlags := []cli.Flag{
 		logFlag,
 		configFlag,
@@ -81,6 +93,8 @@ func main() {
 		credFlag,
 		gcloudFlag,
 		twitterFlag,
+		certFlag,
+		keyFlag,
 	}
 
 	app := cli.NewApp()
@@ -258,7 +272,9 @@ func serve(c *cli.Context) error {
 			user = userAndPassword[0]
 			password = userAndPassword[1]
 		}
-		err := s.Init(user, password)
+		cert := c.String("cert")
+		key := c.String("key")
+		err := s.Init(user, password, cert, key)
 		if err != nil {
 			panic(err)
 		}

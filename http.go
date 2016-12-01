@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -18,7 +19,6 @@ type HTTPServer struct {
 	Port       string       `toml:"port"`
 	Enabled    bool         `toml:"enabled"`
 	LogLines   *int         `toml:logLines`
-	HTTPS      bool         `toml:https`
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
@@ -53,9 +53,8 @@ func wrapHandlerWithBasicAuth(f httpHandler, user, password string) httpHandler 
 }
 
 // Init initializes HTTP server if HTTPServer#Enabled is true.
-func (s *HTTPServer) Init(user, password string) error {
+func (s *HTTPServer) Init(user, password, cert, key string) error {
 	if s.Enabled {
-		fmt.Printf("Open %s:%s for more details\n", s.Host, s.Port)
 		http.HandleFunc("/", wrapHandlerWithBasicAuth(s.handler, user, password))
 		http.HandleFunc("/config/", wrapHandlerWithBasicAuth(s.configHandler, user, password))
 		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
@@ -63,9 +62,13 @@ func (s *HTTPServer) Init(user, password string) error {
 		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
 		var err error
 		addr := s.Host + ":" + s.Port
-		if s.HTTPS {
-			err = http.ListenAndServeTLS(addr, "mybot.crt", "mybot.key", nil)
+		_, certErr := os.Stat(cert)
+		_, keyErr := os.Stat(key)
+		if certErr == nil && keyErr == nil {
+			fmt.Printf("Open %s://%s for more details\n", "https", addr)
+			err = http.ListenAndServeTLS(addr, cert, key, nil)
 		} else {
+			fmt.Printf("Open %s://%s for more details\n", "http", addr)
 			err = http.ListenAndServe(addr, nil)
 		}
 		if err != nil {
