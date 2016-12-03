@@ -6,11 +6,13 @@ import (
 	"github.com/google/go-github/github"
 )
 
+// GitHubAPI is a wrapper of github.Client
 type GitHubAPI struct {
 	*github.Client
 	cache *MybotCache
 }
 
+// NewGitHubAPI creates an instance of GitHubAPI
 func NewGitHubAPI(c *http.Client, cache *MybotCache) *GitHubAPI {
 	return &GitHubAPI{
 		github.NewClient(c),
@@ -18,6 +20,7 @@ func NewGitHubAPI(c *http.Client, cache *MybotCache) *GitHubAPI {
 	}
 }
 
+// GitHubProject represents a GitHub project
 type GitHubProject struct {
 	User string `toml:"user"`
 	Repo string `toml:"repo"`

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 )
 
+// MybotCache is a cache data of mybot
 type MybotCache struct {
 	LatestCommitSHA     map[string]map[string]string
 	LatestTweetID       map[string]int64
@@ -19,6 +20,7 @@ type MybotCache struct {
 	ImageAnalysisDate   string
 }
 
+// NewMybotCache creates an instance of MybotCache
 func NewMybotCache(path string) (*MybotCache, error) {
 	c := &MybotCache{
 		make(map[string]map[string]string),
@@ -52,6 +54,7 @@ func NewMybotCache(path string) (*MybotCache, error) {
 	return c, nil
 }
 
+// Save saves the cache data to the specified file
 func (c *MybotCache) Save(path string) error {
 	err := os.MkdirAll(filepath.Dir(path), 0600)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// Logger represents a logger of this app
 type Logger struct {
 	logger     *log.Logger
 	logFile    string
@@ -14,6 +15,7 @@ type Logger struct {
 	config     *MybotConfig
 }
 
+// NewLogger creates an instance of Logger
 func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, error) {
 	if flag < 0 {
 		flag = log.Ldate | log.Ltime | log.Lshortfile
@@ -28,6 +30,7 @@ func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, e
 	return result, nil
 }
 
+// Println prints the specified values with a trailing newline
 func (l *Logger) Println(v ...interface{}) {
 	if l.twitterAPI != nil {
 		c := l.config.Log
@@ -41,12 +44,14 @@ func (l *Logger) Println(v ...interface{}) {
 	l.logger.Println(v...)
 }
 
+// HandleError prints the specified error if it is not nil
 func (l *Logger) HandleError(err error) {
 	if err != nil {
 		l.Println(err)
 	}
 }
 
+// ReadString returns a content of logging
 func (l *Logger) ReadString() string {
 	out, err := ioutil.ReadFile(l.logFile)
 	if err != nil {

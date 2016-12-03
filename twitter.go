@@ -407,6 +407,7 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
+// ListenUsers listens timelines of the friends
 func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 	if v == nil {
 		v = url.Values{}
@@ -502,7 +503,6 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 			}
 		}
 	}
-	return nil
 }
 
 // Response gets direct messages sent to the authenticated user and react with
@@ -538,6 +538,7 @@ func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 	return nil
 }
 
+// FollowAll follows all usres included in the configuration
 func (a *TwitterAPI) FollowAll() error {
 	for _, t := range a.config.Twitter.Timelines {
 		if t.ScreenName != nil {

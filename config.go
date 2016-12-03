@@ -18,16 +18,19 @@ type MybotConfig struct {
 	HTTP        *HTTPServer        `toml:"http"`
 }
 
+// GitHubConfig is a configuration of GitHub projects
 type GitHubConfig struct {
 	Projects []GitHubProject `toml:"projects"`
 	Duration string          `toml:"duration"`
 }
 
+// SourceConfig is a configuration for common sources
 type SourceConfig struct {
 	Filter *TweetFilterConfig `toml:"filter"`
 	Action *TwitterAction     `toml:"action"`
 }
 
+// TwitterConfig is a configuration for Twitter
 type TwitterConfig struct {
 	Timelines    []TimelineConfig `toml:"timelines"`
 	Favorites    []FavoriteConfig `toml:"favorites"`
@@ -37,6 +40,7 @@ type TwitterConfig struct {
 	Debug        *bool            `toml:"debug"`
 }
 
+// TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
 	*SourceConfig
 	ScreenName     *string  `toml:"screen_name"`
@@ -46,6 +50,7 @@ type TimelineConfig struct {
 	Count          *int     `toml:"count"`
 }
 
+// FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
 	ScreenName  *string  `toml:"screen_name"`
@@ -53,6 +58,7 @@ type FavoriteConfig struct {
 	Count       *int     `toml:"count"`
 }
 
+// SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
 	*SourceConfig
 	Query      *string  `toml:"query"`
@@ -61,6 +67,8 @@ type SearchConfig struct {
 	Count      *int     `toml:"count"`
 }
 
+// InteractionConfig is a configuration for interaction through Twitter direct
+// message
 type InteractionConfig struct {
 	Duration  string   `toml:"duration"`
 	AllowSelf bool     `toml:"allow_self"`
@@ -68,11 +76,13 @@ type InteractionConfig struct {
 	Count     *int     `toml:"count"`
 }
 
+// LogConfig is a configuration for logging
 type LogConfig struct {
 	AllowSelf bool     `toml:"allow_self"`
 	Users     []string `toml:"users"`
 }
 
+// GetScreenNames returns all screen names in the configuration
 func (tc *TwitterConfig) GetScreenNames() []string {
 	result := []string{}
 	for _, t := range tc.Timelines {

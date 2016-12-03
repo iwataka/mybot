@@ -7,6 +7,7 @@ import (
 	"github.com/iwataka/anaconda"
 )
 
+// TweetFilterConfig is a configuration to filter out tweets
 type TweetFilterConfig struct {
 	Patterns           []string         `toml:"patterns"`
 	URLPatterns        []string         `toml:"url_patterns"`

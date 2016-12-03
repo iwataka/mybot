@@ -1,5 +1,6 @@
 package main
 
+// MybotStatus represents a status of this app
 type MybotStatus struct {
 	TwitterListenMyselfStatus bool
 	TwitterListenUsersStatus  bool
