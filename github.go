@@ -26,6 +26,7 @@ type GitHubProject struct {
 	Repo string `toml:"repo"`
 }
 
+// LatestCommit returns the latest commit of the specified project
 func (a *GitHubAPI) LatestCommit(p GitHubProject) (*github.RepositoryCommit, error) {
 	commits, _, err := a.Repositories.ListCommits(p.User, p.Repo, nil)
 	if err != nil {
