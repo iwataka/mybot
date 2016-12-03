@@ -74,3 +74,4 @@ Then run `mybot serve` and that's all.
 + Apply this to other SNSs (like Facebook, Google+, Tumblr,...)
 + Make deployment easier
 + User authentication and user-specific configuration
++ Collect some pieces of information into DB
