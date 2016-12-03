@@ -24,6 +24,7 @@ type HTTPServer struct {
 	VisionAPI  *VisionAPI   `toml:"-"`
 	cache      *MybotCache  `toml:"-"`
 	config     *MybotConfig `toml:"-"`
+	status     *MybotStatus `toml:"-"`
 }
 
 type httpHandler func(http.ResponseWriter, *http.Request)
@@ -59,6 +60,7 @@ func (s *HTTPServer) Init(user, password, cert, key string) error {
 		http.HandleFunc("/config/", wrapHandlerWithBasicAuth(s.configHandler, user, password))
 		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
 		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
+		http.HandleFunc("/status/", wrapHandlerWithBasicAuth(s.statusHandler, user, password))
 		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
 		var err error
 		addr := s.Host + ":" + s.Port
@@ -195,6 +197,28 @@ func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
 	}{
 		s.Name,
 		logger.ReadString(),
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *HTTPServer) statusHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := generateTemplate("status", "pages/status.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := &struct {
+		UserName string
+		Log      string
+		Status   MybotStatus
+	}{
+		s.Name,
+		logger.ReadString(),
+		*s.status,
 	}
 	err = tmpl.Execute(w, data)
 	if err != nil {

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header" .}}
+<body>
+    <div class="container">
+        {{template "navbar" .}}
+        <h2>Current Status</h2>
+        <ul>
+            <li>Twitter Listens Yourself: {{.Status.TwitterListenMyselfStatus}}</li>
+            <li>Twitter Listens Users: {{.Status.TwitterListenUsersStatus}}</li>
+            <li>GitHub: {{.Status.GithubStatus}}</li>
+            <li>Twitter: {{.Status.TwitterStatus}}</li>
+            <li>Monitor Config: {{.Status.MonitorConfigStatus}}</li>
+            <li>HTTP: {{.Status.HttpStatus}}</li>
+        </ul>
+    </div>
+</body>
+</html>

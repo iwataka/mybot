@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -22,6 +23,7 @@ var (
 	config     *MybotConfig
 	cache      *MybotCache
 	logger     *Logger
+	status     *MybotStatus
 )
 
 func main() {
@@ -169,6 +171,15 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
+	status = &MybotStatus{
+		true,
+		true,
+		true,
+		true,
+		true,
+		true,
+	}
+
 	return nil
 }
 
@@ -204,8 +215,9 @@ func keepConnection(f func() error, intervalStr string, maxCount int) error {
 			break
 		}
 	}
-	logger.Println("Interaction feature is now disabled. Please restart.")
-	return nil
+	msg := "Interaction feature is now disabled. Please restart."
+	logger.Println(msg)
+	return errors.New(msg)
 }
 
 func serve(c *cli.Context) error {
@@ -215,17 +227,25 @@ func serve(c *cli.Context) error {
 	s.VisionAPI = visionAPI
 	s.cache = cache
 	s.config = config
-
-	go keepConnection(func() error {
-		r := twitterAPI.DefaultDirectMessageReceiver
-		return twitterAPI.ListenMyself(nil, r, c.String("cache"))
-	}, "5m", 5)
-
-	go keepConnection(func() error {
-		return twitterAPI.ListenUsers(nil, c.String("cache"))
-	}, "5m", 5)
+	s.status = status
 
 	go func() {
+		defer func() { status.TwitterListenMyselfStatus = false }()
+		keepConnection(func() error {
+			r := twitterAPI.DefaultDirectMessageReceiver
+			return twitterAPI.ListenMyself(nil, r, c.String("cache"))
+		}, "5m", 5)
+	}()
+
+	go func() {
+		defer func() { status.TwitterListenUsersStatus = false }()
+		keepConnection(func() error {
+			return twitterAPI.ListenUsers(nil, c.String("cache"))
+		}, "5m", 5)
+	}()
+
+	go func() {
+		defer func() { status.GithubStatus = false }()
 		for {
 			runGitHub(c, logger.HandleError)
 			err := cache.Save(c.String("cache"))
@@ -242,6 +262,7 @@ func serve(c *cli.Context) error {
 	}()
 
 	go func() {
+		defer func() { status.TwitterStatus = false }()
 		for {
 			runTwitterWithStream(c, logger.HandleError)
 			err := cache.Save(c.String("cache"))
@@ -257,17 +278,21 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
-	go monitorFile(
-		c.String("config"),
-		time.Duration(1)*time.Second,
-		func() {
-			cfg, err := NewMybotConfig(c.String("config"), visionAPI)
-			if err == nil {
-				*config = *cfg
-			}
-		})
+	go func() {
+		defer func() { status.MonitorConfigStatus = false }()
+		monitorFile(
+			c.String("config"),
+			time.Duration(1)*time.Second,
+			func() {
+				cfg, err := NewMybotConfig(c.String("config"), visionAPI)
+				if err == nil {
+					*config = *cfg
+				}
+			})
+	}()
 
 	go func() {
+		defer func() { status.HttpStatus = false }()
 		cred := c.String("credential")
 		userAndPassword := strings.SplitN(cred, ":", 2)
 		user := ""
