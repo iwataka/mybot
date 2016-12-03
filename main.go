@@ -182,7 +182,11 @@ func run(c *cli.Context) error {
 	return nil
 }
 
-func keepConnection(f func() error) {
+func keepConnection(f func() error, intervalStr string, maxCount int) error {
+	interval, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		return err
+	}
 	// Abort if there are more than 15 connections in 15 minutes
 	t := time.Now()
 	count := 0
@@ -191,16 +195,17 @@ func keepConnection(f func() error) {
 		if err != nil {
 			logger.Println(err)
 		}
-		if time.Now().Sub(t) >= 15*time.Minute {
+		if time.Now().Sub(t) >= interval {
 			count = 0
 			t = time.Now()
 		}
 		count++
-		if count >= 15 {
+		if count >= maxCount {
 			break
 		}
 	}
 	logger.Println("Interaction feature is now disabled. Please restart.")
+	return nil
 }
 
 func serve(c *cli.Context) error {
@@ -210,16 +215,15 @@ func serve(c *cli.Context) error {
 	s.VisionAPI = visionAPI
 	s.cache = cache
 	s.config = config
-	ch := make(chan bool)
 
 	go keepConnection(func() error {
 		r := twitterAPI.DefaultDirectMessageReceiver
 		return twitterAPI.ListenMyself(nil, r, c.String("cache"))
-	})
+	}, "5m", 5)
 
 	go keepConnection(func() error {
 		return twitterAPI.ListenUsers(nil, c.String("cache"))
-	})
+	}, "5m", 5)
 
 	go func() {
 		for {
@@ -280,6 +284,7 @@ func serve(c *cli.Context) error {
 		}
 	}()
 
+	ch := make(chan bool)
 	<-ch
 	return nil
 }
