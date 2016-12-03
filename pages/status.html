@@ -6,12 +6,41 @@
         {{template "navbar" .}}
         <h2>Current Status</h2>
         <ul>
-            <li>Twitter Listens Yourself: {{.Status.TwitterListenMyselfStatus}}</li>
-            <li>Twitter Listens Users: {{.Status.TwitterListenUsersStatus}}</li>
-            <li>GitHub: {{.Status.GithubStatus}}</li>
-            <li>Twitter: {{.Status.TwitterStatus}}</li>
-            <li>Monitor Config: {{.Status.MonitorConfigStatus}}</li>
-            <li>HTTP: {{.Status.HttpStatus}}</li>
+            {{if .Status.TwitterListenMyselfStatus}}
+            <li>Twitter Listens Yourself: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>Twitter Listens Yourself: <span style="color: red">Stop</span></li>
+            {{end}}
+
+            {{if .Status.TwitterListenUsersStatus}}
+            <li>Twitter Listens Users: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>Twitter Listens Users: <span style="color: red">Stop</span></li>
+            {{end}}
+
+            {{if .Status.GithubStatus}}
+            <li>GitHub: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>GitHub: <span style="color: red">Stop</span></li>
+            {{end}}
+
+            {{if .Status.TwitterStatus}}
+            <li>Twitter: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>Twitter: <span style="color: red">Stop</span></li>
+            {{end}}
+
+            {{if .Status.MonitorConfigStatus}}
+            <li>Monitor Config: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>Monitor Config: <span style="color: red">Stop</span></li>
+            {{end}}
+
+            {{if .Status.HttpStatus}}
+            <li>HTTP: <span style="color: blue">Started</span></li>
+            {{else}}
+            <li>HTTP: <span style="color: red">Stop</span></li>
+            {{end}}
         </ul>
     </div>
 </body>

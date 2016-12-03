@@ -62,6 +62,11 @@ func (s *HTTPServer) Init(user, password, cert, key string) error {
 		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
 		http.HandleFunc("/status/", wrapHandlerWithBasicAuth(s.statusHandler, user, password))
 		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
+		http.HandleFunc("/api/listenMyself/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterListenMyselfHandler, user, password))
+		http.HandleFunc("/api/listenUsers/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterListenUsersHandler, user, password))
+		http.HandleFunc("/api/github/start/", wrapHandlerWithBasicAuth(s.apiStartGitHubHandler, user, password))
+		http.HandleFunc("/api/twitter/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterHandler, user, password))
+		http.HandleFunc("/api/monitorConfig/start/", wrapHandlerWithBasicAuth(s.apiStartMonitorConfigHandler, user, password))
 		var err error
 		addr := s.Host + ":" + s.Port
 		_, certErr := os.Stat(cert)
@@ -251,6 +256,36 @@ func (s *HTTPServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (s *HTTPServer) apiStartTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		twitterListenMyself(ctxt)
+	}
+}
+
+func (s *HTTPServer) apiStartTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		twitterListenUsers(ctxt)
+	}
+}
+
+func (s *HTTPServer) apiStartGitHubHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		githubPeriodically(ctxt)
+	}
+}
+
+func (s *HTTPServer) apiStartTwitterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		twitterPeriodically(ctxt)
+	}
+}
+
+func (s *HTTPServer) apiStartMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		monitorConfig(ctxt)
 	}
 }
 

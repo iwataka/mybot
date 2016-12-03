@@ -24,6 +24,7 @@ var (
 	cache      *MybotCache
 	logger     *Logger
 	status     *MybotStatus
+	ctxt       *cli.Context
 )
 
 func main() {
@@ -150,18 +151,8 @@ func beforeRunning(c *cli.Context) error {
 	githubAPI = NewGitHubAPI(nil, cache)
 
 	twitterAuth := &TwitterAuth{}
-	err = twitterAuth.fromJson(c.String("twitter"))
-	if err != nil {
-		panic(err)
-	}
+	twitterAuth.fromJson(c.String("twitter"))
 	twitterAPI = NewTwitterAPI(twitterAuth, cache, config)
-	ok, err := twitterAPI.api.VerifyCredentials()
-	if err != nil {
-		panic(err)
-	}
-	if !ok {
-		panic("Twitter authentication failed")
-	}
 	if config.Twitter.Debug != nil {
 		twitterAPI.SetDebug(*config.Twitter.Debug)
 	}
@@ -171,22 +162,23 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	status = &MybotStatus{
-		true,
-		true,
-		true,
-		true,
-		true,
-		true,
-	}
+	status = &MybotStatus{}
+
+	ctxt = c
 
 	return nil
 }
 
 func run(c *cli.Context) error {
-	runGitHub(c, logger.HandleError)
-	runTwitterWithoutStream(c, logger.HandleError)
-	err := cache.Save(c.String("cache"))
+	err := runGitHub(c)
+	if err != nil {
+		logger.Println(err)
+	}
+	err = runTwitterWithoutStream(c)
+	if err != nil {
+		logger.Println(err)
+	}
+	err = cache.Save(c.String("cache"))
 	if err != nil {
 		logger.Println(err)
 	}
@@ -220,6 +212,120 @@ func keepConnection(f func() error, intervalStr string, maxCount int) error {
 	return errors.New(msg)
 }
 
+func twitterListenMyself(c *cli.Context) {
+	if status.TwitterListenMyselfStatus {
+		return
+	}
+	status.TwitterListenMyselfStatus = true
+	defer func() { status.TwitterListenMyselfStatus = false }()
+	keepConnection(func() error {
+		r := twitterAPI.DefaultDirectMessageReceiver
+		return twitterAPI.ListenMyself(nil, r, c.String("cache"))
+	}, "5m", 5)
+}
+
+func twitterListenUsers(c *cli.Context) {
+	if status.TwitterListenUsersStatus {
+		return
+	}
+	status.TwitterListenUsersStatus = true
+	defer func() { status.TwitterListenUsersStatus = false }()
+	keepConnection(func() error {
+		return twitterAPI.ListenUsers(nil, c.String("cache"))
+	}, "5m", 5)
+}
+
+func githubPeriodically(c *cli.Context) {
+	if status.GithubStatus {
+		return
+	}
+	status.GithubStatus = true
+	defer func() { status.GithubStatus = false }()
+	for {
+		err := runGitHub(c)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		err = cache.Save(c.String("cache"))
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		d, err := time.ParseDuration(config.GitHub.Duration)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		time.Sleep(d)
+	}
+}
+
+func twitterPeriodically(c *cli.Context) {
+	if status.TwitterStatus {
+		return
+	}
+	status.TwitterStatus = true
+	defer func() { status.TwitterStatus = false }()
+	for {
+		err := runTwitterWithStream(c)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		err = cache.Save(c.String("cache"))
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		d, err := time.ParseDuration(config.Twitter.Duration)
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		time.Sleep(d)
+	}
+}
+
+func monitorConfig(c *cli.Context) {
+	if status.MonitorConfigStatus {
+		return
+	}
+	status.MonitorConfigStatus = true
+	defer func() { status.MonitorConfigStatus = false }()
+	monitorFile(
+		c.String("config"),
+		time.Duration(1)*time.Second,
+		func() {
+			cfg, err := NewMybotConfig(c.String("config"), visionAPI)
+			if err == nil {
+				*config = *cfg
+			}
+		})
+}
+
+func httpServer(c *cli.Context) {
+	if status.HttpStatus {
+		return
+	}
+	status.HttpStatus = true
+	defer func() { status.HttpStatus = false }()
+	cred := c.String("credential")
+	userAndPassword := strings.SplitN(cred, ":", 2)
+	user := ""
+	password := ""
+	if len(userAndPassword) == 2 {
+		user = userAndPassword[0]
+		password = userAndPassword[1]
+	}
+	cert := c.String("cert")
+	key := c.String("key")
+	err := config.HTTP.Init(user, password, cert, key)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func serve(c *cli.Context) error {
 	s := config.HTTP
 	s.Logger = logger
@@ -229,85 +335,12 @@ func serve(c *cli.Context) error {
 	s.config = config
 	s.status = status
 
-	go func() {
-		defer func() { status.TwitterListenMyselfStatus = false }()
-		keepConnection(func() error {
-			r := twitterAPI.DefaultDirectMessageReceiver
-			return twitterAPI.ListenMyself(nil, r, c.String("cache"))
-		}, "5m", 5)
-	}()
-
-	go func() {
-		defer func() { status.TwitterListenUsersStatus = false }()
-		keepConnection(func() error {
-			return twitterAPI.ListenUsers(nil, c.String("cache"))
-		}, "5m", 5)
-	}()
-
-	go func() {
-		defer func() { status.GithubStatus = false }()
-		for {
-			runGitHub(c, logger.HandleError)
-			err := cache.Save(c.String("cache"))
-			if err != nil {
-				logger.Println(err)
-			}
-			d, err := time.ParseDuration(config.GitHub.Duration)
-			if err != nil {
-				logger.Println(err)
-				panic(err)
-			}
-			time.Sleep(d)
-		}
-	}()
-
-	go func() {
-		defer func() { status.TwitterStatus = false }()
-		for {
-			runTwitterWithStream(c, logger.HandleError)
-			err := cache.Save(c.String("cache"))
-			if err != nil {
-				logger.Println(err)
-			}
-			d, err := time.ParseDuration(config.Twitter.Duration)
-			if err != nil {
-				logger.Println(err)
-				panic(err)
-			}
-			time.Sleep(d)
-		}
-	}()
-
-	go func() {
-		defer func() { status.MonitorConfigStatus = false }()
-		monitorFile(
-			c.String("config"),
-			time.Duration(1)*time.Second,
-			func() {
-				cfg, err := NewMybotConfig(c.String("config"), visionAPI)
-				if err == nil {
-					*config = *cfg
-				}
-			})
-	}()
-
-	go func() {
-		defer func() { status.HttpStatus = false }()
-		cred := c.String("credential")
-		userAndPassword := strings.SplitN(cred, ":", 2)
-		user := ""
-		password := ""
-		if len(userAndPassword) == 2 {
-			user = userAndPassword[0]
-			password = userAndPassword[1]
-		}
-		cert := c.String("cert")
-		key := c.String("key")
-		err := s.Init(user, password, cert, key)
-		if err != nil {
-			panic(err)
-		}
-	}()
+	go twitterListenMyself(c)
+	go twitterListenUsers(c)
+	go githubPeriodically(c)
+	go twitterPeriodically(c)
+	go monitorConfig(c)
+	go httpServer(c)
 
 	ch := make(chan bool)
 	<-ch
@@ -333,13 +366,17 @@ func monitorFile(file string, d time.Duration, f func()) {
 	}
 }
 
-func runGitHub(c *cli.Context, handle func(error)) {
+func runGitHub(c *cli.Context) error {
 	for _, p := range config.GitHub.Projects {
-		handle(githubCommitTweet(p))
+		err := githubCommitTweet(p)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func runTwitterWithStream(c *cli.Context, handle func(error)) {
+func runTwitterWithStream(c *cli.Context) error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Searches {
 		a.Filter.visionAPI = visionAPI
@@ -352,12 +389,16 @@ func runTwitterWithStream(c *cli.Context, handle func(error)) {
 		}
 		if a.Query != nil {
 			ts, err := twitterAPI.DoForSearch(*a.Query, v, a.Filter, a.Action)
-			handle(err)
+			if err != nil {
+				return err
+			}
 			tweets = append(tweets, ts...)
 		} else {
 			for _, query := range a.Queries {
 				ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
-				handle(err)
+				if err != nil {
+					return err
+				}
 				tweets = append(tweets, ts...)
 			}
 		}
@@ -371,23 +412,33 @@ func runTwitterWithStream(c *cli.Context, handle func(error)) {
 		if a.ScreenName != nil {
 			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
-			handle(err)
+			if err != nil {
+				return err
+			}
 		} else {
 			for _, name := range a.ScreenNames {
 				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
-				handle(err)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	for _, t := range tweets {
 		err := twitterAPI.NotifyToAll(&t)
-		handle(err)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func runTwitterWithoutStream(c *cli.Context, handle func(error)) {
-	runTwitterWithStream(c, handle)
+func runTwitterWithoutStream(c *cli.Context) error {
+	err := runTwitterWithStream(c)
+	if err != nil {
+		return err
+	}
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
 		v := url.Values{}
@@ -404,19 +455,26 @@ func runTwitterWithoutStream(c *cli.Context, handle func(error)) {
 		if a.ScreenName != nil {
 			ts, err := twitterAPI.DoForAccount(*a.ScreenName, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
-			handle(err)
+			if err != nil {
+				return err
+			}
 		} else {
 			for _, name := range a.ScreenNames {
 				ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
 				tweets = append(tweets, ts...)
-				handle(err)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 	for _, t := range tweets {
 		err := twitterAPI.NotifyToAll(&t)
-		handle(err)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func githubCommitTweet(p GitHubProject) error {

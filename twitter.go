@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io/ioutil"
@@ -474,6 +475,12 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
 func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) error {
+	ok, err := a.api.VerifyCredentials()
+	if err != nil {
+		return err
+	} else if !ok {
+		return errors.New("Twitter Account Verification failed")
+	}
 	stream := a.api.UserStream(v)
 	for {
 		switch c := (<-stream.C).(type) {
