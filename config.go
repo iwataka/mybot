@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
@@ -219,4 +221,25 @@ func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
 		return []byte{}, err
 	}
 	return buf.Bytes(), nil
+}
+
+// Save saves the config data to the specified file
+func (c *MybotConfig) Save(path string) error {
+	err := os.MkdirAll(filepath.Dir(path), 0600)
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		writer := new(bytes.Buffer)
+		enc := toml.NewEncoder(writer)
+		err := enc.Encode(c)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(path, writer.Bytes(), 0600)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

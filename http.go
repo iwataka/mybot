@@ -56,17 +56,53 @@ func wrapHandlerWithBasicAuth(f httpHandler, user, password string) httpHandler 
 // Init initializes HTTP server if HTTPServer#Enabled is true.
 func (s *HTTPServer) Init(user, password, cert, key string) error {
 	if s.Enabled {
-		http.HandleFunc("/", wrapHandlerWithBasicAuth(s.handler, user, password))
-		http.HandleFunc("/config/", wrapHandlerWithBasicAuth(s.configHandler, user, password))
-		http.HandleFunc("/assets/", wrapHandlerWithBasicAuth(s.assetHandler, user, password))
-		http.HandleFunc("/log/", wrapHandlerWithBasicAuth(s.logHandler, user, password))
-		http.HandleFunc("/status/", wrapHandlerWithBasicAuth(s.statusHandler, user, password))
-		http.HandleFunc("/api/config/", wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password))
-		http.HandleFunc("/api/listenMyself/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterListenMyselfHandler, user, password))
-		http.HandleFunc("/api/listenUsers/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterListenUsersHandler, user, password))
-		http.HandleFunc("/api/github/start/", wrapHandlerWithBasicAuth(s.apiStartGitHubHandler, user, password))
-		http.HandleFunc("/api/twitter/start/", wrapHandlerWithBasicAuth(s.apiStartTwitterHandler, user, password))
-		http.HandleFunc("/api/monitorConfig/start/", wrapHandlerWithBasicAuth(s.apiStartMonitorConfigHandler, user, password))
+		http.HandleFunc(
+			"/",
+			wrapHandlerWithBasicAuth(s.handler, user, password),
+		)
+		http.HandleFunc(
+			"/config/",
+			wrapHandlerWithBasicAuth(s.configHandler, user, password),
+		)
+		http.HandleFunc(
+			"/assets/",
+			wrapHandlerWithBasicAuth(s.assetHandler, user, password),
+		)
+		http.HandleFunc(
+			"/log/",
+			wrapHandlerWithBasicAuth(s.logHandler, user, password),
+		)
+		http.HandleFunc(
+			"/status/",
+			wrapHandlerWithBasicAuth(s.statusHandler, user, password),
+		)
+
+		// API handlers
+		http.HandleFunc(
+			"/api/config/",
+			wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password),
+		)
+		http.HandleFunc(
+			"/api/features/listen/myself/",
+			wrapHandlerWithBasicAuth(s.apiTwitterListenMyselfHandler, user, password),
+		)
+		http.HandleFunc(
+			"/api/features/listen/users/",
+			wrapHandlerWithBasicAuth(s.apiTwitterListenUsersHandler, user, password),
+		)
+		http.HandleFunc(
+			"/api/features/github/periodic/",
+			wrapHandlerWithBasicAuth(s.apiGitHubHandler, user, password),
+		)
+		http.HandleFunc(
+			"/api/features/twitter/periodic/",
+			wrapHandlerWithBasicAuth(s.apiTwitterHandler, user, password),
+		)
+		http.HandleFunc(
+			"/api/features/monitor/config/",
+			wrapHandlerWithBasicAuth(s.apiMonitorConfigHandler, user, password),
+		)
+
 		var err error
 		addr := s.Host + ":" + s.Port
 		_, certErr := os.Stat(cert)
@@ -256,36 +292,82 @@ func (s *HTTPServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		err = s.config.Save(ctxt.String("config"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
-func (s *HTTPServer) apiStartTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		twitterListenMyself(ctxt)
+type APIFeatureStatus struct {
+	Status bool `json:status`
+}
+
+func (s *HTTPServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.apiGetStatusHandler(w, r, s.status.TwitterListenMyselfStatus)
+	} else if r.Method == http.MethodPost {
+		s.apiPostStatusHandler(w, r, func() { twitterListenMyself(ctxt) })
 	}
 }
 
-func (s *HTTPServer) apiStartTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		twitterListenUsers(ctxt)
+func (s *HTTPServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.apiGetStatusHandler(w, r, s.status.TwitterListenUsersStatus)
+	} else if r.Method == http.MethodPost {
+		s.apiPostStatusHandler(w, r, func() { twitterListenUsers(ctxt) })
 	}
 }
 
-func (s *HTTPServer) apiStartGitHubHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		githubPeriodically(ctxt)
+func (s *HTTPServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.apiGetStatusHandler(w, r, s.status.GithubStatus)
+	} else if r.Method == http.MethodPost {
+		s.apiPostStatusHandler(w, r, func() { githubPeriodically(ctxt) })
 	}
 }
 
-func (s *HTTPServer) apiStartTwitterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		twitterPeriodically(ctxt)
+func (s *HTTPServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.apiGetStatusHandler(w, r, s.status.TwitterStatus)
+	} else if r.Method == http.MethodPost {
+		s.apiPostStatusHandler(w, r, func() { twitterPeriodically(ctxt) })
 	}
 }
 
-func (s *HTTPServer) apiStartMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		monitorConfig(ctxt)
+func (s *HTTPServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.apiGetStatusHandler(w, r, s.status.MonitorConfigStatus)
+	} else if r.Method == http.MethodPost {
+		s.apiPostStatusHandler(w, r, func() { monitorConfig(ctxt) })
+	}
+}
+
+func (s *HTTPServer) apiGetStatusHandler(w http.ResponseWriter, r *http.Request, status bool) {
+	data := &APIFeatureStatus{status}
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bytes)
+}
+
+func (s *HTTPServer) apiPostStatusHandler(w http.ResponseWriter, r *http.Request, f func()) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := &APIFeatureStatus{}
+	err = json.Unmarshal(bytes, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if data.Status {
+		f()
 	}
 }
 
