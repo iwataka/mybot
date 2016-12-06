@@ -428,7 +428,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 		switch c := (<-stream.C).(type) {
 		case anaconda.Tweet:
 			if a.debug {
-				log.Printf("[Receive tweet]\n%s\n", c)
+				log.Printf("Tweet by %s created at %s\n", c.User.Name, c.CreatedAt)
 			}
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
@@ -486,7 +486,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 		switch c := (<-stream.C).(type) {
 		case anaconda.DirectMessage:
 			if a.debug {
-				log.Printf("[Receive direct message]\n%v\n", c)
+				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
 			}
 			if a.config.Interaction != nil {
 				conf := a.config.Interaction
