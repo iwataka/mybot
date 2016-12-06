@@ -112,11 +112,6 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 		cache.ImageAnalysisResult = string(result)
 		cache.ImageAnalysisDate = time.Now().String()
 
-		err = a.config.DB.insertImageAndResult(urls[i], string(result))
-		if err != nil {
-			return false, err
-		}
-
 		match := true
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
 			m, err := matchEntity(r.LabelAnnotations, cond.Label)
@@ -154,6 +149,10 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 			match = match && m
 		}
 		if match {
+			err = a.config.DB.insertVisionDBColumn(urls[i], string(result))
+			if err != nil {
+				return false, err
+			}
 			return true, nil
 		}
 	}
