@@ -15,13 +15,14 @@ import (
 
 // VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
-	api   *vision.Service
-	cache *MybotCache
+	api    *vision.Service
+	cache  *MybotCache
+	config *MybotConfig
 }
 
 // NewVisionAPI takes a path of a user's google-cloud credential file and cache
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(cache *MybotCache, file string) (*VisionAPI, error) {
+func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
@@ -36,7 +37,7 @@ func NewVisionAPI(cache *MybotCache, file string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, cache}, nil
+	return &VisionAPI{a, cache, config}, nil
 }
 
 // VisionCondition is a condition to check whether images match or not by using
@@ -110,6 +111,11 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 		cache.ImageURL = urls[i]
 		cache.ImageAnalysisResult = string(result)
 		cache.ImageAnalysisDate = time.Now().String()
+
+		err = a.config.DB.insertImageAndResult(urls[i], string(result))
+		if err != nil {
+			return false, err
+		}
 
 		match := true
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {

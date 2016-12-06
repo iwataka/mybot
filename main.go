@@ -138,15 +138,17 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	visionAPI, err = NewVisionAPI(cache, c.String("gcloud"))
+	config, err = NewMybotConfig(c.String("config"), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	config, err = NewMybotConfig(c.String("config"), visionAPI)
+	visionAPI, err = NewVisionAPI(cache, config, c.String("gcloud"))
 	if err != nil {
 		panic(err)
 	}
+
+	config.SetVisionoAPI(visionAPI)
 
 	githubAPI = NewGitHubAPI(nil, cache)
 
@@ -220,7 +222,11 @@ func twitterListenMyself(c *cli.Context) {
 	defer func() { status.TwitterListenMyselfStatus = false }()
 	keepConnection(func() error {
 		r := twitterAPI.DefaultDirectMessageReceiver
-		return twitterAPI.ListenMyself(nil, r, c.String("cache"))
+		err := twitterAPI.ListenMyself(nil, r, c.String("cache"))
+		if err != nil {
+			logger.Println(err)
+		}
+		return err
 	}, "5m", 5)
 }
 
@@ -231,7 +237,11 @@ func twitterListenUsers(c *cli.Context) {
 	status.TwitterListenUsersStatus = true
 	defer func() { status.TwitterListenUsersStatus = false }()
 	keepConnection(func() error {
-		return twitterAPI.ListenUsers(nil, c.String("cache"))
+		err := twitterAPI.ListenUsers(nil, c.String("cache"))
+		if err != nil {
+			logger.Println(err)
+		}
+		return err
 	}, "5m", 5)
 }
 

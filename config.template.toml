@@ -32,6 +32,11 @@ users = ["foo"]
 [twitter]
 duration = "30m"
 
+[db]
+driver = "driver"
+data_source = "user:password@protocol(address)/dbname?param=value"
+vision_table = "table"
+
 [interaction]
 duration = "30s"
 users = ["foo", "bar"]

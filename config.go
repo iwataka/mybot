@@ -15,6 +15,7 @@ import (
 type MybotConfig struct {
 	GitHub      *GitHubConfig      `toml:"github"`
 	Twitter     *TwitterConfig     `toml:"twitter"`
+	DB          *DBConfig          `toml:"db"`
 	Interaction *InteractionConfig `toml:"interaction"`
 	Log         *LogConfig         `toml:"log"`
 	HTTP        *HTTPServer        `toml:"http"`
@@ -67,6 +68,12 @@ type SearchConfig struct {
 	Queries    []string `toml:"queries"`
 	ResultType *string  `toml:"result_type"`
 	Count      *int     `toml:"count"`
+}
+
+type DBConfig struct {
+	Driver      *string `toml:"driver"`
+	DataSource  *string `toml:"data_source"`
+	VisionTable *string `toml:"vision_table"`
 }
 
 // InteractionConfig is a configuration for interaction through Twitter direct
@@ -147,6 +154,18 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		s.Filter.visionAPI = vision
 	}
 	return c, nil
+}
+
+func (c *MybotConfig) SetVisionoAPI(vision *VisionAPI) {
+	for _, t := range c.Twitter.Timelines {
+		t.Filter.visionAPI = vision
+	}
+	for _, f := range c.Twitter.Favorites {
+		f.Filter.visionAPI = vision
+	}
+	for _, s := range c.Twitter.Searches {
+		s.Filter.visionAPI = vision
+	}
 }
 
 func validateConfig(config *MybotConfig) error {
