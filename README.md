@@ -68,6 +68,15 @@ See [config.template.toml](config.template.toml) for more details.
 
 Then run `mybot serve` and that's all.
 
+### MySQL on Docker cotainer
+
+```
+cd /path/to/sql
+docker run -v `pwd`:/docker-entrypoint-initdb.d -d --name mysql -e MYSQL_ROOT_PASSWORD=mysql mysql
+```
+
+And edit config.toml as you want.
+
 ## Planned to be implemented
 
 + Plug-in architecture
