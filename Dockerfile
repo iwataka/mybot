@@ -2,7 +2,7 @@
 # cd /path/to/mybot
 # docker build -t mybot .
 # docker run -d -v `pwd`:/mybot -v ~/.config/gcloud:/root/.config/gcloud -v ~/.cache/mybot:/root/.cache/mybot --name mybot -p 8080:8080 mybot
-FROM golang:1.7-alpine
+FROM golang:1.8-alpine
 
 WORKDIR /mybot
 
