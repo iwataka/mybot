@@ -5,11 +5,69 @@
     <div class="container">
         {{template "navbar" .}}
         <h2>Current Config</h2>
-        <div id="config"></div>
+        <h3>Timelines</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>screen_name</td>
+                    <td>screen_names</td>
+                    <td>exclude_replies</td>
+                    <td>include_rts</td>
+                    <td>count</td>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Config.Twitter.Timelines}}
+                <tr>
+                    <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
+                    <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
+                    <td>{{if .ExcludeReplies}}{{.ExcludeReplies}}{{end}}</td>
+                    <td>{{if .IncludeRts}}{{.IncludeRts}}{{end}}</td>
+                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        <h3>Favorites</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>screen_name</td>
+                    <td>screen_names</td>
+                    <td>count</td>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Config.Twitter.Favorites}}
+                <tr>
+                    <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
+                    <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
+                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        <h3>Searches</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <td>query</td>
+                    <td>queries</td>
+                    <td>result_type</td>
+                    <td>count</td>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Config.Twitter.Searches}}
+                <tr>
+                    <td>{{if .Query}}{{.Query}}{{end}}</td>
+                    <td>{{if .Queries}}{{.Queries}}{{end}}</td>
+                    <td>{{if .ResultType}}{{.ResultType}}{{end}}</td>
+                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
     </div>
-    <script src="/assets/js/config.js"></script>
-    <script>
-        loadConfig('config')
-    </script>
 </body>
 </html>

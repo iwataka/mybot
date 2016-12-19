@@ -206,8 +206,10 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := &struct {
 		UserName string
+		Config   MybotConfig
 	}{
 		s.Name,
+		*s.config,
 	}
 	err = tmpl.Execute(w, data)
 	if err != nil {
