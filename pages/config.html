@@ -4,70 +4,157 @@
 <body>
     <div class="container">
         {{template "navbar" .}}
-        <h2>Current Config</h2>
-        <h3>Timelines</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <td>screen_name</td>
-                    <td>screen_names</td>
-                    <td>exclude_replies</td>
-                    <td>include_rts</td>
-                    <td>count</td>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Config.Twitter.Timelines}}
-                <tr>
-                    <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
-                    <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
-                    <td>{{if .ExcludeReplies}}{{.ExcludeReplies}}{{end}}</td>
-                    <td>{{if .IncludeRts}}{{.IncludeRts}}{{end}}</td>
-                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
-        <h3>Favorites</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <td>screen_name</td>
-                    <td>screen_names</td>
-                    <td>count</td>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Config.Twitter.Favorites}}
-                <tr>
-                    <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
-                    <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
-                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
-        <h3>Searches</h3>
-        <table class="table">
-            <thead>
-                <tr>
-                    <td>query</td>
-                    <td>queries</td>
-                    <td>result_type</td>
-                    <td>count</td>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Config.Twitter.Searches}}
-                <tr>
-                    <td>{{if .Query}}{{.Query}}{{end}}</td>
-                    <td>{{if .Queries}}{{.Queries}}{{end}}</td>
-                    <td>{{if .ResultType}}{{.ResultType}}{{end}}</td>
-                    <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <form action="">
+            <h2>Current Config</h2>
+            <input type="submit" value="Save">
+            <h3>Twitter Timelines</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>screen_name</td>
+                        <td>screen_names</td>
+                        <td>exclude_replies</td>
+                        <td>include_rts</td>
+                        <td>count</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Config.Twitter.Timelines}}
+                    <tr>
+                        <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
+                        <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
+                        <td>{{if .ExcludeReplies}}{{.ExcludeReplies}}{{end}}</td>
+                        <td>{{if .IncludeRts}}{{.IncludeRts}}{{end}}</td>
+                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            <h3>Twitter Favorites</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>screen_name</td>
+                        <td>screen_names</td>
+                        <td>count</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Config.Twitter.Favorites}}
+                    <tr>
+                        <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
+                        <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
+                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            <h3>Twitter Searches</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>query</td>
+                        <td>queries</td>
+                        <td>result_type</td>
+                        <td>count</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Config.Twitter.Searches}}
+                    <tr>
+                        <td>{{if .Query}}{{.Query}}{{end}}</td>
+                        <td>{{if .Queries}}{{.Queries}}{{end}}</td>
+                        <td>{{if .ResultType}}{{.ResultType}}{{end}}</td>
+                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            <h3>Database</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>driver</td>
+                        <td>data_source</td>
+                        <td>vision_table</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" name="db.driver" value="{{if .Config.DB.Driver}}{{.Config.DB.Driver}}{{end}}"></td>
+                        <td><input type="text" name="db.data_source" value="{{if .Config.DB.DataSource}}{{.Config.DB.DataSource}}{{end}}"></td>
+                        <td><input type="text" name="db.vision_table" value="{{if .Config.DB.VisionTable}}{{.Config.DB.VisionTable}}{{end}}"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Interaction</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>duration</td>
+                        <td>allow_self</td>
+                        <td>users</td>
+                        <td>count</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" name="interaction.duration" value="{{if .Config.Interaction.Duration}}{{.Config.Interaction.Duration}}{{end}}"></td>
+                        {{if .Config.Interaction.AllowSelf}}
+                        <td><input type="checkbox" name="interaction.allow_self" checked></td>
+                        {{else}}
+                        <td><input type="checkbox" name="interaction.allow_self"></td>
+                        {{end}}
+                        <td><input type="text" name="interaction.users" value="{{if .Config.Interaction.Users}}{{.Config.Interaction.Users}}{{end}}"></td>
+                        <td><input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>Log</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>allow_self</td>
+                        <td>users</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        {{if .Config.Log.AllowSelf}}
+                        <td><input type="checkbox" name="log.allow_self" checked></td>
+                        {{else}}
+                        <td><input type="checkbox" name="log.allow_self"></td>
+                        {{end}}
+                        <td><input type="text" name="log.users" value="{{if .Config.Log.Users}}{{.Config.Log.Users}}{{end}}"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <h3>HTTP</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <td>name</td>
+                        <td>host</td>
+                        <td>port</td>
+                        <td>enabled</td>
+                        <td>logLines</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" name="http.name" value="{{if .Config.HTTP.Name}}{{.Config.HTTP.Name}}{{end}}"></td>
+                        <td><input type="text" name="http.host" value="{{if .Config.HTTP.Host}}{{.Config.HTTP.Host}}{{end}}"></td>
+                        <td><input type="number" name="http.port" value="{{if .Config.HTTP.Port}}{{.Config.HTTP.Port}}{{end}}"></td>
+                        {{if .Config.HTTP.Enabled}}
+                        <td><input type="checkbox" name="http.enabled" checked></td>
+                        {{else}}
+                        <td><input type="checkbox" name="http.enabled"></td>
+                        {{end}}
+                        <td><input type="number" name="http.logLines" value="{{if .Config.HTTP.LogLines}}{{.Config.HTTP.LogLines}}{{end}}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </form>
     </div>
 </body>
 </html>
