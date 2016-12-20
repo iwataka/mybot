@@ -219,9 +219,10 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset(r.URL.Path[len("/"):])
+	path := r.URL.Path[len("/"):]
+	data, err := readFile(path)
 	if err != nil {
-		s.Logger.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/css")
@@ -374,17 +375,33 @@ func (s *HTTPServer) apiPostStatusHandler(w http.ResponseWriter, r *http.Request
 }
 
 func generateTemplate(name, path string) (*template.Template, error) {
-	index, err := Asset(path)
+	index, err := readFile(path)
 	if err != nil {
 		return nil, err
 	}
-	header, err := Asset("pages/header.html")
+	header, err := readFile("pages/header.html")
 	if err != nil {
 		return nil, err
 	}
-	navbar, err := Asset("pages/navbar.html")
+	navbar, err := readFile("pages/navbar.html")
 	if err != nil {
 		return nil, err
 	}
 	return template.New("index").Parse(string(index) + string(header) + string(navbar))
+}
+
+func readFile(path string) ([]byte, error) {
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		data, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	} else {
+		data, err := Asset(path)
+		if err != nil {
+			return nil, err
+		}
+		return data, nil
+	}
 }
