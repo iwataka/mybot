@@ -6,7 +6,7 @@ repo = "go"
 user = "golang"
 
 [[twitter.timelines]]
-screen_name = "golang"
+screen_names = ["golang"]
 [twitter.timelines.filter]
 patterns = ["is released!", "#golang"]
 has_url = true

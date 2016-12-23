@@ -18,8 +18,8 @@ func TestNewMybotConfig(t *testing.T) {
 		t.Fatalf("%s expected but %s found", "30m", c.GitHub.Duration)
 	}
 	a := c.Twitter.Timelines[0]
-	if *a.ScreenName != "golang" {
-		t.Fatalf("%s expected but %s found", "golang", *a.ScreenName)
+	if a.ScreenNames[0] != "golang" {
+		t.Fatalf("%s expected but %s found", "golang", a.ScreenNames[0])
 	}
 	f := a.Filter
 	if f.Patterns[0] != "is released!" {

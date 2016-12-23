@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -18,7 +19,7 @@ type HTTPServer struct {
 	Host       string       `toml:"host"`
 	Port       string       `toml:"port"`
 	Enabled    bool         `toml:"enabled"`
-	LogLines   *int         `toml:logLines`
+	LogLines   *int         `toml:log_lines`
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
@@ -199,6 +200,122 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		err := r.ParseMultipartForm(32 << 20)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		val := r.MultipartForm.Value
+
+		excludeRepliesExtraCount := 0
+		includeRtsExtraCount := 0
+		for i, _ := range s.config.Twitter.Timelines {
+			timeline := s.config.Twitter.Timelines[i]
+			timeline.ScreenNames = strings.Split(val["twitter.timelines.screen_names"][i], ",")
+			erName := "twitter.timelines.exclude_replies"
+			if val[erName][i+excludeRepliesExtraCount] == "true" {
+				b := true
+				timeline.ExcludeReplies = &b
+				excludeRepliesExtraCount++
+			} else {
+				b := false
+				timeline.ExcludeReplies = &b
+			}
+			irName := "twitter.timelines.include_rts"
+			if val[irName][i+includeRtsExtraCount] == "true" {
+				b := true
+				timeline.IncludeRts = &b
+				includeRtsExtraCount++
+			} else {
+				b := false
+				timeline.IncludeRts = &b
+			}
+			count, err := strconv.Atoi(val["twitter.timelines.count"][i])
+			if err != nil {
+				timeline.Count = nil
+			} else {
+				timeline.Count = &count
+			}
+			s.config.Twitter.Timelines[i] = timeline
+		}
+
+		for i, _ := range s.config.Twitter.Favorites {
+			favorite := s.config.Twitter.Favorites[i]
+			favorite.ScreenNames = strings.Split(val["twitter.favorites.screen_names"][i], ",")
+			count, err := strconv.Atoi(val["twitter.favorites.count"][i])
+			if err != nil {
+				favorite.Count = nil
+			} else {
+				favorite.Count = &count
+			}
+			s.config.Twitter.Favorites[i] = favorite
+		}
+
+		for i, _ := range s.config.Twitter.Searches {
+			search := s.config.Twitter.Searches[i]
+			search.Queries = strings.Split(val["twitter.searches.queries"][i], ",")
+			search.ResultType = &val["twitter.searches.result_type"][i]
+			count, err := strconv.Atoi(val["twitter.searches.count"][i])
+			if err != nil {
+				search.Count = nil
+			} else {
+				search.Count = &count
+			}
+			s.config.Twitter.Searches[i] = search
+		}
+
+		s.config.DB.Driver = &val["db.driver"][0]
+		s.config.DB.DataSource = &val["db.data_source"][0]
+		s.config.DB.VisionTable = &val["db.vision_table"][0]
+
+		s.config.Interaction.Duration = val["interaction.duration"][0]
+		if len(val["interaction.allow_self"]) == 0 {
+			s.config.Interaction.AllowSelf = false
+		} else {
+			s.config.Interaction.AllowSelf = true
+		}
+		s.config.Interaction.Users = strings.Split(val["interaction.users"][0], ",")
+		count, err := strconv.Atoi(val["interaction.count"][0])
+		if err != nil {
+			s.config.Interaction.Count = nil
+		} else {
+			s.config.Interaction.Count = &count
+		}
+
+		if len(val["log.allow_self"]) == 0 {
+			s.config.Log.AllowSelf = false
+		} else {
+			s.config.Log.AllowSelf = true
+		}
+		s.config.Log.Users = strings.Split(val["log.users"][0], ",")
+
+		s.config.HTTP.Name = val["http.name"][0]
+		s.config.HTTP.Host = val["http.host"][0]
+		s.config.HTTP.Port = val["http.port"][0]
+		if len(val["http.enabled"]) == 0 {
+			s.config.HTTP.Enabled = false
+		} else {
+			s.config.HTTP.Enabled = true
+		}
+		logLines, err := strconv.Atoi(val["http.log_lines"][0])
+		if err != nil {
+			s.config.HTTP.LogLines = nil
+		}
+		s.config.HTTP.LogLines = &logLines
+
+		err = ValidateConfig(s.config)
+		if err != nil {
+			s.config.Reload()
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		err = s.config.Save()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	tmpl, err := generateTemplate("config", "pages/config.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -295,7 +412,7 @@ func (s *HTTPServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = s.config.Save(ctxt.String("config"))
+		err = s.config.Save()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -387,7 +504,33 @@ func generateTemplate(name, path string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	return template.New("index").Parse(string(index) + string(header) + string(navbar))
+
+	funcMap := template.FuncMap{
+		"convertListToShow": convertListToShow,
+		"checkBoolRef":      checkBoolRef,
+		"derefString":       derefString,
+	}
+
+	return template.
+		New("index").
+		Funcs(funcMap).
+		Parse(string(index) + string(header) + string(navbar))
+}
+
+func convertListToShow(list []string) string {
+	return strings.Join(list, ",")
+}
+
+func checkBoolRef(ref *bool) bool {
+	if ref == nil {
+		return false
+	} else {
+		return *ref
+	}
+}
+
+func derefString(ref *string) string {
+	return *ref
 }
 
 func readFile(path string) ([]byte, error) {

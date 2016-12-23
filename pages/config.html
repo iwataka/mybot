@@ -4,79 +4,115 @@
 <body>
     <div class="container">
         {{template "navbar" .}}
-        <form action="">
+        <form action="/config/" method="post" enctype="multipart/form-data">
             <h2>Current Config</h2>
-            <input type="submit" value="Save">
+            <input type="submit" value="Save" class="btn btn-lg btn-primary">
+
             <h3>Twitter Timelines</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
-                        <td>screen_name</td>
-                        <td>screen_names</td>
-                        <td>exclude_replies</td>
-                        <td>include_rts</td>
+                        <td>screen names</td>
+                        <td>exclude replies</td>
+                        <td>include rts</td>
                         <td>count</td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Config.Twitter.Timelines}}
                     <tr>
-                        <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
-                        <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
-                        <td>{{if .ExcludeReplies}}{{.ExcludeReplies}}{{end}}</td>
-                        <td>{{if .IncludeRts}}{{.IncludeRts}}{{end}}</td>
-                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                        <td>
+                            <input type="text" name="twitter.timelines.screen_names" value="{{if .ScreenNames}}{{.ScreenNames | convertListToShow}}{{end}}">
+                        </td>
+                        <td>
+                            {{if .ExcludeReplies | checkBoolRef}}
+                            <input type="checkbox" name="twitter.timelines.exclude_replies" value="true" checked>
+                            {{else}}
+                            <input type="checkbox" name="twitter.timelines.exclude_replies" value="true">
+                            {{end}}
+                            <input type="hidden" name="twitter.timelines.exclude_replies" value="placeholder">
+                        </td>
+                        <td>
+                            {{if .IncludeRts | checkBoolRef}}
+                            <input type="checkbox" name="twitter.timelines.include_rts" value="true" checked>
+                            {{else}}
+                            <input type="checkbox" name="twitter.timelines.include_rts" value="true">
+                            {{end}}
+                            <input type="hidden" name="twitter.timelines.include_rts" value="placeholder">
+                        </td>
+                        <td>
+                            <input type="number" name="twitter.timelines.count" value="{{if .Count}}{{.Count}}{{end}}">
+                        </td>
                     </tr>
                     {{end}}
                 </tbody>
             </table>
+
             <h3>Twitter Favorites</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
-                        <td>screen_name</td>
-                        <td>screen_names</td>
+                        <td>screen names</td>
                         <td>count</td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Config.Twitter.Favorites}}
                     <tr>
-                        <td>{{if .ScreenName}}{{.ScreenName}}{{end}}</td>
-                        <td>{{if .ScreenNames}}{{.ScreenNames}}{{end}}</td>
-                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                        <td><input type="text" name="twitter.favorites.screen_names" value="{{if .ScreenNames}}{{.ScreenNames | convertListToShow}}{{end}}"></td>
+                        <td><input type="number" name="twitter.favorites.count" value="{{if .Count}}{{.Count}}{{end}}"></td>
                     </tr>
                     {{end}}
                 </tbody>
             </table>
+
             <h3>Twitter Searches</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
-                        <td>query</td>
                         <td>queries</td>
-                        <td>result_type</td>
+                        <td>result type</td>
                         <td>count</td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Config.Twitter.Searches}}
                     <tr>
-                        <td>{{if .Query}}{{.Query}}{{end}}</td>
-                        <td>{{if .Queries}}{{.Queries}}{{end}}</td>
-                        <td>{{if .ResultType}}{{.ResultType}}{{end}}</td>
-                        <td><input type="number" value="{{if .Count}}{{.Count}}{{end}}"></td>
+                        <td><input type="text" name="twitter.searches.queries" value="{{if .Queries}}{{.Queries | convertListToShow}}{{end}}"></td>
+                        <td>
+                            <select name="twitter.searches.result_type">
+                                {{if not .ResultType }}
+                                <option value="recent" selected>recent</option>
+                                <option value="mixed">mixed</option>
+                                <option value="popular">popular</option>
+                                {{else if eq (derefString .ResultType) "recent"}}
+                                <option value="recent" selected>recent</option>
+                                <option value="mixed">mixed</option>
+                                <option value="popular">popular</option>
+                                {{else if eq (derefString .ResultType) "mixed"}}
+                                <option value="recent">recent</option>
+                                <option value="mixed" selected>mixed</option>
+                                <option value="popular">popular</option>
+                                {{else if eq (derefString .ResultType) "popular"}}
+                                <option value="recent">recent</option>
+                                <option value="mixed">mixed</option>
+                                <option value="popular" selected>popular</option>
+                                {{end}}
+                            </select>
+                        </td>
+                        <td><input type="number" name="twitter.searches.count" value="{{if .Count}}{{.Count}}{{end}}"></td>
                     </tr>
                     {{end}}
                 </tbody>
             </table>
+
             <h3>Database</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
                         <td>driver</td>
-                        <td>data_source</td>
-                        <td>vision_table</td>
+                        <td>data source</td>
+                        <td>vision table</td>
                     </tr>
                 </thead>
                 <tbody>
@@ -87,12 +123,13 @@
                     </tr>
                 </tbody>
             </table>
+
             <h3>Interaction</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
                         <td>duration</td>
-                        <td>allow_self</td>
+                        <td>allow self</td>
                         <td>users</td>
                         <td>count</td>
                     </tr>
@@ -100,44 +137,50 @@
                 <tbody>
                     <tr>
                         <td><input type="text" name="interaction.duration" value="{{if .Config.Interaction.Duration}}{{.Config.Interaction.Duration}}{{end}}"></td>
-                        {{if .Config.Interaction.AllowSelf}}
-                        <td><input type="checkbox" name="interaction.allow_self" checked></td>
-                        {{else}}
-                        <td><input type="checkbox" name="interaction.allow_self"></td>
-                        {{end}}
-                        <td><input type="text" name="interaction.users" value="{{if .Config.Interaction.Users}}{{.Config.Interaction.Users}}{{end}}"></td>
+                        <td>
+                            {{if .Config.Interaction.AllowSelf}}
+                            <input type="checkbox" name="interaction.allow_self" value="true" checked>
+                            {{else}}
+                            <input type="checkbox" name="interaction.allow_self" value="true">
+                            {{end}}
+                        </td>
+                        <td><input type="text" name="interaction.users" value="{{if .Config.Interaction.Users}}{{.Config.Interaction.Users | convertListToShow}}{{end}}"></td>
                         <td><input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}"></td>
                     </tr>
                 </tbody>
             </table>
+
             <h3>Log</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
-                        <td>allow_self</td>
+                        <td>allow self</td>
                         <td>users</td>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        {{if .Config.Log.AllowSelf}}
-                        <td><input type="checkbox" name="log.allow_self" checked></td>
-                        {{else}}
-                        <td><input type="checkbox" name="log.allow_self"></td>
-                        {{end}}
-                        <td><input type="text" name="log.users" value="{{if .Config.Log.Users}}{{.Config.Log.Users}}{{end}}"></td>
+                        <td>
+                            {{if .Config.Log.AllowSelf}}
+                            <input type="checkbox" name="log.allow_self" value="true" checked>
+                            {{else}}
+                            <input type="checkbox" name="log.allow_self" value="true">
+                            {{end}}
+                        </td>
+                        <td><input type="text" name="log.users" value="{{if .Config.Log.Users}}{{.Config.Log.Users | convertListToShow}}{{end}}"></td>
                     </tr>
                 </tbody>
             </table>
+
             <h3>HTTP</h3>
-            <table class="table">
+            <table class="table table-striped table-bordered table-responsive">
                 <thead>
                     <tr>
                         <td>name</td>
                         <td>host</td>
                         <td>port</td>
                         <td>enabled</td>
-                        <td>logLines</td>
+                        <td>log lines</td>
                     </tr>
                 </thead>
                 <tbody>
@@ -145,12 +188,14 @@
                         <td><input type="text" name="http.name" value="{{if .Config.HTTP.Name}}{{.Config.HTTP.Name}}{{end}}"></td>
                         <td><input type="text" name="http.host" value="{{if .Config.HTTP.Host}}{{.Config.HTTP.Host}}{{end}}"></td>
                         <td><input type="number" name="http.port" value="{{if .Config.HTTP.Port}}{{.Config.HTTP.Port}}{{end}}"></td>
-                        {{if .Config.HTTP.Enabled}}
-                        <td><input type="checkbox" name="http.enabled" checked></td>
-                        {{else}}
-                        <td><input type="checkbox" name="http.enabled"></td>
-                        {{end}}
-                        <td><input type="number" name="http.logLines" value="{{if .Config.HTTP.LogLines}}{{.Config.HTTP.LogLines}}{{end}}"></td>
+                        <td>
+                            {{if .Config.HTTP.Enabled}}
+                            <input type="checkbox" name="http.enabled" value="true" checked>
+                            {{else}}
+                            <input type="checkbox" name="http.enabled" value="true">
+                            {{end}}
+                        </td>
+                        <td><input type="number" name="http.log_lines" value="{{if .Config.HTTP.LogLines}}{{.Config.HTTP.LogLines}}{{end}}"></td>
                     </tr>
                 </tbody>
             </table>

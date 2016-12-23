@@ -19,6 +19,7 @@ type MybotConfig struct {
 	Interaction *InteractionConfig `toml:"interaction"`
 	Log         *LogConfig         `toml:"log"`
 	HTTP        *HTTPServer        `toml:"http"`
+	source      string             `toml:"-"`
 }
 
 // GitHubConfig is a configuration of GitHub projects
@@ -46,7 +47,6 @@ type TwitterConfig struct {
 // TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
 	*SourceConfig
-	ScreenName     *string  `toml:"screen_name"`
 	ScreenNames    []string `toml:"screen_names"`
 	ExcludeReplies *bool    `toml:"exclude_replies"`
 	IncludeRts     *bool    `toml:"include_rts"`
@@ -56,7 +56,6 @@ type TimelineConfig struct {
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
-	ScreenName  *string  `toml:"screen_name"`
 	ScreenNames []string `toml:"screen_names"`
 	Count       *int     `toml:"count"`
 }
@@ -64,7 +63,6 @@ type FavoriteConfig struct {
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
 	*SourceConfig
-	Query      *string  `toml:"query"`
 	Queries    []string `toml:"queries"`
 	ResultType *string  `toml:"result_type"`
 	Count      *int     `toml:"count"`
@@ -95,18 +93,10 @@ type LogConfig struct {
 func (tc *TwitterConfig) GetScreenNames() []string {
 	result := []string{}
 	for _, t := range tc.Timelines {
-		if t.ScreenName != nil {
-			result = append(result, *t.ScreenName)
-		} else {
-			result = append(result, t.ScreenNames...)
-		}
+		result = append(result, t.ScreenNames...)
 	}
 	for _, f := range tc.Favorites {
-		if f.ScreenName != nil {
-			result = append(result, *f.ScreenName)
-		} else {
-			result = append(result, f.ScreenNames...)
-		}
+		result = append(result, f.ScreenNames...)
 	}
 	return result
 }
@@ -140,7 +130,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 	if len(md.Undecoded()) != 0 {
 		return nil, fmt.Errorf("%v undecoded in %s", md.Undecoded(), path)
 	}
-	err = validateConfig(c)
+	err = ValidateConfig(c)
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +143,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 	for _, s := range c.Twitter.Searches {
 		s.Filter.visionAPI = vision
 	}
+	c.source = path
 	return c, nil
 }
 
@@ -168,18 +159,14 @@ func (c *MybotConfig) SetVisionoAPI(vision *VisionAPI) {
 	}
 }
 
-func validateConfig(config *MybotConfig) error {
+func ValidateConfig(config *MybotConfig) error {
 	for _, account := range config.Twitter.Timelines {
 		if account.Action == nil {
 			msg := fmt.Sprintf("%v has no action", account)
 			return errors.New(msg)
 		}
-		if account.ScreenName == nil && (account.ScreenNames == nil || len(account.ScreenNames) == 0) {
+		if len(account.ScreenNames) == 0 {
 			msg := fmt.Sprintf("%v has no name", account)
-			return errors.New(msg)
-		}
-		if account.ScreenName != nil && account.ScreenNames != nil && len(account.ScreenNames) != 0 {
-			msg := fmt.Sprintf("%v has name and names properties, use `names` only.", account)
 			return errors.New(msg)
 		}
 		filter := account.Filter
@@ -193,12 +180,8 @@ func validateConfig(config *MybotConfig) error {
 			msg := fmt.Sprintf("%v has no action", favorite)
 			return errors.New(msg)
 		}
-		if favorite.ScreenName == nil && (favorite.ScreenNames == nil || len(favorite.ScreenNames) == 0) {
+		if len(favorite.ScreenNames) == 0 {
 			msg := fmt.Sprintf("%v has no name", favorite)
-			return errors.New(msg)
-		}
-		if favorite.ScreenName != nil && favorite.ScreenNames != nil && len(favorite.ScreenNames) != 0 {
-			msg := fmt.Sprintf("%v has name and names properties, use `names` only.", favorite)
 			return errors.New(msg)
 		}
 		filter := favorite.Filter
@@ -212,12 +195,8 @@ func validateConfig(config *MybotConfig) error {
 			msg := fmt.Sprintf("%v has no action", search)
 			return errors.New(msg)
 		}
-		if search.Query == nil && (search.Queries == nil || len(search.Queries) == 0) {
+		if len(search.Queries) == 0 {
 			msg := fmt.Sprintf("%v has no query", search)
-			return errors.New(msg)
-		}
-		if search.Query != nil && search.Queries != nil && len(search.Queries) != 0 {
-			msg := fmt.Sprintf("%v has query and queries properties, use `query` only.", search)
 			return errors.New(msg)
 		}
 		filter := search.Filter
@@ -243,8 +222,8 @@ func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
 }
 
 // Save saves the config data to the specified file
-func (c *MybotConfig) Save(path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0600)
+func (c *MybotConfig) Save() error {
+	err := os.MkdirAll(filepath.Dir(c.source), 0600)
 	if err != nil {
 		return err
 	}
@@ -255,10 +234,25 @@ func (c *MybotConfig) Save(path string) error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(path, writer.Bytes(), 0600)
+		err = ioutil.WriteFile(c.source, writer.Bytes(), 0600)
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *MybotConfig) Reload() error {
+	bytes, err := ioutil.ReadFile(c.source)
+	if err != nil {
+		return err
+	}
+	md, err := toml.Decode(string(bytes), c)
+	if err != nil {
+		return err
+	}
+	if len(md.Undecoded()) != 0 {
+		return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
 	}
 	return nil
 }

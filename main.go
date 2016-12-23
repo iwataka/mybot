@@ -397,20 +397,12 @@ func runTwitterWithStream(c *cli.Context) error {
 		if a.ResultType != nil {
 			v.Set("result_type", *a.ResultType)
 		}
-		if a.Query != nil {
-			ts, err := twitterAPI.DoForSearch(*a.Query, v, a.Filter, a.Action)
+		for _, query := range a.Queries {
+			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
 			if err != nil {
 				return err
 			}
 			tweets = append(tweets, ts...)
-		} else {
-			for _, query := range a.Queries {
-				ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
-				if err != nil {
-					return err
-				}
-				tweets = append(tweets, ts...)
-			}
 		}
 	}
 	for _, a := range config.Twitter.Favorites {
@@ -419,19 +411,11 @@ func runTwitterWithStream(c *cli.Context) error {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		a.Filter.visionAPI = visionAPI
-		if a.ScreenName != nil {
-			ts, err := twitterAPI.DoForFavorites(*a.ScreenName, v, a.Filter, a.Action)
+		for _, name := range a.ScreenNames {
+			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
-			}
-		} else {
-			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
-				tweets = append(tweets, ts...)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
@@ -462,19 +446,11 @@ func runTwitterWithoutStream(c *cli.Context) error {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
 		a.Filter.visionAPI = visionAPI
-		if a.ScreenName != nil {
-			ts, err := twitterAPI.DoForAccount(*a.ScreenName, v, a.Filter, a.Action)
+		for _, name := range a.ScreenNames {
+			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
-			}
-		} else {
-			for _, name := range a.ScreenNames {
-				ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
-				tweets = append(tweets, ts...)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}

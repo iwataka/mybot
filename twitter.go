@@ -433,14 +433,10 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
 			for _, t := range a.config.Twitter.Timelines {
-				if t.ScreenName != nil && *t.ScreenName == name {
-					timelines = append(timelines, t)
-				} else if t.ScreenNames != nil {
-					for _, n := range t.ScreenNames {
-						if n == name {
-							timelines = append(timelines, t)
-							break
-						}
+				for _, n := range t.ScreenNames {
+					if n == name {
+						timelines = append(timelines, t)
+						break
 					}
 				}
 			}
@@ -548,17 +544,10 @@ func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 // FollowAll follows all usres included in the configuration
 func (a *TwitterAPI) FollowAll() error {
 	for _, t := range a.config.Twitter.Timelines {
-		if t.ScreenName != nil {
-			_, err := a.api.FollowUser(*t.ScreenName)
+		for _, n := range t.ScreenNames {
+			_, err := a.api.FollowUser(n)
 			if err != nil {
 				return err
-			}
-		} else if t.ScreenNames != nil {
-			for _, n := range t.ScreenNames {
-				_, err := a.api.FollowUser(n)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}

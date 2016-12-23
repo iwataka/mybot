@@ -31,3 +31,7 @@ pre {
 .fa-passive {
         color: gray;
 }
+
+table > thead {
+        background-color: aliceblue;
+}
