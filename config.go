@@ -135,12 +135,21 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		return nil, err
 	}
 	for _, t := range c.Twitter.Timelines {
+		if t.Filter.Vision == nil {
+			t.Filter.Vision = new(VisionCondition)
+		}
 		t.Filter.visionAPI = vision
 	}
 	for _, f := range c.Twitter.Favorites {
+		if f.Filter.Vision == nil {
+			f.Filter.Vision = new(VisionCondition)
+		}
 		f.Filter.visionAPI = vision
 	}
 	for _, s := range c.Twitter.Searches {
+		if s.Filter.Vision == nil {
+			s.Filter.Vision = new(VisionCondition)
+		}
 		s.Filter.visionAPI = vision
 	}
 	c.source = path

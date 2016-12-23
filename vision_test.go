@@ -9,8 +9,10 @@ import (
 func TestGetFeatures(t *testing.T) {
 	cond := &VisionCondition{
 		Label: []string{"label"},
-		Face:  map[string]string{"key": "value"},
-		Text:  []string{"text"},
+		Face: &VisionFaceCondition{
+			BlurredLikelihood: "VERY_LIKELY",
+		},
+		Text: []string{"text"},
 	}
 	fs := getFeatures(cond)
 	if len(fs) != 3 {
@@ -47,8 +49,8 @@ func TestMatchFace(t *testing.T) {
 			BlurredLikelihood: "VERY_UNLIKELY",
 		},
 	}
-	face := map[string]string{
-		"anger": "LIKELY|VERY_LIKELY",
+	face := &VisionFaceCondition{
+		AngerLikelihood: "LIKELY|VERY_LIKELY",
 	}
 	flag, err := matchFace(as, face)
 	if err != nil {

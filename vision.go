@@ -43,11 +43,25 @@ func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionA
 // VisionCondition is a condition to check whether images match or not by using
 // Google Vision API.
 type VisionCondition struct {
-	Label    []string          `toml:"label"`
-	Face     map[string]string `toml:"face"`
-	Text     []string          `toml:"text"`
-	Landmark []string          `toml:"landmark"`
-	Logo     []string          `toml:"logo"`
+	Label    []string             `toml:"label"`
+	Face     *VisionFaceCondition `toml:"face"`
+	Text     []string             `toml:"text"`
+	Landmark []string             `toml:"landmark"`
+	Logo     []string             `toml:"logo"`
+}
+
+type VisionFaceCondition struct {
+	AngerLikelihood    string `toml:"anger_likelihood"`
+	BlurredLikelihood  string `toml:"blurred_likelihood"`
+	HeadwearLikelihood string `toml:"headwear_likelihood"`
+	JoyLikelihood      string `toml:"joy_likelihood"`
+}
+
+func (c *VisionFaceCondition) isEmpty() bool {
+	return len(c.AngerLikelihood) == 0 &&
+		len(c.BlurredLikelihood) == 0 &&
+		len(c.HeadwearLikelihood) == 0 &&
+		len(c.JoyLikelihood) == 0
 }
 
 // MatchImages takes image URLs and a Vision condition and returns whether the
@@ -168,7 +182,7 @@ func getFeatures(cond *VisionCondition) []*vision.Feature {
 		}
 		features = append(features, f)
 	}
-	if cond.Face != nil && len(cond.Face) != 0 {
+	if cond.Face != nil && !cond.Face.isEmpty() {
 		f := &vision.Feature{
 			Type:       "FACE_DETECTION",
 			MaxResults: 10,
@@ -219,35 +233,33 @@ func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 	return true, nil
 }
 
-func matchFace(as []*vision.FaceAnnotation, face map[string]string) (bool, error) {
-	for key, val := range face {
-		for _, a := range as {
-			match := false
-			var err error
-			if key == "anger" {
-				match, err = regexp.MatchString(val, a.AngerLikelihood)
-				if err != nil {
-					return false, err
-				}
-			} else if key == "blurred" {
-				match, err = regexp.MatchString(val, a.BlurredLikelihood)
-				if err != nil {
-					return false, err
-				}
-			} else if key == "headwear" {
-				match, err = regexp.MatchString(val, a.HeadwearLikelihood)
-				if err != nil {
-					return false, err
-				}
-			} else if key == "joy" {
-				match, err = regexp.MatchString(val, a.JoyLikelihood)
-				if err != nil {
-					return false, err
-				}
-			}
-			if !match {
-				return false, nil
-			}
+func matchFace(as []*vision.FaceAnnotation, face *VisionFaceCondition) (bool, error) {
+	for _, a := range as {
+		match := false
+		var err error
+
+		match, err = regexp.MatchString(face.AngerLikelihood, a.AngerLikelihood)
+		if err != nil {
+			return false, err
+		}
+
+		match, err = regexp.MatchString(face.BlurredLikelihood, a.BlurredLikelihood)
+		if err != nil {
+			return false, err
+		}
+
+		match, err = regexp.MatchString(face.HeadwearLikelihood, a.HeadwearLikelihood)
+		if err != nil {
+			return false, err
+		}
+
+		match, err = regexp.MatchString(face.JoyLikelihood, a.JoyLikelihood)
+		if err != nil {
+			return false, err
+		}
+
+		if !match {
+			return false, nil
 		}
 	}
 	return true, nil
