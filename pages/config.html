@@ -95,6 +95,17 @@
                                             </td>
                                         </tr>
                                         <tr>
+                                            <td>has url</td>
+                                            <td>
+                                                {{if $timeline.Filter.HasURL | checkBoolRef}}
+                                                <input type="checkbox" name="twitter.timelines.filter.has_url" value="true" checked>
+                                                {{else}}
+                                                <input type="checkbox" name="twitter.timelines.filter.has_url" value="true">
+                                                {{end}}
+                                                <input type="hidden" name="twitter.timelines.filter.has_url" value="placeholder">
+                                            </td>
+                                        </tr>
+                                        <tr>
                                             <td>retweeted</td>
                                             <td>
                                                 {{if $timeline.Filter.Retweeted | checkBoolRef}}
@@ -304,6 +315,17 @@
                                                 <input type="checkbox" name="twitter.favorites.filter.has_media" value="true">
                                                 {{end}}
                                                 <input type="hidden" name="twitter.favorites.filter.has_media" value="placeholder">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>has url</td>
+                                            <td>
+                                                {{if $favorite.Filter.HasURL | checkBoolRef}}
+                                                <input type="checkbox" name="twitter.favorites.filter.has_url" value="true" checked>
+                                                {{else}}
+                                                <input type="checkbox" name="twitter.favorites.filter.has_url" value="true">
+                                                {{end}}
+                                                <input type="hidden" name="twitter.favorites.filter.has_url" value="placeholder">
                                             </td>
                                         </tr>
                                         <tr>
@@ -538,6 +560,17 @@
                                                 <input type="checkbox" name="twitter.searches.filter.has_media" value="true">
                                                 {{end}}
                                                 <input type="hidden" name="twitter.searches.filter.has_media" value="placeholder">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>has url</td>
+                                            <td>
+                                                {{if $search.Filter.HasURL | checkBoolRef}}
+                                                <input type="checkbox" name="twitter.searches.filter.has_url" value="true" checked>
+                                                {{else}}
+                                                <input type="checkbox" name="twitter.searches.filter.has_url" value="true">
+                                                {{end}}
+                                                <input type="hidden" name="twitter.searches.filter.has_url" value="placeholder">
                                             </td>
                                         </tr>
                                         <tr>
