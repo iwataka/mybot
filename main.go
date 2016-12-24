@@ -394,8 +394,8 @@ func runTwitterWithStream(c *cli.Context) error {
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
-		if a.ResultType != nil {
-			v.Set("result_type", *a.ResultType)
+		if len(a.ResultType) != 0 {
+			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
 			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)

@@ -17,11 +17,11 @@ func (c *DBConfig) initDB() error {
 	if db == nil {
 		driver := c.Driver
 		dataSource := c.DataSource
-		if driver == nil || dataSource == nil {
+		if len(driver) == 0 || len(dataSource) == 0 {
 			return nil
 		}
 		var err error
-		db, err = sql.Open(*driver, *dataSource)
+		db, err = sql.Open(driver, dataSource)
 		if err != nil {
 			return err
 		}
@@ -38,10 +38,10 @@ func (c *DBConfig) insertVisionDBColumn(imageURL, result string) error {
 		return nil
 	}
 	table := c.VisionTable
-	if table == nil {
+	if len(table) == 0 {
 		return nil
 	}
-	cmd := fmt.Sprintf("INSERT INTO %s VALUES ('%s', '%s')", *table, imageURL, result)
+	cmd := fmt.Sprintf("INSERT INTO %s VALUES ('%s', '%s')", table, imageURL, result)
 	_, err = db.Exec(cmd)
 	if err != nil {
 		return err
@@ -63,10 +63,10 @@ func (c *DBConfig) selectVisionDBColumn(num int) ([]*VisionDBColumn, error) {
 		return make([]*VisionDBColumn, 0, 0), nil
 	}
 	table := c.VisionTable
-	if table == nil {
+	if len(table) == 0 {
 		return make([]*VisionDBColumn, 0, 0), nil
 	}
-	cmd := fmt.Sprintf("SELECT LAST(%d) * FROM %s", num, *table)
+	cmd := fmt.Sprintf("SELECT LAST(%d) * FROM %s", num, table)
 	rows, err := db.Query(cmd)
 	if err != nil {
 		return nil, err

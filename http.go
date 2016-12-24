@@ -254,14 +254,14 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		for i, _ := range s.config.Twitter.Searches {
 			search := s.config.Twitter.Searches[i]
 			search.Queries = strings.Split(val["twitter.searches.queries"][i], ",")
-			search.ResultType = &val["twitter.searches.result_type"][i]
+			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrNil(val["twitter.searches.count"][i])
 			s.config.Twitter.Searches[i] = search
 		}
 
-		s.config.DB.Driver = &val["db.driver"][0]
-		s.config.DB.DataSource = &val["db.data_source"][0]
-		s.config.DB.VisionTable = &val["db.vision_table"][0]
+		s.config.DB.Driver = val["db.driver"][0]
+		s.config.DB.DataSource = val["db.data_source"][0]
+		s.config.DB.VisionTable = val["db.vision_table"][0]
 
 		s.config.Interaction.Duration = val["interaction.duration"][0]
 		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) != 0

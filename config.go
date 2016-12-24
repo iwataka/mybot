@@ -63,15 +63,15 @@ type FavoriteConfig struct {
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
 	*SourceConfig
-	Queries    []string `toml:"queries"`
-	ResultType *string  `toml:"result_type"`
+	Queries    []string `toml:"queries,omitempty"`
+	ResultType string   `toml:"result_type,omitempty"`
 	Count      *int     `toml:"count"`
 }
 
 type DBConfig struct {
-	Driver      *string `toml:"driver"`
-	DataSource  *string `toml:"data_source"`
-	VisionTable *string `toml:"vision_table"`
+	Driver      string `toml:"driver,omitempty"`
+	DataSource  string `toml:"data_source,omitempty"`
+	VisionTable string `toml:"vision_table,omitempty"`
 }
 
 // InteractionConfig is a configuration for interaction through Twitter direct

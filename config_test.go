@@ -31,8 +31,8 @@ func TestNewMybotConfig(t *testing.T) {
 	if *f.Retweeted != false {
 		t.Fatalf("%v expected but %v found", false, *f.Retweeted)
 	}
-	if *f.Lang != "en" {
-		t.Fatalf("%s expected but %s found", "en", *f.Lang)
+	if f.Lang != "en" {
+		t.Fatalf("%s expected but %s found", "en", f.Lang)
 	}
 	if f.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", f.Vision.Label[0])
