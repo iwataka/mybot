@@ -264,17 +264,17 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.config.DB.VisionTable = val["db.vision_table"][0]
 
 		s.config.Interaction.Duration = val["interaction.duration"][0]
-		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) != 0
+		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.config.Interaction.Users = strings.Split(val["interaction.users"][0], ",")
 		s.config.Interaction.Count = atoiOrNil(val["interaction.count"][0])
 
-		s.config.Log.AllowSelf = len(val["log.allow_self"]) != 0
+		s.config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 		s.config.Log.Users = strings.Split(val["log.users"][0], ",")
 
 		s.config.HTTP.Name = val["http.name"][0]
 		s.config.HTTP.Host = val["http.host"][0]
 		s.config.HTTP.Port = val["http.port"][0]
-		s.config.HTTP.Enabled = len(val["http.enabled"]) != 0
+		s.config.HTTP.Enabled = len(val["http.enabled"]) > 1
 		s.config.HTTP.LogLines = atoiOrNil(val["http.log_lines"][0])
 
 		err = ValidateConfig(s.config)
@@ -483,28 +483,13 @@ func generateTemplate(name, path string) (*template.Template, error) {
 		"convertListToShow": convertListToShow,
 		"checkBoolRef":      checkBoolRef,
 		"derefString":       derefString,
+		"checkbox":          checkbox,
 	}
 
 	return template.
 		New("index").
 		Funcs(funcMap).
 		Parse(string(index) + string(header) + string(navbar))
-}
-
-func convertListToShow(list []string) string {
-	return strings.Join(list, ",")
-}
-
-func checkBoolRef(ref *bool) bool {
-	if ref == nil {
-		return false
-	} else {
-		return *ref
-	}
-}
-
-func derefString(ref *string) string {
-	return *ref
 }
 
 func readFile(path string) ([]byte, error) {

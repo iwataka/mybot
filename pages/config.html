@@ -26,20 +26,10 @@
                             <input type="text" name="twitter.timelines.screen_names" value="{{if $timeline.ScreenNames}}{{$timeline.ScreenNames | convertListToShow}}{{end}}">
                         </td>
                         <td>
-                            {{if $timeline.ExcludeReplies | checkBoolRef}}
-                            <input type="checkbox" name="twitter.timelines.exclude_replies" value="true" checked>
-                            {{else}}
-                            <input type="checkbox" name="twitter.timelines.exclude_replies" value="true">
-                            {{end}}
-                            <input type="hidden" name="twitter.timelines.exclude_replies" value="placeholder">
+                            {{checkbox (checkBoolRef $timeline.ExcludeReplies) "twitter.timelines.exclude_replies"}}
                         </td>
                         <td>
-                            {{if $timeline.IncludeRts | checkBoolRef}}
-                            <input type="checkbox" name="twitter.timelines.include_rts" value="true" checked>
-                            {{else}}
-                            <input type="checkbox" name="twitter.timelines.include_rts" value="true">
-                            {{end}}
-                            <input type="hidden" name="twitter.timelines.include_rts" value="placeholder">
+                            {{checkbox (checkBoolRef $timeline.IncludeRts) "twitter.timelines.include_rts"}}
                         </td>
                         <td>
                             <input type="number" name="twitter.timelines.count" value="{{if $timeline.Count}}{{$timeline.Count}}{{end}}">
@@ -86,34 +76,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{if $timeline.Filter.HasMedia | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.timelines.filter.has_media" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.filter.has_media" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.has_media" value="placeholder">
+                                                {{checkbox (checkBoolRef $timeline.Filter.HasMedia) "twitter.timelines.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{if $timeline.Filter.HasURL | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.timelines.filter.has_url" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.filter.has_url" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.has_url" value="placeholder">
+                                                {{checkbox (checkBoolRef $timeline.Filter.HasURL) "twitter.timelines.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{if $timeline.Filter.Retweeted | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.timelines.filter.retweeted" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.filter.retweeted" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.retweeted" value="placeholder">
+                                                {{checkbox (checkBoolRef $timeline.Filter.Retweeted) "twitter.timelines.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -207,34 +182,19 @@
                                         <tr>
                                             <td>retweet</td>
                                             <td>
-                                                {{if $timeline.Action.Retweet}}
-                                                <input type="checkbox" name="twitter.timelines.action.retweet" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.action.retweet" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.retweet" value="placeholder">
+                                                {{checkbox $timeline.Action.Retweet "twitter.timelines.action.retweet"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>favorite</td>
                                             <td>
-                                                {{if $timeline.Action.Favorite}}
-                                                <input type="checkbox" name="twitter.timelines.action.favorite" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.action.favorite" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.favorite" value="placeholder">
+                                                {{checkbox $timeline.Action.Favorite "twitter.timelines.action.favorite"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>follow</td>
                                             <td>
-                                                {{if $timeline.Action.Follow}}
-                                                <input type="checkbox" name="twitter.timelines.action.follow" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.timelines.action.follow" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.timelines.filter.follow" value="placeholder">
+                                                {{checkbox $timeline.Action.Follow "twitter.timelines.action.follow"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -309,34 +269,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{if $favorite.Filter.HasMedia | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.favorites.filter.has_media" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.filter.has_media" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.has_media" value="placeholder">
+                                                {{checkbox (checkBoolRef $favorite.Filter.HasMedia) "twitter.favorite.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{if $favorite.Filter.HasURL | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.favorites.filter.has_url" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.filter.has_url" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.has_url" value="placeholder">
+                                                {{checkbox (checkBoolRef $favorite.Filter.HasURL) "twitter.favorite.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{if $favorite.Filter.Retweeted | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.favorites.filter.retweeted" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.filter.retweeted" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.retweeted" value="placeholder">
+                                                {{checkbox (checkBoolRef $favorite.Filter.Retweeted) "twitter.favorite.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -430,34 +375,19 @@
                                         <tr>
                                             <td>retweet</td>
                                             <td>
-                                                {{if $favorite.Action.Retweet}}
-                                                <input type="checkbox" name="twitter.favorites.action.retweet" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.action.retweet" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.retweet" value="placeholder">
+                                                {{checkbox $favorite.Action.Retweet "twitter.favorite.action.retweet"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>favorite</td>
                                             <td>
-                                                {{if $favorite.Action.Favorite}}
-                                                <input type="checkbox" name="twitter.favorites.action.favorite" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.action.favorite" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.favorite" value="placeholder">
+                                                {{checkbox $favorite.Action.Favorite "twitter.favorite.action.favorite"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>follow</td>
                                             <td>
-                                                {{if $favorite.Action.Follow}}
-                                                <input type="checkbox" name="twitter.favorites.action.follow" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.favorites.action.follow" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.favorites.filter.follow" value="placeholder">
+                                                {{checkbox $favorite.Action.Follow "twitter.favorite.action.follow"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -554,34 +484,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{if $search.Filter.HasMedia | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.searches.filter.has_media" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.filter.has_media" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.has_media" value="placeholder">
+                                                {{checkbox (checkBoolRef $search.Filter.HasMedia) "twitter.search.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{if $search.Filter.HasURL | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.searches.filter.has_url" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.filter.has_url" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.has_url" value="placeholder">
+                                                {{checkbox (checkBoolRef $search.Filter.HasURL) "twitter.search.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{if $search.Filter.Retweeted | checkBoolRef}}
-                                                <input type="checkbox" name="twitter.searches.filter.retweeted" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.filter.retweeted" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.retweeted" value="placeholder">
+                                                {{checkbox (checkBoolRef $search.Filter.Retweeted) "twitter.search.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -675,34 +590,19 @@
                                         <tr>
                                             <td>retweet</td>
                                             <td>
-                                                {{if $search.Action.Retweet}}
-                                                <input type="checkbox" name="twitter.searches.action.retweet" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.action.retweet" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.retweet" value="placeholder">
+                                                {{checkbox $search.Action.Retweet "twitter.search.action.retweet"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>favorite</td>
                                             <td>
-                                                {{if $search.Action.Favorite}}
-                                                <input type="checkbox" name="twitter.searches.action.favorite" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.action.favorite" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.favorite" value="placeholder">
+                                                {{checkbox $search.Action.Favorite "twitter.search.action.favorite"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>follow</td>
                                             <td>
-                                                {{if $search.Action.Follow}}
-                                                <input type="checkbox" name="twitter.searches.action.follow" value="true" checked>
-                                                {{else}}
-                                                <input type="checkbox" name="twitter.searches.action.follow" value="true">
-                                                {{end}}
-                                                <input type="hidden" name="twitter.searches.filter.follow" value="placeholder">
+                                                {{checkbox $search.Action.Follow "twitter.search.action.follow"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -753,11 +653,7 @@
                     <tr>
                         <td><input type="text" name="interaction.duration" value="{{if .Config.Interaction.Duration}}{{.Config.Interaction.Duration}}{{end}}"></td>
                         <td>
-                            {{if .Config.Interaction.AllowSelf}}
-                            <input type="checkbox" name="interaction.allow_self" value="true" checked>
-                            {{else}}
-                            <input type="checkbox" name="interaction.allow_self" value="true">
-                            {{end}}
+                            {{checkbox .Config.Interaction.AllowSelf "interaction.allow_self"}}
                         </td>
                         <td><input type="text" name="interaction.users" value="{{if .Config.Interaction.Users}}{{.Config.Interaction.Users | convertListToShow}}{{end}}"></td>
                         <td><input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}"></td>
@@ -776,11 +672,7 @@
                 <tbody>
                     <tr>
                         <td>
-                            {{if .Config.Log.AllowSelf}}
-                            <input type="checkbox" name="log.allow_self" value="true" checked>
-                            {{else}}
-                            <input type="checkbox" name="log.allow_self" value="true">
-                            {{end}}
+                            {{checkbox .Config.Log.AllowSelf "log.allow_self"}}
                         </td>
                         <td><input type="text" name="log.users" value="{{if .Config.Log.Users}}{{.Config.Log.Users | convertListToShow}}{{end}}"></td>
                     </tr>
@@ -804,11 +696,7 @@
                         <td><input type="text" name="http.host" value="{{if .Config.HTTP.Host}}{{.Config.HTTP.Host}}{{end}}"></td>
                         <td><input type="number" name="http.port" value="{{if .Config.HTTP.Port}}{{.Config.HTTP.Port}}{{end}}"></td>
                         <td>
-                            {{if .Config.HTTP.Enabled}}
-                            <input type="checkbox" name="http.enabled" value="true" checked>
-                            {{else}}
-                            <input type="checkbox" name="http.enabled" value="true">
-                            {{end}}
+                            {{checkbox .Config.HTTP.Enabled "http.enabled"}}
                         </td>
                         <td><input type="number" name="http.log_lines" value="{{if .Config.HTTP.LogLines}}{{.Config.HTTP.LogLines}}{{end}}"></td>
                     </tr>
