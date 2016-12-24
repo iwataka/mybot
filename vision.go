@@ -50,6 +50,14 @@ type VisionCondition struct {
 	Logo     []string             `toml:"logo"`
 }
 
+func (c *VisionCondition) isEmpty() bool {
+	return (c.Label == nil || len(c.Label) == 0) &&
+		(c.Face == nil || c.Face.isEmpty()) &&
+		(c.Text == nil || len(c.Text) == 0) &&
+		(c.Landmark == nil || len(c.Landmark) == 0) &&
+		(c.Logo == nil || len(c.Logo) == 0)
+}
+
 type VisionFaceCondition struct {
 	AngerLikelihood    string `toml:"anger_likelihood"`
 	BlurredLikelihood  string `toml:"blurred_likelihood"`

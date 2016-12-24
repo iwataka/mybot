@@ -179,7 +179,8 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := account.Filter
-		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
@@ -194,7 +195,8 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := favorite.Filter
-		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
@@ -209,7 +211,8 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := search.Filter
-		if filter.Vision != nil && (filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
