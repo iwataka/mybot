@@ -32,7 +32,7 @@
                             {{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}
                         </td>
                         <td>
-                            <input type="number" name="twitter.timelines.count" value="{{if $timeline.Count}}{{$timeline.Count}}{{end}}">
+                            <input type="number" name="twitter.timelines.count" value="{{$timeline.Count}}">
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{$index}}">
@@ -94,13 +94,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.timelines.filter.favorite_threshold" value="{{if $timeline.Filter.FavoriteThreshold}}{{$timeline.Filter.FavoriteThreshold}}{{end}}">
+                                                <input type="number" name="twitter.timelines.filter.favorite_threshold" value="{{$timeline.Filter.FavoriteThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.timelines.filter.retweeted_threshold" value="{{if $timeline.Filter.RetweetedThreshold}}{{$timeline.Filter.RetweetedThreshold}}{{end}}">
+                                                <input type="number" name="twitter.timelines.filter.retweeted_threshold" value="{{$timeline.Filter.RetweetedThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -228,7 +228,7 @@
                         <td>
                             {{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}
                         </td>
-                        <td><input type="number" name="twitter.favorites.count" value="{{if $favorite.Count}}{{$favorite.Count}}{{end}}"></td>
+                        <td><input type="number" name="twitter.favorites.count" value="{{$favorite.Count}}"></td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{$index}}">
                                 details here
@@ -289,13 +289,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.favorites.filter.favorite_threshold" value="{{if $favorite.Filter.FavoriteThreshold}}{{$favorite.Filter.FavoriteThreshold}}{{end}}">
+                                                <input type="number" name="twitter.favorites.filter.favorite_threshold" value="{{$favorite.Filter.FavoriteThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.favorites.filter.retweeted_threshold" value="{{if $favorite.Filter.RetweetedThreshold}}{{$favorite.Filter.RetweetedThreshold}}{{end}}">
+                                                <input type="number" name="twitter.favorites.filter.retweeted_threshold" value="{{$favorite.Filter.RetweetedThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -427,7 +427,7 @@
                         <td>
                             {{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}
                         </td>
-                        <td><input type="number" name="twitter.searches.count" value="{{if $search.Count}}{{$search.Count}}{{end}}"></td>
+                        <td><input type="number" name="twitter.searches.count" value="{{$search.Count}}"></td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{$index}}">
                                 details here
@@ -488,13 +488,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.searches.filter.favorite_threshold" value="{{if $search.Filter.FavoriteThreshold}}{{$search.Filter.FavoriteThreshold}}{{end}}">
+                                                <input type="number" name="twitter.searches.filter.favorite_threshold" value="{{$search.Filter.FavoriteThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input type="number" name="twitter.searches.filter.retweeted_threshold" value="{{if $search.Filter.RetweetedThreshold}}{{$search.Filter.RetweetedThreshold}}{{end}}">
+                                                <input type="number" name="twitter.searches.filter.retweeted_threshold" value="{{$search.Filter.RetweetedThreshold}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -529,7 +529,7 @@
                                         <tr>
                                             <td>face blurred likelihood</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.vision.face.blurred_likelihood" value="{{if $search.Filter.Vision.Face}}{{$search.Filter.Vision.Face.BlurredLikelihood}}{{end}}">
+                                                <input type="text" name="twitter.searches.filter.vision.face.blurred_likelihood" value="{{$search.Filter.Vision.Face.BlurredLikelihood}}">
                                             </td>
                                         </tr>
                                         <tr>
@@ -653,7 +653,7 @@
                             {{listTextbox .Config.Interaction.Users "interaction.users"}}
                         </td>
                         <td>
-                            <input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}">
+                            <input type="number" name="interaction.count" value="{{.Config.Interaction.Count}}">
                         </td>
                     </tr>
                 </tbody>
@@ -705,7 +705,7 @@
                             {{checkbox .Config.HTTP.Enabled "http.enabled"}}
                         </td>
                         <td>
-                            <input type="number" name="http.log_lines" value="{{if .Config.HTTP.LogLines}}{{.Config.HTTP.LogLines}}{{end}}">
+                            <input type="number" name="http.log_lines" value="{{.Config.HTTP.LogLines}}">
                         </td>
                     </tr>
                 </tbody>

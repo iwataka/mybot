@@ -50,14 +50,14 @@ type TimelineConfig struct {
 	ScreenNames    []string `toml:"screen_names"`
 	ExcludeReplies *bool    `toml:"exclude_replies"`
 	IncludeRts     *bool    `toml:"include_rts"`
-	Count          *int     `toml:"count"`
+	Count          int      `toml:"count,omitempty"`
 }
 
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
 	ScreenNames []string `toml:"screen_names"`
-	Count       *int     `toml:"count"`
+	Count       int      `toml:"count,omitempty"`
 }
 
 // SearchConfig is a configuration for Twitter searches
@@ -65,7 +65,7 @@ type SearchConfig struct {
 	*SourceConfig
 	Queries    []string `toml:"queries,omitempty"`
 	ResultType string   `toml:"result_type,omitempty"`
-	Count      *int     `toml:"count"`
+	Count      int      `toml:"count,omitempty"`
 }
 
 type DBConfig struct {
@@ -80,7 +80,7 @@ type InteractionConfig struct {
 	Duration  string   `toml:"duration"`
 	AllowSelf bool     `toml:"allow_self"`
 	Users     []string `toml:"users"`
-	Count     *int     `toml:"count"`
+	Count     int      `toml:"count,omitempty"`
 }
 
 // LogConfig is a configuration for logging
@@ -189,7 +189,7 @@ func ValidateConfig(config *MybotConfig) error {
 		}
 		filter := account.Filter
 		if filter.Vision != nil && !filter.Vision.isEmpty() &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
@@ -205,7 +205,7 @@ func ValidateConfig(config *MybotConfig) error {
 		}
 		filter := favorite.Filter
 		if filter.Vision != nil && !filter.Vision.isEmpty() &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}
@@ -221,7 +221,7 @@ func ValidateConfig(config *MybotConfig) error {
 		}
 		filter := search.Filter
 		if filter.Vision != nil && !filter.Vision.isEmpty() &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
 			msg := "Don't use Vision API and retweeted/favorite threshold"
 			return errors.New(msg)
 		}

@@ -47,8 +47,8 @@ func TestNewMybotConfig(t *testing.T) {
 	if s.Queries[1] != "bar" {
 		t.Fatalf("%s expected but %s found", "bar", s.Queries[1])
 	}
-	if *s.Filter.RetweetedThreshold != 100 {
-		t.Fatalf("%d expected but %d found", 100, *s.Filter.RetweetedThreshold)
+	if s.Filter.RetweetedThreshold != 100 {
+		t.Fatalf("%d expected but %d found", 100, s.Filter.RetweetedThreshold)
 	}
 	if s.Action.Retweet != true {
 		t.Fatalf("%v expected but %v found", true, s.Action.Retweet)

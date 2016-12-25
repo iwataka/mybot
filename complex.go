@@ -14,8 +14,8 @@ type TweetFilterConfig struct {
 	HasMedia           *bool            `toml:"has_media"`
 	HasURL             *bool            `toml:"has_url"`
 	Retweeted          *bool            `toml:"retweeted"`
-	FavoriteThreshold  *int             `toml:"favorite_threshold"`
-	RetweetedThreshold *int             `toml:"retweeted_threshold"`
+	FavoriteThreshold  int              `toml:"favorite_threshold"`
+	RetweetedThreshold int              `toml:"retweeted_threshold"`
 	Lang               string           `toml:"lang"`
 	Vision             *VisionCondition `toml:"vision"`
 	visionAPI          *VisionAPI
@@ -56,10 +56,10 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 	if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {
 		return false, nil
 	}
-	if c.FavoriteThreshold != nil && *c.FavoriteThreshold > t.FavoriteCount {
+	if c.FavoriteThreshold > 0 && c.FavoriteThreshold > t.FavoriteCount {
 		return false, nil
 	}
-	if c.RetweetedThreshold != nil && *c.RetweetedThreshold > t.RetweetCount {
+	if c.RetweetedThreshold > 0 && c.RetweetedThreshold > t.RetweetCount {
 		return false, nil
 	}
 	if len(c.Lang) != 0 && c.Lang != t.Lang {
@@ -87,5 +87,5 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 }
 
 func (c *TweetFilterConfig) shouldRepeat() bool {
-	return c.RetweetedThreshold != nil || c.FavoriteThreshold != nil
+	return c.RetweetedThreshold > 0 || c.FavoriteThreshold > 0
 }

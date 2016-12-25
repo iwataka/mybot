@@ -19,7 +19,7 @@ type HTTPServer struct {
 	Host       string       `toml:"host"`
 	Port       string       `toml:"port"`
 	Enabled    bool         `toml:"enabled"`
-	LogLines   *int         `toml:log_lines`
+	LogLines   int          `toml:"log_lines,omitempty"`
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
@@ -132,10 +132,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		log := s.Logger.ReadString()
 		lines := strings.Split(log, "\n")
-		lineNum := 10
-		if s.LogLines != nil {
-			lineNum = *s.LogLines
-		}
+		lineNum := s.LogLines
 		head := len(lines) - lineNum
 		if head < 0 {
 			head = 0
@@ -213,12 +210,12 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 	}
 }
 
-func atoiOrNil(str string) *int {
+func atoiOrDefault(str string, def int) int {
 	i, err := strconv.Atoi(str)
 	if err != nil {
-		return nil
+		return def
 	} else {
-		return &i
+		return i
 	}
 }
 
@@ -236,14 +233,14 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.ScreenNames = strings.Split(val["twitter.timelines.screen_names"][i], ",")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
-			timeline.Count = atoiOrNil(val["twitter.timelines.count"][i])
+			timeline.Count = atoiOrDefault(val["twitter.timelines.count"][i], timeline.Count)
 			s.config.Twitter.Timelines[i] = timeline
 		}
 
 		for i, _ := range s.config.Twitter.Favorites {
 			favorite := s.config.Twitter.Favorites[i]
 			favorite.ScreenNames = strings.Split(val["twitter.favorites.screen_names"][i], ",")
-			favorite.Count = atoiOrNil(val["twitter.favorites.count"][i])
+			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
 			s.config.Twitter.Favorites[i] = favorite
 		}
 
@@ -251,7 +248,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search := s.config.Twitter.Searches[i]
 			search.Queries = strings.Split(val["twitter.searches.queries"][i], ",")
 			search.ResultType = val["twitter.searches.result_type"][i]
-			search.Count = atoiOrNil(val["twitter.searches.count"][i])
+			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
 			s.config.Twitter.Searches[i] = search
 		}
 
@@ -262,7 +259,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.config.Interaction.Duration = val["interaction.duration"][0]
 		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.config.Interaction.Users = strings.Split(val["interaction.users"][0], ",")
-		s.config.Interaction.Count = atoiOrNil(val["interaction.count"][0])
+		s.config.Interaction.Count = atoiOrDefault(val["interaction.count"][0], s.config.Interaction.Count)
 
 		s.config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 		s.config.Log.Users = strings.Split(val["log.users"][0], ",")
@@ -271,7 +268,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.config.HTTP.Host = val["http.host"][0]
 		s.config.HTTP.Port = val["http.port"][0]
 		s.config.HTTP.Enabled = len(val["http.enabled"]) > 1
-		s.config.HTTP.LogLines = atoiOrNil(val["http.log_lines"][0])
+		s.config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.config.HTTP.LogLines)
 
 		err = ValidateConfig(s.config)
 		if err != nil {
