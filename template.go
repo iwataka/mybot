@@ -73,3 +73,15 @@ func listTextbox(list []string, name string) template.HTML {
 	result := fmt.Sprintf(format, name, str)
 	return template.HTML(result)
 }
+
+func getListTextboxValue(val map[string][]string, index int, name string) []string {
+	v := val[name][index]
+	result := []string{}
+	for _, s := range strings.Split(v, ",") {
+		trimmed := strings.TrimSpace(s)
+		if len(trimmed) != 0 {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}

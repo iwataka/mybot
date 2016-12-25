@@ -43,11 +43,11 @@ func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionA
 // VisionCondition is a condition to check whether images match or not by using
 // Google Vision API.
 type VisionCondition struct {
-	Label    []string             `toml:"label"`
-	Face     *VisionFaceCondition `toml:"face"`
-	Text     []string             `toml:"text"`
-	Landmark []string             `toml:"landmark"`
-	Logo     []string             `toml:"logo"`
+	Label    []string             `toml:"label,omitempty"`
+	Face     *VisionFaceCondition `toml:"face,omitempty"`
+	Text     []string             `toml:"text,omitempty"`
+	Landmark []string             `toml:"landmark,omitempty"`
+	Logo     []string             `toml:"logo,omitempty"`
 }
 
 func (c *VisionCondition) isEmpty() bool {
@@ -59,10 +59,10 @@ func (c *VisionCondition) isEmpty() bool {
 }
 
 type VisionFaceCondition struct {
-	AngerLikelihood    string `toml:"anger_likelihood"`
-	BlurredLikelihood  string `toml:"blurred_likelihood"`
-	HeadwearLikelihood string `toml:"headwear_likelihood"`
-	JoyLikelihood      string `toml:"joy_likelihood"`
+	AngerLikelihood    string `toml:"anger_likelihood,omitempty"`
+	BlurredLikelihood  string `toml:"blurred_likelihood,omitempty"`
+	HeadwearLikelihood string `toml:"headwear_likelihood,omitempty"`
+	JoyLikelihood      string `toml:"joy_likelihood,omitempty"`
 }
 
 func (c *VisionFaceCondition) isEmpty() bool {

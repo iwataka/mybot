@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -36,9 +37,9 @@ type SourceConfig struct {
 
 // TwitterConfig is a configuration for Twitter
 type TwitterConfig struct {
-	Timelines    []TimelineConfig `toml:"timelines"`
-	Favorites    []FavoriteConfig `toml:"favorites"`
-	Searches     []SearchConfig   `toml:"searches"`
+	Timelines    []TimelineConfig `toml:"timelines,omitempty"`
+	Favorites    []FavoriteConfig `toml:"favorites,omitempty"`
+	Searches     []SearchConfig   `toml:"searches,omitempty"`
 	Notification *Notification    `toml:"notification"`
 	Duration     string           `toml:"duration"`
 	Debug        *bool            `toml:"debug"`
@@ -50,22 +51,22 @@ type TimelineConfig struct {
 	ScreenNames    []string `toml:"screen_names"`
 	ExcludeReplies *bool    `toml:"exclude_replies"`
 	IncludeRts     *bool    `toml:"include_rts"`
-	Count          int      `toml:"count,omitempty"`
+	Count          int      `toml:"count"`
 }
 
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
 	ScreenNames []string `toml:"screen_names"`
-	Count       int      `toml:"count,omitempty"`
+	Count       int      `toml:"count"`
 }
 
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
 	*SourceConfig
-	Queries    []string `toml:"queries,omitempty"`
+	Queries    []string `toml:"queries"`
 	ResultType string   `toml:"result_type,omitempty"`
-	Count      int      `toml:"count,omitempty"`
+	Count      int      `toml:"count"`
 }
 
 type DBConfig struct {
@@ -79,14 +80,14 @@ type DBConfig struct {
 type InteractionConfig struct {
 	Duration  string   `toml:"duration"`
 	AllowSelf bool     `toml:"allow_self"`
-	Users     []string `toml:"users"`
-	Count     int      `toml:"count,omitempty"`
+	Users     []string `toml:"users,omitempty"`
+	Count     int      `toml:"count"`
 }
 
 // LogConfig is a configuration for logging
 type LogConfig struct {
 	AllowSelf bool     `toml:"allow_self"`
-	Users     []string `toml:"users"`
+	Users     []string `toml:"users,omitempty"`
 }
 
 // GetScreenNames returns all screen names in the configuration
@@ -188,9 +189,13 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := account.Filter
-		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
 			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			msg := "Don't use Vision API and retweeted/favorite threshold"
+			bytes, _ := json.Marshal(account)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
 			return errors.New(msg)
 		}
 	}
@@ -204,9 +209,13 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := favorite.Filter
-		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
 			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			msg := "Don't use Vision API and retweeted/favorite threshold"
+			bytes, _ := json.Marshal(favorite)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
 			return errors.New(msg)
 		}
 	}
@@ -220,9 +229,13 @@ func ValidateConfig(config *MybotConfig) error {
 			return errors.New(msg)
 		}
 		filter := search.Filter
-		if filter.Vision != nil && !filter.Vision.isEmpty() &&
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
 			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			msg := "Don't use Vision API and retweeted/favorite threshold"
+			bytes, _ := json.Marshal(search)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
 			return errors.New(msg)
 		}
 	}

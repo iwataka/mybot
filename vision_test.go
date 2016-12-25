@@ -20,6 +20,19 @@ func TestGetFeatures(t *testing.T) {
 	}
 }
 
+func TestIsEmpty(t *testing.T) {
+	cond := &VisionCondition{
+		Label: []string{},
+		Face: &VisionFaceCondition{
+			BlurredLikelihood: "",
+		},
+		Text: []string{},
+	}
+	if !cond.isEmpty() {
+		t.Fatalf("%v is expected to be empty but not", cond)
+	}
+}
+
 func TestMatchEntity(t *testing.T) {
 	as := []*vision.EntityAnnotation{
 		&vision.EntityAnnotation{

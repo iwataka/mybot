@@ -228,28 +228,97 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		val := r.MultipartForm.Value
 
+		actionRetweetCounter := checkboxCounter{"twitter.timelines.action.retweet", 0}
+		actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.favorite", 0}
+		actionFollowCounter := checkboxCounter{"twitter.timelines.action.follow", 0}
 		for i, _ := range s.config.Twitter.Timelines {
 			timeline := s.config.Twitter.Timelines[i]
-			timeline.ScreenNames = strings.Split(val["twitter.timelines.screen_names"][i], ",")
+			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
 			timeline.Count = atoiOrDefault(val["twitter.timelines.count"][i], timeline.Count)
+			timeline.Filter.Patterns = getListTextboxValue(val, i, "twitter.timelines.filter.patterns")
+			timeline.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.timelines.filter.url_patterns")
+			timeline.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_media")
+			timeline.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_url")
+			timeline.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.timelines.filter.retweeted")
+			timeline.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.timelines.filter.favorite_threshold"][i], timeline.Filter.FavoriteThreshold)
+			timeline.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.timelines.filter.retweeted_threshold"][i], timeline.Filter.RetweetedThreshold)
+			timeline.Filter.Lang = val["twitter.timelines.filter.lang"][i]
+			timeline.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.timelines.filter.vision.label")
+			timeline.Filter.Vision.Face.AngerLikelihood = val["twitter.timelines.filter.vision.face.anger_likelihood"][i]
+			timeline.Filter.Vision.Face.BlurredLikelihood = val["twitter.timelines.filter.vision.face.blurred_likelihood"][i]
+			timeline.Filter.Vision.Face.HeadwearLikelihood = val["twitter.timelines.filter.vision.face.headwear_likelihood"][i]
+			timeline.Filter.Vision.Face.JoyLikelihood = val["twitter.timelines.filter.vision.face.joy_likelihood"][i]
+			timeline.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.timelines.filter.vision.text")
+			timeline.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.timelines.filter.vision.landmark")
+			timeline.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.timelines.filter.vision.logo")
+			timeline.Action.Retweet = actionRetweetCounter.returnValue(i, val)
+			timeline.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
+			timeline.Action.Follow = actionFollowCounter.returnValue(i, val)
+			timeline.Action.Collections = getListTextboxValue(val, i, "twitter.timelines.action.collections")
 			s.config.Twitter.Timelines[i] = timeline
 		}
 
+		actionRetweetCounter = checkboxCounter{"twitter.favorites.action.retweet", 0}
+		actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.favorite", 0}
+		actionFollowCounter = checkboxCounter{"twitter.favorites.action.follow", 0}
 		for i, _ := range s.config.Twitter.Favorites {
 			favorite := s.config.Twitter.Favorites[i]
-			favorite.ScreenNames = strings.Split(val["twitter.favorites.screen_names"][i], ",")
+			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
 			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
 			s.config.Twitter.Favorites[i] = favorite
+			favorite.Filter.Patterns = getListTextboxValue(val, i, "twitter.favorites.filter.patterns")
+			favorite.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.favorites.filter.url_patterns")
+			favorite.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
+			favorite.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_url")
+			favorite.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.favorites.filter.retweeted")
+			favorite.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.favorites.filter.favorite_threshold"][i], favorite.Filter.FavoriteThreshold)
+			favorite.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.favorites.filter.retweeted_threshold"][i], favorite.Filter.RetweetedThreshold)
+			favorite.Filter.Lang = val["twitter.favorites.filter.lang"][i]
+			favorite.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.favorites.filter.vision.label")
+			favorite.Filter.Vision.Face.AngerLikelihood = val["twitter.favorites.filter.vision.face.anger_likelihood"][i]
+			favorite.Filter.Vision.Face.BlurredLikelihood = val["twitter.favorites.filter.vision.face.blurred_likelihood"][i]
+			favorite.Filter.Vision.Face.HeadwearLikelihood = val["twitter.favorites.filter.vision.face.headwear_likelihood"][i]
+			favorite.Filter.Vision.Face.JoyLikelihood = val["twitter.favorites.filter.vision.face.joy_likelihood"][i]
+			favorite.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.favorites.filter.vision.text")
+			favorite.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.favorites.filter.vision.landmark")
+			favorite.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.favorites.filter.vision.logo")
+			favorite.Action.Retweet = actionRetweetCounter.returnValue(i, val)
+			favorite.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
+			favorite.Action.Follow = actionFollowCounter.returnValue(i, val)
+			favorite.Action.Collections = getListTextboxValue(val, i, "twitter.favorites.action.collections")
 		}
 
+		actionRetweetCounter = checkboxCounter{"twitter.searches.action.retweet", 0}
+		actionFavoriteCounter = checkboxCounter{"twitter.searches.action.favorite", 0}
+		actionFollowCounter = checkboxCounter{"twitter.searches.action.follow", 0}
 		for i, _ := range s.config.Twitter.Searches {
 			search := s.config.Twitter.Searches[i]
-			search.Queries = strings.Split(val["twitter.searches.queries"][i], ",")
+			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
 			s.config.Twitter.Searches[i] = search
+			search.Filter.Patterns = getListTextboxValue(val, i, "twitter.searches.filter.patterns")
+			search.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.searches.filter.url_patterns")
+			search.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
+			search.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_url")
+			search.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.searches.filter.retweeted")
+			search.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.searches.filter.favorite_threshold"][i], search.Filter.FavoriteThreshold)
+			search.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.searches.filter.retweeted_threshold"][i], search.Filter.RetweetedThreshold)
+			search.Filter.Lang = val["twitter.searches.filter.lang"][i]
+			search.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.searches.filter.vision.label")
+			search.Filter.Vision.Face.AngerLikelihood = val["twitter.searches.filter.vision.face.anger_likelihood"][i]
+			search.Filter.Vision.Face.BlurredLikelihood = val["twitter.searches.filter.vision.face.blurred_likelihood"][i]
+			search.Filter.Vision.Face.HeadwearLikelihood = val["twitter.searches.filter.vision.face.headwear_likelihood"][i]
+			search.Filter.Vision.Face.JoyLikelihood = val["twitter.searches.filter.vision.face.joy_likelihood"][i]
+			search.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.searches.filter.vision.text")
+			search.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.searches.filter.vision.landmark")
+			search.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.searches.filter.vision.logo")
+			search.Action.Retweet = actionRetweetCounter.returnValue(i, val)
+			search.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
+			search.Action.Follow = actionFollowCounter.returnValue(i, val)
+			search.Action.Collections = getListTextboxValue(val, i, "twitter.searches.action.collections")
 		}
 
 		s.config.DB.Driver = val["db.driver"][0]
@@ -258,11 +327,11 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 
 		s.config.Interaction.Duration = val["interaction.duration"][0]
 		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
-		s.config.Interaction.Users = strings.Split(val["interaction.users"][0], ",")
+		s.config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
 		s.config.Interaction.Count = atoiOrDefault(val["interaction.count"][0], s.config.Interaction.Count)
 
 		s.config.Log.AllowSelf = len(val["log.allow_self"]) > 1
-		s.config.Log.Users = strings.Split(val["log.users"][0], ",")
+		s.config.Log.Users = getListTextboxValue(val, 0, "log.users")
 
 		s.config.HTTP.Name = val["http.name"][0]
 		s.config.HTTP.Host = val["http.host"][0]
