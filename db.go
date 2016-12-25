@@ -10,7 +10,7 @@ var (
 	db *sql.DB
 )
 
-func (c *DBConfig) initDB() error {
+func initDB(c *DBConfig) error {
 	if c == nil {
 		return nil
 	}
@@ -29,8 +29,8 @@ func (c *DBConfig) initDB() error {
 	return nil
 }
 
-func (c *DBConfig) insertVisionDBColumn(imageURL, result string) error {
-	err := c.initDB()
+func insertVisionDBColumn(c *DBConfig, imageURL, result string) error {
+	err := initDB(c)
 	if err != nil {
 		return err
 	}
@@ -54,8 +54,8 @@ type VisionDBColumn struct {
 	Result   string
 }
 
-func (c *DBConfig) selectVisionDBColumn(num int) ([]*VisionDBColumn, error) {
-	err := c.initDB()
+func selectVisionDBColumn(c *DBConfig, num int) ([]*VisionDBColumn, error) {
+	err := initDB(c)
 	if err != nil {
 		return nil, err
 	}

@@ -171,7 +171,7 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 			match = match && m
 		}
 		if match {
-			err = a.config.DB.insertVisionDBColumn(urls[i], string(result))
+			err = insertVisionDBColumn(a.config.DB, urls[i], string(result))
 			if err != nil {
 				return false, err
 			}
