@@ -138,17 +138,26 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if t.Filter.Vision == nil {
 			t.Filter.Vision = new(VisionCondition)
 		}
+		if t.Filter.Vision.Face == nil {
+			t.Filter.Vision.Face = new(VisionFaceCondition)
+		}
 		t.Filter.visionAPI = vision
 	}
 	for _, f := range c.Twitter.Favorites {
 		if f.Filter.Vision == nil {
 			f.Filter.Vision = new(VisionCondition)
 		}
+		if f.Filter.Vision.Face == nil {
+			f.Filter.Vision.Face = new(VisionFaceCondition)
+		}
 		f.Filter.visionAPI = vision
 	}
 	for _, s := range c.Twitter.Searches {
 		if s.Filter.Vision == nil {
 			s.Filter.Vision = new(VisionCondition)
+		}
+		if s.Filter.Vision.Face == nil {
+			s.Filter.Vision.Face = new(VisionFaceCondition)
 		}
 		s.Filter.visionAPI = vision
 	}
