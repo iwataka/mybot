@@ -204,14 +204,12 @@ type checkboxCounter struct {
 	extraCount int
 }
 
-func (c *checkboxCounter) returnValue(index int, val map[string][]string) *bool {
+func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 	if val[c.name][index+c.extraCount] == "true" {
 		c.extraCount++
-		b := true
-		return &b
+		return true
 	} else {
-		b := false
-		return &b
+		return false
 	}
 }
 
@@ -233,13 +231,11 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		val := r.MultipartForm.Value
 
-		excludeRepliesCounter := checkboxCounter{"twitter.timelines.exclude_replies", 0}
-		includeRtsCounter := checkboxCounter{"twitter.timelines.include_rts", 0}
 		for i, _ := range s.config.Twitter.Timelines {
 			timeline := s.config.Twitter.Timelines[i]
 			timeline.ScreenNames = strings.Split(val["twitter.timelines.screen_names"][i], ",")
-			timeline.ExcludeReplies = excludeRepliesCounter.returnValue(i, val)
-			timeline.IncludeRts = includeRtsCounter.returnValue(i, val)
+			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
+			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
 			timeline.Count = atoiOrNil(val["twitter.timelines.count"][i])
 			s.config.Twitter.Timelines[i] = timeline
 		}
@@ -481,9 +477,9 @@ func generateTemplate(name, path string) (*template.Template, error) {
 
 	funcMap := template.FuncMap{
 		"convertListToShow": convertListToShow,
-		"checkBoolRef":      checkBoolRef,
 		"derefString":       derefString,
 		"checkbox":          checkbox,
+		"boolSelectbox":     boolSelectbox,
 	}
 
 	return template.

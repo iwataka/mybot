@@ -26,10 +26,10 @@
                             <input type="text" name="twitter.timelines.screen_names" value="{{if $timeline.ScreenNames}}{{$timeline.ScreenNames | convertListToShow}}{{end}}">
                         </td>
                         <td>
-                            {{checkbox (checkBoolRef $timeline.ExcludeReplies) "twitter.timelines.exclude_replies"}}
+                            {{boolSelectbox $timeline.ExcludeReplies "twitter.timelines.exclude_replies"}}
                         </td>
                         <td>
-                            {{checkbox (checkBoolRef $timeline.IncludeRts) "twitter.timelines.include_rts"}}
+                            {{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}
                         </td>
                         <td>
                             <input type="number" name="twitter.timelines.count" value="{{if $timeline.Count}}{{$timeline.Count}}{{end}}">
@@ -76,19 +76,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $timeline.Filter.HasMedia) "twitter.timelines.filter.has_media"}}
+                                                {{boolSelectbox $timeline.Filter.HasMedia "twitter.timelines.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $timeline.Filter.HasURL) "twitter.timelines.filter.has_url"}}
+                                                {{boolSelectbox $timeline.Filter.HasURL "twitter.timelines.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $timeline.Filter.Retweeted) "twitter.timelines.filter.retweeted"}}
+                                                {{boolSelectbox $timeline.Filter.Retweeted "twitter.timelines.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -269,19 +269,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $favorite.Filter.HasMedia) "twitter.favorite.filter.has_media"}}
+                                                {{boolSelectbox $favorite.Filter.HasMedia "twitter.favorite.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $favorite.Filter.HasURL) "twitter.favorite.filter.has_url"}}
+                                                {{boolSelectbox $favorite.Filter.HasURL "twitter.favorite.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $favorite.Filter.Retweeted) "twitter.favorite.filter.retweeted"}}
+                                                {{boolSelectbox $favorite.Filter.Retweeted "twitter.favorite.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -484,19 +484,19 @@
                                         <tr>
                                             <td>has media</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $search.Filter.HasMedia) "twitter.search.filter.has_media"}}
+                                                {{boolSelectbox $search.Filter.HasMedia "twitter.search.filter.has_media"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>has url</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $search.Filter.HasURL) "twitter.search.filter.has_url"}}
+                                                {{boolSelectbox $search.Filter.HasURL "twitter.search.filter.has_url"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted</td>
                                             <td>
-                                                {{checkbox (checkBoolRef $search.Filter.Retweeted) "twitter.search.filter.retweeted"}}
+                                                {{boolSelectbox $search.Filter.Retweeted "twitter.search.filter.retweeted"}}
                                             </td>
                                         </tr>
                                         <tr>
