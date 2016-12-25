@@ -421,25 +421,7 @@
                     <tr>
                         <td><input type="text" name="twitter.searches.queries" value="{{if $search.Queries}}{{$search.Queries | convertListToShow}}{{end}}"></td>
                         <td>
-                            <select name="twitter.searches.result_type">
-                                {{if not $search.ResultType }}
-                                <option value="recent" selected>recent</option>
-                                <option value="mixed">mixed</option>
-                                <option value="popular">popular</option>
-                                {{else if eq (derefString $search.ResultType) "recent"}}
-                                <option value="recent" selected>recent</option>
-                                <option value="mixed">mixed</option>
-                                <option value="popular">popular</option>
-                                {{else if eq (derefString $search.ResultType) "mixed"}}
-                                <option value="recent">recent</option>
-                                <option value="mixed" selected>mixed</option>
-                                <option value="popular">popular</option>
-                                {{else if eq (derefString $search.ResultType) "popular"}}
-                                <option value="recent">recent</option>
-                                <option value="mixed">mixed</option>
-                                <option value="popular" selected>popular</option>
-                                {{end}}
-                            </select>
+                            {{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}
                         </td>
                         <td><input type="number" name="twitter.searches.count" value="{{if $search.Count}}{{$search.Count}}{{end}}"></td>
                         <td>

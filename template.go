@@ -15,10 +15,6 @@ func convertListToShow(list []string) string {
 	return strings.Join(list, ",")
 }
 
-func derefString(ref *string) string {
-	return *ref
-}
-
 func checkbox(flag bool, name string) template.HTML {
 	result := ""
 	typeExp := `type="checkbox"`
@@ -57,4 +53,20 @@ func getBoolSelectboxValue(val map[string][]string, index int, name string) *boo
 	} else {
 		return &flag
 	}
+}
+
+func selectbox(str, name string, opts ...string) template.HTML {
+	start := fmt.Sprintf(`<select name="%s">`, name)
+	end := `</select>`
+	result := start
+	format := `<option value="%s" %s>%s</option>`
+	for _, opt := range opts {
+		if opt == str {
+			result += fmt.Sprintf(format, opt, "selected", opt)
+		} else {
+			result += fmt.Sprintf(format, opt, "", opt)
+		}
+	}
+	result += end
+	return template.HTML(result)
 }

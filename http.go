@@ -477,9 +477,9 @@ func generateTemplate(name, path string) (*template.Template, error) {
 
 	funcMap := template.FuncMap{
 		"convertListToShow": convertListToShow,
-		"derefString":       derefString,
 		"checkbox":          checkbox,
 		"boolSelectbox":     boolSelectbox,
+		"selectbox":         selectbox,
 	}
 
 	return template.
