@@ -9,14 +9,14 @@ import (
 
 // TweetFilterConfig is a configuration to filter out tweets
 type TweetFilterConfig struct {
-	Patterns           []string         `toml:"patterns"`
-	URLPatterns        []string         `toml:"url_patterns"`
+	Patterns           []string         `toml:"patterns,omitempty"`
+	URLPatterns        []string         `toml:"url_patterns,omitempty"`
 	HasMedia           *bool            `toml:"has_media"`
 	HasURL             *bool            `toml:"has_url"`
 	Retweeted          *bool            `toml:"retweeted"`
 	FavoriteThreshold  int              `toml:"favorite_threshold"`
 	RetweetedThreshold int              `toml:"retweeted_threshold"`
-	Lang               string           `toml:"lang"`
+	Lang               string           `toml:"lang,omitempty"`
 	Vision             *VisionCondition `toml:"vision"`
 	visionAPI          *VisionAPI
 }

@@ -20,6 +20,7 @@ var (
 	twitterAPI *TwitterAPI
 	githubAPI  *GitHubAPI
 	visionAPI  *VisionAPI
+	server     *MybotServer
 	config     *MybotConfig
 	cache      *MybotCache
 	logger     *Logger
@@ -165,6 +166,15 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	status = &MybotStatus{}
+
+	server = &MybotServer{
+		Logger:     logger,
+		TwitterAPI: twitterAPI,
+		VisionAPI:  visionAPI,
+		cache:      cache,
+		config:     config,
+		status:     status,
+	}
 
 	ctxt = c
 
@@ -330,21 +340,13 @@ func httpServer(c *cli.Context) {
 	}
 	cert := c.String("cert")
 	key := c.String("key")
-	err := config.HTTP.Init(user, password, cert, key)
+	err := server.Init(user, password, cert, key)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func serve(c *cli.Context) error {
-	s := config.HTTP
-	s.Logger = logger
-	s.TwitterAPI = twitterAPI
-	s.VisionAPI = visionAPI
-	s.cache = cache
-	s.config = config
-	s.status = status
-
 	go twitterListenMyself(c)
 	go twitterListenUsers(c)
 	go githubPeriodically(c)

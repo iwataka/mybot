@@ -19,7 +19,7 @@ type MybotConfig struct {
 	DB          *DBConfig          `toml:"db"`
 	Interaction *InteractionConfig `toml:"interaction"`
 	Log         *LogConfig         `toml:"log"`
-	HTTP        *HTTPServer        `toml:"http"`
+	HTTP        *HTTPConfig        `toml:"http"`
 	source      string             `toml:"-"`
 }
 
@@ -90,6 +90,14 @@ type LogConfig struct {
 	Users     []string `toml:"users,omitempty"`
 }
 
+type HTTPConfig struct {
+	Name     string `toml:"name"`
+	Host     string `toml:"host"`
+	Port     string `toml:"port"`
+	Enabled  bool   `toml:"enabled"`
+	LogLines int    `toml:"log_lines,omitempty"`
+}
+
 // GetScreenNames returns all screen names in the configuration
 func (tc *TwitterConfig) GetScreenNames() []string {
 	result := []string{}
@@ -115,7 +123,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 			Searches:  []SearchConfig{},
 			Duration:  "1h",
 		},
-		HTTP: &HTTPServer{
+		HTTP: &HTTPConfig{
 			Host: "127.0.0.1",
 			Port: "8080",
 		},

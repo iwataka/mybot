@@ -12,14 +12,9 @@ import (
 	"strings"
 )
 
-// HTTPServer contains values for providing various pieces of information, such
+// MybotServer contains values for providing various pieces of information, such
 // as the error log and Google Vision API result, via HTTP to users.
-type HTTPServer struct {
-	Name       string       `toml:"name"`
-	Host       string       `toml:"host"`
-	Port       string       `toml:"port"`
-	Enabled    bool         `toml:"enabled"`
-	LogLines   int          `toml:"log_lines,omitempty"`
+type MybotServer struct {
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
@@ -27,8 +22,6 @@ type HTTPServer struct {
 	config     *MybotConfig `toml:"-"`
 	status     *MybotStatus `toml:"-"`
 }
-
-type httpHandler func(http.ResponseWriter, *http.Request)
 
 func checkAuth(r *http.Request, user, password string) bool {
 	u, p, ok := r.BasicAuth()
@@ -38,7 +31,7 @@ func checkAuth(r *http.Request, user, password string) bool {
 	return u == user && p == password
 }
 
-func wrapHandlerWithBasicAuth(f httpHandler, user, password string) httpHandler {
+func wrapHandlerWithBasicAuth(f http.HandlerFunc, user, password string) http.HandlerFunc {
 	if len(user) != 0 && len(password) != 0 {
 		return func(w http.ResponseWriter, r *http.Request) {
 			if !checkAuth(r, user, password) {
@@ -54,9 +47,9 @@ func wrapHandlerWithBasicAuth(f httpHandler, user, password string) httpHandler 
 	}
 }
 
-// Init initializes HTTP server if HTTPServer#Enabled is true.
-func (s *HTTPServer) Init(user, password, cert, key string) error {
-	if s.Enabled {
+// Init initializes HTTP server if MybotServer#Enabled is true.
+func (s *MybotServer) Init(user, password, cert, key string) error {
+	if s.config.HTTP.Enabled {
 		http.HandleFunc(
 			"/",
 			wrapHandlerWithBasicAuth(s.handler, user, password),
@@ -105,7 +98,7 @@ func (s *HTTPServer) Init(user, password, cert, key string) error {
 		)
 
 		var err error
-		addr := s.Host + ":" + s.Port
+		addr := s.config.HTTP.Host + ":" + s.config.HTTP.Port
 		_, certErr := os.Stat(cert)
 		_, keyErr := os.Stat(key)
 		if certErr == nil && keyErr == nil {
@@ -122,7 +115,7 @@ func (s *HTTPServer) Init(user, password, cert, key string) error {
 	return nil
 }
 
-func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		tmpl, err := generateTemplate("index", "pages/index.html")
 		if err != nil {
@@ -132,7 +125,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		log := s.Logger.ReadString()
 		lines := strings.Split(log, "\n")
-		lineNum := s.LogLines
+		lineNum := s.config.HTTP.LogLines
 		head := len(lines) - lineNum
 		if head < 0 {
 			head = 0
@@ -176,7 +169,7 @@ func (s *HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 			ImageAnalysisDate   string
 			CollectionMap       map[string]string
 		}{
-			s.Name,
+			s.config.HTTP.Name,
 			log,
 			botName,
 			s.cache.ImageURL,
@@ -219,7 +212,7 @@ func atoiOrDefault(str string, def int) int {
 	}
 }
 
-func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		err := r.ParseMultipartForm(32 << 20)
 		if err != nil {
@@ -364,7 +357,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		UserName string
 		Config   MybotConfig
 	}{
-		s.Name,
+		s.config.HTTP.Name,
 		*s.config,
 	}
 	err = tmpl.Execute(w, data)
@@ -374,7 +367,7 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len("/"):]
 	data, err := readFile(path)
 	if err != nil {
@@ -385,7 +378,7 @@ func (s *HTTPServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := generateTemplate("log", "pages/log.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -395,7 +388,7 @@ func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
 		UserName string
 		Log      string
 	}{
-		s.Name,
+		s.config.HTTP.Name,
 		logger.ReadString(),
 	}
 	err = tmpl.Execute(w, data)
@@ -405,7 +398,7 @@ func (s *HTTPServer) logHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) statusHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := generateTemplate("status", "pages/status.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -416,7 +409,7 @@ func (s *HTTPServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 		Log      string
 		Status   MybotStatus
 	}{
-		s.Name,
+		s.config.HTTP.Name,
 		logger.ReadString(),
 		*s.status,
 	}
@@ -427,7 +420,7 @@ func (s *HTTPServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "text/json")
 		bytes, err := json.Marshal(s.config)
@@ -463,7 +456,7 @@ type APIFeatureStatus struct {
 	Status bool `json:status`
 }
 
-func (s *HTTPServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterListenMyselfStatus)
 	} else if r.Method == http.MethodPost {
@@ -471,7 +464,7 @@ func (s *HTTPServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *htt
 	}
 }
 
-func (s *HTTPServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterListenUsersStatus)
 	} else if r.Method == http.MethodPost {
@@ -479,7 +472,7 @@ func (s *HTTPServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *http
 	}
 }
 
-func (s *HTTPServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.GithubStatus)
 	} else if r.Method == http.MethodPost {
@@ -487,7 +480,7 @@ func (s *HTTPServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterStatus)
 	} else if r.Method == http.MethodPost {
@@ -495,7 +488,7 @@ func (s *HTTPServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
+func (s *MybotServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.MonitorConfigStatus)
 	} else if r.Method == http.MethodPost {
@@ -503,7 +496,7 @@ func (s *HTTPServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func (s *HTTPServer) apiGetStatusHandler(w http.ResponseWriter, r *http.Request, status bool) {
+func (s *MybotServer) apiGetStatusHandler(w http.ResponseWriter, r *http.Request, status bool) {
 	data := &APIFeatureStatus{status}
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -513,7 +506,7 @@ func (s *HTTPServer) apiGetStatusHandler(w http.ResponseWriter, r *http.Request,
 	w.Write(bytes)
 }
 
-func (s *HTTPServer) apiPostStatusHandler(w http.ResponseWriter, r *http.Request, f func()) {
+func (s *MybotServer) apiPostStatusHandler(w http.ResponseWriter, r *http.Request, f func()) {
 	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
