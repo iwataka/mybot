@@ -13,31 +13,28 @@ const (
 
 func checkbox(flag bool, name string) template.HTML {
 	result := ""
-	typeExp := `type="checkbox"`
-	nameExp := `name="` + name + `"`
-	format := `<input %s %s %s %s/>`
+	format := `<input type="checkbox" name="%s" value="%s" %s/>`
 	if flag {
-		result += fmt.Sprintf(format, typeExp, nameExp, `value="true"`, `checked`)
+		result += fmt.Sprintf(format, name, "true", "checked")
 	} else {
-		result += fmt.Sprintf(format, typeExp, nameExp, `value="true"`, ``)
+		result += fmt.Sprintf(format, name, "true", "")
 	}
-	result += fmt.Sprintf(format, `type="hidden"`, `name="`+name+`"`, `value="`+placeholder+`"`, "")
+	result += fmt.Sprintf(`<input type="hidden" name="%s" value="%s"/>`, name, placeholder)
 	return template.HTML(result)
 }
 
 func boolSelectbox(flag *bool, name string) template.HTML {
-	nameExp := `name="` + name + `"`
-	format := `<select %s>` +
+	format := `<select name="%s">` +
 		`<option value="true" %s>true</option>` +
 		`<option value="false" %s>false</option>` +
 		`<option value="" %s></option>` +
 		`</select>`
 	if flag == nil {
-		return template.HTML(fmt.Sprintf(format, nameExp, "", "", "selected"))
+		return template.HTML(fmt.Sprintf(format, name, "", "", "selected"))
 	} else if *flag {
-		return template.HTML(fmt.Sprintf(format, nameExp, "selected", "", ""))
+		return template.HTML(fmt.Sprintf(format, name, "selected", "", ""))
 	} else {
-		return template.HTML(fmt.Sprintf(format, nameExp, "", "selected", ""))
+		return template.HTML(fmt.Sprintf(format, name, "", "selected", ""))
 	}
 }
 
