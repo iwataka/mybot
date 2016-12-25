@@ -11,10 +11,6 @@ const (
 	placeholder = "placeholder"
 )
 
-func convertListToShow(list []string) string {
-	return strings.Join(list, ",")
-}
-
 func checkbox(flag bool, name string) template.HTML {
 	result := ""
 	typeExp := `type="checkbox"`
@@ -68,5 +64,15 @@ func selectbox(str, name string, opts ...string) template.HTML {
 		}
 	}
 	result += end
+	return template.HTML(result)
+}
+
+func listTextbox(list []string, name string) template.HTML {
+	str := ""
+	if list != nil {
+		str = strings.Join(list, ",")
+	}
+	format := `<input type="text" name="%s" value="%s"/>`
+	result := fmt.Sprintf(format, name, str)
 	return template.HTML(result)
 }

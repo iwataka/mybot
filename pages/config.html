@@ -23,7 +23,7 @@
                     {{range $index, $timeline := .Config.Twitter.Timelines}}
                     <tr>
                         <td>
-                            <input type="text" name="twitter.timelines.screen_names" value="{{if $timeline.ScreenNames}}{{$timeline.ScreenNames | convertListToShow}}{{end}}">
+                            {{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}
                         </td>
                         <td>
                             {{boolSelectbox $timeline.ExcludeReplies "twitter.timelines.exclude_replies"}}
@@ -64,13 +64,13 @@
                                         <tr>
                                             <td>patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.patterns" value="{{if $timeline.Filter.Patterns}}{{$timeline.Filter.Patterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.Patterns "twitter.timelines.filter.patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>url patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.url_patterns" value="{{if $timeline.Filter.URLPatterns}}{{$timeline.Filter.URLPatterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.URLPatterns "twitter.timelines.filter.url_patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -123,7 +123,7 @@
                                         <tr>
                                             <td>label</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.vision.label" value="{{if $timeline.Filter.Vision.Label}}{{$timeline.Filter.Vision.Label | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.Vision.Label "twitter.timelines.filter.vision.label"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -153,19 +153,19 @@
                                         <tr>
                                             <td>text</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.vision.text" value="{{if $timeline.Filter.Vision.Text}}{{$timeline.Filter.Vision.Text | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.Vision.Text "twitter.timelines.filter.vision.text"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>landmark</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.vision.landmark" value="{{if $timeline.Filter.Vision.Landmark}}{{$timeline.Filter.Vision.Landmark | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.Vision.Landmark "twitter.timelines.filter.vision.landmark"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>logo</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.filter.vision.logo" value="{{if $timeline.Filter.Vision.Logo}}{{$timeline.Filter.Vision.Logo | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Filter.Vision.Logo "twitter.timelines.filter.vision.logo"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -200,7 +200,7 @@
                                         <tr>
                                             <td>collections</td>
                                             <td>
-                                                <input type="text" name="twitter.timelines.action.collections" value="{{if $timeline.Action.Collections}}{{$timeline.Action.Collections | convertListToShow}}{{end}}">
+                                                {{listTextbox $timeline.Action.Collections "twitter.timelines.action.collections"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -225,7 +225,9 @@
                 <tbody>
                     {{range $index, $favorite := .Config.Twitter.Favorites}}
                     <tr>
-                        <td><input type="text" name="twitter.favorites.screen_names" value="{{if $favorite.ScreenNames}}{{$favorite.ScreenNames | convertListToShow}}{{end}}"></td>
+                        <td>
+                            {{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}
+                        </td>
                         <td><input type="number" name="twitter.favorites.count" value="{{if $favorite.Count}}{{$favorite.Count}}{{end}}"></td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{$index}}">
@@ -257,13 +259,13 @@
                                         <tr>
                                             <td>patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.patterns" value="{{if $favorite.Filter.Patterns}}{{$favorite.Filter.Patterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.Patterns "twitter.favorites.filter.patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>url patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.url_patterns" value="{{if $favorite.Filter.URLPatterns}}{{$favorite.Filter.URLPatterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.URLPatterns "twitter.favorites.filter.url_patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -316,7 +318,7 @@
                                         <tr>
                                             <td>label</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.vision.label" value="{{if $favorite.Filter.Vision.Label}}{{$favorite.Filter.Vision.Label | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.Vision.Label "twitter.favorites.filter.vision.label"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -346,19 +348,19 @@
                                         <tr>
                                             <td>text</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.vision.text" value="{{if $favorite.Filter.Vision.Text}}{{$favorite.Filter.Vision.Text | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.Vision.Text "twitter.favorites.filter.vision.text"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>landmark</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.vision.landmark" value="{{if $favorite.Filter.Vision.Landmark}}{{$favorite.Filter.Vision.Landmark | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.Vision.Landmark "twitter.favorites.filter.vision.landmark"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>logo</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.filter.vision.logo" value="{{if $favorite.Filter.Vision.Logo}}{{$favorite.Filter.Vision.Logo | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Filter.Vision.Logo "twitter.favorites.filter.vision.logo"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -393,7 +395,7 @@
                                         <tr>
                                             <td>collections</td>
                                             <td>
-                                                <input type="text" name="twitter.favorites.action.collections" value="{{if $favorite.Action.Collections}}{{$favorite.Action.Collections | convertListToShow}}{{end}}">
+                                                {{listTextbox $favorite.Action.Collections "twitter.favorites.action.collections"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -419,7 +421,9 @@
                 <tbody>
                     {{range $index, $search := .Config.Twitter.Searches}}
                     <tr>
-                        <td><input type="text" name="twitter.searches.queries" value="{{if $search.Queries}}{{$search.Queries | convertListToShow}}{{end}}"></td>
+                        <td>
+                            {{listTextbox $search.Queries "twitter.searches.queries"}}
+                        </td>
                         <td>
                             {{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}
                         </td>
@@ -454,13 +458,13 @@
                                         <tr>
                                             <td>patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.patterns" value="{{if $search.Filter.Patterns}}{{$search.Filter.Patterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.Patterns "twitter.searches.filter.patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>url patterns</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.url_patterns" value="{{if $search.Filter.URLPatterns}}{{$search.Filter.URLPatterns | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.URLPatterns "twitter.searches.filter.url_patterns"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -513,7 +517,7 @@
                                         <tr>
                                             <td>label</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.vision.label" value="{{if $search.Filter.Vision.Label}}{{$search.Filter.Vision.Label | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.Vision.Label "twitter.searches.filter.vision.label"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -543,19 +547,19 @@
                                         <tr>
                                             <td>text</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.vision.text" value="{{if $search.Filter.Vision.Text}}{{$search.Filter.Vision.Text | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.Vision.Text "twitter.searches.filter.vision.text"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>landmark</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.vision.landmark" value="{{if $search.Filter.Vision.Landmark}}{{$search.Filter.Vision.Landmark | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.Vision.Landmark "twitter.searches.filter.vision.landmark"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>logo</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.filter.vision.logo" value="{{if $search.Filter.Vision.Logo}}{{$search.Filter.Vision.Logo | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Filter.Vision.Logo "twitter.searches.filter.vision.logo"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -590,7 +594,7 @@
                                         <tr>
                                             <td>collections</td>
                                             <td>
-                                                <input type="text" name="twitter.searches.action.collections" value="{{if $search.Action.Collections}}{{$search.Action.Collections | convertListToShow}}{{end}}">
+                                                {{listTextbox $search.Action.Collections "twitter.searches.action.collections"}}
                                             </td>
                                         </tr>
                                     </tbody>
@@ -637,8 +641,12 @@
                         <td>
                             {{checkbox .Config.Interaction.AllowSelf "interaction.allow_self"}}
                         </td>
-                        <td><input type="text" name="interaction.users" value="{{if .Config.Interaction.Users}}{{.Config.Interaction.Users | convertListToShow}}{{end}}"></td>
-                        <td><input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}"></td>
+                        <td>
+                            {{listTextbox .Config.Interaction.Users "interaction.users"}}
+                        </td>
+                        <td>
+                            <input type="number" name="interaction.count" value="{{if .Config.Interaction.Count}}{{.Config.Interaction.Count}}{{end}}">
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -656,7 +664,9 @@
                         <td>
                             {{checkbox .Config.Log.AllowSelf "log.allow_self"}}
                         </td>
-                        <td><input type="text" name="log.users" value="{{if .Config.Log.Users}}{{.Config.Log.Users | convertListToShow}}{{end}}"></td>
+                        <td>
+                            {{listTextbox .Config.Log.Users "log.users"}}
+                        </td>
                     </tr>
                 </tbody>
             </table>
