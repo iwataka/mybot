@@ -460,7 +460,7 @@ func (s *MybotServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *ht
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterListenMyselfStatus)
 	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterListenMyself(ctxt) })
+		s.apiPostStatusHandler(w, r, func() { twitterListenMyself() })
 	}
 }
 
@@ -468,7 +468,7 @@ func (s *MybotServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *htt
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterListenUsersStatus)
 	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterListenUsers(ctxt) })
+		s.apiPostStatusHandler(w, r, func() { twitterListenUsers() })
 	}
 }
 
@@ -476,7 +476,7 @@ func (s *MybotServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.GithubStatus)
 	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { githubPeriodically(ctxt) })
+		s.apiPostStatusHandler(w, r, func() { githubPeriodically() })
 	}
 }
 
@@ -484,7 +484,7 @@ func (s *MybotServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) 
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.TwitterStatus)
 	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterPeriodically(ctxt) })
+		s.apiPostStatusHandler(w, r, func() { twitterPeriodically() })
 	}
 }
 
@@ -492,7 +492,7 @@ func (s *MybotServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Req
 	if r.Method == http.MethodGet {
 		s.apiGetStatusHandler(w, r, s.status.MonitorConfigStatus)
 	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { monitorConfig(ctxt) })
+		s.apiPostStatusHandler(w, r, func() { monitorConfig() })
 	}
 }
 

@@ -7,37 +7,37 @@
         <h2>Current Status</h2>
         <ul>
             {{if .Status.TwitterListenMyselfStatus}}
-            <li>Twitter Listens Yourself: <span style="color: blue">Started</span></li>
+            <li>Twitter Listens Yourself: <span style="color: blue">Active</span></li>
             {{else}}
             <li>Twitter Listens Yourself: <span style="color: red">Stop</span></li>
             {{end}}
 
             {{if .Status.TwitterListenUsersStatus}}
-            <li>Twitter Listens Users: <span style="color: blue">Started</span></li>
+            <li>Twitter Listens Users: <span style="color: blue">Active</span></li>
             {{else}}
             <li>Twitter Listens Users: <span style="color: red">Stop</span></li>
             {{end}}
 
             {{if .Status.GithubStatus}}
-            <li>GitHub: <span style="color: blue">Started</span></li>
+            <li>GitHub: <span style="color: blue">Active</span></li>
             {{else}}
             <li>GitHub: <span style="color: red">Stop</span></li>
             {{end}}
 
             {{if .Status.TwitterStatus}}
-            <li>Twitter: <span style="color: blue">Started</span></li>
+            <li>Twitter: <span style="color: blue">Active</span></li>
             {{else}}
             <li>Twitter: <span style="color: red">Stop</span></li>
             {{end}}
 
             {{if .Status.MonitorConfigStatus}}
-            <li>Monitor Config: <span style="color: blue">Started</span></li>
+            <li>Monitor Config: <span style="color: blue">Active</span></li>
             {{else}}
             <li>Monitor Config: <span style="color: red">Stop</span></li>
             {{end}}
 
             {{if .Status.HttpStatus}}
-            <li>HTTP: <span style="color: blue">Started</span></li>
+            <li>HTTP: <span style="color: blue">Active</span></li>
             {{else}}
             <li>HTTP: <span style="color: red">Stop</span></li>
             {{end}}

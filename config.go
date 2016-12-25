@@ -42,7 +42,7 @@ type TwitterConfig struct {
 	Searches     []SearchConfig   `toml:"searches,omitempty"`
 	Notification *Notification    `toml:"notification"`
 	Duration     string           `toml:"duration"`
-	Debug        *bool            `toml:"debug"`
+	Debug        bool             `toml:"debug"`
 }
 
 // TimelineConfig is a configuration for Twitter timelines

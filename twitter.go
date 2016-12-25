@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/iwataka/anaconda"
@@ -23,7 +24,6 @@ type TwitterAPI struct {
 	self   *anaconda.User
 	cache  *MybotCache
 	config *MybotConfig
-	debug  bool
 }
 
 // TwitterAuth contains values required for Twitter's user authentication.
@@ -98,12 +98,7 @@ func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI 
 	anaconda.SetConsumerKey(a.ConsumerKey)
 	anaconda.SetConsumerSecret(a.ConsumerSecret)
 	api := anaconda.NewTwitterApi(a.AccessToken, a.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg, false}
-}
-
-// SetDebug enables/disables TwitterAPI's debug mode.
-func (a *TwitterAPI) SetDebug(val bool) {
-	a.debug = val
+	return &TwitterAPI{api, nil, c, cfg}
 }
 
 // PostDMToScreenName wraps anaconda.TwitterApi#PostDMToScreenName and has
@@ -408,31 +403,22 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 	return nil
 }
 
-// ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
-	if v == nil {
-		v = url.Values{}
-	}
-	usernames := strings.Join(a.config.Twitter.GetScreenNames(), ",")
-	users, err := a.api.GetUsersLookup(usernames, nil)
-	if err != nil {
-		return err
-	}
-	userids := []string{}
-	for _, u := range users {
-		userids = append(userids, u.IdStr)
-	}
-	v.Set("follow", strings.Join(userids, ","))
-	stream := a.api.PublicStreamFilter(v)
+type TwitterUserListener struct {
+	C    chan interface{}
+	api  *TwitterAPI
+	file string
+}
+
+func (l *TwitterUserListener) Listen() error {
 	for {
-		switch c := (<-stream.C).(type) {
+		switch c := (<-l.C).(type) {
 		case anaconda.Tweet:
-			if a.debug {
+			if l.api.config.Twitter.Debug {
 				log.Printf("Tweet by %s created at %s\n", c.User.Name, c.CreatedAt)
 			}
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
-			for _, t := range a.config.Twitter.Timelines {
+			for _, t := range l.api.config.Twitter.Timelines {
 				for _, n := range t.ScreenNames {
 					if n == name {
 						timelines = append(timelines, t)
@@ -452,17 +438,88 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 					return err
 				}
 				if match {
-					done := a.cache.Tweet2Action[c.IdStr]
-					err := a.processTweet(c, timeline.Action, done)
+					done := l.api.cache.Tweet2Action[c.IdStr]
+					err := l.api.processTweet(c, timeline.Action, done)
 					if err != nil {
 						return err
 					}
-					a.cache.LatestTweetID[name] = c.Id
-					err = a.cache.Save(file)
+					l.api.cache.LatestTweetID[name] = c.Id
+					err = l.api.cache.Save(l.file)
 					if err != nil {
 						return err
 					}
 				}
+			}
+		case os.Signal:
+			if c == os.Interrupt {
+				return nil
+			}
+			if c == os.Kill {
+				return NewKillError("User listener is killed")
+			}
+		}
+	}
+}
+
+// ListenUsers listens timelines of the friends
+func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListener, error) {
+	if v == nil {
+		v = url.Values{}
+	}
+	usernames := strings.Join(a.config.Twitter.GetScreenNames(), ",")
+	users, err := a.api.GetUsersLookup(usernames, nil)
+	if err != nil {
+		return nil, err
+	}
+	userids := []string{}
+	for _, u := range users {
+		userids = append(userids, u.IdStr)
+	}
+	v.Set("follow", strings.Join(userids, ","))
+	stream := a.api.PublicStreamFilter(v)
+	return &TwitterUserListener{stream.C, a, file}, nil
+}
+
+type TwitterMyselfListener struct {
+	C        chan interface{}
+	api      *TwitterAPI
+	receiver DirectMessageReceiver
+	file     string
+}
+
+func (l *TwitterMyselfListener) Listen() error {
+	for {
+		switch c := (<-l.C).(type) {
+		case anaconda.DirectMessage:
+			if l.api.config.Twitter.Debug {
+				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
+			}
+			if l.api.config.Interaction != nil {
+				conf := l.api.config.Interaction
+				match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
+				if err != nil {
+					return err
+				}
+				if match {
+					if l.api.cache.LatestDMID < c.Id {
+						l.api.cache.LatestDMID = c.Id
+					}
+					err := l.api.responseForDirectMessage(c, l.receiver)
+					if err != nil {
+						return err
+					}
+				}
+				err = l.api.cache.Save(l.file)
+				if err != nil {
+					return err
+				}
+			}
+		case os.Signal:
+			if c == os.Interrupt {
+				return nil
+			}
+			if c == os.Kill {
+				return NewKillError("User listener is killed")
 			}
 		}
 	}
@@ -470,42 +527,15 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) error {
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) error {
+func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) (*TwitterMyselfListener, error) {
 	ok, err := a.api.VerifyCredentials()
 	if err != nil {
-		return err
+		return nil, err
 	} else if !ok {
-		return errors.New("Twitter Account Verification failed")
+		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	for {
-		switch c := (<-stream.C).(type) {
-		case anaconda.DirectMessage:
-			if a.debug {
-				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
-			}
-			if a.config.Interaction != nil {
-				conf := a.config.Interaction
-				match, err := a.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
-				if err != nil {
-					return err
-				}
-				if match {
-					if a.cache.LatestDMID < c.Id {
-						a.cache.LatestDMID = c.Id
-					}
-					err := a.responseForDirectMessage(c, receiver)
-					if err != nil {
-						return err
-					}
-				}
-				err = a.cache.Save(file)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
+	return &TwitterMyselfListener{stream.C, a, receiver, file}, nil
 }
 
 // Response gets direct messages sent to the authenticated user and react with
