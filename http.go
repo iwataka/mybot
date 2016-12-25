@@ -321,6 +321,9 @@ func (s *HTTPServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Action.Collections = getListTextboxValue(val, i, "twitter.searches.action.collections")
 		}
 
+		s.config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
+		s.config.Twitter.Notification.Place.Users = getListTextboxValue(val, 0, "twitter.notification.place.users")
+
 		s.config.DB.Driver = val["db.driver"][0]
 		s.config.DB.DataSource = val["db.data_source"][0]
 		s.config.DB.VisionTable = val["db.vision_table"][0]
