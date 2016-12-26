@@ -236,11 +236,11 @@ func twitterListenMyself() {
 	keepConnection(func() error {
 		r := twitterAPI.DefaultDirectMessageReceiver
 		listener, err := twitterAPI.ListenMyself(nil, r, ctxt.String("cache"))
-		myselfListenerChan = listener.C
 		if err != nil {
 			logger.Println(err)
 			return err
 		}
+		myselfListenerChan = listener.C
 		err = listener.Listen()
 		if err != nil {
 			logger.Println(err)
@@ -258,11 +258,11 @@ func twitterListenUsers() {
 	defer func() { status.TwitterListenUsersStatus = false }()
 	keepConnection(func() error {
 		listener, err := twitterAPI.ListenUsers(nil, ctxt.String("cache"))
-		userListenerChan = listener.C
 		if err != nil {
 			logger.Println(err)
 			return err
 		}
+		userListenerChan = listener.C
 		err = listener.Listen()
 		if err != nil {
 			logger.Println(err)

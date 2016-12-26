@@ -44,3 +44,8 @@ pre {
 table > thead {
         background-color: aliceblue;
 }
+
+table.table-striped > tbody > tr.deleted {
+        opacity: 0.3;
+        background-color: grey;
+}

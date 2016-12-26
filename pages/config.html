@@ -2,6 +2,30 @@
 <html lang="en">
 {{template "header" .}}
 <body>
+    <script>
+        function deleteRow(button, modal) {
+            var tr = button.parentNode.parentNode;
+            if (tr.className === 'deleted') {
+                for (var i = 0; i < tr.childNodes.length; i++) {
+                    var child = tr.childNodes[i]
+                    if (child.type === 'hidden' && child.nodeName === 'INPUT') {
+                        child.value = 'false';
+                        tr.className = '';
+                        button.innerHTML = 'Delete';
+                    }
+                }
+            } else {
+                for (var i = 0; i < tr.childNodes.length; i++) {
+                    var child = tr.childNodes[i]
+                    if (child.type === 'hidden' && child.nodeName === 'INPUT') {
+                        child.value = 'true';
+                        tr.className = 'deleted';
+                        button.innerHTML = 'Revert';
+                    }
+                }
+            }
+        }
+    </script>
     <div class="container">
         {{template "navbar" .}}
         <form action="/config/" method="post" enctype="multipart/form-data">
@@ -16,12 +40,14 @@
                         <td>exclude replies</td>
                         <td>include rts</td>
                         <td>count</td>
+                        <td>others</td>
                         <td></td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range $index, $timeline := .Config.Twitter.Timelines}}
                     <tr>
+                        <input type="hidden" name="twitter.timelines.deleted" value="false"/>
                         <td>
                             {{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}
                         </td>
@@ -38,6 +64,9 @@
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{$index}}">
                                 details here
                             </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-timelines-filter_{{$index}}')">Delete</button>
                         </td>
                     </tr>
                     {{end}}
@@ -220,11 +249,13 @@
                         <td>screen names</td>
                         <td>count</td>
                         <td>others</td>
+                        <td></td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range $index, $favorite := .Config.Twitter.Favorites}}
                     <tr>
+                        <input type="hidden" name="twitter.favorites.deleted" value="false"/>
                         <td>
                             {{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}
                         </td>
@@ -233,6 +264,9 @@
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{$index}}">
                                 details here
                             </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-favorites-filter_{{$index}}')">Delete</button>
                         </td>
                     </tr>
                     {{end}}
@@ -416,11 +450,13 @@
                         <td>result type</td>
                         <td>count</td>
                         <td>others</td>
+                        <td></td>
                     </tr>
                 </thead>
                 <tbody>
                     {{range $index, $search := .Config.Twitter.Searches}}
                     <tr>
+                        <input type="hidden" name="twitter.searches.deleted" value="false"/>
                         <td>
                             {{listTextbox $search.Queries "twitter.searches.queries"}}
                         </td>
@@ -432,6 +468,9 @@
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{$index}}">
                                 details here
                             </button>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-searches-filter_{{$index}}')">Delete</button>
                         </td>
                     </tr>
                     {{end}}

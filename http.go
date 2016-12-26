@@ -224,8 +224,25 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		actionRetweetCounter := checkboxCounter{"twitter.timelines.action.retweet", 0}
 		actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.favorite", 0}
 		actionFollowCounter := checkboxCounter{"twitter.timelines.action.follow", 0}
-		for i, _ := range s.config.Twitter.Timelines {
-			timeline := s.config.Twitter.Timelines[i]
+		length := len(val["twitter.timelines.count"])
+		timelines := []TimelineConfig{}
+		for i := 0; i < length; i++ {
+			if val["twitter.timelines.deleted"][i] == "true" {
+				actionRetweetCounter.returnValue(i, val)
+				actionFavoriteCounter.returnValue(i, val)
+				actionFollowCounter.returnValue(i, val)
+				continue
+			}
+			timeline := TimelineConfig{
+				SourceConfig: &SourceConfig{
+					Filter: &TweetFilterConfig{
+						Vision: &VisionCondition{
+							Face: &VisionFaceCondition{},
+						},
+					},
+					Action: &TwitterAction{},
+				},
+			}
 			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
@@ -250,14 +267,32 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			timeline.Action.Follow = actionFollowCounter.returnValue(i, val)
 			timeline.Action.Collections = getListTextboxValue(val, i, "twitter.timelines.action.collections")
-			s.config.Twitter.Timelines[i] = timeline
+			timelines = append(timelines, timeline)
 		}
+		s.config.Twitter.Timelines = timelines
 
 		actionRetweetCounter = checkboxCounter{"twitter.favorites.action.retweet", 0}
 		actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.favorites.action.follow", 0}
-		for i, _ := range s.config.Twitter.Favorites {
-			favorite := s.config.Twitter.Favorites[i]
+		length = len(val["twitter.favorites.count"])
+		favorites := []FavoriteConfig{}
+		for i := 0; i < length; i++ {
+			if val["twitter.favorites.deleted"][i] == "true" {
+				actionRetweetCounter.returnValue(i, val)
+				actionFavoriteCounter.returnValue(i, val)
+				actionFollowCounter.returnValue(i, val)
+				continue
+			}
+			favorite := FavoriteConfig{
+				SourceConfig: &SourceConfig{
+					Filter: &TweetFilterConfig{
+						Vision: &VisionCondition{
+							Face: &VisionFaceCondition{},
+						},
+					},
+					Action: &TwitterAction{},
+				},
+			}
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
 			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
 			s.config.Twitter.Favorites[i] = favorite
@@ -281,13 +316,32 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			favorite.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			favorite.Action.Follow = actionFollowCounter.returnValue(i, val)
 			favorite.Action.Collections = getListTextboxValue(val, i, "twitter.favorites.action.collections")
+			favorites = append(favorites, favorite)
 		}
+		s.config.Twitter.Favorites = favorites
 
 		actionRetweetCounter = checkboxCounter{"twitter.searches.action.retweet", 0}
 		actionFavoriteCounter = checkboxCounter{"twitter.searches.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.searches.action.follow", 0}
-		for i, _ := range s.config.Twitter.Searches {
-			search := s.config.Twitter.Searches[i]
+		length = len(val["twitter.searches.count"])
+		searches := []SearchConfig{}
+		for i := 0; i < length; i++ {
+			if val["twitter.searches.deleted"][i] == "true" {
+				actionRetweetCounter.returnValue(i, val)
+				actionFavoriteCounter.returnValue(i, val)
+				actionFollowCounter.returnValue(i, val)
+				continue
+			}
+			search := SearchConfig{
+				SourceConfig: &SourceConfig{
+					Filter: &TweetFilterConfig{
+						Vision: &VisionCondition{
+							Face: &VisionFaceCondition{},
+						},
+					},
+					Action: &TwitterAction{},
+				},
+			}
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
@@ -312,7 +366,9 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			search.Action.Follow = actionFollowCounter.returnValue(i, val)
 			search.Action.Collections = getListTextboxValue(val, i, "twitter.searches.action.collections")
+			searches = append(searches, search)
 		}
+		s.config.Twitter.Searches = searches
 
 		s.config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
 		s.config.Twitter.Notification.Place.Users = getListTextboxValue(val, 0, "twitter.notification.place.users")

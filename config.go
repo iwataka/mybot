@@ -25,7 +25,7 @@ type MybotConfig struct {
 
 // GitHubConfig is a configuration of GitHub projects
 type GitHubConfig struct {
-	Projects []GitHubProject `toml:"projects"`
+	Projects []GitHubProject `toml:"projects,omitempty"`
 	Duration string          `toml:"duration"`
 }
 
