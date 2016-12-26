@@ -221,13 +221,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		val := r.MultipartForm.Value
 
+		deletedFlags := val["twitter.timelines.deleted"]
+		if len(deletedFlags) != len(s.config.Twitter.Timelines) {
+			http.Error(w, "Collapsed request", http.StatusInternalServerError)
+			return
+		}
 		actionRetweetCounter := checkboxCounter{"twitter.timelines.action.retweet", 0}
 		actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.favorite", 0}
 		actionFollowCounter := checkboxCounter{"twitter.timelines.action.follow", 0}
 		length := len(val["twitter.timelines.count"])
 		timelines := []TimelineConfig{}
 		for i := 0; i < length; i++ {
-			if val["twitter.timelines.deleted"][i] == "true" {
+			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
 				actionFavoriteCounter.returnValue(i, val)
 				actionFollowCounter.returnValue(i, val)
@@ -271,13 +276,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.config.Twitter.Timelines = timelines
 
+		deletedFlags = val["twitter.favorites.deleted"]
+		if len(deletedFlags) != len(s.config.Twitter.Favorites) {
+			http.Error(w, "Collapsed request", http.StatusInternalServerError)
+			return
+		}
 		actionRetweetCounter = checkboxCounter{"twitter.favorites.action.retweet", 0}
 		actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.favorites.action.follow", 0}
 		length = len(val["twitter.favorites.count"])
 		favorites := []FavoriteConfig{}
 		for i := 0; i < length; i++ {
-			if val["twitter.favorites.deleted"][i] == "true" {
+			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
 				actionFavoriteCounter.returnValue(i, val)
 				actionFollowCounter.returnValue(i, val)
@@ -320,13 +330,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		s.config.Twitter.Favorites = favorites
 
+		deletedFlags = val["twitter.searches.deleted"]
+		if len(deletedFlags) != len(s.config.Twitter.Searches) {
+			http.Error(w, "Collapsed request", http.StatusInternalServerError)
+			return
+		}
 		actionRetweetCounter = checkboxCounter{"twitter.searches.action.retweet", 0}
 		actionFavoriteCounter = checkboxCounter{"twitter.searches.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.searches.action.follow", 0}
 		length = len(val["twitter.searches.count"])
 		searches := []SearchConfig{}
 		for i := 0; i < length; i++ {
-			if val["twitter.searches.deleted"][i] == "true" {
+			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
 				actionFavoriteCounter.returnValue(i, val)
 				actionFollowCounter.returnValue(i, val)
