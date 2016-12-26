@@ -403,23 +403,28 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	}
-	tmpl, err := generateTemplate("config", "pages/config.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := &struct {
-		UserName string
-		Config   MybotConfig
-	}{
-		s.config.HTTP.Name,
-		*s.config,
-	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+
+		// This two lines must be in this order, I don't know the reason.
+		w.Header().Add("Location", "/config/")
+		w.WriteHeader(http.StatusSeeOther)
+	} else if r.Method == http.MethodGet {
+		tmpl, err := generateTemplate("config", "pages/config.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data := &struct {
+			UserName string
+			Config   MybotConfig
+		}{
+			s.config.HTTP.Name,
+			*s.config,
+		}
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
