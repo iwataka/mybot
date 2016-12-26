@@ -59,6 +59,18 @@ func (s *MybotServer) Init(user, password, cert, key string) error {
 			wrapHandlerWithBasicAuth(s.configHandler, user, password),
 		)
 		http.HandleFunc(
+			"/config/timelines/add",
+			wrapHandlerWithBasicAuth(s.configTimelineAddHandler, user, password),
+		)
+		http.HandleFunc(
+			"/config/favorites/add",
+			wrapHandlerWithBasicAuth(s.configFavoriteAddHandler, user, password),
+		)
+		http.HandleFunc(
+			"/config/searches/add",
+			wrapHandlerWithBasicAuth(s.configSearchAddHandler, user, password),
+		)
+		http.HandleFunc(
 			"/assets/",
 			wrapHandlerWithBasicAuth(s.assetHandler, user, password),
 		)
@@ -238,16 +250,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			timeline := TimelineConfig{
-				SourceConfig: &SourceConfig{
-					Filter: &TweetFilterConfig{
-						Vision: &VisionCondition{
-							Face: &VisionFaceCondition{},
-						},
-					},
-					Action: &TwitterAction{},
-				},
-			}
+			timeline := *NewTimelineConfig()
 			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
@@ -293,16 +296,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			favorite := FavoriteConfig{
-				SourceConfig: &SourceConfig{
-					Filter: &TweetFilterConfig{
-						Vision: &VisionCondition{
-							Face: &VisionFaceCondition{},
-						},
-					},
-					Action: &TwitterAction{},
-				},
-			}
+			favorite := *NewFavoriteConfig()
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
 			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
 			s.config.Twitter.Favorites[i] = favorite
@@ -347,16 +341,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			search := SearchConfig{
-				SourceConfig: &SourceConfig{
-					Filter: &TweetFilterConfig{
-						Vision: &VisionCondition{
-							Face: &VisionFaceCondition{},
-						},
-					},
-					Action: &TwitterAction{},
-				},
-			}
+			search := *NewSearchConfig()
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
@@ -440,6 +425,36 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		timelines := s.config.Twitter.Timelines
+		timelines = append(timelines, *NewTimelineConfig())
+		s.config.Twitter.Timelines = timelines
+		w.Header().Add("Location", "/config/")
+		w.WriteHeader(http.StatusSeeOther)
+	}
+}
+
+func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		favorites := s.config.Twitter.Favorites
+		favorites = append(favorites, *NewFavoriteConfig())
+		s.config.Twitter.Favorites = favorites
+		w.Header().Add("Location", "/config/")
+		w.WriteHeader(http.StatusSeeOther)
+	}
+}
+
+func (s *MybotServer) configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		searches := s.config.Twitter.Searches
+		searches = append(searches, *NewSearchConfig())
+		s.config.Twitter.Searches = searches
+		w.Header().Add("Location", "/config/")
+		w.WriteHeader(http.StatusSeeOther)
 	}
 }
 

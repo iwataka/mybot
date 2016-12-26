@@ -13,18 +13,18 @@ const (
 
 func checkbox(flag bool, name string) template.HTML {
 	result := ""
-	format := `<input type="checkbox" name="%s" value="%s" %s/>`
+	format := `<input form="overwrite" type="checkbox" name="%s" value="%s" %s/>`
 	if flag {
 		result += fmt.Sprintf(format, name, "true", "checked")
 	} else {
 		result += fmt.Sprintf(format, name, "true", "")
 	}
-	result += fmt.Sprintf(`<input type="hidden" name="%s" value="%s"/>`, name, placeholder)
+	result += fmt.Sprintf(`<input form="overwrite" type="hidden" name="%s" value="%s"/>`, name, placeholder)
 	return template.HTML(result)
 }
 
 func boolSelectbox(flag *bool, name string) template.HTML {
-	format := `<select name="%s">` +
+	format := `<select form="overwrite" name="%s">` +
 		`<option value="true" %s>true</option>` +
 		`<option value="false" %s>false</option>` +
 		`<option value="" %s></option>` +
@@ -49,7 +49,7 @@ func getBoolSelectboxValue(val map[string][]string, index int, name string) *boo
 }
 
 func selectbox(str, name string, opts ...string) template.HTML {
-	start := fmt.Sprintf(`<select name="%s">`, name)
+	start := fmt.Sprintf(`<select form="overwrite" name="%s">`, name)
 	end := `</select>`
 	result := start
 	format := `<option value="%s" %s>%s</option>`
@@ -69,7 +69,7 @@ func listTextbox(list []string, name string) template.HTML {
 	if list != nil {
 		str = strings.Join(list, ",")
 	}
-	format := `<input type="text" name="%s" value="%s"/>`
+	format := `<input form="overwrite" type="text" name="%s" value="%s"/>`
 	result := fmt.Sprintf(format, name, str)
 	return template.HTML(result)
 }

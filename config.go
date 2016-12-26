@@ -54,11 +54,37 @@ type TimelineConfig struct {
 	Count          int      `toml:"count"`
 }
 
+func NewTimelineConfig() *TimelineConfig {
+	return &TimelineConfig{
+		SourceConfig: &SourceConfig{
+			Filter: &TweetFilterConfig{
+				Vision: &VisionCondition{
+					Face: &VisionFaceCondition{},
+				},
+			},
+			Action: &TwitterAction{},
+		},
+	}
+}
+
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
 	ScreenNames []string `toml:"screen_names"`
 	Count       int      `toml:"count"`
+}
+
+func NewFavoriteConfig() *FavoriteConfig {
+	return &FavoriteConfig{
+		SourceConfig: &SourceConfig{
+			Filter: &TweetFilterConfig{
+				Vision: &VisionCondition{
+					Face: &VisionFaceCondition{},
+				},
+			},
+			Action: &TwitterAction{},
+		},
+	}
 }
 
 // SearchConfig is a configuration for Twitter searches
@@ -67,6 +93,19 @@ type SearchConfig struct {
 	Queries    []string `toml:"queries"`
 	ResultType string   `toml:"result_type,omitempty"`
 	Count      int      `toml:"count"`
+}
+
+func NewSearchConfig() *SearchConfig {
+	return &SearchConfig{
+		SourceConfig: &SourceConfig{
+			Filter: &TweetFilterConfig{
+				Vision: &VisionCondition{
+					Face: &VisionFaceCondition{},
+				},
+			},
+			Action: &TwitterAction{},
+		},
+	}
 }
 
 type DBConfig struct {
