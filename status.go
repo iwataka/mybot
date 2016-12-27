@@ -7,5 +7,7 @@ type MybotStatus struct {
 	GithubStatus              bool
 	TwitterStatus             bool
 	MonitorConfigStatus       bool
+	MonitorTwitterCred        bool
+	MonitorGCloudCred         bool
 	HttpStatus                bool
 }

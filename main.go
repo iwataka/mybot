@@ -135,6 +135,8 @@ func main() {
 }
 
 func beforeRunning(c *cli.Context) error {
+	ctxt = c
+
 	var err error
 	cache, err = NewMybotCache(c.String("cache"))
 	if err != nil {
@@ -174,8 +176,6 @@ func beforeRunning(c *cli.Context) error {
 		config:     config,
 		status:     status,
 	}
-
-	ctxt = c
 
 	return nil
 }
@@ -337,14 +337,63 @@ func monitorConfig() {
 			cfg, err := NewMybotConfig(ctxt.String("config"), visionAPI)
 			if err == nil {
 				*config = *cfg
+				reloadListeners()
 			}
-			if userListenerChan != nil {
-				userListenerChan <- os.Interrupt
+		},
+	)
+}
+
+func monitorTwitterCred() {
+	if status.MonitorTwitterCred {
+		return
+	}
+	status.MonitorTwitterCred = true
+	defer func() { status.MonitorTwitterCred = false }()
+	monitorFile(
+		ctxt.String("twitter"),
+		time.Duration(1)*time.Second,
+		func() {
+			auth := &TwitterAuth{}
+			err := auth.fromJson(ctxt.String("twitter"))
+			if err != nil {
+				api := NewTwitterAPI(auth, cache, config)
+				*twitterAPI = *api
+				reloadListeners()
 			}
-			if myselfListenerChan != nil {
-				myselfListenerChan <- os.Interrupt
+		},
+	)
+}
+
+func monitorGCloudCred() {
+	if status.MonitorGCloudCred {
+		return
+	}
+	status.MonitorGCloudCred = true
+	defer func() { status.MonitorGCloudCred = false }()
+	monitorFile(
+		ctxt.String("gcloud"),
+		time.Duration(1)*time.Second,
+		func() {
+			api, err := NewVisionAPI(cache, config, ctxt.String("gcloud"))
+			if err != nil {
+				*visionAPI = *api
+				reloadListeners()
 			}
-		})
+		},
+	)
+}
+
+func reloadListeners() {
+	if userListenerChan != nil {
+		userListenerChan <- os.Interrupt
+	} else {
+		twitterListenUsers()
+	}
+	if myselfListenerChan != nil {
+		myselfListenerChan <- os.Interrupt
+	} else {
+		twitterListenMyself()
+	}
 }
 
 func httpServer() {
