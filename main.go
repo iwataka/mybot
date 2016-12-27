@@ -425,7 +425,10 @@ func serve(c *cli.Context) error {
 	go twitterListenUsers()
 	go githubPeriodically()
 	go twitterPeriodically()
+
 	go monitorConfig()
+	go monitorTwitterCred()
+	go monitorGCloudCred()
 
 	ch := make(chan bool)
 	<-ch
