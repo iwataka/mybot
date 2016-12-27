@@ -5,42 +5,90 @@
     <div class="container">
         {{template "navbar" .}}
         <h2>Current Status</h2>
+        <table class="table table-striped table-bordered table-responsive">
+            <tr>
+                <td>Twitter Your Own Listener</td>
+                <td>
+                    {{if .Status.TwitterListenMyselfStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>Twitter User Listener</td>
+                <td>
+                    {{if .Status.TwitterListenUsersStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>GitHub Periodic Job</td>
+                <td>
+                    {{if .Status.GithubStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>Twitter Periodic Job</td>
+                <td>
+                    {{if .Status.TwitterStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>Config File Monitoring</td>
+                <td>
+                    {{if .Status.MonitorConfigStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>Twitter Credential Monitoring</td>
+                <td>
+                    {{if .Status.MonitorTwitterCred}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>Google Cloud Credential Monitoring</td>
+                <td>
+                    {{if .Status.MonitorGCloudCred}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+            <tr>
+                <td>HTTP</td>
+                <td>
+                    {{if .Status.HttpStatus}}
+                    <span style="color: blue">Active</span>
+                    {{else}}
+                    <span style="color: red">Stop</span>
+                    {{end}}
+                </td>
+            </tr>
+        </table>
         <ul>
-            {{if .Status.TwitterListenMyselfStatus}}
-            <li>Twitter Listens Yourself: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>Twitter Listens Yourself: <span style="color: red">Stop</span></li>
-            {{end}}
 
-            {{if .Status.TwitterListenUsersStatus}}
-            <li>Twitter Listens Users: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>Twitter Listens Users: <span style="color: red">Stop</span></li>
-            {{end}}
-
-            {{if .Status.GithubStatus}}
-            <li>GitHub: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>GitHub: <span style="color: red">Stop</span></li>
-            {{end}}
-
-            {{if .Status.TwitterStatus}}
-            <li>Twitter: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>Twitter: <span style="color: red">Stop</span></li>
-            {{end}}
-
-            {{if .Status.MonitorConfigStatus}}
-            <li>Monitor Config: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>Monitor Config: <span style="color: red">Stop</span></li>
-            {{end}}
-
-            {{if .Status.HttpStatus}}
-            <li>HTTP: <span style="color: blue">Active</span></li>
-            {{else}}
-            <li>HTTP: <span style="color: red">Stop</span></li>
-            {{end}}
         </ul>
     </div>
 </body>
