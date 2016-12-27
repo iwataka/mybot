@@ -82,6 +82,10 @@ func (s *MybotServer) Init(user, password, cert, key string) error {
 			"/status/",
 			wrapHandlerWithBasicAuth(s.statusHandler, user, password),
 		)
+		http.HandleFunc(
+			"/setup/",
+			wrapHandlerWithBasicAuth(s.setupHandler, user, password),
+		)
 
 		// API handlers
 		http.HandleFunc(
@@ -503,6 +507,24 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 		s.config.HTTP.Name,
 		logger.ReadString(),
 		*s.status,
+	}
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := generateTemplate("setup", "pages/setup.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := &struct {
+		UserName string
+	}{
+		s.config.HTTP.Name,
 	}
 	err = tmpl.Execute(w, data)
 	if err != nil {
