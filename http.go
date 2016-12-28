@@ -516,20 +516,52 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("setup", "pages/setup.html")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := &struct {
-		UserName string
-	}{
-		s.config.HTTP.Name,
-	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if r.Method == http.MethodPost {
+		msg := ""
+		defer func() {
+			if len(msg) != 0 {
+				msgCookie := &http.Cookie{
+					Name:  "mybot.setup.message",
+					Value: msg,
+				}
+				http.SetCookie(w, msgCookie)
+			}
+			w.Header().Add("Location", "/setup/")
+			w.WriteHeader(http.StatusSeeOther)
+		}()
+
+		msg = "This feature is not available now"
+	} else if r.Method == http.MethodGet {
+		tmpl, err := generateTemplate("setup", "pages/setup.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		msg := ""
+		msgCookie, err := r.Cookie("mybot.setup.message")
+		if err == nil {
+			msg = msgCookie.Value
+		}
+
+		data := &struct {
+			UserName string
+			Message  string
+		}{
+			s.config.HTTP.Name,
+			msg,
+		}
+
+		if msgCookie != nil {
+			msgCookie.Value = ""
+			http.SetCookie(w, msgCookie)
+		}
+
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 

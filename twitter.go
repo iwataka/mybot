@@ -94,11 +94,14 @@ func (a *TwitterAction) sub(action *TwitterAction) {
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(a *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
-	anaconda.SetConsumerKey(a.ConsumerKey)
-	anaconda.SetConsumerSecret(a.ConsumerSecret)
-	api := anaconda.NewTwitterApi(a.AccessToken, a.AccessTokenSecret)
+func NewTwitterAPI(at, ats string, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
+	api := anaconda.NewTwitterApi(at, ats)
 	return &TwitterAPI{api, nil, c, cfg}
+}
+
+func SetConsumer(key, secret string) {
+	anaconda.SetConsumerKey(key)
+	anaconda.SetConsumerSecret(secret)
 }
 
 // PostDMToScreenName wraps anaconda.TwitterApi#PostDMToScreenName and has

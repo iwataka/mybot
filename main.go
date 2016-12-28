@@ -159,7 +159,8 @@ func beforeRunning(c *cli.Context) error {
 
 	twitterAuth := &TwitterAuth{}
 	twitterAuth.fromJson(c.String("twitter"))
-	twitterAPI = NewTwitterAPI(twitterAuth, cache, config)
+	SetConsumer(twitterAuth.ConsumerKey, twitterAuth.ConsumerSecret)
+	twitterAPI = NewTwitterAPI(twitterAuth.AccessToken, twitterAuth.AccessTokenSecret, cache, config)
 
 	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
@@ -356,7 +357,8 @@ func monitorTwitterCred() {
 			auth := &TwitterAuth{}
 			err := auth.fromJson(ctxt.String("twitter"))
 			if err != nil {
-				api := NewTwitterAPI(auth, cache, config)
+				SetConsumer(auth.ConsumerKey, auth.ConsumerSecret)
+				api := NewTwitterAPI(auth.AccessToken, auth.AccessTokenSecret, cache, config)
 				*twitterAPI = *api
 				reloadListeners()
 			}
