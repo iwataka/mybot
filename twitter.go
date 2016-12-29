@@ -449,7 +449,7 @@ func (l *TwitterUserListener) Listen() error {
 					l.api.cache.LatestTweetID[name] = c.Id
 				}
 			}
-			err = l.api.cache.Save(l.file)
+			err := l.api.cache.Save(l.file)
 			if err != nil {
 				return err
 			}
@@ -513,7 +513,7 @@ func (l *TwitterMyselfListener) Listen() error {
 					}
 				}
 			}
-			err = l.api.cache.Save(l.file)
+			err := l.api.cache.Save(l.file)
 			if err != nil {
 				return err
 			}
