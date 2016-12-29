@@ -4,13 +4,7 @@
 <body>
     <div class="container">
         {{template "navbar" .}}
-        <h2>Current Error Log</h2>
-        <br/>
-        {{if .Log}}
-        <div class="alert alert-info">Error Log found</div>
-        {{else}}
-        <div class="alert alert-info">Nothing to show</div>
-        {{end}}
+        <h2>Error Log</h2>
         <pre>
             {{.Log}}
         </pre>
