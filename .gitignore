@@ -11,3 +11,4 @@ twitter_authentication.json
 *.crt
 *.csr
 *.key
+*.bak
