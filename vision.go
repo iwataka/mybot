@@ -130,9 +130,9 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 		if err != nil {
 			return false, err
 		}
-		cache.ImageURL = urls[i]
-		cache.ImageAnalysisResult = string(result)
-		cache.ImageAnalysisDate = time.Now().String()
+		a.cache.ImageURL = urls[i]
+		a.cache.ImageAnalysisResult = string(result)
+		a.cache.ImageAnalysisDate = time.Now().String()
 
 		match := true
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {

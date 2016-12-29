@@ -447,11 +447,11 @@ func (l *TwitterUserListener) Listen() error {
 						return err
 					}
 					l.api.cache.LatestTweetID[name] = c.Id
-					err = l.api.cache.Save(l.file)
-					if err != nil {
-						return err
-					}
 				}
+			}
+			err = l.api.cache.Save(l.file)
+			if err != nil {
+				return err
 			}
 		case os.Signal:
 			if c == os.Interrupt {
@@ -512,10 +512,10 @@ func (l *TwitterMyselfListener) Listen() error {
 						return err
 					}
 				}
-				err = l.api.cache.Save(l.file)
-				if err != nil {
-					return err
-				}
+			}
+			err = l.api.cache.Save(l.file)
+			if err != nil {
+				return err
 			}
 		case os.Signal:
 			if c == os.Interrupt {
