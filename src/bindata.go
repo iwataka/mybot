@@ -90,7 +90,7 @@ func assetsCssCustomCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/css/custom.css", size: 722, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "assets/css/custom.css", size: 722, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -110,7 +110,7 @@ func pagesConfigHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/config.html", size: 41935, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/config.html", size: 41935, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -130,7 +130,7 @@ func pagesHeaderHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/header.html", size: 1028, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/header.html", size: 1028, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -150,7 +150,7 @@ func pagesIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/index.html", size: 4199, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/index.html", size: 4199, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -170,7 +170,7 @@ func pagesLogHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/log.html", size: 228, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/log.html", size: 228, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -190,7 +190,7 @@ func pagesNavbarHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/navbar.html", size: 943, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/navbar.html", size: 943, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -210,7 +210,7 @@ func pagesSetupHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/setup.html", size: 1778, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/setup.html", size: 1778, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -230,7 +230,7 @@ func pagesStatusHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "pages/status.html", size: 3104, mode: os.FileMode(436), modTime: time.Unix(1483434060, 0)}
+	info := bindataFileInfo{name: "pages/status.html", size: 3104, mode: os.FileMode(436), modTime: time.Unix(1483434595, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

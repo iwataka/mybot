@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/iwataka/mybot/src"
 )
 
 func TestCache(t *testing.T) {
@@ -15,7 +17,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	c, err := NewMybotCache(path)
+	c, err := mybot.NewMybotCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +25,7 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err = NewMybotCache(path)
+	c, err = mybot.NewMybotCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +36,7 @@ func TestLogger(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	tmp := filepath.Join(dir, "mybot-test-logger.log")
-	_, err = NewLogger(tmp, -1, nil, nil)
+	_, err = mybot.NewLogger(tmp, -1, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

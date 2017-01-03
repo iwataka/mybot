@@ -15,10 +15,8 @@ build() {
     if [[ ${os} = "windows" ]]; then
         exe="${name}".exe
     fi
-    GOOS=${os} GOARCH=${arch} go build -o "bin/${os}-${arch}/${exe}"
+    GOOS=${os} GOARCH=${arch} go build -o "bin/${os}-${arch}/${exe}" ./cmd/mybot
 }
-
-go generate
 
 build linux 386
 build linux amd64
