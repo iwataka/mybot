@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"io/ioutil"

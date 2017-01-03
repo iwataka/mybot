@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"bytes"
@@ -14,19 +14,12 @@ import (
 
 // MybotConfig is a root of the all configurations.
 type MybotConfig struct {
-	GitHub      *GitHubConfig      `toml:"github"`
 	Twitter     *TwitterConfig     `toml:"twitter"`
 	DB          *DBConfig          `toml:"db"`
 	Interaction *InteractionConfig `toml:"interaction"`
 	Log         *LogConfig         `toml:"log"`
 	HTTP        *HTTPConfig        `toml:"http"`
 	source      string             `toml:"-"`
-}
-
-// GitHubConfig is a configuration of GitHub projects
-type GitHubConfig struct {
-	Projects []GitHubProject `toml:"projects,omitempty"`
-	Duration string          `toml:"duration"`
 }
 
 // SourceConfig is a configuration for common sources
@@ -153,10 +146,6 @@ func (tc *TwitterConfig) GetScreenNames() []string {
 // instance.
 func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 	c := &MybotConfig{
-		GitHub: &GitHubConfig{
-			Projects: []GitHubProject{},
-			Duration: "12h",
-		},
 		Twitter: &TwitterConfig{
 			Timelines: []TimelineConfig{},
 			Searches:  []SearchConfig{},
@@ -189,7 +178,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if t.Filter.Vision.Face == nil {
 			t.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		t.Filter.visionAPI = vision
+		t.Filter.VisionAPI = vision
 	}
 	for _, f := range c.Twitter.Favorites {
 		if f.Filter.Vision == nil {
@@ -198,7 +187,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if f.Filter.Vision.Face == nil {
 			f.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		f.Filter.visionAPI = vision
+		f.Filter.VisionAPI = vision
 	}
 	for _, s := range c.Twitter.Searches {
 		if s.Filter.Vision == nil {
@@ -207,7 +196,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if s.Filter.Vision.Face == nil {
 			s.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		s.Filter.visionAPI = vision
+		s.Filter.VisionAPI = vision
 	}
 	c.source = path
 	return c, nil
@@ -215,13 +204,13 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 
 func (c *MybotConfig) SetVisionoAPI(vision *VisionAPI) {
 	for _, t := range c.Twitter.Timelines {
-		t.Filter.visionAPI = vision
+		t.Filter.VisionAPI = vision
 	}
 	for _, f := range c.Twitter.Favorites {
-		f.Filter.visionAPI = vision
+		f.Filter.VisionAPI = vision
 	}
 	for _, s := range c.Twitter.Searches {
-		s.Filter.visionAPI = vision
+		s.Filter.VisionAPI = vision
 	}
 }
 

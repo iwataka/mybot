@@ -1,4 +1,4 @@
-package main
+package mybot
 
 // Notification represents a notification about tweets
 type Notification struct {

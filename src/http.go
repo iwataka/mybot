@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"bytes"
@@ -12,15 +12,17 @@ import (
 	"strings"
 )
 
+//go:generate go-bindata -pkg mybot assets/... pages/...
+
 // MybotServer contains values for providing various pieces of information, such
 // as the error log and Google Vision API result, via HTTP to users.
 type MybotServer struct {
 	Logger     *Logger      `toml:"-"`
 	TwitterAPI *TwitterAPI  `toml:"-"`
 	VisionAPI  *VisionAPI   `toml:"-"`
-	cache      *MybotCache  `toml:"-"`
-	config     *MybotConfig `toml:"-"`
-	status     *MybotStatus `toml:"-"`
+	Cache      *MybotCache  `toml:"-"`
+	Config     *MybotConfig `toml:"-"`
+	Status     *MybotStatus `toml:"-"`
 }
 
 func checkAuth(r *http.Request, user, password string) bool {
@@ -49,7 +51,7 @@ func wrapHandlerWithBasicAuth(f http.HandlerFunc, user, password string) http.Ha
 
 // Init initializes HTTP server if MybotServer#Enabled is true.
 func (s *MybotServer) Init(user, password, cert, key string) error {
-	if s.config.HTTP.Enabled {
+	if s.Config.HTTP.Enabled {
 		http.HandleFunc(
 			"/",
 			wrapHandlerWithBasicAuth(s.handler, user, password),
@@ -87,34 +89,8 @@ func (s *MybotServer) Init(user, password, cert, key string) error {
 			wrapHandlerWithBasicAuth(s.setupHandler, user, password),
 		)
 
-		// API handlers
-		http.HandleFunc(
-			"/api/config/",
-			wrapHandlerWithBasicAuth(s.apiConfigHandler, user, password),
-		)
-		http.HandleFunc(
-			"/api/features/listen/myself/",
-			wrapHandlerWithBasicAuth(s.apiTwitterListenMyselfHandler, user, password),
-		)
-		http.HandleFunc(
-			"/api/features/listen/users/",
-			wrapHandlerWithBasicAuth(s.apiTwitterListenUsersHandler, user, password),
-		)
-		http.HandleFunc(
-			"/api/features/github/periodic/",
-			wrapHandlerWithBasicAuth(s.apiGitHubHandler, user, password),
-		)
-		http.HandleFunc(
-			"/api/features/twitter/periodic/",
-			wrapHandlerWithBasicAuth(s.apiTwitterHandler, user, password),
-		)
-		http.HandleFunc(
-			"/api/features/monitor/config/",
-			wrapHandlerWithBasicAuth(s.apiMonitorConfigHandler, user, password),
-		)
-
 		var err error
-		addr := s.config.HTTP.Host + ":" + s.config.HTTP.Port
+		addr := s.Config.HTTP.Host + ":" + s.Config.HTTP.Port
 		_, certErr := os.Stat(cert)
 		_, keyErr := os.Stat(key)
 		if certErr == nil && keyErr == nil {
@@ -141,7 +117,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		log := s.Logger.ReadString()
 		lines := strings.Split(log, "\n")
-		lineNum := s.config.HTTP.LogLines
+		lineNum := s.Config.HTTP.LogLines
 		head := len(lines) - lineNum
 		if head < 0 {
 			head = 0
@@ -156,9 +132,9 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		imageAnalysisResult := ""
-		if s.cache != nil {
+		if s.Cache != nil {
 			buf := new(bytes.Buffer)
-			err := json.Indent(buf, []byte(s.cache.ImageAnalysisResult), "", "  ")
+			err := json.Indent(buf, []byte(s.Cache.ImageAnalysisResult), "", "  ")
 			if err != nil {
 				imageAnalysisResult = "Error while formatting the result"
 			} else {
@@ -185,13 +161,13 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 			ImageAnalysisDate   string
 			CollectionMap       map[string]string
 		}{
-			s.config.HTTP.Name,
+			s.Config.HTTP.Name,
 			log,
 			botName,
-			s.cache.ImageURL,
-			s.cache.ImageSource,
+			s.Cache.ImageURL,
+			s.Cache.ImageSource,
 			imageAnalysisResult,
-			s.cache.ImageAnalysisDate,
+			s.Cache.ImageAnalysisDate,
 			colMap,
 		}
 
@@ -238,7 +214,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		val := r.MultipartForm.Value
 
 		deletedFlags := val["twitter.timelines.deleted"]
-		if len(deletedFlags) != len(s.config.Twitter.Timelines) {
+		if len(deletedFlags) != len(s.Config.Twitter.Timelines) {
 			http.Error(w, "Collapsed request", http.StatusInternalServerError)
 			return
 		}
@@ -281,10 +257,10 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.Action.Collections = getListTextboxValue(val, i, "twitter.timelines.action.collections")
 			timelines = append(timelines, timeline)
 		}
-		s.config.Twitter.Timelines = timelines
+		s.Config.Twitter.Timelines = timelines
 
 		deletedFlags = val["twitter.favorites.deleted"]
-		if len(deletedFlags) != len(s.config.Twitter.Favorites) {
+		if len(deletedFlags) != len(s.Config.Twitter.Favorites) {
 			http.Error(w, "Collapsed request", http.StatusInternalServerError)
 			return
 		}
@@ -303,7 +279,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			favorite := *NewFavoriteConfig()
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
 			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
-			s.config.Twitter.Favorites[i] = favorite
+			s.Config.Twitter.Favorites[i] = favorite
 			favorite.Filter.Patterns = getListTextboxValue(val, i, "twitter.favorites.filter.patterns")
 			favorite.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.favorites.filter.url_patterns")
 			favorite.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
@@ -326,10 +302,10 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			favorite.Action.Collections = getListTextboxValue(val, i, "twitter.favorites.action.collections")
 			favorites = append(favorites, favorite)
 		}
-		s.config.Twitter.Favorites = favorites
+		s.Config.Twitter.Favorites = favorites
 
 		deletedFlags = val["twitter.searches.deleted"]
-		if len(deletedFlags) != len(s.config.Twitter.Searches) {
+		if len(deletedFlags) != len(s.Config.Twitter.Searches) {
 			http.Error(w, "Collapsed request", http.StatusInternalServerError)
 			return
 		}
@@ -349,7 +325,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
-			s.config.Twitter.Searches[i] = search
+			s.Config.Twitter.Searches[i] = search
 			search.Filter.Patterns = getListTextboxValue(val, i, "twitter.searches.filter.patterns")
 			search.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.searches.filter.url_patterns")
 			search.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
@@ -372,37 +348,37 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Action.Collections = getListTextboxValue(val, i, "twitter.searches.action.collections")
 			searches = append(searches, search)
 		}
-		s.config.Twitter.Searches = searches
+		s.Config.Twitter.Searches = searches
 
-		s.config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
-		s.config.Twitter.Notification.Place.Users = getListTextboxValue(val, 0, "twitter.notification.place.users")
+		s.Config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
+		s.Config.Twitter.Notification.Place.Users = getListTextboxValue(val, 0, "twitter.notification.place.users")
 
-		s.config.DB.Driver = val["db.driver"][0]
-		s.config.DB.DataSource = val["db.data_source"][0]
-		s.config.DB.VisionTable = val["db.vision_table"][0]
+		s.Config.DB.Driver = val["db.driver"][0]
+		s.Config.DB.DataSource = val["db.data_source"][0]
+		s.Config.DB.VisionTable = val["db.vision_table"][0]
 
-		s.config.Interaction.Duration = val["interaction.duration"][0]
-		s.config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
-		s.config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
-		s.config.Interaction.Count = atoiOrDefault(val["interaction.count"][0], s.config.Interaction.Count)
+		s.Config.Interaction.Duration = val["interaction.duration"][0]
+		s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
+		s.Config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
+		s.Config.Interaction.Count = atoiOrDefault(val["interaction.count"][0], s.Config.Interaction.Count)
 
-		s.config.Log.AllowSelf = len(val["log.allow_self"]) > 1
-		s.config.Log.Users = getListTextboxValue(val, 0, "log.users")
+		s.Config.Log.AllowSelf = len(val["log.allow_self"]) > 1
+		s.Config.Log.Users = getListTextboxValue(val, 0, "log.users")
 
-		s.config.HTTP.Name = val["http.name"][0]
-		s.config.HTTP.Host = val["http.host"][0]
-		s.config.HTTP.Port = val["http.port"][0]
-		s.config.HTTP.Enabled = len(val["http.enabled"]) > 1
-		s.config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.config.HTTP.LogLines)
+		s.Config.HTTP.Name = val["http.name"][0]
+		s.Config.HTTP.Host = val["http.host"][0]
+		s.Config.HTTP.Port = val["http.port"][0]
+		s.Config.HTTP.Enabled = len(val["http.enabled"]) > 1
+		s.Config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.Config.HTTP.LogLines)
 
-		err = ValidateConfig(s.config)
+		err = ValidateConfig(s.Config)
 		if err != nil {
-			s.config.Reload()
+			s.Config.Reload()
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		err = s.config.Save()
+		err = s.Config.Save()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -421,8 +397,8 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			UserName string
 			Config   MybotConfig
 		}{
-			s.config.HTTP.Name,
-			*s.config,
+			s.Config.HTTP.Name,
+			*s.Config,
 		}
 		err = tmpl.Execute(w, data)
 		if err != nil {
@@ -434,9 +410,9 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		timelines := s.config.Twitter.Timelines
+		timelines := s.Config.Twitter.Timelines
 		timelines = append(timelines, *NewTimelineConfig())
-		s.config.Twitter.Timelines = timelines
+		s.Config.Twitter.Timelines = timelines
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
 	}
@@ -444,9 +420,9 @@ func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Re
 
 func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		favorites := s.config.Twitter.Favorites
+		favorites := s.Config.Twitter.Favorites
 		favorites = append(favorites, *NewFavoriteConfig())
-		s.config.Twitter.Favorites = favorites
+		s.Config.Twitter.Favorites = favorites
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
 	}
@@ -454,9 +430,9 @@ func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Re
 
 func (s *MybotServer) configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		searches := s.config.Twitter.Searches
+		searches := s.Config.Twitter.Searches
 		searches = append(searches, *NewSearchConfig())
-		s.config.Twitter.Searches = searches
+		s.Config.Twitter.Searches = searches
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
 	}
@@ -483,8 +459,8 @@ func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 		UserName string
 		Log      string
 	}{
-		s.config.HTTP.Name,
-		logger.ReadString(),
+		s.Config.HTTP.Name,
+		s.Logger.ReadString(),
 	}
 	err = tmpl.Execute(w, data)
 	if err != nil {
@@ -504,9 +480,9 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 		Log      string
 		Status   MybotStatus
 	}{
-		s.config.HTTP.Name,
-		logger.ReadString(),
-		*s.status,
+		s.Config.HTTP.Name,
+		s.Logger.ReadString(),
+		*s.Status,
 	}
 	err = tmpl.Execute(w, data)
 	if err != nil {
@@ -548,7 +524,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 			UserName string
 			Message  string
 		}{
-			s.config.HTTP.Name,
+			s.Config.HTTP.Name,
 			msg,
 		}
 
@@ -562,109 +538,6 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	}
-}
-
-func (s *MybotServer) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		w.Header().Set("Content-Type", "text/json")
-		bytes, err := json.Marshal(s.config)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write(bytes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else if r.Method == http.MethodPost {
-		bytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = json.Unmarshal(bytes, s.config)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = s.config.Save()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
-
-type APIFeatureStatus struct {
-	Status bool `json:status`
-}
-
-func (s *MybotServer) apiTwitterListenMyselfHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.apiGetStatusHandler(w, r, s.status.TwitterListenMyselfStatus)
-	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterListenMyself() })
-	}
-}
-
-func (s *MybotServer) apiTwitterListenUsersHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.apiGetStatusHandler(w, r, s.status.TwitterListenUsersStatus)
-	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterListenUsers() })
-	}
-}
-
-func (s *MybotServer) apiGitHubHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.apiGetStatusHandler(w, r, s.status.GithubStatus)
-	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { githubPeriodically() })
-	}
-}
-
-func (s *MybotServer) apiTwitterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.apiGetStatusHandler(w, r, s.status.TwitterStatus)
-	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { twitterPeriodically() })
-	}
-}
-
-func (s *MybotServer) apiMonitorConfigHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		s.apiGetStatusHandler(w, r, s.status.MonitorConfigStatus)
-	} else if r.Method == http.MethodPost {
-		s.apiPostStatusHandler(w, r, func() { monitorConfig() })
-	}
-}
-
-func (s *MybotServer) apiGetStatusHandler(w http.ResponseWriter, r *http.Request, status bool) {
-	data := &APIFeatureStatus{status}
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(bytes)
-}
-
-func (s *MybotServer) apiPostStatusHandler(w http.ResponseWriter, r *http.Request, f func()) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := &APIFeatureStatus{}
-	err = json.Unmarshal(bytes, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if data.Status {
-		f()
 	}
 }
 

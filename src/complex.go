@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ type TweetFilterConfig struct {
 	RetweetedThreshold int              `toml:"retweeted_threshold"`
 	Lang               string           `toml:"lang,omitempty"`
 	Vision             *VisionCondition `toml:"vision"`
-	visionAPI          *VisionAPI
+	VisionAPI          *VisionAPI
 }
 
 func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
@@ -65,7 +65,7 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 	if len(c.Lang) != 0 && c.Lang != t.Lang {
 		return false, nil
 	}
-	if c.Vision != nil && c.visionAPI != nil && c.visionAPI.api != nil {
+	if c.Vision != nil && c.VisionAPI != nil && c.VisionAPI.api != nil {
 		urls := make([]string, len(t.Entities.Media))
 		for i, m := range t.Entities.Media {
 			urls[i] = m.Media_url
@@ -73,11 +73,11 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 		match := false
 		var err error
 		if len(urls) != 0 {
-			match, err = c.visionAPI.MatchImages(urls, c.Vision)
+			match, err = c.VisionAPI.MatchImages(urls, c.Vision)
 			if err != nil {
 				return false, err
 			}
-			c.visionAPI.cache.ImageSource = fmt.Sprintf("https://twitter.com/%s/status/%s", t.User.IdStr, t.IdStr)
+			c.VisionAPI.cache.ImageSource = fmt.Sprintf("https://twitter.com/%s/status/%s", t.User.IdStr, t.IdStr)
 		}
 		if !match {
 			return false, nil

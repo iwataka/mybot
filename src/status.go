@@ -1,4 +1,4 @@
-package main
+package mybot
 
 // MybotStatus represents a status of this app
 type MybotStatus struct {

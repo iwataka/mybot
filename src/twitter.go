@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ type TwitterAuth struct {
 	AccessTokenSecret string `json:"access_token_secret",toml:"access_token_secret"`
 }
 
-func (a *TwitterAuth) fromJson(file string) error {
+func (a *TwitterAuth) FromJson(file string) error {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
@@ -649,7 +649,7 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 		return strings.Join(lines, "\n"), nil
 	} else if lowers == "configuration" || lowers == "config" || lowers == "conf" {
 		cfg := new(MybotConfig)
-		*cfg = *config
+		*cfg = *a.config
 		bytes, err := cfg.TomlText(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err

@@ -5,40 +5,33 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/iwataka/anaconda"
-	"github.com/mitchellh/go-homedir"
+	"github.com/iwataka/mybot/src"
 	"github.com/urfave/cli"
 )
 
-//go:generate go-bindata assets/... pages/...
-
 var (
-	twitterAPI         *TwitterAPI
-	githubAPI          *GitHubAPI
-	visionAPI          *VisionAPI
-	server             *MybotServer
-	config             *MybotConfig
-	cache              *MybotCache
-	logger             *Logger
-	status             *MybotStatus
+	twitterAPI         *mybot.TwitterAPI
+	visionAPI          *mybot.VisionAPI
+	server             *mybot.MybotServer
+	config             *mybot.MybotConfig
+	cache              *mybot.MybotCache
+	logger             *mybot.Logger
+	status             *mybot.MybotStatus
 	ctxt               *cli.Context
 	userListenerChan   chan interface{}
 	myselfListenerChan chan interface{}
 )
 
 func main() {
-	home, err := homedir.Dir()
-	if err != nil {
-		panic(err)
-	}
+	var err error
 
 	logFlag := cli.StringFlag{
 		Name:  "log",
-		Value: filepath.Join(home, ".mybot-debug.log"),
+		Value: "mybot.log",
 		Usage: "Log file's location",
 	}
 
@@ -50,7 +43,7 @@ func main() {
 
 	cacheFlag := cli.StringFlag{
 		Name:  "cache",
-		Value: filepath.Join(home, ".cache/mybot/cache.json"),
+		Value: ".cache/mybot/cache.json",
 		Usage: "Cache file's location",
 	}
 
@@ -138,55 +131,49 @@ func beforeRunning(c *cli.Context) error {
 	ctxt = c
 
 	var err error
-	cache, err = NewMybotCache(c.String("cache"))
+	cache, err = mybot.NewMybotCache(c.String("cache"))
 	if err != nil {
 		panic(err)
 	}
 
-	config, err = NewMybotConfig(c.String("config"), nil)
+	config, err = mybot.NewMybotConfig(c.String("config"), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	visionAPI, err = NewVisionAPI(cache, config, c.String("gcloud"))
+	visionAPI, err = mybot.NewVisionAPI(cache, config, c.String("gcloud"))
 	if err != nil {
 		panic(err)
 	}
 
 	config.SetVisionoAPI(visionAPI)
 
-	githubAPI = NewGitHubAPI(nil, cache)
+	twitterAuth := &mybot.TwitterAuth{}
+	twitterAuth.FromJson(c.String("twitter"))
+	mybot.SetConsumer(twitterAuth.ConsumerKey, twitterAuth.ConsumerSecret)
+	twitterAPI = mybot.NewTwitterAPI(twitterAuth.AccessToken, twitterAuth.AccessTokenSecret, cache, config)
 
-	twitterAuth := &TwitterAuth{}
-	twitterAuth.fromJson(c.String("twitter"))
-	SetConsumer(twitterAuth.ConsumerKey, twitterAuth.ConsumerSecret)
-	twitterAPI = NewTwitterAPI(twitterAuth.AccessToken, twitterAuth.AccessTokenSecret, cache, config)
-
-	logger, err = NewLogger(c.String("log"), -1, twitterAPI, config)
+	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
 		panic(err)
 	}
 
-	status = &MybotStatus{}
+	status = &mybot.MybotStatus{}
 
-	server = &MybotServer{
+	server = &mybot.MybotServer{
 		Logger:     logger,
 		TwitterAPI: twitterAPI,
 		VisionAPI:  visionAPI,
-		cache:      cache,
-		config:     config,
-		status:     status,
+		Cache:      cache,
+		Config:     config,
+		Status:     status,
 	}
 
 	return nil
 }
 
 func run(c *cli.Context) error {
-	err := runGitHub()
-	if err != nil {
-		logger.Println(err)
-	}
-	err = runTwitterWithoutStream()
+	err := runTwitterWithoutStream()
 	if err != nil {
 		logger.Println(err)
 	}
@@ -213,7 +200,7 @@ func keepConnection(f func() error, intervalStr string, maxCount int) error {
 		if err != nil {
 			logger.Println(err)
 			switch err.(type) {
-			case KillError:
+			case mybot.KillError:
 				break
 			default:
 				count++
@@ -273,32 +260,6 @@ func twitterListenUsers() {
 	}, "5m", 5)
 }
 
-func githubPeriodically() {
-	if status.GithubStatus {
-		return
-	}
-	status.GithubStatus = true
-	defer func() { status.GithubStatus = false }()
-	for {
-		err := runGitHub()
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		err = cache.Save(ctxt.String("cache"))
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		d, err := time.ParseDuration(config.GitHub.Duration)
-		if err != nil {
-			logger.Println(err)
-			return
-		}
-		time.Sleep(d)
-	}
-}
-
 func twitterPeriodically() {
 	if status.TwitterStatus {
 		return
@@ -335,7 +296,7 @@ func monitorConfig() {
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
-			cfg, err := NewMybotConfig(ctxt.String("config"), visionAPI)
+			cfg, err := mybot.NewMybotConfig(ctxt.String("config"), visionAPI)
 			if err == nil {
 				*config = *cfg
 				reloadListeners()
@@ -354,11 +315,11 @@ func monitorTwitterCred() {
 		ctxt.String("twitter"),
 		time.Duration(1)*time.Second,
 		func() {
-			auth := &TwitterAuth{}
-			err := auth.fromJson(ctxt.String("twitter"))
+			auth := &mybot.TwitterAuth{}
+			err := auth.FromJson(ctxt.String("twitter"))
 			if err != nil {
-				SetConsumer(auth.ConsumerKey, auth.ConsumerSecret)
-				api := NewTwitterAPI(auth.AccessToken, auth.AccessTokenSecret, cache, config)
+				mybot.SetConsumer(auth.ConsumerKey, auth.ConsumerSecret)
+				api := mybot.NewTwitterAPI(auth.AccessToken, auth.AccessTokenSecret, cache, config)
 				*twitterAPI = *api
 				reloadListeners()
 			}
@@ -376,7 +337,7 @@ func monitorGCloudCred() {
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
 		func() {
-			api, err := NewVisionAPI(cache, config, ctxt.String("gcloud"))
+			api, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
 			if err != nil {
 				*visionAPI = *api
 				reloadListeners()
@@ -425,7 +386,6 @@ func serve(c *cli.Context) error {
 
 	go twitterListenMyself()
 	go twitterListenUsers()
-	go githubPeriodically()
 	go twitterPeriodically()
 
 	go monitorConfig()
@@ -456,20 +416,10 @@ func monitorFile(file string, d time.Duration, f func()) {
 	}
 }
 
-func runGitHub() error {
-	for _, p := range config.GitHub.Projects {
-		err := githubCommitTweet(p)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func runTwitterWithStream() error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Searches {
-		a.Filter.visionAPI = visionAPI
+		a.Filter.VisionAPI = visionAPI
 		v := url.Values{}
 		if a.Count > 0 {
 			v.Set("count", fmt.Sprintf("%d", a.Count))
@@ -490,7 +440,7 @@ func runTwitterWithStream() error {
 		if a.Count > 0 {
 			v.Set("count", fmt.Sprintf("%d", a.Count))
 		}
-		a.Filter.visionAPI = visionAPI
+		a.Filter.VisionAPI = visionAPI
 		for _, name := range a.ScreenNames {
 			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
@@ -525,7 +475,7 @@ func runTwitterWithoutStream() error {
 		if a.IncludeRts != nil {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
-		a.Filter.visionAPI = visionAPI
+		a.Filter.VisionAPI = visionAPI
 		for _, name := range a.ScreenNames {
 			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
 			tweets = append(tweets, ts...)
@@ -536,21 +486,6 @@ func runTwitterWithoutStream() error {
 	}
 	for _, t := range tweets {
 		err := twitterAPI.NotifyToAll(&t)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func githubCommitTweet(p GitHubProject) error {
-	commit, err := githubAPI.LatestCommit(p)
-	if err != nil {
-		return err
-	}
-	if commit != nil {
-		msg := p.User + "/" + p.Repo + "\n" + *commit.HTMLURL
-		_, err := twitterAPI.PostTweet(msg, nil)
 		if err != nil {
 			return err
 		}
