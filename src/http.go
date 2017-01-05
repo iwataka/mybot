@@ -14,102 +14,137 @@ import (
 
 //go:generate go-bindata -pkg mybot assets/... pages/...
 
-// MybotServer contains values for providing various pieces of information, such
-// as the error log and Google Vision API result, via HTTP to users.
+// MybotServer shows various pieces of information to users, such as an error
+// log, Google Vision API result and Twitter collections, via HTTP protocol .
 type MybotServer struct {
-	Logger     *Logger      `toml:"-"`
-	TwitterAPI *TwitterAPI  `toml:"-"`
-	VisionAPI  *VisionAPI   `toml:"-"`
-	Cache      *MybotCache  `toml:"-"`
-	Config     *MybotConfig `toml:"-"`
-	Status     *MybotStatus `toml:"-"`
+	// Logger is a logging utility instance of this application. This
+	// returns a log file's content if users request.
+	Logger *Logger
+	// TwitterAPI is a client for Twitter API. This server requires some
+	// pieces of information related to TWitter, so this is here.
+	TwitterAPI *TwitterAPI
+	// VisionAPI is a client for Google Vision API.
+	//
+	// TODO: This field may not be required (at this time only
+	// VisionAPI.File is required).
+	VisionAPI *VisionAPI
+	// Cache is a cache of this application and contains some Vision API
+	// analysis result. This server need to show them.
+	//
+	// TODO: In the future, this server will fetch Vision API results from
+	// DB and thus this field will be removed.
+	Cache *MybotCache
+	// Config is a configuration of this application and this server use
+	// this as the others do.
+	Config *MybotConfig
+	// Status is a status of all processes in this application. This
+	// enables users monitor their status via browser.
+	Status *MybotStatus
+	// pass is a flag which represents whether Twitter API is authenticated
+	// or not. When Twitter API is authenticated, then users can pass a
+	// setup page and go to other pages, thus this is called 'pass'.
+	pass bool
 }
 
-func checkAuth(r *http.Request, user, password string) bool {
-	u, p, ok := r.BasicAuth()
-	if !ok {
-		return false
-	}
-	return u == user && p == password
-}
-
-func wrapHandlerWithBasicAuth(f http.HandlerFunc, user, password string) http.HandlerFunc {
-	if len(user) != 0 && len(password) != 0 {
-		return func(w http.ResponseWriter, r *http.Request) {
-			if !checkAuth(r, user, password) {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Enter username and password"`)
-				w.WriteHeader(401)
-				w.Write([]byte("401 Unauthorized\n"))
-				return
-			}
+func (s *MybotServer) wrapHandler(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if s.pass {
 			f(w, r)
+			return
 		}
-	} else {
-		return f
+
+		ok, err := s.TwitterAPI.VerifyCredentials()
+		if ok && err == nil {
+			s.pass = true
+			f(w, r)
+			return
+		}
+
+		msg := ""
+		if err != nil {
+			msg = err.Error()
+		} else {
+			msg = "You should specify the below information"
+		}
+		msgCookie := &http.Cookie{
+			Name:  "mybot.setup.message",
+			Value: msg,
+			Path:  "/setup/",
+		}
+		http.SetCookie(w, msgCookie)
+		w.Header().Add("Location", "/setup/")
+		w.WriteHeader(http.StatusSeeOther)
 	}
 }
 
-// Init initializes HTTP server if MybotServer#Enabled is true.
-func (s *MybotServer) Init(user, password, cert, key string) error {
-	if s.Config.HTTP.Enabled {
-		http.HandleFunc(
-			"/",
-			wrapHandlerWithBasicAuth(s.handler, user, password),
-		)
-		http.HandleFunc(
-			"/config/",
-			wrapHandlerWithBasicAuth(s.configHandler, user, password),
-		)
-		http.HandleFunc(
-			"/config/timelines/add",
-			wrapHandlerWithBasicAuth(s.configTimelineAddHandler, user, password),
-		)
-		http.HandleFunc(
-			"/config/favorites/add",
-			wrapHandlerWithBasicAuth(s.configFavoriteAddHandler, user, password),
-		)
-		http.HandleFunc(
-			"/config/searches/add",
-			wrapHandlerWithBasicAuth(s.configSearchAddHandler, user, password),
-		)
-		http.HandleFunc(
-			"/assets/",
-			wrapHandlerWithBasicAuth(s.assetHandler, user, password),
-		)
-		http.HandleFunc(
-			"/log/",
-			wrapHandlerWithBasicAuth(s.logHandler, user, password),
-		)
-		http.HandleFunc(
-			"/status/",
-			wrapHandlerWithBasicAuth(s.statusHandler, user, password),
-		)
-		http.HandleFunc(
-			"/setup/",
-			wrapHandlerWithBasicAuth(s.setupHandler, user, password),
-		)
+func (s *MybotServer) Init(host, port, cert, key string) error {
+	http.HandleFunc(
+		"/",
+		s.wrapHandler(s.handler),
+	)
+	http.HandleFunc(
+		"/config/",
+		s.wrapHandler(s.configHandler),
+	)
+	http.HandleFunc(
+		"/config/timelines/add",
+		s.wrapHandler(s.configTimelineAddHandler),
+	)
+	http.HandleFunc(
+		"/config/favorites/add",
+		s.wrapHandler(s.configFavoriteAddHandler),
+	)
+	http.HandleFunc(
+		"/config/searches/add",
+		s.wrapHandler(s.configSearchAddHandler),
+	)
+	http.HandleFunc(
+		"/assets/",
+		s.assetHandler,
+	)
+	http.HandleFunc(
+		"/log/",
+		s.wrapHandler(s.logHandler),
+	)
+	http.HandleFunc(
+		"/status/",
+		s.wrapHandler(s.statusHandler),
+	)
+	http.HandleFunc(
+		"/setup/",
+		s.setupHandler,
+	)
 
-		var err error
-		addr := s.Config.HTTP.Host + ":" + s.Config.HTTP.Port
-		_, certErr := os.Stat(cert)
-		_, keyErr := os.Stat(key)
-		if certErr == nil && keyErr == nil {
-			fmt.Printf("Open %s://%s for more details\n", "https", addr)
-			err = http.ListenAndServeTLS(addr, cert, key, nil)
-		} else {
-			fmt.Printf("Open %s://%s for more details\n", "http", addr)
-			err = http.ListenAndServe(addr, nil)
-		}
-		if err != nil {
-			return err
-		}
+	h := s.Config.HTTP.Host
+	if len(host) != 0 {
+		h = host
+	}
+
+	p := s.Config.HTTP.Port
+	if len(port) != 0 {
+		p = port
+	}
+
+	var err error
+	addr := h + ":" + p
+	_, certErr := os.Stat(cert)
+	_, keyErr := os.Stat(key)
+	if certErr == nil && keyErr == nil {
+		fmt.Printf("Open %s://%s for more details\n", "https", addr)
+		err = http.ListenAndServeTLS(addr, cert, key, nil)
+	} else {
+		fmt.Printf("Open %s://%s for more details\n", "http", addr)
+		err = http.ListenAndServe(addr, nil)
+	}
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		tmpl, err := generateTemplate("index", "pages/index.html")
+		tmpl, err := generateTemplate("index", "src/pages/index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -368,7 +403,6 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.HTTP.Name = val["http.name"][0]
 		s.Config.HTTP.Host = val["http.host"][0]
 		s.Config.HTTP.Port = val["http.port"][0]
-		s.Config.HTTP.Enabled = len(val["http.enabled"]) > 1
 		s.Config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.Config.HTTP.LogLines)
 
 		err = ValidateConfig(s.Config)
@@ -388,7 +422,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
 	} else if r.Method == http.MethodGet {
-		tmpl, err := generateTemplate("config", "pages/config.html")
+		tmpl, err := generateTemplate("config", "src/pages/config.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -450,7 +484,7 @@ func (s *MybotServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("log", "pages/log.html")
+	tmpl, err := generateTemplate("log", "src/pages/log.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -470,7 +504,7 @@ func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("status", "pages/status.html")
+	tmpl, err := generateTemplate("status", "src/pages/status.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -499,6 +533,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 				msgCookie := &http.Cookie{
 					Name:  "mybot.setup.message",
 					Value: msg,
+					Path:  "/setup/",
 				}
 				http.SetCookie(w, msgCookie)
 			}
@@ -506,9 +541,40 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusSeeOther)
 		}()
 
-		msg = "This feature is not available now"
+		err := r.ParseMultipartForm(32 << 20)
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		val := r.MultipartForm.Value
+
+		ck := val["twitter-consumer-key"][0]
+		cs := val["twitter-consumer-secret"][0]
+		at := val["twitter-access-token"][0]
+		ats := val["twitter-access-token-secret"][0]
+		auth := &TwitterAuth{ck, cs, at, ats, s.TwitterAPI.File}
+
+		err = auth.ToJson()
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+
+		file, _, err := r.FormFile("gcloud-credential-file")
+		if err == nil {
+			bytes, err := ioutil.ReadAll(file)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			err = ioutil.WriteFile(s.VisionAPI.File, bytes, 0640)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+		}
 	} else if r.Method == http.MethodGet {
-		tmpl, err := generateTemplate("setup", "pages/setup.html")
+		tmpl, err := generateTemplate("setup", "src/pages/setup.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -530,6 +596,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 
 		if msgCookie != nil {
 			msgCookie.Value = ""
+			msgCookie.Path = "/setup/"
 			http.SetCookie(w, msgCookie)
 		}
 
@@ -546,11 +613,11 @@ func generateTemplate(name, path string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	header, err := readFile("pages/header.html")
+	header, err := readFile("src/pages/header.html")
 	if err != nil {
 		return nil, err
 	}
-	navbar, err := readFile("pages/navbar.html")
+	navbar, err := readFile("src/pages/navbar.html")
 	if err != nil {
 		return nil, err
 	}

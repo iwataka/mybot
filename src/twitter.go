@@ -18,28 +18,34 @@ import (
 // values cause infinite number of messages.
 const msgPrefix = "<bot message>\n"
 
-// TwitterAPI is a wrapper of anaconda.TwitterApi.
-type TwitterAPI struct {
-	api    *anaconda.TwitterApi
-	self   *anaconda.User
-	cache  *MybotCache
-	config *MybotConfig
-}
-
 // TwitterAuth contains values required for Twitter's user authentication.
 type TwitterAuth struct {
 	ConsumerKey       string `json:"consumer_key",toml:"consumer_key"`
 	ConsumerSecret    string `json:"consumer_secret",toml:"consumer_secret"`
 	AccessToken       string `json:"access_token",toml:"access_token"`
 	AccessTokenSecret string `json:"access_token_secret",toml:"access_token_secret"`
+	File              string `json:"-",toml:"-"`
 }
 
 func (a *TwitterAuth) FromJson(file string) error {
+	a.File = file
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return err
 	}
 	err = json.Unmarshal(bytes, a)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *TwitterAuth) ToJson() error {
+	bytes, err := json.Marshal(a)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(a.File, bytes, 0640)
 	if err != nil {
 		return err
 	}
@@ -92,16 +98,33 @@ func (a *TwitterAction) sub(action *TwitterAction) {
 	a.Collections = cols
 }
 
-// NewTwitterAPI takes a user's authentication, cache and configuration and
-// returns TwitterAPI instance for that user
-func NewTwitterAPI(at, ats string, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
-	api := anaconda.NewTwitterApi(at, ats)
-	return &TwitterAPI{api, nil, c, cfg}
+// TwitterAPI is a wrapper of anaconda.TwitterApi.
+type TwitterAPI struct {
+	api    *anaconda.TwitterApi
+	self   *anaconda.User
+	cache  *MybotCache
+	config *MybotConfig
+	File   string
 }
 
-func SetConsumer(key, secret string) {
-	anaconda.SetConsumerKey(key)
-	anaconda.SetConsumerSecret(secret)
+// NewTwitterAPI takes a user's authentication, cache and configuration and
+// returns TwitterAPI instance for that user
+func NewTwitterAPI(auth *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
+	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
+	return &TwitterAPI{api, nil, c, cfg, auth.File}
+}
+
+func SetConsumer(auth *TwitterAuth) {
+	anaconda.SetConsumerKey(auth.ConsumerKey)
+	anaconda.SetConsumerSecret(auth.ConsumerSecret)
+}
+
+func (a *TwitterAPI) VerifyCredentials() (bool, error) {
+	if a.api == nil {
+		return false, nil
+	} else {
+		return a.api.VerifyCredentials()
+	}
 }
 
 // PostDMToScreenName wraps anaconda.TwitterApi#PostDMToScreenName and has
@@ -470,17 +493,21 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListene
 		v = url.Values{}
 	}
 	usernames := strings.Join(a.config.Twitter.GetScreenNames(), ",")
-	users, err := a.api.GetUsersLookup(usernames, nil)
-	if err != nil {
-		return nil, err
+	if len(usernames) == 0 {
+		return nil, errors.New("No user specified")
+	} else {
+		users, err := a.api.GetUsersLookup(usernames, nil)
+		if err != nil {
+			return nil, err
+		}
+		userids := []string{}
+		for _, u := range users {
+			userids = append(userids, u.IdStr)
+		}
+		v.Set("follow", strings.Join(userids, ","))
+		stream := a.api.PublicStreamFilter(v)
+		return &TwitterUserListener{stream.C, a, file}, nil
 	}
-	userids := []string{}
-	for _, u := range users {
-		userids = append(userids, u.IdStr)
-	}
-	v.Set("follow", strings.Join(userids, ","))
-	stream := a.api.PublicStreamFilter(v)
-	return &TwitterUserListener{stream.C, a, file}, nil
 }
 
 type TwitterMyselfListener struct {
@@ -531,7 +558,7 @@ func (l *TwitterMyselfListener) Listen() error {
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
 func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) (*TwitterMyselfListener, error) {
-	ok, err := a.api.VerifyCredentials()
+	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, err
 	} else if !ok {

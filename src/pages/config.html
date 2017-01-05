@@ -780,7 +780,6 @@
                     <td>name</td>
                     <td>host</td>
                     <td>port</td>
-                    <td>enabled</td>
                     <td>log lines</td>
                 </tr>
             </thead>
@@ -794,9 +793,6 @@
                     </td>
                     <td>
                         <input form="overwrite" type="number" name="http.port" value="{{.Config.HTTP.Port}}">
-                    </td>
-                    <td>
-                        {{checkbox .Config.HTTP.Enabled "http.enabled"}}
                     </td>
                     <td>
                         <input form="overwrite" type="number" name="http.log_lines" value="{{.Config.HTTP.LogLines}}">

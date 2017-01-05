@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/src"
+	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 )
 
@@ -27,7 +28,10 @@ var (
 )
 
 func main() {
-	var err error
+	home, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
 
 	logFlag := cli.StringFlag{
 		Name:  "log",
@@ -37,20 +41,14 @@ func main() {
 
 	configFlag := cli.StringFlag{
 		Name:  "config",
-		Value: "config.toml",
+		Value: filepath.Join(home, ".config/mybot/config.toml"),
 		Usage: "Config file's location",
 	}
 
 	cacheFlag := cli.StringFlag{
 		Name:  "cache",
-		Value: ".cache/mybot/cache.json",
+		Value: filepath.Join(home, ".cache/mybot/cache.json"),
 		Usage: "Cache file's location",
-	}
-
-	credFlag := cli.StringFlag{
-		Name:  "credential,c",
-		Value: "",
-		Usage: "Credential for Basic Authentication (ex: user:password)",
 	}
 
 	gcloudFlag := cli.StringFlag{
@@ -77,6 +75,18 @@ func main() {
 		Usage: "Key file for HTTPS",
 	}
 
+	hostFlag := cli.StringFlag{
+		Name:  "host,H",
+		Value: "",
+		Usage: "Host this server listen on",
+	}
+
+	portFlag := cli.StringFlag{
+		Name:  "port,P",
+		Value: "",
+		Usage: "Port this server listen on",
+	}
+
 	runFlags := []cli.Flag{
 		logFlag,
 		configFlag,
@@ -89,11 +99,12 @@ func main() {
 		logFlag,
 		configFlag,
 		cacheFlag,
-		credFlag,
 		gcloudFlag,
 		twitterFlag,
 		certFlag,
 		keyFlag,
+		hostFlag,
+		portFlag,
 	}
 
 	app := cli.NewApp()
@@ -141,17 +152,22 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	visionAPI, err = mybot.NewVisionAPI(cache, config, c.String("gcloud"))
-	if err != nil {
-		panic(err)
+	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
+		visionAPI, err = mybot.NewVisionAPI(cache, config, c.String("gcloud"))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		visionAPI = &mybot.VisionAPI{}
+		visionAPI.File = c.String("gcloud")
 	}
 
 	config.SetVisionoAPI(visionAPI)
 
 	twitterAuth := &mybot.TwitterAuth{}
 	twitterAuth.FromJson(c.String("twitter"))
-	mybot.SetConsumer(twitterAuth.ConsumerKey, twitterAuth.ConsumerSecret)
-	twitterAPI = mybot.NewTwitterAPI(twitterAuth.AccessToken, twitterAuth.AccessTokenSecret, cache, config)
+	mybot.SetConsumer(twitterAuth)
+	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
 	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
@@ -191,6 +207,7 @@ func keepConnection(f func() error, intervalStr string, maxCount int) error {
 	}
 	t := time.Now()
 	count := 0
+	killed := false
 	for {
 		err := f()
 		if time.Now().Sub(t) >= interval {
@@ -201,12 +218,12 @@ func keepConnection(f func() error, intervalStr string, maxCount int) error {
 			logger.Println(err)
 			switch err.(type) {
 			case mybot.KillError:
-				break
+				killed = true
 			default:
 				count++
 			}
 		}
-		if count >= maxCount {
+		if count >= maxCount || killed {
 			break
 		}
 	}
@@ -317,9 +334,9 @@ func monitorTwitterCred() {
 		func() {
 			auth := &mybot.TwitterAuth{}
 			err := auth.FromJson(ctxt.String("twitter"))
-			if err != nil {
-				mybot.SetConsumer(auth.ConsumerKey, auth.ConsumerSecret)
-				api := mybot.NewTwitterAPI(auth.AccessToken, auth.AccessTokenSecret, cache, config)
+			if err == nil {
+				mybot.SetConsumer(auth)
+				api := mybot.NewTwitterAPI(auth, cache, config)
 				*twitterAPI = *api
 				reloadListeners()
 			}
@@ -338,7 +355,7 @@ func monitorGCloudCred() {
 		time.Duration(1)*time.Second,
 		func() {
 			api, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
-			if err != nil {
+			if err == nil {
 				*visionAPI = *api
 				reloadListeners()
 			}
@@ -350,12 +367,15 @@ func reloadListeners() {
 	if userListenerChan != nil {
 		userListenerChan <- os.Interrupt
 	} else {
-		twitterListenUsers()
+		go twitterListenUsers()
 	}
 	if myselfListenerChan != nil {
 		myselfListenerChan <- os.Interrupt
 	} else {
-		twitterListenMyself()
+		go twitterListenMyself()
+	}
+	if !status.TwitterStatus {
+		go twitterPeriodically()
 	}
 }
 
@@ -365,17 +385,11 @@ func httpServer() {
 	}
 	status.HttpStatus = true
 	defer func() { status.HttpStatus = false }()
-	cred := ctxt.String("credential")
-	userAndPassword := strings.SplitN(cred, ":", 2)
-	user := ""
-	password := ""
-	if len(userAndPassword) == 2 {
-		user = userAndPassword[0]
-		password = userAndPassword[1]
-	}
+	host := ctxt.String("host")
+	port := ctxt.String("port")
 	cert := ctxt.String("cert")
 	key := ctxt.String("key")
-	err := server.Init(user, password, cert, key)
+	err := server.Init(host, port, cert, key)
 	if err != nil {
 		panic(err)
 	}

@@ -18,12 +18,13 @@ type VisionAPI struct {
 	api    *vision.Service
 	cache  *MybotCache
 	config *MybotConfig
+	File   string
 }
 
 // NewVisionAPI takes a path of a user's google-cloud credential file and cache
 // and returns a VisionAPI instance for that user.
 func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionAPI, error) {
-	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
+	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
 			return nil, err
@@ -37,7 +38,7 @@ func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionA
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, cache, config}, nil
+	return &VisionAPI{a, cache, config, file}, nil
 }
 
 // VisionCondition is a condition to check whether images match or not by using

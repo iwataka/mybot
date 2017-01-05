@@ -126,7 +126,6 @@ type HTTPConfig struct {
 	Name     string `toml:"name"`
 	Host     string `toml:"host"`
 	Port     string `toml:"port"`
-	Enabled  bool   `toml:"enabled"`
 	LogLines int    `toml:"log_lines,omitempty"`
 }
 
@@ -150,27 +149,32 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 			Timelines: []TimelineConfig{},
 			Searches:  []SearchConfig{},
 			Duration:  "1h",
+			Notification: &Notification{
+				Place: &PlaceNotification{},
+			},
 		},
 		HTTP: &HTTPConfig{
-			Host: "127.0.0.1",
-			Port: "8080",
+			Host: "localhost",
+			Port: "3256",
 		},
+		DB:          &DBConfig{},
+		Log:         &LogConfig{},
+		Interaction: &InteractionConfig{},
 	}
-	bytes, err := ioutil.ReadFile(path)
+
+	c.source = path
+	err := c.Reload()
 	if err != nil {
 		return nil, err
 	}
-	md, err := toml.Decode(string(bytes), c)
-	if err != nil {
-		return nil, err
-	}
-	if len(md.Undecoded()) != 0 {
-		return nil, fmt.Errorf("%v undecoded in %s", md.Undecoded(), path)
-	}
+
 	err = ValidateConfig(c)
 	if err != nil {
 		return nil, err
 	}
+
+	// Assign empty values to config instance to prevent nil pointer
+	// reference error.
 	for _, t := range c.Twitter.Timelines {
 		if t.Filter.Vision == nil {
 			t.Filter.Vision = new(VisionCondition)
@@ -198,7 +202,6 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		}
 		s.Filter.VisionAPI = vision
 	}
-	c.source = path
 	return c, nil
 }
 
@@ -293,7 +296,7 @@ func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
 
 // Save saves the config data to the specified file
 func (c *MybotConfig) Save() error {
-	err := os.MkdirAll(filepath.Dir(c.source), 0600)
+	err := os.MkdirAll(filepath.Dir(c.source), 0751)
 	if err != nil {
 		return err
 	}
@@ -304,7 +307,7 @@ func (c *MybotConfig) Save() error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(c.source, writer.Bytes(), 0600)
+		err = ioutil.WriteFile(c.source, writer.Bytes(), 0640)
 		if err != nil {
 			return err
 		}
@@ -313,16 +316,18 @@ func (c *MybotConfig) Save() error {
 }
 
 func (c *MybotConfig) Reload() error {
-	bytes, err := ioutil.ReadFile(c.source)
-	if err != nil {
-		return err
-	}
-	md, err := toml.Decode(string(bytes), c)
-	if err != nil {
-		return err
-	}
-	if len(md.Undecoded()) != 0 {
-		return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
+	if info, err := os.Stat(c.source); err == nil && !info.IsDir() {
+		bytes, err := ioutil.ReadFile(c.source)
+		if err != nil {
+			return err
+		}
+		md, err := toml.Decode(string(bytes), c)
+		if err != nil {
+			return err
+		}
+		if len(md.Undecoded()) != 0 {
+			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
+		}
 	}
 	return nil
 }

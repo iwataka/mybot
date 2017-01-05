@@ -1,6 +1,8 @@
 package mybot
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestNewMybotConfig(t *testing.T) {
 	c, err := NewMybotConfig("config.template.toml", nil)
@@ -49,5 +51,12 @@ func TestNewMybotConfig(t *testing.T) {
 	}
 	if n.Place.Users[0] != "foo" {
 		t.Fatalf("%s expected but %s found", "foo", n.Place.Users[0])
+	}
+}
+
+func TestNewMybotConfigWhenNotExist(t *testing.T) {
+	_, err := NewMybotConfig("config_not_exist.toml", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

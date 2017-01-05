@@ -4,7 +4,6 @@ package mybot
 type MybotStatus struct {
 	TwitterListenMyselfStatus bool
 	TwitterListenUsersStatus  bool
-	GithubStatus              bool
 	TwitterStatus             bool
 	MonitorConfigStatus       bool
 	MonitorTwitterCred        bool
