@@ -71,7 +71,7 @@ Run the following commands and that's all.
 ```
 cd /path/to/mybot
 docker build -t mybot .
-docker run -d -v ~/.config/gcloud:/root/.config/gcloud -v ~/.cache/mybot:/root/.cache/mybot --name mybot -p 8080:8080 mybot
+docker run -d -v ~/.config/gcloud:/root/.config/gcloud -v ~/.config/mybot:/root/.config/mybot -v ~/.cache/mybot:/root/.cache/mybot --name mybot -p 8080:8080 mybot
 ```
 
 ### MySQL on Docker cotainer
