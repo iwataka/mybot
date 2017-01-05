@@ -12,30 +12,262 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// MybotConfig is a root of the all configurations.
+// MybotConfig is a root of the all configurations of this applciation.
 type MybotConfig struct {
-	Twitter     *TwitterConfig     `toml:"twitter"`
-	DB          *DBConfig          `toml:"db"`
+	// Twitter is a configuration related to Twitter.
+	Twitter *TwitterConfig `toml:"twitter"`
+	// DB is a configuration related to DB.
+	DB *DBConfig `toml:"db"`
+	// Interaction is a configuration related to interaction with users
+	// such as Twitter's direct message exchange.
 	Interaction *InteractionConfig `toml:"interaction"`
-	Log         *LogConfig         `toml:"log"`
-	HTTP        *HTTPConfig        `toml:"http"`
-	source      string             `toml:"-"`
+	// Log is a configuration related to logging.
+	Log *LogConfig `toml:"log"`
+	// HTTP is a configuration related to HTTP(S) protocol.
+	HTTP *HTTPConfig `toml:"http"`
+	// source is a configuration file from which this was loaded. This is
+	// needed to save the content to the same file.
+	source string `toml:"-"`
 }
 
-// SourceConfig is a configuration for common sources
+// NewMybotConfig takes the configuration file path and returns a configuration
+// instance.
+func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
+	c := &MybotConfig{
+		Twitter: &TwitterConfig{
+			Timelines: []TimelineConfig{},
+			Searches:  []SearchConfig{},
+			Duration:  "1h",
+			Notification: &Notification{
+				Place: &PlaceNotification{},
+			},
+		},
+		HTTP: &HTTPConfig{
+			Host: "localhost",
+			Port: "3256",
+		},
+		DB:          &DBConfig{},
+		Log:         &LogConfig{},
+		Interaction: &InteractionConfig{},
+	}
+
+	c.source = path
+	err := c.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign empty values to config instance to prevent nil pointer
+	// reference error.
+	for _, t := range c.Twitter.Timelines {
+		if t.Filter.Vision == nil {
+			t.Filter.Vision = new(VisionCondition)
+		}
+		if t.Filter.Vision.Face == nil {
+			t.Filter.Vision.Face = new(VisionFaceCondition)
+		}
+		t.Filter.VisionAPI = vision
+	}
+	for _, f := range c.Twitter.Favorites {
+		if f.Filter.Vision == nil {
+			f.Filter.Vision = new(VisionCondition)
+		}
+		if f.Filter.Vision.Face == nil {
+			f.Filter.Vision.Face = new(VisionFaceCondition)
+		}
+		f.Filter.VisionAPI = vision
+	}
+	for _, s := range c.Twitter.Searches {
+		if s.Filter.Vision == nil {
+			s.Filter.Vision = new(VisionCondition)
+		}
+		if s.Filter.Vision.Face == nil {
+			s.Filter.Vision.Face = new(VisionFaceCondition)
+		}
+		s.Filter.VisionAPI = vision
+	}
+	return c, nil
+}
+
+// SetVisionAPI sets the specified Vision API client to the configuration.
+func (c *MybotConfig) SetVisionAPI(vision *VisionAPI) {
+	for _, t := range c.Twitter.Timelines {
+		t.Filter.VisionAPI = vision
+	}
+	for _, f := range c.Twitter.Favorites {
+		f.Filter.VisionAPI = vision
+	}
+	for _, s := range c.Twitter.Searches {
+		s.Filter.VisionAPI = vision
+	}
+}
+
+// Validate tries to validate the specified configuration. If invalid values
+// are detected, this returns an error.
+func (c *MybotConfig) Validate() error {
+	for _, account := range c.Twitter.Timelines {
+		if account.Action == nil {
+			msg := fmt.Sprintf("%v has no action", account)
+			return errors.New(msg)
+		}
+		if len(account.ScreenNames) == 0 {
+			msg := fmt.Sprintf("%v has no name", account)
+			return errors.New(msg)
+		}
+		filter := account.Filter
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			bytes, _ := json.Marshal(account)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
+			return errors.New(msg)
+		}
+	}
+
+	for _, favorite := range c.Twitter.Favorites {
+		if favorite.Action == nil {
+			msg := fmt.Sprintf("%v has no action", favorite)
+			return errors.New(msg)
+		}
+		if len(favorite.ScreenNames) == 0 {
+			msg := fmt.Sprintf("%v has no name", favorite)
+			return errors.New(msg)
+		}
+		filter := favorite.Filter
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			bytes, _ := json.Marshal(favorite)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
+			return errors.New(msg)
+		}
+	}
+
+	for _, search := range c.Twitter.Searches {
+		if search.Action == nil {
+			msg := fmt.Sprintf("%v has no action", search)
+			return errors.New(msg)
+		}
+		if len(search.Queries) == 0 {
+			msg := fmt.Sprintf("%v has no query", search)
+			return errors.New(msg)
+		}
+		filter := search.Filter
+		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
+			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			bytes, _ := json.Marshal(search)
+			msg := fmt.Sprintf("%s\n%s",
+				"Don't use both of Vision API and retweeted/favorite threshold",
+				string(bytes),
+			)
+			return errors.New(msg)
+		}
+	}
+	return nil
+}
+
+// Read returns a configuration content as a toml text. If error occurs while
+// encoding, this returns an empty string. This return value is not same as the
+// source file's content.
+func (c *MybotConfig) Read(indent string) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	enc := toml.NewEncoder(buf)
+	enc.Indent = indent
+	err := enc.Encode(c)
+	if err != nil {
+		return []byte{}, err
+	}
+	return buf.Bytes(), nil
+}
+
+// Save saves the specified configuration to the source file.
+func (c *MybotConfig) Save() error {
+	// Make a directory before all.
+	err := os.MkdirAll(filepath.Dir(c.source), 0751)
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		writer := new(bytes.Buffer)
+		enc := toml.NewEncoder(writer)
+		err := enc.Encode(c)
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(c.source, writer.Bytes(), 0640)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Load loads the configuration from the source file. If the specified source
+// file doesn't exist, this method does nothing and returns nil.
+func (c *MybotConfig) Load() error {
+	if info, err := os.Stat(c.source); err == nil && !info.IsDir() {
+		bytes, err := ioutil.ReadFile(c.source)
+		if err != nil {
+			return err
+		}
+		md, err := toml.Decode(string(bytes), c)
+		if err != nil {
+			return err
+		}
+		if len(md.Undecoded()) != 0 {
+			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
+		}
+	}
+	return nil
+}
+
+// SourceConfig is a configuration for common data sources such as Twitter's
+// timelines, favorites and searches. Sources should have filters and actions.
 type SourceConfig struct {
+	// Filter filters out incoming data from sources.
 	Filter *TweetFilterConfig `toml:"filter"`
-	Action *TwitterAction     `toml:"action"`
+	// Action defines actions for data passing through filters.
+	Action *TwitterAction `toml:"action"`
 }
 
-// TwitterConfig is a configuration for Twitter
+// TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
-	Timelines    []TimelineConfig `toml:"timelines,omitempty"`
-	Favorites    []FavoriteConfig `toml:"favorites,omitempty"`
-	Searches     []SearchConfig   `toml:"searches,omitempty"`
-	Notification *Notification    `toml:"notification"`
-	Duration     string           `toml:"duration"`
-	Debug        bool             `toml:"debug"`
+	Timelines []TimelineConfig `toml:"timelines,omitempty"`
+	Favorites []FavoriteConfig `toml:"favorites,omitempty"`
+	Searches  []SearchConfig   `toml:"searches,omitempty"`
+	// Notification is a configuration related to notification for users.
+	// Currently only place notification is supported, which means that
+	// when a tweet with place information is detected, it is notified to
+	// the specified users.
+	Notification *Notification `toml:"notification"`
+	// Duration is a duration for some periodic jobs such as fetching
+	// users' favorites and searching by the specified condition.
+	Duration string `toml:"duration"`
+	// Debug is a flag for debugging, if it is true, additional information
+	// is outputted.
+	Debug bool `toml:"debug"`
+}
+
+// GetScreenNames returns all screen names in the TwitterConfig instance. This
+// is useful to do something for all related users.
+func (tc *TwitterConfig) GetScreenNames() []string {
+	result := []string{}
+	for _, t := range tc.Timelines {
+		result = append(result, t.ScreenNames...)
+	}
+	for _, f := range tc.Favorites {
+		result = append(result, f.ScreenNames...)
+	}
+	return result
 }
 
 // TimelineConfig is a configuration for Twitter timelines
@@ -47,6 +279,8 @@ type TimelineConfig struct {
 	Count          int      `toml:"count"`
 }
 
+// NewTimelineConfig returns TimelineConfig instance, which is empty but has a
+// non-nil filter and action.
 func NewTimelineConfig() *TimelineConfig {
 	return &TimelineConfig{
 		SourceConfig: &SourceConfig{
@@ -67,6 +301,8 @@ type FavoriteConfig struct {
 	Count       int      `toml:"count"`
 }
 
+// NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
+// non-nil filter and action.
 func NewFavoriteConfig() *FavoriteConfig {
 	return &FavoriteConfig{
 		SourceConfig: &SourceConfig{
@@ -88,6 +324,8 @@ type SearchConfig struct {
 	Count      int      `toml:"count"`
 }
 
+// NewSearchConfig returns SearchConfig instance, which is empty but has a
+// non-nil filter and action.
 func NewSearchConfig() *SearchConfig {
 	return &SearchConfig{
 		SourceConfig: &SourceConfig{
@@ -127,207 +365,4 @@ type HTTPConfig struct {
 	Host     string `toml:"host"`
 	Port     string `toml:"port"`
 	LogLines int    `toml:"log_lines,omitempty"`
-}
-
-// GetScreenNames returns all screen names in the configuration
-func (tc *TwitterConfig) GetScreenNames() []string {
-	result := []string{}
-	for _, t := range tc.Timelines {
-		result = append(result, t.ScreenNames...)
-	}
-	for _, f := range tc.Favorites {
-		result = append(result, f.ScreenNames...)
-	}
-	return result
-}
-
-// NewMybotConfig takes the configuration file path and returns a configuration
-// instance.
-func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
-	c := &MybotConfig{
-		Twitter: &TwitterConfig{
-			Timelines: []TimelineConfig{},
-			Searches:  []SearchConfig{},
-			Duration:  "1h",
-			Notification: &Notification{
-				Place: &PlaceNotification{},
-			},
-		},
-		HTTP: &HTTPConfig{
-			Host: "localhost",
-			Port: "3256",
-		},
-		DB:          &DBConfig{},
-		Log:         &LogConfig{},
-		Interaction: &InteractionConfig{},
-	}
-
-	c.source = path
-	err := c.Reload()
-	if err != nil {
-		return nil, err
-	}
-
-	err = ValidateConfig(c)
-	if err != nil {
-		return nil, err
-	}
-
-	// Assign empty values to config instance to prevent nil pointer
-	// reference error.
-	for _, t := range c.Twitter.Timelines {
-		if t.Filter.Vision == nil {
-			t.Filter.Vision = new(VisionCondition)
-		}
-		if t.Filter.Vision.Face == nil {
-			t.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		t.Filter.VisionAPI = vision
-	}
-	for _, f := range c.Twitter.Favorites {
-		if f.Filter.Vision == nil {
-			f.Filter.Vision = new(VisionCondition)
-		}
-		if f.Filter.Vision.Face == nil {
-			f.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		f.Filter.VisionAPI = vision
-	}
-	for _, s := range c.Twitter.Searches {
-		if s.Filter.Vision == nil {
-			s.Filter.Vision = new(VisionCondition)
-		}
-		if s.Filter.Vision.Face == nil {
-			s.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		s.Filter.VisionAPI = vision
-	}
-	return c, nil
-}
-
-func (c *MybotConfig) SetVisionoAPI(vision *VisionAPI) {
-	for _, t := range c.Twitter.Timelines {
-		t.Filter.VisionAPI = vision
-	}
-	for _, f := range c.Twitter.Favorites {
-		f.Filter.VisionAPI = vision
-	}
-	for _, s := range c.Twitter.Searches {
-		s.Filter.VisionAPI = vision
-	}
-}
-
-func ValidateConfig(config *MybotConfig) error {
-	for _, account := range config.Twitter.Timelines {
-		if account.Action == nil {
-			msg := fmt.Sprintf("%v has no action", account)
-			return errors.New(msg)
-		}
-		if len(account.ScreenNames) == 0 {
-			msg := fmt.Sprintf("%v has no name", account)
-			return errors.New(msg)
-		}
-		filter := account.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			bytes, _ := json.Marshal(account)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
-		}
-	}
-	for _, favorite := range config.Twitter.Favorites {
-		if favorite.Action == nil {
-			msg := fmt.Sprintf("%v has no action", favorite)
-			return errors.New(msg)
-		}
-		if len(favorite.ScreenNames) == 0 {
-			msg := fmt.Sprintf("%v has no name", favorite)
-			return errors.New(msg)
-		}
-		filter := favorite.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			bytes, _ := json.Marshal(favorite)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
-		}
-	}
-	for _, search := range config.Twitter.Searches {
-		if search.Action == nil {
-			msg := fmt.Sprintf("%v has no action", search)
-			return errors.New(msg)
-		}
-		if len(search.Queries) == 0 {
-			msg := fmt.Sprintf("%v has no query", search)
-			return errors.New(msg)
-		}
-		filter := search.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			bytes, _ := json.Marshal(search)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
-		}
-	}
-	return nil
-}
-
-// TomlText returns a toml text encoded from the configuration. If error occurs
-// while encoding, this returns an empty string.
-func (c *MybotConfig) TomlText(indent string) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	enc := toml.NewEncoder(buf)
-	enc.Indent = indent
-	err := enc.Encode(c)
-	if err != nil {
-		return []byte{}, err
-	}
-	return buf.Bytes(), nil
-}
-
-// Save saves the config data to the specified file
-func (c *MybotConfig) Save() error {
-	err := os.MkdirAll(filepath.Dir(c.source), 0751)
-	if err != nil {
-		return err
-	}
-	if c != nil {
-		writer := new(bytes.Buffer)
-		enc := toml.NewEncoder(writer)
-		err := enc.Encode(c)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(c.source, writer.Bytes(), 0640)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *MybotConfig) Reload() error {
-	if info, err := os.Stat(c.source); err == nil && !info.IsDir() {
-		bytes, err := ioutil.ReadFile(c.source)
-		if err != nil {
-			return err
-		}
-		md, err := toml.Decode(string(bytes), c)
-		if err != nil {
-			return err
-		}
-		if len(md.Undecoded()) != 0 {
-			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
-		}
-	}
-	return nil
 }

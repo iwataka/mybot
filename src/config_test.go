@@ -60,3 +60,42 @@ func TestNewMybotConfigWhenNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestNewTimelineConfig(t *testing.T) {
+	tl := NewTimelineConfig()
+	if tl.Filter == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if tl.Filter.Vision == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if tl.Action == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+}
+
+func TestNewFavoriteConfig(t *testing.T) {
+	f := NewFavoriteConfig()
+	if f.Filter == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if f.Filter.Vision == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if f.Action == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+}
+
+func TestNewSearchConfig(t *testing.T) {
+	s := NewSearchConfig()
+	if s.Filter == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if s.Filter.Vision == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+	if s.Action == nil {
+		t.Fatalf("Non-nil expected but nil found")
+	}
+}

@@ -405,9 +405,9 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.HTTP.Port = val["http.port"][0]
 		s.Config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.Config.HTTP.LogLines)
 
-		err = ValidateConfig(s.Config)
+		err = s.Config.Validate()
 		if err != nil {
-			s.Config.Reload()
+			s.Config.Load()
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

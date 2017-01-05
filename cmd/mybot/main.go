@@ -162,7 +162,7 @@ func beforeRunning(c *cli.Context) error {
 		visionAPI.File = c.String("gcloud")
 	}
 
-	config.SetVisionoAPI(visionAPI)
+	config.SetVisionAPI(visionAPI)
 
 	twitterAuth := &mybot.TwitterAuth{}
 	twitterAuth.FromJson(c.String("twitter"))

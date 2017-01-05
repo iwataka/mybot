@@ -677,7 +677,7 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 	} else if lowers == "configuration" || lowers == "config" || lowers == "conf" {
 		cfg := new(MybotConfig)
 		*cfg = *a.config
-		bytes, err := cfg.TomlText(strings.Repeat(" ", 4))
+		bytes, err := cfg.Read(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err
 		}
