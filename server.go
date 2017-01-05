@@ -1,4 +1,4 @@
-package mybot
+package main
 
 import (
 	"bytes"
@@ -10,36 +10,38 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/iwataka/mybot/src"
 )
 
-//go:generate go-bindata -pkg mybot assets/... pages/...
+//go:generate go-bindata assets/...
 
 // MybotServer shows various pieces of information to users, such as an error
 // log, Google Vision API result and Twitter collections.
 type MybotServer struct {
 	// Logger is a logging utility instance of this application. This
 	// returns a log file's content if users request.
-	Logger *Logger
+	Logger *mybot.Logger
 	// TwitterAPI is a client for Twitter API. This server requires some
 	// pieces of information related to TWitter, so this is here.
-	TwitterAPI *TwitterAPI
+	TwitterAPI *mybot.TwitterAPI
 	// VisionAPI is a client for Google Vision API.
 	//
 	// TODO: This field may not be required (at this time only
 	// VisionAPI.File is required).
-	VisionAPI *VisionAPI
+	VisionAPI *mybot.VisionAPI
 	// Cache is a cache of this application and contains some Vision API
 	// analysis result. This server need to show them.
 	//
 	// TODO: In the future, this server will fetch Vision API results from
 	// DB and thus this field will be removed.
-	Cache *MybotCache
+	Cache *mybot.MybotCache
 	// Config is a configuration of this application and this server use
 	// this as the others do.
-	Config *MybotConfig
+	Config *mybot.MybotConfig
 	// Status is a status of all processes in this application. This
 	// enables users monitor their status via browser.
-	Status *MybotStatus
+	Status *mybot.MybotStatus
 	// pass is a flag which represents whether Twitter API is authenticated
 	// or not. When Twitter API is authenticated, then users can pass a
 	// setup page and go to other pages, thus this is called 'pass'.
@@ -144,7 +146,7 @@ func (s *MybotServer) Init(host, port, cert, key string) error {
 
 func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		tmpl, err := generateTemplate("index", "src/pages/index.html")
+		tmpl, err := generateTemplate("index", "assets/tmpl/index.tmpl")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -178,7 +180,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		colMap := make(map[string]string)
-		colList, err := s.TwitterAPI.api.GetCollectionListByUserId(self.Id, nil)
+		colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
 		if err == nil {
 			for _, c := range colList.Objects.Timelines {
 				name := strings.Replace(c.Name, " ", "-", -1)
@@ -257,7 +259,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.favorite", 0}
 		actionFollowCounter := checkboxCounter{"twitter.timelines.action.follow", 0}
 		length := len(val["twitter.timelines.count"])
-		timelines := []TimelineConfig{}
+		timelines := []mybot.TimelineConfig{}
 		for i := 0; i < length; i++ {
 			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
@@ -265,7 +267,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			timeline := *NewTimelineConfig()
+			timeline := *mybot.NewTimelineConfig()
 			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
@@ -303,7 +305,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.favorites.action.follow", 0}
 		length = len(val["twitter.favorites.count"])
-		favorites := []FavoriteConfig{}
+		favorites := []mybot.FavoriteConfig{}
 		for i := 0; i < length; i++ {
 			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
@@ -311,7 +313,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			favorite := *NewFavoriteConfig()
+			favorite := *mybot.NewFavoriteConfig()
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
 			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
 			s.Config.Twitter.Favorites[i] = favorite
@@ -348,7 +350,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		actionFavoriteCounter = checkboxCounter{"twitter.searches.action.favorite", 0}
 		actionFollowCounter = checkboxCounter{"twitter.searches.action.follow", 0}
 		length = len(val["twitter.searches.count"])
-		searches := []SearchConfig{}
+		searches := []mybot.SearchConfig{}
 		for i := 0; i < length; i++ {
 			if deletedFlags[i] == "true" {
 				actionRetweetCounter.returnValue(i, val)
@@ -356,7 +358,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 				actionFollowCounter.returnValue(i, val)
 				continue
 			}
-			search := *NewSearchConfig()
+			search := *mybot.NewSearchConfig()
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
 			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
@@ -422,14 +424,14 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
 	} else if r.Method == http.MethodGet {
-		tmpl, err := generateTemplate("config", "src/pages/config.html")
+		tmpl, err := generateTemplate("config", "assets/tmpl/config.tmpl")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		data := &struct {
 			UserName string
-			Config   MybotConfig
+			Config   mybot.MybotConfig
 		}{
 			s.Config.Server.Name,
 			*s.Config,
@@ -445,7 +447,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		timelines := s.Config.Twitter.Timelines
-		timelines = append(timelines, *NewTimelineConfig())
+		timelines = append(timelines, *mybot.NewTimelineConfig())
 		s.Config.Twitter.Timelines = timelines
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
@@ -455,7 +457,7 @@ func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Re
 func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		favorites := s.Config.Twitter.Favorites
-		favorites = append(favorites, *NewFavoriteConfig())
+		favorites = append(favorites, *mybot.NewFavoriteConfig())
 		s.Config.Twitter.Favorites = favorites
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
@@ -465,7 +467,7 @@ func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Re
 func (s *MybotServer) configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		searches := s.Config.Twitter.Searches
-		searches = append(searches, *NewSearchConfig())
+		searches = append(searches, *mybot.NewSearchConfig())
 		s.Config.Twitter.Searches = searches
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
@@ -484,7 +486,7 @@ func (s *MybotServer) assetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("log", "src/pages/log.html")
+	tmpl, err := generateTemplate("log", "assets/tmpl/log.tmpl")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -504,7 +506,7 @@ func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("status", "src/pages/status.html")
+	tmpl, err := generateTemplate("status", "assets/tmpl/status.tmpl")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -512,7 +514,7 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
 		UserName string
 		Log      string
-		Status   MybotStatus
+		Status   mybot.MybotStatus
 	}{
 		s.Config.Server.Name,
 		s.Logger.ReadString(),
@@ -552,7 +554,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 		cs := val["twitter-consumer-secret"][0]
 		at := val["twitter-access-token"][0]
 		ats := val["twitter-access-token-secret"][0]
-		auth := &TwitterAuth{ck, cs, at, ats, s.TwitterAPI.File}
+		auth := &mybot.TwitterAuth{ck, cs, at, ats, s.TwitterAPI.File}
 
 		err = auth.ToJson()
 		if err != nil {
@@ -574,7 +576,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else if r.Method == http.MethodGet {
-		tmpl, err := generateTemplate("setup", "src/pages/setup.html")
+		tmpl, err := generateTemplate("setup", "assets/tmpl/setup.tmpl")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -613,11 +615,11 @@ func generateTemplate(name, path string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	header, err := readFile("src/pages/header.html")
+	header, err := readFile("assets/tmpl/header.tmpl")
 	if err != nil {
 		return nil, err
 	}
-	navbar, err := readFile("src/pages/navbar.html")
+	navbar, err := readFile("assets/tmpl/navbar.tmpl")
 	if err != nil {
 		return nil, err
 	}

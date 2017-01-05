@@ -17,7 +17,7 @@ import (
 var (
 	twitterAPI         *mybot.TwitterAPI
 	visionAPI          *mybot.VisionAPI
-	server             *mybot.MybotServer
+	server             *MybotServer
 	config             *mybot.MybotConfig
 	cache              *mybot.MybotCache
 	logger             *mybot.Logger
@@ -179,7 +179,7 @@ func beforeRunning(c *cli.Context) error {
 
 	status = &mybot.MybotStatus{}
 
-	server = &mybot.MybotServer{
+	server = &MybotServer{
 		Logger:     logger,
 		TwitterAPI: twitterAPI,
 		VisionAPI:  visionAPI,
