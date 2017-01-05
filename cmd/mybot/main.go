@@ -66,13 +66,13 @@ func main() {
 	certFlag := cli.StringFlag{
 		Name:  "cert",
 		Value: "mybot.crt",
-		Usage: "Certification file for HTTPS",
+		Usage: "Certification file for server",
 	}
 
 	keyFlag := cli.StringFlag{
 		Name:  "key",
 		Value: "mybot.key",
-		Usage: "Key file for HTTPS",
+		Usage: "Key file for server",
 	}
 
 	hostFlag := cli.StringFlag{
@@ -380,11 +380,11 @@ func reloadListeners() {
 }
 
 func httpServer() {
-	if status.HttpStatus {
+	if status.ServerStatus {
 		return
 	}
-	status.HttpStatus = true
-	defer func() { status.HttpStatus = false }()
+	status.ServerStatus = true
+	defer func() { status.ServerStatus = false }()
 	host := ctxt.String("host")
 	port := ctxt.String("port")
 	cert := ctxt.String("cert")

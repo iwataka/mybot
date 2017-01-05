@@ -23,8 +23,8 @@ type MybotConfig struct {
 	Interaction *InteractionConfig `toml:"interaction"`
 	// Log is a configuration related to logging.
 	Log *LogConfig `toml:"log"`
-	// HTTP is a configuration related to HTTP(S) protocol.
-	HTTP *HTTPConfig `toml:"http"`
+	// Server is a server configuration.
+	Server *ServerConfig `toml:"server"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
 	source string `toml:"-"`
@@ -42,7 +42,7 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 				Place: &PlaceNotification{},
 			},
 		},
-		HTTP: &HTTPConfig{
+		Server: &ServerConfig{
 			Host: "localhost",
 			Port: "3256",
 		},
@@ -360,7 +360,7 @@ type LogConfig struct {
 	Users     []string `toml:"users,omitempty"`
 }
 
-type HTTPConfig struct {
+type ServerConfig struct {
 	Name     string `toml:"name"`
 	Host     string `toml:"host"`
 	Port     string `toml:"port"`

@@ -8,5 +8,5 @@ type MybotStatus struct {
 	MonitorConfigStatus       bool
 	MonitorTwitterCred        bool
 	MonitorGCloudCred         bool
-	HttpStatus                bool
+	ServerStatus              bool
 }

@@ -15,7 +15,7 @@ import (
 //go:generate go-bindata -pkg mybot assets/... pages/...
 
 // MybotServer shows various pieces of information to users, such as an error
-// log, Google Vision API result and Twitter collections, via HTTP protocol .
+// log, Google Vision API result and Twitter collections.
 type MybotServer struct {
 	// Logger is a logging utility instance of this application. This
 	// returns a log file's content if users request.
@@ -115,12 +115,12 @@ func (s *MybotServer) Init(host, port, cert, key string) error {
 		s.setupHandler,
 	)
 
-	h := s.Config.HTTP.Host
+	h := s.Config.Server.Host
 	if len(host) != 0 {
 		h = host
 	}
 
-	p := s.Config.HTTP.Port
+	p := s.Config.Server.Port
 	if len(port) != 0 {
 		p = port
 	}
@@ -152,7 +152,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		log := s.Logger.ReadString()
 		lines := strings.Split(log, "\n")
-		lineNum := s.Config.HTTP.LogLines
+		lineNum := s.Config.Server.LogLines
 		head := len(lines) - lineNum
 		if head < 0 {
 			head = 0
@@ -196,7 +196,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 			ImageAnalysisDate   string
 			CollectionMap       map[string]string
 		}{
-			s.Config.HTTP.Name,
+			s.Config.Server.Name,
 			log,
 			botName,
 			s.Cache.ImageURL,
@@ -400,10 +400,10 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 		s.Config.Log.Users = getListTextboxValue(val, 0, "log.users")
 
-		s.Config.HTTP.Name = val["http.name"][0]
-		s.Config.HTTP.Host = val["http.host"][0]
-		s.Config.HTTP.Port = val["http.port"][0]
-		s.Config.HTTP.LogLines = atoiOrDefault(val["http.log_lines"][0], s.Config.HTTP.LogLines)
+		s.Config.Server.Name = val["server.name"][0]
+		s.Config.Server.Host = val["server.host"][0]
+		s.Config.Server.Port = val["server.port"][0]
+		s.Config.Server.LogLines = atoiOrDefault(val["server.log_lines"][0], s.Config.Server.LogLines)
 
 		err = s.Config.Validate()
 		if err != nil {
@@ -431,7 +431,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			UserName string
 			Config   MybotConfig
 		}{
-			s.Config.HTTP.Name,
+			s.Config.Server.Name,
 			*s.Config,
 		}
 		err = tmpl.Execute(w, data)
@@ -493,7 +493,7 @@ func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 		UserName string
 		Log      string
 	}{
-		s.Config.HTTP.Name,
+		s.Config.Server.Name,
 		s.Logger.ReadString(),
 	}
 	err = tmpl.Execute(w, data)
@@ -514,7 +514,7 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 		Log      string
 		Status   MybotStatus
 	}{
-		s.Config.HTTP.Name,
+		s.Config.Server.Name,
 		s.Logger.ReadString(),
 		*s.Status,
 	}
@@ -590,7 +590,7 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 			UserName string
 			Message  string
 		}{
-			s.Config.HTTP.Name,
+			s.Config.Server.Name,
 			msg,
 		}
 
