@@ -29,9 +29,12 @@
     <div class="container">
         {{template "navbar" .}}
 
-        <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
-
         <h2>Config</h2>
+        {{if .Message}}
+        <div class="alert alert-danger">{{.Message}}</div>
+        {{end}}
+
+        <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
         <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary">
 
         <h3>Twitter Timelines</h3>

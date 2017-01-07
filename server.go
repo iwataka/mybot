@@ -241,20 +241,25 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 	}
 }
 
-func atoiOrDefault(str string, def int) int {
-	i, err := strconv.Atoi(str)
-	if err != nil {
-		return def
-	} else {
-		return i
-	}
-}
-
 func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		msg := ""
+		defer func() {
+			if len(msg) != 0 {
+				msgCookie := &http.Cookie{
+					Name:  "mybot.config.message",
+					Value: msg,
+					Path:  "/config/",
+				}
+				http.SetCookie(w, msgCookie)
+			}
+			w.Header().Add("Location", "/config/")
+			w.WriteHeader(http.StatusSeeOther)
+		}()
+
 		err := r.ParseMultipartForm(32 << 20)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			msg = err.Error()
 			return
 		}
 		val := r.MultipartForm.Value
@@ -280,14 +285,31 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
-			timeline.Count = atoiOrDefault(val["twitter.timelines.count"][i], timeline.Count)
+			count, err := strconv.Atoi(val["twitter.timelines.count"][i])
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			timeline.Count = count
 			timeline.Filter.Patterns = getListTextboxValue(val, i, "twitter.timelines.filter.patterns")
 			timeline.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.timelines.filter.url_patterns")
 			timeline.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_media")
 			timeline.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_url")
 			timeline.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.timelines.filter.retweeted")
-			timeline.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.timelines.filter.favorite_threshold"][i], timeline.Filter.FavoriteThreshold)
-			timeline.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.timelines.filter.retweeted_threshold"][i], timeline.Filter.RetweetedThreshold)
+			fThresholdStr := val["twitter.timelines.filter.favorite_threshold"][i]
+			fThreshold, err := strconv.Atoi(fThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			timeline.Filter.FavoriteThreshold = fThreshold
+			rThresholdStr := val["twitter.timelines.filter.retweeted_threshold"][i]
+			rThreshold, err := strconv.Atoi(rThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			timeline.Filter.RetweetedThreshold = rThreshold
 			timeline.Filter.Lang = val["twitter.timelines.filter.lang"][i]
 			timeline.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.timelines.filter.vision.label")
 			timeline.Filter.Vision.Face.AngerLikelihood = val["twitter.timelines.filter.vision.face.anger_likelihood"][i]
@@ -324,15 +346,32 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			favorite := *mybot.NewFavoriteConfig()
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
-			favorite.Count = atoiOrDefault(val["twitter.favorites.count"][i], favorite.Count)
+			count, err := strconv.Atoi(val["twitter.favorites.count"][i])
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			favorite.Count = count
 			s.Config.Twitter.Favorites[i] = favorite
 			favorite.Filter.Patterns = getListTextboxValue(val, i, "twitter.favorites.filter.patterns")
 			favorite.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.favorites.filter.url_patterns")
 			favorite.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
 			favorite.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_url")
 			favorite.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.favorites.filter.retweeted")
-			favorite.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.favorites.filter.favorite_threshold"][i], favorite.Filter.FavoriteThreshold)
-			favorite.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.favorites.filter.retweeted_threshold"][i], favorite.Filter.RetweetedThreshold)
+			fThresholdStr := val["twitter.favorites.filter.favorite_threshold"][i]
+			fThreshold, err := strconv.Atoi(fThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			favorite.Filter.FavoriteThreshold = fThreshold
+			rThresholdStr := val["twitter.favorites.filter.retweeted_threshold"][i]
+			rThreshold, err := strconv.Atoi(rThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			favorite.Filter.RetweetedThreshold = rThreshold
 			favorite.Filter.Lang = val["twitter.favorites.filter.lang"][i]
 			favorite.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.favorites.filter.vision.label")
 			favorite.Filter.Vision.Face.AngerLikelihood = val["twitter.favorites.filter.vision.face.anger_likelihood"][i]
@@ -370,15 +409,32 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search := *mybot.NewSearchConfig()
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
-			search.Count = atoiOrDefault(val["twitter.searches.count"][i], search.Count)
+			count, err := strconv.Atoi(val["twitter.searches.count"][i])
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			search.Count = count
 			s.Config.Twitter.Searches[i] = search
 			search.Filter.Patterns = getListTextboxValue(val, i, "twitter.searches.filter.patterns")
 			search.Filter.URLPatterns = getListTextboxValue(val, i, "twitter.searches.filter.url_patterns")
 			search.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
 			search.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_url")
 			search.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.searches.filter.retweeted")
-			search.Filter.FavoriteThreshold = atoiOrDefault(val["twitter.searches.filter.favorite_threshold"][i], search.Filter.FavoriteThreshold)
-			search.Filter.RetweetedThreshold = atoiOrDefault(val["twitter.searches.filter.retweeted_threshold"][i], search.Filter.RetweetedThreshold)
+			fThresholdStr := val["twitter.searches.filter.favorite_threshold"][i]
+			fThreshold, err := strconv.Atoi(fThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			search.Filter.FavoriteThreshold = fThreshold
+			rThresholdStr := val["twitter.searches.filter.retweeted_threshold"][i]
+			rThreshold, err := strconv.Atoi(rThresholdStr)
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			search.Filter.RetweetedThreshold = rThreshold
 			search.Filter.Lang = val["twitter.searches.filter.lang"][i]
 			search.Filter.Vision.Label = getListTextboxValue(val, i, "twitter.searches.filter.vision.label")
 			search.Filter.Vision.Face.AngerLikelihood = val["twitter.searches.filter.vision.face.anger_likelihood"][i]
@@ -406,7 +462,12 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.Interaction.Duration = val["interaction.duration"][0]
 		s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.Config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
-		s.Config.Interaction.Count = atoiOrDefault(val["interaction.count"][0], s.Config.Interaction.Count)
+		count, err := strconv.Atoi(val["interaction.count"][0])
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		s.Config.Interaction.Count = count
 
 		s.Config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 		s.Config.Log.Users = getListTextboxValue(val, 0, "log.users")
@@ -414,37 +475,54 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.Server.Name = val["server.name"][0]
 		s.Config.Server.Host = val["server.host"][0]
 		s.Config.Server.Port = val["server.port"][0]
-		s.Config.Server.LogLines = atoiOrDefault(val["server.log_lines"][0], s.Config.Server.LogLines)
+		logLines, err := strconv.Atoi(val["server.log_lines"][0])
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		s.Config.Server.LogLines = logLines
 
 		err = s.Config.Validate()
 		if err != nil {
 			s.Config.Load()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			msg = err.Error()
 			return
 		}
 
 		err = s.Config.Save()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			msg = err.Error()
 			return
 		}
-
-		// This two lines must be in this order, I don't know the reason.
-		w.Header().Add("Location", "/config/")
-		w.WriteHeader(http.StatusSeeOther)
 	} else if r.Method == http.MethodGet {
 		tmpl, err := generateTemplate("config", "assets/tmpl/config.tmpl")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		msg := ""
+		msgCookie, err := r.Cookie("mybot.config.message")
+		if err == nil {
+			msg = msgCookie.Value
+		}
+
 		data := &struct {
 			UserName string
+			Message  string
 			Config   mybot.MybotConfig
 		}{
 			s.Config.Server.Name,
+			msg,
 			*s.Config,
 		}
+
+		if msgCookie != nil {
+			msgCookie.Value = ""
+			msgCookie.Path = "/config/"
+			http.SetCookie(w, msgCookie)
+		}
+
 		err = tmpl.Execute(w, data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
