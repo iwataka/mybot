@@ -5,78 +5,80 @@
     <div class="container">
         {{template "navbar" .}}
         <h2>Status</h2>
-        <table class="table table-striped table-bordered table-responsive">
-            <tr>
-                <td>Twitter Your Own Listener</td>
-                <td>
-                    {{if .Status.TwitterListenMyselfStatus}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Twitter User Listener</td>
-                <td>
-                    {{if .Status.TwitterListenUsersStatus}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Twitter Periodic Job</td>
-                <td>
-                    {{if .Status.TwitterStatus}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Config File Monitoring</td>
-                <td>
-                    {{if .Status.MonitorConfigStatus}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Twitter Credential Monitoring</td>
-                <td>
-                    {{if .Status.MonitorTwitterCred}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Google Cloud Credential Monitoring</td>
-                <td>
-                    {{if .Status.MonitorGCloudCred}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-            <tr>
-                <td>Server</td>
-                <td>
-                    {{if .Status.ServerStatus}}
-                    <span style="color:blue">Active</span>
-                    {{else}}
-                    <span style="color:red">Stop</span>
-                    {{end}}
-                </td>
-            </tr>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <tr>
+                    <td>Twitter Your Own Listener</td>
+                    <td>
+                        {{if .Status.TwitterListenMyselfStatus}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Twitter User Listener</td>
+                    <td>
+                        {{if .Status.TwitterListenUsersStatus}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Twitter Periodic Job</td>
+                    <td>
+                        {{if .Status.TwitterStatus}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Config File Monitoring</td>
+                    <td>
+                        {{if .Status.MonitorConfigStatus}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Twitter Credential Monitoring</td>
+                    <td>
+                        {{if .Status.MonitorTwitterCred}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Google Cloud Credential Monitoring</td>
+                    <td>
+                        {{if .Status.MonitorGCloudCred}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Server</td>
+                    <td>
+                        {{if .Status.ServerStatus}}
+                        <span style="color:blue">Active</span>
+                        {{else}}
+                        <span style="color:red">Stop</span>
+                        {{end}}
+                    </td>
+                </tr>
+            </table>
+        </div>
         <ul>
 
         </ul>
