@@ -168,20 +168,25 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 			botName = ""
 		}
 
-		imageSource := s.Cache.ImageSources[len(s.Cache.ImageSources)-1]
-		imageURL := s.Cache.ImageURLs[len(s.Cache.ImageURLs)-1]
+		imageSource := ""
+		imageURL := ""
 		imageAnalysisResult := ""
-		if s.Cache != nil {
-			buf := new(bytes.Buffer)
-			result := s.Cache.ImageAnalysisResults[len(s.Cache.ImageAnalysisResults)-1]
-			err := json.Indent(buf, []byte(result), "", "  ")
-			if err != nil {
-				imageAnalysisResult = "Error while formatting the result"
-			} else {
-				imageAnalysisResult = buf.String()
+		imageAnalysisDate := ""
+		if len(s.Cache.ImageSources) != 0 {
+			imageSource = s.Cache.ImageSources[len(s.Cache.ImageSources)-1]
+			imageURL = s.Cache.ImageURLs[len(s.Cache.ImageURLs)-1]
+			if s.Cache != nil {
+				buf := new(bytes.Buffer)
+				result := s.Cache.ImageAnalysisResults[len(s.Cache.ImageAnalysisResults)-1]
+				err := json.Indent(buf, []byte(result), "", "  ")
+				if err != nil {
+					imageAnalysisResult = "Error while formatting the result"
+				} else {
+					imageAnalysisResult = buf.String()
+				}
 			}
+			imageAnalysisDate = s.Cache.ImageAnalysisDates[len(s.Cache.ImageAnalysisDates)-1]
 		}
-		imageAnalysisDate := s.Cache.ImageAnalysisDates[len(s.Cache.ImageAnalysisDates)-1]
 
 		colMap := make(map[string]string)
 		colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
