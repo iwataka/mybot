@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewMybotConfig(t *testing.T) {
-	c, err := NewMybotConfig("config.template.toml", nil)
+	c, err := NewMybotConfig("config.template.toml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -55,7 +55,7 @@ func TestNewMybotConfig(t *testing.T) {
 }
 
 func TestNewMybotConfigWhenNotExist(t *testing.T) {
-	_, err := NewMybotConfig("config_not_exist.toml", nil)
+	_, err := NewMybotConfig("config_not_exist.toml")
 	if err != nil {
 		t.Fatal(err)
 	}

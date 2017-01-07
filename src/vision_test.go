@@ -6,7 +6,7 @@ import (
 	"google.golang.org/api/vision/v1"
 )
 
-func TestGetFeatures(t *testing.T) {
+func TestVisionFeatures(t *testing.T) {
 	cond := &VisionCondition{
 		Label: []string{"label"},
 		Face: &VisionFaceCondition{
@@ -14,7 +14,7 @@ func TestGetFeatures(t *testing.T) {
 		},
 		Text: []string{"text"},
 	}
-	fs := getFeatures(cond)
+	fs := VisionFeatures(cond)
 	if len(fs) != 3 {
 		t.Fatalf("%v has %d elements but should have %d", fs, len(fs), 3)
 	}

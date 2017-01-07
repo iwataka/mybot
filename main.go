@@ -17,6 +17,7 @@ import (
 var (
 	twitterAPI         *mybot.TwitterAPI
 	visionAPI          *mybot.VisionAPI
+	languageAPI        *mybot.LanguageAPI
 	server             *MybotServer
 	config             *mybot.MybotConfig
 	cache              *mybot.MybotCache
@@ -150,7 +151,7 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	config, err = mybot.NewMybotConfig(c.String("config"), nil)
+	config, err = mybot.NewMybotConfig(c.String("config"))
 	if err != nil {
 		panic(err)
 	}
@@ -160,9 +161,15 @@ func beforeRunning(c *cli.Context) error {
 		if err != nil {
 			panic(err)
 		}
+		languageAPI, err = mybot.NewLanguageAPI(cache, config, c.String("gcloud"))
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		visionAPI = &mybot.VisionAPI{}
 		visionAPI.File = c.String("gcloud")
+		languageAPI = &mybot.LanguageAPI{}
+		languageAPI.File = c.String("gcloud")
 	}
 
 	twitterAuth := &mybot.TwitterAuth{}
@@ -269,7 +276,7 @@ func twitterListenUsers() {
 			return err
 		}
 		userListenerChan = listener.C
-		err = listener.Listen(visionAPI)
+		err = listener.Listen(visionAPI, languageAPI)
 		if err != nil {
 			logger.Println(err)
 			return err
@@ -314,7 +321,7 @@ func monitorConfig() {
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
-			cfg, err := mybot.NewMybotConfig(ctxt.String("config"), visionAPI)
+			cfg, err := mybot.NewMybotConfig(ctxt.String("config"))
 			if err == nil {
 				*config = *cfg
 				reloadListeners()
@@ -355,11 +362,17 @@ func monitorGCloudCred() {
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
 		func() {
-			api, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
+			vis, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
 			if err == nil {
-				*visionAPI = *api
-				reloadListeners()
+				*visionAPI = *vis
+				return
 			}
+			lang, err := mybot.NewLanguageAPI(cache, config, ctxt.String("gcloud"))
+			if err == nil {
+				*languageAPI = *lang
+				return
+			}
+			reloadListeners()
 		},
 	)
 }
@@ -442,7 +455,7 @@ func runTwitterWithStream() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, visionAPI, a.Action)
+			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, visionAPI, languageAPI, a.Action)
 			if err != nil {
 				return err
 			}
@@ -455,7 +468,7 @@ func runTwitterWithStream() error {
 			v.Set("count", fmt.Sprintf("%d", a.Count))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, visionAPI, a.Action)
+			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, visionAPI, languageAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
@@ -489,7 +502,7 @@ func runTwitterWithoutStream() error {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, visionAPI, a.Action)
+			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, visionAPI, languageAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err

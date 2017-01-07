@@ -189,6 +189,7 @@ func (a *TwitterAPI) DoForAccount(
 	v url.Values,
 	c TweetChecker,
 	vision *VisionAPI,
+	lang *LanguageAPI,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -206,7 +207,7 @@ func (a *TwitterAPI) DoForAccount(
 	} else {
 		post = a.postProcess(name, a.cache.LatestTweetID)
 	}
-	result, err := a.doForTweets(tweets, c, vision, action, post)
+	result, err := a.doForTweets(tweets, c, vision, lang, action, post)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +221,7 @@ func (a *TwitterAPI) DoForFavorites(
 	v url.Values,
 	c TweetChecker,
 	vision *VisionAPI,
+	lang *LanguageAPI,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
@@ -237,7 +239,7 @@ func (a *TwitterAPI) DoForFavorites(
 	} else {
 		post = a.postProcess(name, a.cache.LatestFavoriteID)
 	}
-	result, err := a.doForTweets(tweets, c, vision, action, post)
+	result, err := a.doForTweets(tweets, c, vision, lang, action, post)
 	if err != nil {
 		return nil, err
 	}
@@ -251,13 +253,14 @@ func (a *TwitterAPI) DoForSearch(
 	v url.Values,
 	c TweetChecker,
 	vision *VisionAPI,
+	lang *LanguageAPI,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(res.Statuses, c, vision, action, a.postProcessEach(action))
+	result, err := a.doForTweets(res.Statuses, c, vision, lang, action, a.postProcessEach(action))
 	if err != nil {
 		return nil, err
 	}
@@ -294,6 +297,7 @@ func (a *TwitterAPI) doForTweets(
 	tweets []anaconda.Tweet,
 	c TweetChecker,
 	v *VisionAPI,
+	l *LanguageAPI,
 	action *TwitterAction,
 	post postProcessor,
 ) ([]anaconda.Tweet, error) {
@@ -301,7 +305,7 @@ func (a *TwitterAPI) doForTweets(
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.check(t, v)
+		match, err := c.check(t, v, l)
 		if err != nil {
 			return nil, err
 		}
@@ -459,7 +463,7 @@ type TwitterUserListener struct {
 	file string
 }
 
-func (l *TwitterUserListener) Listen(v *VisionAPI) error {
+func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
 	for {
 		switch c := (<-l.C).(type) {
 		case anaconda.Tweet:
@@ -483,7 +487,7 @@ func (l *TwitterUserListener) Listen(v *VisionAPI) error {
 				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
 					continue
 				}
-				match, err := timeline.Filter.check(c, v)
+				match, err := timeline.Filter.check(c, vis, lang)
 				if err != nil {
 					return err
 				}
@@ -654,7 +658,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet, v *VisionAPI) (bool, error)
+	check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error)
 	shouldRepeat() bool
 }
 

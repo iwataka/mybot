@@ -32,7 +32,7 @@ type MybotConfig struct {
 
 // NewMybotConfig takes the configuration file path and returns a configuration
 // instance.
-func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
+func NewMybotConfig(path string) (*MybotConfig, error) {
 	c := &MybotConfig{
 		Twitter: &TwitterConfig{
 			Timelines: []TimelineConfig{},
