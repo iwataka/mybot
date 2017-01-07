@@ -8,16 +8,17 @@ import (
 )
 
 // MybotCache is a cache data of mybot
+// TODO: This should be stored in DB, not .json file.
 type MybotCache struct {
-	LatestCommitSHA     map[string]map[string]string
-	LatestTweetID       map[string]int64
-	LatestFavoriteID    map[string]int64
-	LatestDMID          int64 `json:"-"`
-	Tweet2Action        map[string]*TwitterAction
-	ImageURL            string
-	ImageSource         string
-	ImageAnalysisResult string
-	ImageAnalysisDate   string
+	LatestCommitSHA      map[string]map[string]string
+	LatestTweetID        map[string]int64
+	LatestFavoriteID     map[string]int64
+	LatestDMID           int64 `json:"-"`
+	Tweet2Action         map[string]*TwitterAction
+	ImageURLs            []string
+	ImageSources         []string
+	ImageAnalysisResults []string
+	ImageAnalysisDates   []string
 }
 
 // NewMybotCache creates an instance of MybotCache
@@ -28,10 +29,10 @@ func NewMybotCache(path string) (*MybotCache, error) {
 		make(map[string]int64),
 		0,
 		make(map[string]*TwitterAction),
-		"",
-		"",
-		"",
-		"",
+		[]string{},
+		[]string{},
+		[]string{},
+		[]string{},
 	}
 
 	info, _ := os.Stat(path)

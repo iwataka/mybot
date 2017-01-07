@@ -184,7 +184,13 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 
 // DoForAccount gets tweets from the specified user's timeline and do action
 // for tweets filtered by c.
-func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForAccount(
+	name string,
+	v url.Values,
+	c TweetChecker,
+	vision *VisionAPI,
+	action *TwitterAction,
+) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
 	v.Set("screen_name", name)
 	if exists {
@@ -200,7 +206,7 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, act
 	} else {
 		post = a.postProcess(name, a.cache.LatestTweetID)
 	}
-	result, err := a.doForTweets(tweets, c, action, post)
+	result, err := a.doForTweets(tweets, c, vision, action, post)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +215,13 @@ func (a *TwitterAPI) DoForAccount(name string, v url.Values, c TweetChecker, act
 
 // DoForFavorites gets tweets from the specified user's favorite list and do
 // action for tweets filtered by c.
-func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForFavorites(
+	name string,
+	v url.Values,
+	c TweetChecker,
+	vision *VisionAPI,
+	action *TwitterAction,
+) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
 	v.Set("screen_name", name)
 	if exists {
@@ -225,7 +237,7 @@ func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, a
 	} else {
 		post = a.postProcess(name, a.cache.LatestFavoriteID)
 	}
-	result, err := a.doForTweets(tweets, c, action, post)
+	result, err := a.doForTweets(tweets, c, vision, action, post)
 	if err != nil {
 		return nil, err
 	}
@@ -234,12 +246,18 @@ func (a *TwitterAPI) DoForFavorites(name string, v url.Values, c TweetChecker, a
 
 // DoForSearch gets tweets from search result by the specified query and do
 // action for tweets filtered by c.
-func (a *TwitterAPI) DoForSearch(query string, v url.Values, c TweetChecker, action *TwitterAction) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) DoForSearch(
+	query string,
+	v url.Values,
+	c TweetChecker,
+	vision *VisionAPI,
+	action *TwitterAction,
+) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(res.Statuses, c, action, a.postProcessEach(action))
+	result, err := a.doForTweets(res.Statuses, c, vision, action, a.postProcessEach(action))
 	if err != nil {
 		return nil, err
 	}
@@ -272,12 +290,18 @@ func (a *TwitterAPI) postProcessEach(action *TwitterAction) postProcessor {
 	}
 }
 
-func (a *TwitterAPI) doForTweets(tweets []anaconda.Tweet, c TweetChecker, action *TwitterAction, post postProcessor) ([]anaconda.Tweet, error) {
+func (a *TwitterAPI) doForTweets(
+	tweets []anaconda.Tweet,
+	c TweetChecker,
+	v *VisionAPI,
+	action *TwitterAction,
+	post postProcessor,
+) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.check(t)
+		match, err := c.check(t, v)
 		if err != nil {
 			return nil, err
 		}
@@ -435,7 +459,7 @@ type TwitterUserListener struct {
 	file string
 }
 
-func (l *TwitterUserListener) Listen() error {
+func (l *TwitterUserListener) Listen(v *VisionAPI) error {
 	for {
 		switch c := (<-l.C).(type) {
 		case anaconda.Tweet:
@@ -459,7 +483,7 @@ func (l *TwitterUserListener) Listen() error {
 				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
 					continue
 				}
-				match, err := timeline.Filter.check(c)
+				match, err := timeline.Filter.check(c, v)
 				if err != nil {
 					return err
 				}
@@ -643,7 +667,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet) (bool, error)
+	check(t anaconda.Tweet, v *VisionAPI) (bool, error)
 	shouldRepeat() bool
 }
 

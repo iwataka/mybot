@@ -71,7 +71,6 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if t.Filter.Vision.Face == nil {
 			t.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		t.Filter.VisionAPI = vision
 	}
 	for _, f := range c.Twitter.Favorites {
 		if f.Filter.Vision == nil {
@@ -80,7 +79,6 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if f.Filter.Vision.Face == nil {
 			f.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		f.Filter.VisionAPI = vision
 	}
 	for _, s := range c.Twitter.Searches {
 		if s.Filter.Vision == nil {
@@ -89,22 +87,8 @@ func NewMybotConfig(path string, vision *VisionAPI) (*MybotConfig, error) {
 		if s.Filter.Vision.Face == nil {
 			s.Filter.Vision.Face = new(VisionFaceCondition)
 		}
-		s.Filter.VisionAPI = vision
 	}
 	return c, nil
-}
-
-// SetVisionAPI sets the specified Vision API client to the configuration.
-func (c *MybotConfig) SetVisionAPI(vision *VisionAPI) {
-	for _, t := range c.Twitter.Timelines {
-		t.Filter.VisionAPI = vision
-	}
-	for _, f := range c.Twitter.Favorites {
-		f.Filter.VisionAPI = vision
-	}
-	for _, s := range c.Twitter.Searches {
-		s.Filter.VisionAPI = vision
-	}
 }
 
 // Validate tries to validate the specified configuration. If invalid values

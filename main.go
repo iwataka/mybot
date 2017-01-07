@@ -165,8 +165,6 @@ func beforeRunning(c *cli.Context) error {
 		visionAPI.File = c.String("gcloud")
 	}
 
-	config.SetVisionAPI(visionAPI)
-
 	twitterAuth := &mybot.TwitterAuth{}
 	twitterAuth.FromJson(c.String("twitter"))
 	mybot.SetConsumer(twitterAuth)
@@ -271,7 +269,7 @@ func twitterListenUsers() {
 			return err
 		}
 		userListenerChan = listener.C
-		err = listener.Listen()
+		err = listener.Listen(visionAPI)
 		if err != nil {
 			logger.Println(err)
 			return err
@@ -436,7 +434,6 @@ func monitorFile(file string, d time.Duration, f func()) {
 func runTwitterWithStream() error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Searches {
-		a.Filter.VisionAPI = visionAPI
 		v := url.Values{}
 		if a.Count > 0 {
 			v.Set("count", fmt.Sprintf("%d", a.Count))
@@ -445,7 +442,7 @@ func runTwitterWithStream() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, a.Action)
+			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, visionAPI, a.Action)
 			if err != nil {
 				return err
 			}
@@ -457,9 +454,8 @@ func runTwitterWithStream() error {
 		if a.Count > 0 {
 			v.Set("count", fmt.Sprintf("%d", a.Count))
 		}
-		a.Filter.VisionAPI = visionAPI
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, a.Action)
+			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, visionAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
@@ -492,9 +488,8 @@ func runTwitterWithoutStream() error {
 		if a.IncludeRts != nil {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
-		a.Filter.VisionAPI = visionAPI
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, a.Action)
+			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, visionAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err

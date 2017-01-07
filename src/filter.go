@@ -3,6 +3,7 @@ package mybot
 import (
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/iwataka/anaconda"
 )
@@ -18,10 +19,9 @@ type TweetFilterConfig struct {
 	RetweetedThreshold int              `toml:"retweeted_threshold"`
 	Lang               string           `toml:"lang,omitempty"`
 	Vision             *VisionCondition `toml:"vision"`
-	VisionAPI          *VisionAPI
 }
 
-func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
+func (c *TweetFilterConfig) check(t anaconda.Tweet, v *VisionAPI) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -65,22 +65,35 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet) (bool, error) {
 	if len(c.Lang) != 0 && c.Lang != t.Lang {
 		return false, nil
 	}
-	if c.Vision != nil && c.VisionAPI != nil && c.VisionAPI.api != nil {
+	if c.Vision != nil && v != nil && v.api != nil {
 		urls := make([]string, len(t.Entities.Media))
 		for i, m := range t.Entities.Media {
 			urls[i] = m.Media_url
 		}
-		match := false
-		var err error
 		if len(urls) != 0 {
-			match, err = c.VisionAPI.MatchImages(urls, c.Vision)
+			results, matches, err := v.MatchImages(urls, c.Vision)
 			if err != nil {
 				return false, err
 			}
-			c.VisionAPI.cache.ImageSource = fmt.Sprintf("https://twitter.com/%s/status/%s", t.User.IdStr, t.IdStr)
-		}
-		if !match {
-			return false, nil
+
+			result := results[len(results)-1]
+			// empty result means no Vision API analysis occurred.
+			if len(result) != 0 {
+				v.cache.ImageAnalysisDates =
+					append(v.cache.ImageAnalysisDates, time.Now().Format(time.RubyDate))
+				v.cache.ImageAnalysisResults =
+					append(v.cache.ImageAnalysisResults, results[len(results)-1])
+				srcFmt := "https://twitter.com/%s/status/%s"
+				tweetSrc := fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
+				v.cache.ImageSources = append(v.cache.ImageSources, tweetSrc)
+				v.cache.ImageURLs = append(v.cache.ImageURLs, urls[len(urls)-1])
+			}
+
+			for _, m := range matches {
+				if m {
+					return true, nil
+				}
+			}
 		}
 	}
 	return true, nil

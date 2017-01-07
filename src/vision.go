@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"time"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
@@ -75,32 +74,40 @@ func (c *VisionFaceCondition) isEmpty() bool {
 
 // MatchImages takes image URLs and a Vision condition and returns whether the
 // specified images match or not.
-func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, error) {
+func (a *VisionAPI) MatchImages(
+	urls []string,
+	cond *VisionCondition,
+) ([]string, []bool, error) {
 	// No image never match any conditions
 	if len(urls) == 0 {
-		return false, nil
+		return []string{}, []bool{}, nil
+	}
+
+	features := getFeatures(cond)
+	if len(features) == 0 {
+		results := make([]string, len(urls), len(urls))
+		matches := []bool{}
+		for i, _ := range matches {
+			matches[i] = true
+		}
+		return results, matches, nil
 	}
 
 	imgData := make([][]byte, len(urls))
 	for i, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
-			return false, err
+			return nil, nil, err
 		}
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return false, err
+			return nil, nil, err
 		}
 		imgData[i] = data
 		err = resp.Body.Close()
 		if err != nil {
-			return false, err
+			return nil, nil, err
 		}
-	}
-
-	features := getFeatures(cond)
-	if len(features) == 0 {
-		return true, nil
 	}
 
 	imgs := make([]*vision.Image, len(imgData))
@@ -123,63 +130,57 @@ func (a *VisionAPI) MatchImages(urls []string, cond *VisionCondition) (bool, err
 
 	res, err := a.api.Images.Annotate(batch).Do()
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
 
-	for i, r := range res.Responses {
+	results := []string{}
+	matches := []bool{}
+	for _, r := range res.Responses {
 		result, err := r.MarshalJSON()
 		if err != nil {
-			return false, err
+			return nil, nil, err
 		}
-		a.cache.ImageURL = urls[i]
-		a.cache.ImageAnalysisResult = string(result)
-		a.cache.ImageAnalysisDate = time.Now().String()
+		results = append(results, string(result))
 
 		match := true
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
 			m, err := matchEntity(r.LabelAnnotations, cond.Label)
 			if err != nil {
-				return false, err
+				return nil, nil, err
 			}
 			match = match && m
 		}
 		if match && r.FaceAnnotations != nil && len(r.FaceAnnotations) != 0 {
 			m, err := matchFace(r.FaceAnnotations, cond.Face)
 			if err != nil {
-				return false, err
+				return nil, nil, err
 			}
 			match = match && m
 		}
 		if match && r.TextAnnotations != nil && len(r.TextAnnotations) != 0 {
 			m, err := matchEntity(r.TextAnnotations, cond.Text)
 			if err != nil {
-				return false, err
+				return nil, nil, err
 			}
 			match = match && m
 		}
 		if match && r.LandmarkAnnotations != nil && len(r.LandmarkAnnotations) != 0 {
 			m, err := matchEntity(r.LandmarkAnnotations, cond.Landmark)
 			if err != nil {
-				return false, err
+				return nil, nil, err
 			}
 			match = match && m
 		}
 		if match && r.LogoAnnotations != nil && len(r.LogoAnnotations) != 0 {
 			m, err := matchEntity(r.LogoAnnotations, cond.Logo)
 			if err != nil {
-				return false, err
+				return nil, nil, err
 			}
 			match = match && m
 		}
-		if match {
-			err = insertVisionDBColumn(a.config.DB, urls[i], string(result))
-			if err != nil {
-				return false, err
-			}
-			return true, nil
-		}
+		matches = append(matches, match)
 	}
-	return false, nil
+	return results, matches, nil
 }
 
 func getFeatures(cond *VisionCondition) []*vision.Feature {
