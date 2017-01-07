@@ -85,3 +85,25 @@ func getListTextboxValue(val map[string][]string, index int, name string) []stri
 	}
 	return result
 }
+
+func textboxOfFloat64Ptr(val *float64, name string) template.HTML {
+	value := ""
+	if val != nil {
+		value = strconv.FormatFloat(*val, 'E', -1, 64)
+	}
+	format := `<input form="overwrite" type="number" name="%s" value="%s"/>`
+	result := fmt.Sprintf(format, name, value)
+	return template.HTML(result)
+}
+
+func getFloat64Ptr(val map[string][]string, index int, name string) (*float64, error) {
+	v := val[name][index]
+	if len(v) == 0 {
+		return nil, nil
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}

@@ -319,6 +319,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.timelines.filter.vision.text")
 			timeline.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.timelines.filter.vision.landmark")
 			timeline.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.timelines.filter.vision.logo")
+			minSentiment, err := getFloat64Ptr(val, i, "twitter.timelines.filter.language.min_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			timeline.Filter.Language.MinSentiment = minSentiment
+			maxSentiment, err := getFloat64Ptr(val, i, "twitter.timelines.filter.language.max_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			timeline.Filter.Language.MaxSentiment = maxSentiment
 			timeline.Action.Retweet = actionRetweetCounter.returnValue(i, val)
 			timeline.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			timeline.Action.Follow = actionFollowCounter.returnValue(i, val)
@@ -381,6 +393,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			favorite.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.favorites.filter.vision.text")
 			favorite.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.favorites.filter.vision.landmark")
 			favorite.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.favorites.filter.vision.logo")
+			minSentiment, err := getFloat64Ptr(val, i, "twitter.favorites.filter.language.min_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			favorite.Filter.Language.MinSentiment = minSentiment
+			maxSentiment, err := getFloat64Ptr(val, i, "twitter.favorites.filter.language.max_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			favorite.Filter.Language.MaxSentiment = maxSentiment
 			favorite.Action.Retweet = actionRetweetCounter.returnValue(i, val)
 			favorite.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			favorite.Action.Follow = actionFollowCounter.returnValue(i, val)
@@ -444,6 +468,18 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Filter.Vision.Text = getListTextboxValue(val, i, "twitter.searches.filter.vision.text")
 			search.Filter.Vision.Landmark = getListTextboxValue(val, i, "twitter.searches.filter.vision.landmark")
 			search.Filter.Vision.Logo = getListTextboxValue(val, i, "twitter.searches.filter.vision.logo")
+			minSentiment, err := getFloat64Ptr(val, i, "twitter.searches.filter.language.min_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			search.Filter.Language.MinSentiment = minSentiment
+			maxSentiment, err := getFloat64Ptr(val, i, "twitter.searches.filter.language.max_sentiment")
+			if err != nil {
+				msg = err.Error()
+				return
+			}
+			search.Filter.Language.MaxSentiment = maxSentiment
 			search.Action.Retweet = actionRetweetCounter.returnValue(i, val)
 			search.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
 			search.Action.Follow = actionFollowCounter.returnValue(i, val)
@@ -712,10 +748,11 @@ func generateTemplate(name, path string) (*template.Template, error) {
 	}
 
 	funcMap := template.FuncMap{
-		"checkbox":      checkbox,
-		"boolSelectbox": boolSelectbox,
-		"selectbox":     selectbox,
-		"listTextbox":   listTextbox,
+		"checkbox":            checkbox,
+		"boolSelectbox":       boolSelectbox,
+		"selectbox":           selectbox,
+		"listTextbox":         listTextbox,
+		"textboxOfFloat64Ptr": textboxOfFloat64Ptr,
 	}
 
 	return template.

@@ -12,14 +12,14 @@ import (
 type TweetFilterConfig struct {
 	Patterns           []string           `toml:"patterns,omitempty"`
 	URLPatterns        []string           `toml:"url_patterns,omitempty"`
-	HasMedia           *bool              `toml:"has_media"`
-	HasURL             *bool              `toml:"has_url"`
-	Retweeted          *bool              `toml:"retweeted"`
+	HasMedia           *bool              `toml:"has_media,omitempty"`
+	HasURL             *bool              `toml:"has_url,omitempty"`
+	Retweeted          *bool              `toml:"retweeted,omitempty"`
 	FavoriteThreshold  int                `toml:"favorite_threshold"`
 	RetweetedThreshold int                `toml:"retweeted_threshold"`
 	Lang               string             `toml:"lang,omitempty"`
-	Vision             *VisionCondition   `toml:"vision"`
-	Language           *LanguageCondition `toml:"language"`
+	Vision             *VisionCondition   `toml:"vision,omitempty"`
+	Language           *LanguageCondition `toml:"language,omitempty"`
 }
 
 func (c *TweetFilterConfig) check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error) {

@@ -216,6 +216,29 @@
                                     </tr>
                                 </tbody>
                             </table>
+                            <h3>Filter.Language</h3>
+                            <table class="table table-striped table-bordered table-responsive">
+                                <thead>
+                                    <tr>
+                                        <td>name</td>
+                                        <td>value</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>min sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $timeline.Filter.Language.MinSentiment "twitter.timelines.filter.language.min_sentiment"}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>max sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $timeline.Filter.Language.MaxSentiment "twitter.timelines.filter.language.max_sentiment"}}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                             <h3>Action</h3>
                             <table class="table table-striped table-bordered table-responsive">
                                 <thead>
@@ -422,6 +445,29 @@
                                         <td>logo</td>
                                         <td>
                                             {{listTextbox $favorite.Filter.Vision.Logo "twitter.favorites.filter.vision.logo"}}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <h3>Filter.Language</h3>
+                            <table class="table table-striped table-bordered table-responsive">
+                                <thead>
+                                    <tr>
+                                        <td>name</td>
+                                        <td>value</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>min sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $favorite.Filter.Language.MinSentiment "twitter.favorites.filter.language.min_sentiment"}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>max sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $favorite.Filter.Language.MaxSentiment "twitter.favorites.filter.language.max_sentiment"}}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -637,6 +683,29 @@
                                         <td>logo</td>
                                         <td>
                                             {{listTextbox $search.Filter.Vision.Logo "twitter.searches.filter.vision.logo"}}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <h3>Filter.Language</h3>
+                            <table class="table table-striped table-bordered table-responsive">
+                                <thead>
+                                    <tr>
+                                        <td>name</td>
+                                        <td>value</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>min sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $search.Filter.Language.MinSentiment "twitter.searches.filter.language.min_sentiment"}}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>max sentiment</td>
+                                        <td>
+                                            {{textboxOfFloat64Ptr $search.Filter.Language.MaxSentiment "twitter.searches.filter.language.max_sentiment"}}
                                         </td>
                                     </tr>
                                 </tbody>

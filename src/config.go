@@ -57,11 +57,6 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		return nil, err
 	}
 
-	err = c.Validate()
-	if err != nil {
-		return nil, err
-	}
-
 	// Assign empty values to config instance to prevent nil pointer
 	// reference error.
 	for _, t := range c.Twitter.Timelines {
@@ -71,6 +66,9 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		if t.Filter.Vision.Face == nil {
 			t.Filter.Vision.Face = new(VisionFaceCondition)
 		}
+		if t.Filter.Language == nil {
+			t.Filter.Language = new(LanguageCondition)
+		}
 	}
 	for _, f := range c.Twitter.Favorites {
 		if f.Filter.Vision == nil {
@@ -78,6 +76,9 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		}
 		if f.Filter.Vision.Face == nil {
 			f.Filter.Vision.Face = new(VisionFaceCondition)
+		}
+		if f.Filter.Language == nil {
+			f.Filter.Language = new(LanguageCondition)
 		}
 	}
 	for _, s := range c.Twitter.Searches {
@@ -87,26 +88,35 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		if s.Filter.Vision.Face == nil {
 			s.Filter.Vision.Face = new(VisionFaceCondition)
 		}
+		if s.Filter.Language == nil {
+			s.Filter.Language = new(LanguageCondition)
+		}
 	}
+
+	err = c.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
 func (c *MybotConfig) Validate() error {
-	for _, account := range c.Twitter.Timelines {
-		if account.Action == nil {
-			msg := fmt.Sprintf("%v has no action", account)
+	for _, timeline := range c.Twitter.Timelines {
+		if timeline.Action == nil {
+			msg := fmt.Sprintf("%v has no action", timeline)
 			return errors.New(msg)
 		}
-		if len(account.ScreenNames) == 0 {
-			msg := fmt.Sprintf("%v has no name", account)
+		if len(timeline.ScreenNames) == 0 {
+			msg := fmt.Sprintf("%v has no name", timeline)
 			return errors.New(msg)
 		}
-		filter := account.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
+		filter := timeline.Filter
+		if !filter.Vision.isEmpty() &&
 			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
-			bytes, _ := json.Marshal(account)
+			bytes, _ := json.Marshal(timeline)
 			msg := fmt.Sprintf("%s\n%s",
 				"Don't use both of Vision API and retweeted/favorite threshold",
 				string(bytes),
@@ -272,6 +282,7 @@ func NewTimelineConfig() *TimelineConfig {
 				Vision: &VisionCondition{
 					Face: &VisionFaceCondition{},
 				},
+				Language: &LanguageCondition{},
 			},
 			Action: &TwitterAction{},
 		},
@@ -294,6 +305,7 @@ func NewFavoriteConfig() *FavoriteConfig {
 				Vision: &VisionCondition{
 					Face: &VisionFaceCondition{},
 				},
+				Language: &LanguageCondition{},
 			},
 			Action: &TwitterAction{},
 		},
@@ -317,6 +329,7 @@ func NewSearchConfig() *SearchConfig {
 				Vision: &VisionCondition{
 					Face: &VisionFaceCondition{},
 				},
+				Language: &LanguageCondition{},
 			},
 			Action: &TwitterAction{},
 		},
