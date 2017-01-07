@@ -625,19 +625,6 @@ func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 	return nil
 }
 
-// FollowAll follows all usres included in the configuration
-func (a *TwitterAPI) FollowAll() error {
-	for _, t := range a.config.Twitter.Timelines {
-		for _, n := range t.ScreenNames {
-			_, err := a.api.FollowUser(n)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
 	allowSelf := a.config.Interaction.AllowSelf
 	users := a.config.Interaction.Users
