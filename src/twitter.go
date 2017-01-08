@@ -606,8 +606,8 @@ func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	}
 	count := a.config.Interaction.Count
-	if count > 0 {
-		v.Set("count", fmt.Sprintf("%d", count))
+	if count != nil {
+		v.Set("count", fmt.Sprintf("%d", *count))
 	}
 	dms, err := a.api.GetDirectMessages(v)
 	if err != nil {

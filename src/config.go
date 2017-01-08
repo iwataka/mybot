@@ -115,7 +115,7 @@ func (c *MybotConfig) Validate() error {
 		}
 		filter := timeline.Filter
 		if !filter.Vision.isEmpty() &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			bytes, _ := json.Marshal(timeline)
 			msg := fmt.Sprintf("%s\n%s",
 				"Don't use both of Vision API and retweeted/favorite threshold",
@@ -136,7 +136,7 @@ func (c *MybotConfig) Validate() error {
 		}
 		filter := favorite.Filter
 		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			bytes, _ := json.Marshal(favorite)
 			msg := fmt.Sprintf("%s\n%s",
 				"Don't use both of Vision API and retweeted/favorite threshold",
@@ -157,7 +157,7 @@ func (c *MybotConfig) Validate() error {
 		}
 		filter := search.Filter
 		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold > 0 || filter.FavoriteThreshold > 0) {
+			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
 			bytes, _ := json.Marshal(search)
 			msg := fmt.Sprintf("%s\n%s",
 				"Don't use both of Vision API and retweeted/favorite threshold",
@@ -278,7 +278,7 @@ type TimelineConfig struct {
 	ScreenNames    []string `toml:"screen_names"`
 	ExcludeReplies *bool    `toml:"exclude_replies"`
 	IncludeRts     *bool    `toml:"include_rts"`
-	Count          int      `toml:"count"`
+	Count          *int     `toml:"count,omitempty"`
 }
 
 // NewTimelineConfig returns TimelineConfig instance, which is empty but has a
@@ -301,7 +301,7 @@ func NewTimelineConfig() *TimelineConfig {
 type FavoriteConfig struct {
 	*SourceConfig
 	ScreenNames []string `toml:"screen_names"`
-	Count       int      `toml:"count"`
+	Count       *int     `toml:"count,omitempty"`
 }
 
 // NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
@@ -325,7 +325,7 @@ type SearchConfig struct {
 	*SourceConfig
 	Queries    []string `toml:"queries"`
 	ResultType string   `toml:"result_type,omitempty"`
-	Count      int      `toml:"count"`
+	Count      *int     `toml:"count,omitempty"`
 }
 
 // NewSearchConfig returns SearchConfig instance, which is empty but has a
@@ -356,7 +356,7 @@ type InteractionConfig struct {
 	Duration  string   `toml:"duration"`
 	AllowSelf bool     `toml:"allow_self"`
 	Users     []string `toml:"users,omitempty"`
-	Count     int      `toml:"count"`
+	Count     *int     `toml:"count,omitempty"`
 }
 
 // LogConfig is a configuration for logging

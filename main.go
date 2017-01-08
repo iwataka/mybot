@@ -448,8 +448,8 @@ func runTwitterWithStream() error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Searches {
 		v := url.Values{}
-		if a.Count > 0 {
-			v.Set("count", fmt.Sprintf("%d", a.Count))
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		if len(a.ResultType) != 0 {
 			v.Set("result_type", a.ResultType)
@@ -464,8 +464,8 @@ func runTwitterWithStream() error {
 	}
 	for _, a := range config.Twitter.Favorites {
 		v := url.Values{}
-		if a.Count > 0 {
-			v.Set("count", fmt.Sprintf("%d", a.Count))
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		for _, name := range a.ScreenNames {
 			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, visionAPI, languageAPI, a.Action)
@@ -492,8 +492,8 @@ func runTwitterWithoutStream() error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.Twitter.Timelines {
 		v := url.Values{}
-		if a.Count > 0 {
-			v.Set("count", fmt.Sprintf("%d", a.Count))
+		if a.Count != nil {
+			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		if a.ExcludeReplies != nil {
 			v.Set("exclude_replies", fmt.Sprintf("%v", *a.ExcludeReplies))

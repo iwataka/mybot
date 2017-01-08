@@ -107,3 +107,26 @@ func getFloat64Ptr(val map[string][]string, index int, name string) (*float64, e
 	}
 	return &f, nil
 }
+
+func textboxOfIntPtr(val *int, name string) template.HTML {
+	value := ""
+	if val != nil {
+		value = strconv.Itoa(*val)
+	}
+	format := `<input form="overwrite" type="number" name="%s" value="%s"/>`
+	result := fmt.Sprintf(format, name, value)
+	return template.HTML(result)
+}
+
+func getIntPtr(val map[string][]string, index int, name string) (*int, error) {
+	v := val[name][index]
+	if len(v) == 0 {
+		return nil, nil
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return nil, err
+	}
+	result := int(i)
+	return &result, nil
+}

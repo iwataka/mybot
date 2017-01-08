@@ -289,7 +289,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.ScreenNames = getListTextboxValue(val, i, "twitter.timelines.screen_names")
 			timeline.ExcludeReplies = getBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
 			timeline.IncludeRts = getBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
-			count, err := strconv.Atoi(val["twitter.timelines.count"][i])
+			count, err := getIntPtr(val, i, "twitter.timelines.count")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -300,15 +300,13 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			timeline.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_media")
 			timeline.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.timelines.filter.has_url")
 			timeline.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.timelines.filter.retweeted")
-			fThresholdStr := val["twitter.timelines.filter.favorite_threshold"][i]
-			fThreshold, err := strconv.Atoi(fThresholdStr)
+			fThreshold, err := getIntPtr(val, i, "twitter.timelines.filter.favorite_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
 			}
 			timeline.Filter.FavoriteThreshold = fThreshold
-			rThresholdStr := val["twitter.timelines.filter.retweeted_threshold"][i]
-			rThreshold, err := strconv.Atoi(rThresholdStr)
+			rThreshold, err := getIntPtr(val, i, "twitter.timelines.filter.retweeted_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -362,7 +360,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			favorite := *mybot.NewFavoriteConfig()
 			favorite.ScreenNames = getListTextboxValue(val, i, "twitter.favorites.screen_names")
-			count, err := strconv.Atoi(val["twitter.favorites.count"][i])
+			count, err := getIntPtr(val, i, "twitter.favorites.count")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -374,15 +372,13 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			favorite.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
 			favorite.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.favorites.filter.has_url")
 			favorite.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.favorites.filter.retweeted")
-			fThresholdStr := val["twitter.favorites.filter.favorite_threshold"][i]
-			fThreshold, err := strconv.Atoi(fThresholdStr)
+			fThreshold, err := getIntPtr(val, i, "twitter.favorites.filter.favorite_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
 			}
 			favorite.Filter.FavoriteThreshold = fThreshold
-			rThresholdStr := val["twitter.favorites.filter.retweeted_threshold"][i]
-			rThreshold, err := strconv.Atoi(rThresholdStr)
+			rThreshold, err := getIntPtr(val, i, "twitter.favorites.filter.retweeted_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -437,7 +433,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search := *mybot.NewSearchConfig()
 			search.Queries = getListTextboxValue(val, i, "twitter.searches.queries")
 			search.ResultType = val["twitter.searches.result_type"][i]
-			count, err := strconv.Atoi(val["twitter.searches.count"][i])
+			count, err := getIntPtr(val, i, "twitter.searches.count")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -449,15 +445,13 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 			search.Filter.HasMedia = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
 			search.Filter.HasURL = getBoolSelectboxValue(val, i, "twitter.searches.filter.has_url")
 			search.Filter.Retweeted = getBoolSelectboxValue(val, i, "twitter.searches.filter.retweeted")
-			fThresholdStr := val["twitter.searches.filter.favorite_threshold"][i]
-			fThreshold, err := strconv.Atoi(fThresholdStr)
+			fThreshold, err := getIntPtr(val, i, "twitter.searches.filter.favorite_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
 			}
 			search.Filter.FavoriteThreshold = fThreshold
-			rThresholdStr := val["twitter.searches.filter.retweeted_threshold"][i]
-			rThreshold, err := strconv.Atoi(rThresholdStr)
+			rThreshold, err := getIntPtr(val, i, "twitter.searches.filter.retweeted_threshold")
 			if err != nil {
 				msg = err.Error()
 				return
@@ -502,7 +496,7 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.Interaction.Duration = val["interaction.duration"][0]
 		s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.Config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
-		count, err := strconv.Atoi(val["interaction.count"][0])
+		count, err := getIntPtr(val, 0, "interaction.count")
 		if err != nil {
 			msg = err.Error()
 			return
@@ -816,6 +810,7 @@ func generateTemplate(name, path string) (*template.Template, error) {
 		"selectbox":           selectbox,
 		"listTextbox":         listTextbox,
 		"textboxOfFloat64Ptr": textboxOfFloat64Ptr,
+		"textboxOfIntPtr":     textboxOfIntPtr,
 	}
 
 	return template.

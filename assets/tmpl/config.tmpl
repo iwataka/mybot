@@ -73,7 +73,7 @@
                             {{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}
                         </td>
                         <td>
-                            <input form="overwrite" type="number" name="twitter.timelines.count" value="{{$timeline.Count}}">
+                            {{textboxOfIntPtr $timeline.Count "twitter.timelines.count"}}
                         </td>
                         <td>
                             <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-timelines-filter_{{$index}}">
@@ -153,13 +153,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.timelines.filter.favorite_threshold" value="{{$timeline.Filter.FavoriteThreshold}}">
+                                                {{textboxOfIntPtr $timeline.Filter.FavoriteThreshold "twitter.timelines.filter.favorite_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.timelines.filter.retweeted_threshold" value="{{$timeline.Filter.RetweetedThreshold}}">
+                                                {{textboxOfIntPtr $timeline.Filter.RetweetedThreshold "twitter.timelines.filter.retweeted_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -321,7 +321,9 @@
                         <td>
                             {{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}
                         </td>
-                        <td><input form="overwrite" type="number" name="twitter.favorites.count" value="{{$favorite.Count}}"></td>
+                        <td>
+                            {{textboxOfIntPtr $favorite.Count "twitter.favorites.count"}}
+                        </td>
                         <td>
                             <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-favorites-filter_{{$index}}">
                                 details here
@@ -398,13 +400,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.favorites.filter.favorite_threshold" value="{{$favorite.Filter.FavoriteThreshold}}">
+                                                {{textboxOfIntPtr $favorite.Filter.FavoriteThreshold "twitter.favorites.filter.favorite_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.favorites.filter.retweeted_threshold" value="{{$favorite.Filter.RetweetedThreshold}}">
+                                                {{textboxOfIntPtr $favorite.Filter.RetweetedThreshold "twitter.favorites.filter.retweeted_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -570,7 +572,9 @@
                         <td>
                             {{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}
                         </td>
-                        <td><input form="overwrite" type="number" name="twitter.searches.count" value="{{$search.Count}}"></td>
+                        <td>
+                            {{textboxOfIntPtr $search.Count "twitter.searches.count"}}
+                        </td>
                         <td>
                             <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-searches-filter_{{$index}}">
                                 details here
@@ -648,13 +652,13 @@
                                         <tr>
                                             <td>favorite threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.searches.filter.favorite_threshold" value="{{$search.Filter.FavoriteThreshold}}">
+                                                {{textboxOfIntPtr $search.Filter.FavoriteThreshold "twitter.searches.filter.favorite_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
                                             <td>retweeted threshold</td>
                                             <td>
-                                                <input form="overwrite" type="number" name="twitter.searches.filter.retweeted_threshold" value="{{$search.Filter.RetweetedThreshold}}">
+                                                {{textboxOfIntPtr $search.Filter.RetweetedThreshold "twitter.searches.filter.retweeted_threshold"}}
                                             </td>
                                         </tr>
                                         <tr>
@@ -869,7 +873,7 @@
                             {{listTextbox .Config.Interaction.Users "interaction.users"}}
                         </td>
                         <td>
-                            <input form="overwrite" type="number" name="interaction.count" value="{{.Config.Interaction.Count}}">
+                            {{textboxOfIntPtr .Config.Interaction.Count "interaction.count"}}
                         </td>
                     </tr>
                 </tbody>
