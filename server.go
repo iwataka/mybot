@@ -688,11 +688,9 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := &struct {
 		UserName string
-		Log      string
 		Status   mybot.MybotStatus
 	}{
 		s.Config.Server.Name,
-		s.Logger.ReadString(),
 		*s.Status,
 	}
 	err = tmpl.Execute(w, data)

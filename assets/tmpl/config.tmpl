@@ -35,14 +35,14 @@
         {{end}}
 
         <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
-        <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary" style="display:inline;margin-right:30px">
+        <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary" style="display:inline">
 
         <form action="/config/file/" method="get" style="display:inline">
-            <input type="submit" value="Download" class="btn btn-lg btn-default">
+            <input type="submit" value="Download" class="btn btn-lg btn-primary">
         </form>
 
         <form action="/config/file/" method="post" enctype="multipart/form-data" style="display:inline">
-            <input type="submit" value="Upload" class="btn btn-lg btn-default">
+            <input type="submit" value="Upload" class="btn btn-lg btn-primary">
             <input type="file" name="mybot.config" style="display:inline">
         </form>
 
