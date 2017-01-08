@@ -668,12 +668,20 @@ type TweetChecker interface {
 // Returning an empty string means this function does nothing.
 type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
 
-// DefaultDirectMessageReceiver returns a reply from the specified direct
-// message.
-func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
-	text := html.UnescapeString(m.Text)
-	lowers := strings.ToLower(text)
-	if lowers == "collection" || lowers == "cols" {
+type DirectMessageCommand struct {
+	Name        string
+	Description string
+	Exec        func(*TwitterAPI, []string, []*DirectMessageCommand) (string, error)
+}
+
+var collectionsCommand = &DirectMessageCommand{
+	Name:        "collections,cols",
+	Description: "Shows a list of Twitter collections.",
+	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
+		if len(args) != 0 {
+			return "This command can't accept any arguments", nil
+		}
+
 		self, err := a.GetSelf()
 		if err != nil {
 			return "", err
@@ -689,15 +697,113 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 			lines = append(lines, line)
 		}
 		return strings.Join(lines, "\n"), nil
-	} else if lowers == "configuration" || lowers == "config" || lowers == "conf" {
-		cfg := new(MybotConfig)
-		*cfg = *a.config
-		bytes, err := cfg.Read(strings.Repeat(" ", 4))
+	},
+}
+
+var configCommand = &DirectMessageCommand{
+	Name:        "configuration,config,conf",
+	Description: "Shows the configuration of this app.",
+	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
+		if len(args) != 0 {
+			return "This command can't accept any arguments", nil
+		}
+
+		bytes, err := a.config.Read(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err
 		}
 		return string(bytes), nil
-	} else {
-		return fmt.Sprintf("Unknow command: %s", text), nil
+	},
+}
+
+var retweetCommand = &DirectMessageCommand{
+	Name:        "retweet",
+	Description: "Add configuration to retweet all tweet of the specified users",
+	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
+		timeline := NewTimelineConfig()
+		timeline.ScreenNames = args
+		timeline.Action.Retweet = true
+		a.config.Twitter.Timelines = append(a.config.Twitter.Timelines, *timeline)
+		err := a.config.Validate()
+		if err != nil {
+			a.config.Load()
+			return "", err
+		}
+		err = a.config.Save()
+		if err != nil {
+			return "", err
+		}
+		return "Add configuration successfully", nil
+	},
+}
+
+var favoriteCommand = &DirectMessageCommand{
+	Name:        "favorite",
+	Description: "Add configuration to favorite all favorites of the specified users",
+	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
+		favorite := NewFavoriteConfig()
+		favorite.ScreenNames = args
+		favorite.Action.Favorite = true
+		a.config.Twitter.Favorites = append(a.config.Twitter.Favorites, *favorite)
+		err := a.config.Validate()
+		if err != nil {
+			a.config.Load()
+			return "", err
+		}
+		err = a.config.Save()
+		if err != nil {
+			return "", err
+		}
+		return "Add configuration successfully", nil
+	},
+}
+
+var helpCommand = &DirectMessageCommand{
+	Name:        "help,h",
+	Description: "Shows the help text",
+	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
+		// If only slash is given, shows the help text.
+		reply := "Use these commands with / at the head."
+		for _, cmd := range cmds {
+			reply += "\n"
+			reply += fmt.Sprintf("  [%s]: %s", cmd.Name, cmd.Description)
+		}
+		return reply, nil
+	},
+}
+
+var directMessageCommandList = []*DirectMessageCommand{
+	collectionsCommand,
+	configCommand,
+	helpCommand,
+	retweetCommand,
+	favoriteCommand,
+}
+
+// DefaultDirectMessageReceiver returns a reply from the specified direct
+// message.
+func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
+	fields := strings.Fields(html.UnescapeString(m.Text))
+	cmd := fields[0]
+	args := []string{}
+	if len(fields) > 1 {
+		args = fields[1:]
 	}
+	// If the given command doesn't start with slash, ignore it.
+	if !strings.HasPrefix(cmd, "/") {
+		return "", nil
+	} else if len(cmd) < 2 {
+		return helpCommand.Exec(a, args, directMessageCommandList)
+	}
+	cmd = cmd[1:]
+
+	for _, c := range directMessageCommandList {
+		names := strings.Split(c.Name, ",")
+		for _, name := range names {
+			if cmd == name {
+				return c.Exec(a, args, directMessageCommandList)
+			}
+		}
+	}
+	return "", nil
 }
