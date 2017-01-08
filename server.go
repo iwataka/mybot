@@ -489,11 +489,6 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		s.Config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
 		s.Config.Twitter.Notification.Place.Users = getListTextboxValue(val, 0, "twitter.notification.place.users")
 
-		s.Config.DB.Driver = val["db.driver"][0]
-		s.Config.DB.DataSource = val["db.data_source"][0]
-		s.Config.DB.VisionTable = val["db.vision_table"][0]
-
-		s.Config.Interaction.Duration = val["interaction.duration"][0]
 		s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.Config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
 		count, err := getIntPtr(val, 0, "interaction.count")

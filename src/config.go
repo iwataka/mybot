@@ -16,8 +16,6 @@ import (
 type MybotConfig struct {
 	// Twitter is a configuration related to Twitter.
 	Twitter *TwitterConfig `toml:"twitter"`
-	// DB is a configuration related to DB.
-	DB *DBConfig `toml:"db"`
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
 	Interaction *InteractionConfig `toml:"interaction"`
@@ -46,7 +44,6 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 			Host: "localhost",
 			Port: "3256",
 		},
-		DB:          &DBConfig{},
 		Log:         &LogConfig{},
 		Interaction: &InteractionConfig{},
 	}
@@ -344,16 +341,9 @@ func NewSearchConfig() *SearchConfig {
 	}
 }
 
-type DBConfig struct {
-	Driver      string `toml:"driver,omitempty"`
-	DataSource  string `toml:"data_source,omitempty"`
-	VisionTable string `toml:"vision_table,omitempty"`
-}
-
 // InteractionConfig is a configuration for interaction through Twitter direct
 // message
 type InteractionConfig struct {
-	Duration  string   `toml:"duration"`
 	AllowSelf bool     `toml:"allow_self"`
 	Users     []string `toml:"users,omitempty"`
 	Count     *int     `toml:"count,omitempty"`
