@@ -27,7 +27,7 @@ type MybotConfig struct {
 	Server *ServerConfig `toml:"server"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
-	source string `toml:"-"`
+	File string `toml:"-"`
 }
 
 // NewMybotConfig takes the configuration file path and returns a configuration
@@ -51,7 +51,7 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 		Interaction: &InteractionConfig{},
 	}
 
-	c.source = path
+	c.File = path
 	err := c.Load()
 	if err != nil {
 		return nil, err
@@ -183,10 +183,21 @@ func (c *MybotConfig) Read(indent string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (c *MybotConfig) Write(bytes []byte) error {
+	md, err := toml.Decode(string(bytes), c)
+	if err != nil {
+		return err
+	}
+	if len(md.Undecoded()) != 0 {
+		return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.File)
+	}
+	return nil
+}
+
 // Save saves the specified configuration to the source file.
 func (c *MybotConfig) Save() error {
 	// Make a directory before all.
-	err := os.MkdirAll(filepath.Dir(c.source), 0751)
+	err := os.MkdirAll(filepath.Dir(c.File), 0751)
 	if err != nil {
 		return err
 	}
@@ -197,7 +208,7 @@ func (c *MybotConfig) Save() error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(c.source, writer.Bytes(), 0640)
+		err = ioutil.WriteFile(c.File, writer.Bytes(), 0640)
 		if err != nil {
 			return err
 		}
@@ -208,17 +219,14 @@ func (c *MybotConfig) Save() error {
 // Load loads the configuration from the source file. If the specified source
 // file doesn't exist, this method does nothing and returns nil.
 func (c *MybotConfig) Load() error {
-	if info, err := os.Stat(c.source); err == nil && !info.IsDir() {
-		bytes, err := ioutil.ReadFile(c.source)
+	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
+		bytes, err := ioutil.ReadFile(c.File)
 		if err != nil {
 			return err
 		}
-		md, err := toml.Decode(string(bytes), c)
+		err = c.Write(bytes)
 		if err != nil {
 			return err
-		}
-		if len(md.Undecoded()) != 0 {
-			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.source)
 		}
 	}
 	return nil

@@ -89,6 +89,10 @@ func (s *MybotServer) Init(host, port, cert, key string) error {
 		s.wrapHandler(s.configHandler),
 	)
 	http.HandleFunc(
+		"/config/file/",
+		s.wrapHandler(s.configFileHandler),
+	)
+	http.HandleFunc(
 		"/config/timelines/add",
 		s.wrapHandler(s.configTimelineAddHandler),
 	)
@@ -594,6 +598,65 @@ func (s *MybotServer) configSearchAddHandler(w http.ResponseWriter, r *http.Requ
 		s.Config.Twitter.Searches = searches
 		w.Header().Add("Location", "/config/")
 		w.WriteHeader(http.StatusSeeOther)
+	}
+}
+
+func (s *MybotServer) configFileHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		msg := ""
+		defer func() {
+			if len(msg) != 0 {
+				msgCookie := &http.Cookie{
+					Name:  "mybot.config.message",
+					Value: msg,
+					Path:  "/config/",
+				}
+				http.SetCookie(w, msgCookie)
+			}
+			w.Header().Add("Location", "/config/")
+			w.WriteHeader(http.StatusSeeOther)
+		}()
+
+		file, _, err := r.FormFile("mybot.config")
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		err = s.Config.Write(bytes)
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+		err = s.Config.Validate()
+		if err != nil {
+			msg = err.Error()
+			s.Config.Load()
+			return
+		}
+		err = s.Config.Save()
+		if err != nil {
+			msg = err.Error()
+			return
+		}
+	} else if r.Method == http.MethodGet {
+		w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
+		w.Header().Add("Content-Disposition", `attachment; filename="config.toml"`)
+		bytes, err := ioutil.ReadFile(s.Config.File)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		len, err := w.Write(bytes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
 	}
 }
 
