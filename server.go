@@ -491,12 +491,6 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 
 		s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
 		s.Config.Interaction.Users = getListTextboxValue(val, 0, "interaction.users")
-		count, err := getIntPtr(val, 0, "interaction.count")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		s.Config.Interaction.Count = count
 
 		s.Config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 		s.Config.Log.Users = getListTextboxValue(val, 0, "log.users")

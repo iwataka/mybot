@@ -596,39 +596,6 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 	return &TwitterMyselfListener{stream.C, a, receiver, file}, nil
 }
 
-// Response gets direct messages sent to the authenticated user and react with
-// them.
-// This is currently DEPRECATED and replaced with Listen.
-func (a *TwitterAPI) Response(receiver DirectMessageReceiver) error {
-	latestID := a.cache.LatestDMID
-	v := url.Values{}
-	if latestID != 0 {
-		v.Set("since_id", fmt.Sprintf("%d", latestID))
-	}
-	count := a.config.Interaction.Count
-	if count != nil {
-		v.Set("count", fmt.Sprintf("%d", *count))
-	}
-	dms, err := a.api.GetDirectMessages(v)
-	if err != nil {
-		return err
-	}
-	first := latestID == 0
-	for _, dm := range dms {
-		if dm.Id > latestID {
-			latestID = dm.Id
-		}
-		if !first {
-			err := a.responseForDirectMessage(dm, receiver)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	a.cache.LatestDMID = latestID
-	return nil
-}
-
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
 	allowSelf := a.config.Interaction.AllowSelf
 	users := a.config.Interaction.Users

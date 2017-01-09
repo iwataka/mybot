@@ -346,7 +346,6 @@ func NewSearchConfig() *SearchConfig {
 type InteractionConfig struct {
 	AllowSelf bool     `toml:"allow_self"`
 	Users     []string `toml:"users,omitempty"`
-	Count     *int     `toml:"count,omitempty"`
 }
 
 // LogConfig is a configuration for logging
