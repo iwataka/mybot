@@ -11,10 +11,6 @@ body {
         max-width: 800px;
 }
 
-.panel-title {
-        text-transform: uppercase;
-}
-
 div.jumbotron a span.fa {
         font-size: 40px;
 }
@@ -52,4 +48,8 @@ table > thead {
 table.table-striped > tbody > tr.deleted {
         opacity: 0.3;
         background-color: grey;
+}
+
+div.tab-content {
+        margin-top: 30px;
 }

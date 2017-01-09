@@ -29,22 +29,26 @@
     <div class="container">
         {{template "navbar" .}}
 
-        <h2>Config</h2>
+        <div class="jumbotron">
+            <h1>Configuration</h1>
+            <h2 class="lead">Configure your own bot's sources, filters and actions</h2>
+            <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
+            <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary" style="display:inline">
+
+            <form action="/config/file/" method="get" style="display:inline">
+                <input type="submit" value="Download" class="btn btn-lg btn-primary">
+            </form>
+
+            <form action="/config/file/" method="post" enctype="multipart/form-data" style="display:inline">
+                <input type="submit" value="Upload" class="btn btn-lg btn-primary">
+                <input type="file" name="mybot.config" style="display:inline">
+            </form>
+        </div>
+
         {{if .Message}}
         <div class="alert alert-danger">{{.Message}}</div>
         {{end}}
 
-        <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
-        <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary" style="display:inline">
-
-        <form action="/config/file/" method="get" style="display:inline">
-            <input type="submit" value="Download" class="btn btn-lg btn-primary">
-        </form>
-
-        <form action="/config/file/" method="post" enctype="multipart/form-data" style="display:inline">
-            <input type="submit" value="Upload" class="btn btn-lg btn-primary">
-            <input type="file" name="mybot.config" style="display:inline">
-        </form>
 
         <h3>Twitter Timelines</h3>
         <div class="table-responsive">

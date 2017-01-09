@@ -4,8 +4,19 @@
 <body>
     <div class="container">
         {{template "navbar" .}}
-        <h2>Error Log</h2>
-        <pre>{{.Log}}</pre>
+        <div class="jumbotron">
+            <h1>Logs</h1>
+            <h2 class="lead">Check your own bot's logs</h2>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-body">
+                {{if .Log}}
+                <pre>{{.Log}}</pre>
+                {{else}}
+                <h1 class="lead text-center text-primary">Nothing to show</h1>
+                {{end}}
+            </div>
+        </div>
     </div>
 </body>
 </html>

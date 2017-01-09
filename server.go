@@ -203,6 +203,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 
 		data := &struct {
 			UserName            string
+			NavbarName          string
 			Log                 string
 			BotName             string
 			ImageURL            string
@@ -212,6 +213,7 @@ func (s *MybotServer) handler(w http.ResponseWriter, r *http.Request) {
 			CollectionMap       map[string]string
 		}{
 			s.Config.Server.Name,
+			"",
 			log,
 			botName,
 			imageURL,
@@ -531,11 +533,13 @@ func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := &struct {
-			UserName string
-			Message  string
-			Config   mybot.MybotConfig
+			UserName   string
+			NavbarName string
+			Message    string
+			Config     mybot.MybotConfig
 		}{
 			s.Config.Server.Name,
+			"Config",
 			msg,
 			*s.Config,
 		}
@@ -661,10 +665,12 @@ func (s *MybotServer) logHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := &struct {
-		UserName string
-		Log      string
+		UserName   string
+		NavbarName string
+		Log        string
 	}{
 		s.Config.Server.Name,
+		"Log",
 		s.Logger.ReadString(),
 	}
 	err = tmpl.Execute(w, data)
@@ -681,10 +687,12 @@ func (s *MybotServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data := &struct {
-		UserName string
-		Status   mybot.MybotStatus
+		UserName   string
+		NavbarName string
+		Status     mybot.MybotStatus
 	}{
 		s.Config.Server.Name,
+		"Status",
 		*s.Status,
 	}
 	err = tmpl.Execute(w, data)
@@ -756,10 +764,12 @@ func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := &struct {
-			UserName string
-			Message  string
+			UserName   string
+			NavbarName string
+			Message    string
 		}{
 			s.Config.Server.Name,
+			"Setup",
 			msg,
 		}
 
