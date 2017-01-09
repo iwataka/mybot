@@ -1,0 +1,8 @@
+environment:
+  GOPATH: C:\gopath
+
+build: off
+
+test_script:
+  - go get -d -v ./...
+  - go test -v ./...
