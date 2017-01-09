@@ -54,10 +54,10 @@ func TestMonitorFile(t *testing.T) {
 	ch := make(chan bool)
 	defer close(ch)
 	dur := time.Second / 10
-	go monitorFile(file.Name(), dur, ch, func() {
+	go monitorFile(file.Name(), dur, func() {
 		ch <- true
 	})
-	<-ch
+	time.Sleep(dur)
 	_, err = file.WriteString("foo")
 	if err != nil {
 		t.Fatal(err)
