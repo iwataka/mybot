@@ -320,6 +320,7 @@ func monitorConfig() {
 	monitorFile(
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
+		nil,
 		func() {
 			cfg, err := mybot.NewMybotConfig(ctxt.String("config"))
 			if err == nil {
@@ -339,6 +340,7 @@ func monitorTwitterCred() {
 	monitorFile(
 		ctxt.String("twitter"),
 		time.Duration(1)*time.Second,
+		nil,
 		func() {
 			auth := &mybot.TwitterAuth{}
 			err := auth.FromJson(ctxt.String("twitter"))
@@ -361,6 +363,7 @@ func monitorGCloudCred() {
 	monitorFile(
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
+		nil,
 		func() {
 			vis, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
 			if err == nil {
@@ -425,13 +428,17 @@ func serve(c *cli.Context) error {
 	return nil
 }
 
-func monitorFile(file string, d time.Duration, f func()) {
+func monitorFile(file string, d time.Duration, init chan bool, f func()) {
 	info, _ := os.Stat(file)
 	modTime := time.Now()
 	if info != nil {
 		modTime = info.ModTime()
 	}
+	started := false
 	for {
+		if !started && init != nil {
+			init <- true
+		}
 		info, _ := os.Stat(file)
 		if info != nil {
 			mt := info.ModTime()

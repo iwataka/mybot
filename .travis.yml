@@ -1,0 +1,15 @@
+sudo: false
+
+language: go
+go:
+  - 1.7.x
+os:
+  - linux
+  - osx
+
+script:
+  - go test -v ./...
+
+notifications:
+  slack:
+    secure: UmB6p8yymczQIsctVuqP6fsJjtgm6ADH2BPP7NY9lKAbJ28zxf46LBPo4h9U/31xnFuq/GM7BB46t3E/sLxD6tHYMEyX6RYVWjm3k06LnDmG1dLRFOw0QL6MXpfTEMqPSehuSij/ib9gw2QNockzgJKi8PpA3iLxcgb3tVPnxbkj8jPBtR2IIoZRLQYQ66QwLaPZx36Y0JbyB3E65/AIQ9qNrJMQ9Q3Bd6nNeEVIyfotqjIRTMaufZ6+4+j81GazeGbujpaXi8dJ6PMSGcakSN7wdZKxKHEapieojg/C6dYyPJlqEZ7zUsq/JZgb72u4gdG9H7G+vmHrdFMEEaTueQ6ERWCf1oF1wFeNwhaVMkFi5nFI8QUiDs2M6fI51g8gnx+f8SyOQveq8jXq+CaVgoajOiWFT4JBLTlTKlnvw7lC0Pnem41cvmY6t0cuDClx7ioT0mM1/b2q6JhpawmTuRLmD0AfvobalLkXffNrRpJd3iKKBwinKwVT6ivau9vlWWdrazgLYPwOgIDMTU3XgGf/NEl03GMFMtrJpRn1V/93lW3cPhIWzSWDknVznYBX+uFatQUoF0dJ1Xzr/Dv8jua9tdw5d2zYTkfneu4y7SLkProPp3e/LKmIj3xiFuwRK70N/CNqCyP3YLRgyvJILhE5y4xeJnT02J2MhJOTpjg=
