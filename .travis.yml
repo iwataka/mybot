@@ -5,7 +5,6 @@ go:
   - 1.7.x
 os:
   - linux
-  - osx
 
 script:
   - go test -v ./...
