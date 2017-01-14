@@ -403,7 +403,7 @@ func httpServer() {
 	port := ctxt.String("port")
 	cert := ctxt.String("cert")
 	key := ctxt.String("key")
-	err := server.Init(host, port, cert, key)
+	err := server.Start(host, port, cert, key)
 	if err != nil {
 		panic(err)
 	}
