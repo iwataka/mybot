@@ -180,6 +180,7 @@ func (c *Config) Read(indent string) ([]byte, error) {
 		if err != nil {
 			return []byte{}, err
 		}
+		// go1.6 or lower doesn't support json.Encoder#SetIndent.
 		err = json.Indent(buf, b.Bytes(), "", indent)
 		if err != nil {
 			return []byte{}, err

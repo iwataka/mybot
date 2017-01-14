@@ -19,6 +19,12 @@ import (
 	"github.com/markbates/goth/providers/twitter"
 )
 
+const (
+	// go1.5 or lower doesn't support http.MethodPost and else.
+	methodPost = "POST"
+	methodGet  = "GET"
+)
+
 var (
 	htmlTemplate     *template.Template
 	passInitlalSetup bool
@@ -243,9 +249,9 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == methodPost {
 		postConfig(w, r)
-	} else if r.Method == http.MethodGet {
+	} else if r.Method == methodGet {
 		getConfig(w, r)
 	}
 }
@@ -559,7 +565,7 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == methodPost {
 		postConfnigTimelineAdd(w, r)
 	}
 }
@@ -573,7 +579,7 @@ func postConfnigTimelineAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == methodPost {
 	}
 }
 
@@ -586,7 +592,7 @@ func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == methodPost {
 		postConfigSearchAdd(w, r)
 	}
 }
@@ -600,9 +606,9 @@ func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == methodPost {
 		postConfigFile(w, r)
-	} else if r.Method == http.MethodGet {
+	} else if r.Method == methodGet {
 		getConfigFile(w, r)
 	}
 }
