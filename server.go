@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	htmlTemplate *template.Template
+	htmlTemplate     *template.Template
+	passInitlalSetup bool
 )
 
 func init() {
@@ -47,48 +48,16 @@ func init() {
 
 //go:generate go-bindata assets/...
 
-// MybotServer shows various pieces of information to users, such as an error
-// log, Google Vision API result and Twitter collections.
-type MybotServer struct {
-	// Logger is a logging utility instance of this application. This
-	// returns a log file's content if users request.
-	Logger *mybot.Logger
-	// TwitterAPI is a client for Twitter API. This server requires some
-	// pieces of information related to TWitter, so this is here.
-	TwitterAPI *mybot.TwitterAPI
-	// VisionAPI is a client for Google Vision API.
-	//
-	// TODO: This field may not be required (at this time only
-	// VisionAPI.File is required).
-	VisionAPI *mybot.VisionAPI
-	// Cache is a cache of this application and contains some Vision API
-	// analysis result. This server need to show them.
-	//
-	// TODO: In the future, this server will fetch Vision API results from
-	// DB and thus this field will be removed.
-	Cache *mybot.Cache
-	// Config is a configuration of this application and this server use
-	// this as the others do.
-	Config *mybot.Config
-	// Status is a status of all processes in this application. This
-	// enables users monitor their status via browser.
-	Status *mybot.MybotStatus
-	// pass is a flag which represents whether Twitter API is authenticated
-	// or not. When Twitter API is authenticated, then users can pass a
-	// setup page and go to other pages, thus this is called 'pass'.
-	pass bool
-}
-
-func (s *MybotServer) wrapHandler(f http.HandlerFunc) http.HandlerFunc {
+func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if s.pass {
+		if passInitlalSetup {
 			f(w, r)
 			return
 		}
 
-		ok, err := s.TwitterAPI.VerifyCredentials()
+		ok, err := twitterAPI.VerifyCredentials()
 		if ok && err == nil {
-			s.pass = true
+			passInitlalSetup = true
 			f(w, r)
 			return
 		}
@@ -110,55 +79,54 @@ func (s *MybotServer) wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Start make this server listening to the specified host and port.
-func (s *MybotServer) Start(host, port, cert, key string) error {
+func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/",
-		s.wrapHandler(s.indexHandler),
+		wrapHandler(indexHandler),
 	)
 	http.HandleFunc(
 		"/config/",
-		s.wrapHandler(s.configHandler),
+		wrapHandler(configHandler),
 	)
 	http.HandleFunc(
 		"/config/file/",
-		s.wrapHandler(s.configFileHandler),
+		wrapHandler(configFileHandler),
 	)
 	http.HandleFunc(
 		"/config/timelines/add",
-		s.wrapHandler(s.configTimelineAddHandler),
+		wrapHandler(configTimelineAddHandler),
 	)
 	http.HandleFunc(
 		"/config/favorites/add",
-		s.wrapHandler(s.configFavoriteAddHandler),
+		wrapHandler(configFavoriteAddHandler),
 	)
 	http.HandleFunc(
 		"/config/searches/add",
-		s.wrapHandler(s.configSearchAddHandler),
+		wrapHandler(configSearchAddHandler),
 	)
 	http.HandleFunc(
 		"/assets/",
-		s.getAssets,
+		getAssets,
 	)
 	http.HandleFunc(
 		"/log/",
-		s.wrapHandler(s.getLog),
+		wrapHandler(getLog),
 	)
 	http.HandleFunc(
 		"/status/",
-		s.wrapHandler(s.getStatus),
+		wrapHandler(getStatus),
 	)
 	http.HandleFunc(
 		"/setup/",
-		s.setupHandler,
+		setupHandler,
 	)
 
-	h := s.Config.Server.Host
+	h := config.Server.Host
 	if len(host) != 0 {
 		h = host
 	}
 
-	p := s.Config.Server.Port
+	p := config.Server.Port
 	if len(port) != 0 {
 		p = port
 	}
@@ -180,25 +148,25 @@ func (s *MybotServer) Start(host, port, cert, key string) error {
 	return nil
 }
 
-func (s *MybotServer) indexHandler(w http.ResponseWriter, r *http.Request) {
+func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		s.getIndex(w, r)
+		getIndex(w, r)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
-	log := s.Logger.ReadString()
+func getIndex(w http.ResponseWriter, r *http.Request) {
+	log := logger.ReadString()
 	lines := strings.Split(log, "\n")
-	lineNum := s.Config.Server.LogLines
+	lineNum := config.Server.LogLines
 	head := len(lines) - lineNum
 	if head < 0 {
 		head = 0
 	}
 	log = strings.Join(lines[head:len(lines)], "\n")
 	var botName string
-	self, err := s.TwitterAPI.GetSelf()
+	self, err := twitterAPI.GetSelf()
 	if err == nil {
 		botName = self.ScreenName
 	} else {
@@ -209,12 +177,12 @@ func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
 	imageURL := ""
 	imageAnalysisResult := ""
 	imageAnalysisDate := ""
-	if len(s.Cache.ImageSources) != 0 {
-		imageSource = s.Cache.ImageSources[len(s.Cache.ImageSources)-1]
-		imageURL = s.Cache.ImageURLs[len(s.Cache.ImageURLs)-1]
-		if s.Cache != nil {
+	if len(cache.ImageSources) != 0 {
+		imageSource = cache.ImageSources[len(cache.ImageSources)-1]
+		imageURL = cache.ImageURLs[len(cache.ImageURLs)-1]
+		if cache != nil {
 			buf := new(bytes.Buffer)
-			result := s.Cache.ImageAnalysisResults[len(s.Cache.ImageAnalysisResults)-1]
+			result := cache.ImageAnalysisResults[len(cache.ImageAnalysisResults)-1]
 			err := json.Indent(buf, []byte(result), "", "  ")
 			if err != nil {
 				imageAnalysisResult = "Error while formatting the result"
@@ -222,11 +190,11 @@ func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
 				imageAnalysisResult = buf.String()
 			}
 		}
-		imageAnalysisDate = s.Cache.ImageAnalysisDates[len(s.Cache.ImageAnalysisDates)-1]
+		imageAnalysisDate = cache.ImageAnalysisDates[len(cache.ImageAnalysisDates)-1]
 	}
 
 	colMap := make(map[string]string)
-	colList, err := s.TwitterAPI.GetCollectionListByUserId(self.Id, nil)
+	colList, err := twitterAPI.GetCollectionListByUserId(self.Id, nil)
 	if err == nil {
 		for _, c := range colList.Objects.Timelines {
 			name := strings.Replace(c.Name, " ", "-", -1)
@@ -245,7 +213,7 @@ func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
 		ImageAnalysisDate   string
 		CollectionMap       map[string]string
 	}{
-		s.Config.Server.Name,
+		config.Server.Name,
 		"",
 		log,
 		botName,
@@ -276,15 +244,15 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 	return false
 }
 
-func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
+func configHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		s.postConfig(w, r)
+		postConfig(w, r)
 	} else if r.Method == http.MethodGet {
-		s.getConfig(w, r)
+		getConfig(w, r)
 	}
 }
 
-func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
+func postConfig(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -307,7 +275,7 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 	val := r.MultipartForm.Value
 
 	deletedFlags := val["twitter.timelines.deleted"]
-	if len(deletedFlags) != len(s.Config.Twitter.Timelines) {
+	if len(deletedFlags) != len(config.Twitter.Timelines) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
@@ -377,10 +345,10 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 		timeline.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.timelines.action.collections")
 		timelines = append(timelines, timeline)
 	}
-	s.Config.Twitter.Timelines = timelines
+	config.Twitter.Timelines = timelines
 
 	deletedFlags = val["twitter.favorites.deleted"]
-	if len(deletedFlags) != len(s.Config.Twitter.Favorites) {
+	if len(deletedFlags) != len(config.Twitter.Favorites) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
@@ -404,7 +372,7 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		favorite.Count = count
-		s.Config.Twitter.Favorites[i] = favorite
+		config.Twitter.Favorites[i] = favorite
 		favorite.Filter.Patterns = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.patterns")
 		favorite.Filter.URLPatterns = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.url_patterns")
 		favorite.Filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
@@ -449,10 +417,10 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 		favorite.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.favorites.action.collections")
 		favorites = append(favorites, favorite)
 	}
-	s.Config.Twitter.Favorites = favorites
+	config.Twitter.Favorites = favorites
 
 	deletedFlags = val["twitter.searches.deleted"]
-	if len(deletedFlags) != len(s.Config.Twitter.Searches) {
+	if len(deletedFlags) != len(config.Twitter.Searches) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
@@ -477,7 +445,7 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		search.Count = count
-		s.Config.Twitter.Searches[i] = search
+		config.Twitter.Searches[i] = search
 		search.Filter.Patterns = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.patterns")
 		search.Filter.URLPatterns = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.url_patterns")
 		search.Filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
@@ -522,45 +490,45 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 		search.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.searches.action.collections")
 		searches = append(searches, search)
 	}
-	s.Config.Twitter.Searches = searches
+	config.Twitter.Searches = searches
 
-	s.Config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
-	s.Config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, "twitter.notification.place.users")
+	config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
+	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, "twitter.notification.place.users")
 
-	s.Config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
-	s.Config.Interaction.Users = mybot.GetListTextboxValue(val, 0, "interaction.users")
+	config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
+	config.Interaction.Users = mybot.GetListTextboxValue(val, 0, "interaction.users")
 
-	s.Config.Log.AllowSelf = len(val["log.allow_self"]) > 1
-	s.Config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")
+	config.Log.AllowSelf = len(val["log.allow_self"]) > 1
+	config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")
 
-	s.Config.Server.Name = val["server.name"][0]
-	s.Config.Server.Host = val["server.host"][0]
-	s.Config.Server.Port = val["server.port"][0]
+	config.Server.Name = val["server.name"][0]
+	config.Server.Host = val["server.host"][0]
+	config.Server.Port = val["server.port"][0]
 	logLines, err := strconv.Atoi(val["server.log_lines"][0])
 	if err != nil {
 		msg = err.Error()
 		return
 	}
-	s.Config.Server.LogLines = logLines
+	config.Server.LogLines = logLines
 
-	err = s.Config.Validate()
+	err = config.Validate()
 	if err != nil {
 		msg = err.Error()
-		err = s.Config.Load()
+		err = config.Load()
 		if err != nil {
 			msg = err.Error()
 		}
 		return
 	}
 
-	err = s.Config.Save()
+	err = config.Save()
 	if err != nil {
 		msg = err.Error()
 		return
 	}
 }
 
-func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
+func getConfig(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -573,10 +541,10 @@ func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
 		Message    string
 		Config     mybot.Config
 	}{
-		s.Config.Server.Name,
+		config.Server.Name,
 		"Config",
 		msg,
-		*s.Config,
+		*config,
 	}
 
 	if msgCookie != nil {
@@ -592,56 +560,56 @@ func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
+func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		s.postConfnigTimelineAdd(w, r)
+		postConfnigTimelineAdd(w, r)
 	}
 }
 
-func (s *MybotServer) postConfnigTimelineAdd(w http.ResponseWriter, r *http.Request) {
-	timelines := s.Config.Twitter.Timelines
+func postConfnigTimelineAdd(w http.ResponseWriter, r *http.Request) {
+	timelines := config.Twitter.Timelines
 	timelines = append(timelines, *mybot.NewTimelineConfig())
-	s.Config.Twitter.Timelines = timelines
+	config.Twitter.Timelines = timelines
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
 
-func (s *MybotServer) configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
+func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 	}
 }
 
-func (s *MybotServer) postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
-	favorites := s.Config.Twitter.Favorites
+func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
+	favorites := config.Twitter.Favorites
 	favorites = append(favorites, *mybot.NewFavoriteConfig())
-	s.Config.Twitter.Favorites = favorites
+	config.Twitter.Favorites = favorites
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
 
-func (s *MybotServer) configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
+func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		s.postConfigSearchAdd(w, r)
+		postConfigSearchAdd(w, r)
 	}
 }
 
-func (s *MybotServer) postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
-	searches := s.Config.Twitter.Searches
+func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
+	searches := config.Twitter.Searches
 	searches = append(searches, *mybot.NewSearchConfig())
-	s.Config.Twitter.Searches = searches
+	config.Twitter.Searches = searches
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
 
-func (s *MybotServer) configFileHandler(w http.ResponseWriter, r *http.Request) {
+func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		s.postConfigFile(w, r)
+		postConfigFile(w, r)
 	} else if r.Method == http.MethodGet {
-		s.getConfigFile(w, r)
+		getConfigFile(w, r)
 	}
 }
 
-func (s *MybotServer) postConfigFile(w http.ResponseWriter, r *http.Request) {
+func postConfigFile(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -666,31 +634,31 @@ func (s *MybotServer) postConfigFile(w http.ResponseWriter, r *http.Request) {
 		msg = err.Error()
 		return
 	}
-	err = s.Config.Write(bytes)
+	err = config.Write(bytes)
 	if err != nil {
 		msg = err.Error()
 		return
 	}
-	err = s.Config.Validate()
+	err = config.Validate()
 	if err != nil {
 		msg = err.Error()
-		err = s.Config.Load()
+		err = config.Load()
 		if err != nil {
 			msg = err.Error()
 		}
 		return
 	}
-	err = s.Config.Save()
+	err = config.Save()
 	if err != nil {
 		msg = err.Error()
 		return
 	}
 }
 
-func (s *MybotServer) getConfigFile(w http.ResponseWriter, r *http.Request) {
+func getConfigFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config.toml"`)
-	bytes, err := ioutil.ReadFile(s.Config.File)
+	bytes, err := ioutil.ReadFile(config.File)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -703,7 +671,7 @@ func (s *MybotServer) getConfigFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
 }
 
-func (s *MybotServer) getAssets(w http.ResponseWriter, r *http.Request) {
+func getAssets(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len("/"):]
 	data, err := readFile(path)
 	if err != nil {
@@ -718,15 +686,15 @@ func (s *MybotServer) getAssets(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
+func getLog(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
 		UserName   string
 		NavbarName string
 		Log        string
 	}{
-		s.Config.Server.Name,
+		config.Server.Name,
 		"Log",
-		s.Logger.ReadString(),
+		logger.ReadString(),
 	}
 	err := htmlTemplate.ExecuteTemplate(w, "log", data)
 	if err != nil {
@@ -735,15 +703,15 @@ func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
+func getStatus(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
 		UserName   string
 		NavbarName string
 		Status     mybot.MybotStatus
 	}{
-		s.Config.Server.Name,
+		config.Server.Name,
 		"Status",
-		*s.Status,
+		*status,
 	}
 	err := htmlTemplate.ExecuteTemplate(w, "status", data)
 	if err != nil {
@@ -752,15 +720,15 @@ func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
+func setupHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		s.postSetup(w, r)
+		postSetup(w, r)
 	} else if r.Method == http.MethodGet {
-		s.getSetup(w, r)
+		getSetup(w, r)
 	}
 }
 
-func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
+func postSetup(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -791,7 +759,7 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 		ConsumerSecret:    cs,
 		AccessToken:       at,
 		AccessTokenSecret: as,
-		File:              s.TwitterAPI.File,
+		File:              twitterAuth.File,
 	}
 
 	err = auth.Write()
@@ -807,7 +775,7 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 			msg = err.Error()
 			return
 		}
-		err = ioutil.WriteFile(s.VisionAPI.File, bytes, 0640)
+		err = ioutil.WriteFile(visionAPI.File, bytes, 0640)
 		if err != nil {
 			msg = err.Error()
 			return
@@ -815,7 +783,7 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *MybotServer) getSetup(w http.ResponseWriter, r *http.Request) {
+func getSetup(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.setup.message")
 	if err == nil {
@@ -827,7 +795,7 @@ func (s *MybotServer) getSetup(w http.ResponseWriter, r *http.Request) {
 		NavbarName string
 		Message    string
 	}{
-		s.Config.Server.Name,
+		config.Server.Name,
 		"Setup",
 		msg,
 	}

@@ -16,9 +16,9 @@ import (
 
 var (
 	twitterAPI         *mybot.TwitterAPI
+	twitterAuth        *mybot.TwitterAuth
 	visionAPI          *mybot.VisionAPI
 	languageAPI        *mybot.LanguageAPI
-	server             *MybotServer
 	config             *mybot.Config
 	cache              *mybot.Cache
 	logger             *mybot.Logger
@@ -172,7 +172,7 @@ func beforeRunning(c *cli.Context) error {
 		languageAPI.File = c.String("gcloud")
 	}
 
-	twitterAuth := &mybot.TwitterAuth{}
+	twitterAuth = &mybot.TwitterAuth{}
 	err = twitterAuth.Read(c.String("twitter"))
 	if err != nil {
 		panic(err)
@@ -186,15 +186,6 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	status = &mybot.MybotStatus{}
-
-	server = &MybotServer{
-		Logger:     logger,
-		TwitterAPI: twitterAPI,
-		VisionAPI:  visionAPI,
-		Cache:      cache,
-		Config:     config,
-		Status:     status,
-	}
 
 	return nil
 }
@@ -406,7 +397,7 @@ func httpServer() {
 	port := ctxt.String("port")
 	cert := ctxt.String("cert")
 	key := ctxt.String("key")
-	err := server.Start(host, port, cert, key)
+	err := startServer(host, port, cert, key)
 	if err != nil {
 		panic(err)
 	}

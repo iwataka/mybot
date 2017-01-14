@@ -138,14 +138,13 @@ type TwitterAPI struct {
 	self   *anaconda.User
 	cache  *Cache
 	config *Config
-	File   string
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
 func NewTwitterAPI(auth *TwitterAuth, c *Cache, cfg *Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg, auth.File}
+	return &TwitterAPI{api, nil, c, cfg}
 }
 
 func SetConsumer(auth *TwitterAuth) {
