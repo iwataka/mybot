@@ -16,7 +16,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	c, err := mybot.NewMybotCache(path)
+	c, err := mybot.NewCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err = mybot.NewMybotCache(path)
+	c, err = mybot.NewCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -136,14 +136,14 @@ func (a *TwitterAction) sub(action *TwitterAction) {
 type TwitterAPI struct {
 	api    *anaconda.TwitterApi
 	self   *anaconda.User
-	cache  *MybotCache
-	config *MybotConfig
+	cache  *Cache
+	config *Config
 	File   string
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth *TwitterAuth, c *MybotCache, cfg *MybotConfig) *TwitterAPI {
+func NewTwitterAPI(auth *TwitterAuth, c *Cache, cfg *Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
 	return &TwitterAPI{api, nil, c, cfg, auth.File}
 }

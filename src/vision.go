@@ -15,14 +15,14 @@ import (
 // VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
 	api    *vision.Service
-	cache  *MybotCache
-	config *MybotConfig
+	cache  *Cache
+	config *Config
 	File   string
 }
 
 // NewVisionAPI takes a path of a user's google-cloud credential file and cache
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(cache *MybotCache, config *MybotConfig, file string) (*VisionAPI, error) {
+func NewVisionAPI(cache *Cache, config *Config, file string) (*VisionAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {

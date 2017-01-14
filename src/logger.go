@@ -12,11 +12,11 @@ type Logger struct {
 	logger     *log.Logger
 	logFile    string
 	twitterAPI *TwitterAPI
-	config     *MybotConfig
+	config     *Config
 }
 
 // NewLogger creates an instance of Logger
-func NewLogger(path string, flag int, a *TwitterAPI, c *MybotConfig) (*Logger, error) {
+func NewLogger(path string, flag int, a *TwitterAPI, c *Config) (*Logger, error) {
 	if flag < 0 {
 		flag = log.Ldate | log.Ltime | log.Lshortfile
 	}

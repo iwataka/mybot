@@ -10,12 +10,12 @@ import (
 
 type LanguageAPI struct {
 	api    *language.Service
-	cache  *MybotCache
-	config *MybotConfig
+	cache  *Cache
+	config *Config
 	File   string
 }
 
-func NewLanguageAPI(cache *MybotCache, config *MybotConfig, file string) (*LanguageAPI, error) {
+func NewLanguageAPI(cache *Cache, config *Config, file string) (*LanguageAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {

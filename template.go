@@ -43,9 +43,8 @@ func getBoolSelectboxValue(val map[string][]string, index int, name string) *boo
 	flag, err := strconv.ParseBool(str)
 	if err != nil {
 		return nil
-	} else {
-		return &flag
 	}
+	return &flag
 }
 
 func selectbox(str, name string, opts ...string) template.HTML {

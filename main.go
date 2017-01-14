@@ -19,8 +19,8 @@ var (
 	visionAPI          *mybot.VisionAPI
 	languageAPI        *mybot.LanguageAPI
 	server             *MybotServer
-	config             *mybot.MybotConfig
-	cache              *mybot.MybotCache
+	config             *mybot.Config
+	cache              *mybot.Cache
 	logger             *mybot.Logger
 	status             *mybot.MybotStatus
 	ctxt               *cli.Context
@@ -146,12 +146,12 @@ func beforeRunning(c *cli.Context) error {
 	ctxt = c
 
 	var err error
-	cache, err = mybot.NewMybotCache(c.String("cache"))
+	cache, err = mybot.NewCache(c.String("cache"))
 	if err != nil {
 		panic(err)
 	}
 
-	config, err = mybot.NewMybotConfig(c.String("config"))
+	config, err = mybot.NewConfig(c.String("config"))
 	if err != nil {
 		panic(err)
 	}
@@ -324,7 +324,7 @@ func monitorConfig() {
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
-			cfg, err := mybot.NewMybotConfig(ctxt.String("config"))
+			cfg, err := mybot.NewConfig(ctxt.String("config"))
 			if err == nil {
 				*config = *cfg
 				reloadListeners()

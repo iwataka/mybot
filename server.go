@@ -66,10 +66,10 @@ type MybotServer struct {
 	//
 	// TODO: In the future, this server will fetch Vision API results from
 	// DB and thus this field will be removed.
-	Cache *mybot.MybotCache
+	Cache *mybot.Cache
 	// Config is a configuration of this application and this server use
 	// this as the others do.
-	Config *mybot.MybotConfig
+	Config *mybot.Config
 	// Status is a status of all processes in this application. This
 	// enables users monitor their status via browser.
 	Status *mybot.MybotStatus
@@ -110,6 +110,7 @@ func (s *MybotServer) wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// Start make this server listening to the specified host and port.
 func (s *MybotServer) Start(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/",
@@ -255,7 +256,11 @@ func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
 		colMap,
 	}
 
-	htmlTemplate.ExecuteTemplate(w, "index", data)
+	err = htmlTemplate.ExecuteTemplate(w, "index", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 type checkboxCounter struct {
@@ -267,9 +272,8 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
 	if val[c.name][index+c.extraCount] == "true" {
 		c.extraCount++
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func (s *MybotServer) configHandler(w http.ResponseWriter, r *http.Request) {
@@ -541,8 +545,11 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 
 	err = s.Config.Validate()
 	if err != nil {
-		s.Config.Load()
 		msg = err.Error()
+		err = s.Config.Load()
+		if err != nil {
+			msg = err.Error()
+		}
 		return
 	}
 
@@ -564,7 +571,7 @@ func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
 		UserName   string
 		NavbarName string
 		Message    string
-		Config     mybot.MybotConfig
+		Config     mybot.Config
 	}{
 		s.Config.Server.Name,
 		"Config",
@@ -578,7 +585,11 @@ func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	htmlTemplate.ExecuteTemplate(w, "config", data)
+	err = htmlTemplate.ExecuteTemplate(w, "config", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -663,7 +674,10 @@ func (s *MybotServer) postConfigFile(w http.ResponseWriter, r *http.Request) {
 	err = s.Config.Validate()
 	if err != nil {
 		msg = err.Error()
-		s.Config.Load()
+		err = s.Config.Load()
+		if err != nil {
+			msg = err.Error()
+		}
 		return
 	}
 	err = s.Config.Save()
@@ -697,7 +711,11 @@ func (s *MybotServer) getAssets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/css")
-	w.Write(data)
+	_, err = w.Write(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
@@ -710,7 +728,11 @@ func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
 		"Log",
 		s.Logger.ReadString(),
 	}
-	htmlTemplate.ExecuteTemplate(w, "log", data)
+	err := htmlTemplate.ExecuteTemplate(w, "log", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
@@ -723,7 +745,11 @@ func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
 		"Status",
 		*s.Status,
 	}
-	htmlTemplate.ExecuteTemplate(w, "status", data)
+	err := htmlTemplate.ExecuteTemplate(w, "status", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
@@ -759,8 +785,14 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 	ck := val["twitter-consumer-key"][0]
 	cs := val["twitter-consumer-secret"][0]
 	at := val["twitter-access-token"][0]
-	ats := val["twitter-access-token-secret"][0]
-	auth := &mybot.TwitterAuth{ck, cs, at, ats, s.TwitterAPI.File}
+	as := val["twitter-access-token-secret"][0]
+	auth := &mybot.TwitterAuth{
+		ConsumerKey:       ck,
+		ConsumerSecret:    cs,
+		AccessToken:       at,
+		AccessTokenSecret: as,
+		File:              s.TwitterAPI.File,
+	}
 
 	err = auth.Write()
 	if err != nil {
@@ -806,7 +838,11 @@ func (s *MybotServer) getSetup(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	htmlTemplate.ExecuteTemplate(w, "setup", data)
+	err = htmlTemplate.ExecuteTemplate(w, "setup", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func readFile(path string) ([]byte, error) {
@@ -816,11 +852,10 @@ func readFile(path string) ([]byte, error) {
 			return nil, err
 		}
 		return data, nil
-	} else {
-		data, err := Asset(path)
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
 	}
+	data, err := Asset(path)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }

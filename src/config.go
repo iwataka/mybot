@@ -12,8 +12,8 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// MybotConfig is a root of the all configurations of this applciation.
-type MybotConfig struct {
+// Config is a root of the all configurations of this applciation.
+type Config struct {
 	// Twitter is a configuration related to Twitter.
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
 	// Interaction is a configuration related to interaction with users
@@ -28,10 +28,10 @@ type MybotConfig struct {
 	File string `json:"-" toml:"-"`
 }
 
-// NewMybotConfig takes the configuration file path and returns a configuration
+// NewConfig takes the configuration file path and returns a configuration
 // instance.
-func NewMybotConfig(path string) (*MybotConfig, error) {
-	c := &MybotConfig{
+func NewConfig(path string) (*Config, error) {
+	c := &Config{
 		Twitter: &TwitterConfig{
 			Timelines: []TimelineConfig{},
 			Searches:  []SearchConfig{},
@@ -100,7 +100,7 @@ func NewMybotConfig(path string) (*MybotConfig, error) {
 
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
-func (c *MybotConfig) Validate() error {
+func (c *Config) Validate() error {
 	for _, timeline := range c.Twitter.Timelines {
 		if timeline.Action == nil {
 			msg := fmt.Sprintf("%v has no action", timeline)
@@ -169,7 +169,7 @@ func (c *MybotConfig) Validate() error {
 // Read returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *MybotConfig) Read(indent string) ([]byte, error) {
+func (c *Config) Read(indent string) ([]byte, error) {
 	ext := filepath.Ext(c.File)
 	buf := new(bytes.Buffer)
 	switch ext {
@@ -191,7 +191,7 @@ func (c *MybotConfig) Read(indent string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *MybotConfig) Write(bytes []byte) error {
+func (c *Config) Write(bytes []byte) error {
 	ext := filepath.Ext(c.File)
 	switch ext {
 	case ".json":
@@ -212,7 +212,7 @@ func (c *MybotConfig) Write(bytes []byte) error {
 }
 
 // Save saves the specified configuration to the source file.
-func (c *MybotConfig) Save() error {
+func (c *Config) Save() error {
 	// Make a directory before all.
 	err := os.MkdirAll(filepath.Dir(c.File), 0751)
 	if err != nil {
@@ -235,7 +235,7 @@ func (c *MybotConfig) Save() error {
 
 // Load loads the configuration from the source file. If the specified source
 // file doesn't exist, this method does nothing and returns nil.
-func (c *MybotConfig) Load() error {
+func (c *Config) Load() error {
 	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
 		bytes, err := ioutil.ReadFile(c.File)
 		if err != nil {

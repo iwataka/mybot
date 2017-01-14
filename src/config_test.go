@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestNewMybotConfig(t *testing.T) {
-	c, err := NewMybotConfig("config.template.toml")
+func TestNewConfig(t *testing.T) {
+	c, err := NewConfig("config.template.toml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -54,8 +54,8 @@ func TestNewMybotConfig(t *testing.T) {
 	}
 }
 
-func TestNewMybotConfigWhenNotExist(t *testing.T) {
-	_, err := NewMybotConfig("config_not_exist.toml")
+func TestNewConfigWhenNotExist(t *testing.T) {
+	_, err := NewConfig("config_not_exist.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
