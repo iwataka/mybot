@@ -1,4 +1,4 @@
-package main
+package mybot
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ const (
 	placeholder = "placeholder"
 )
 
-func checkbox(flag bool, name string) template.HTML {
+func Checkbox(flag bool, name string) template.HTML {
 	result := ""
 	format := `<input form="overwrite" type="checkbox" name="%s" value="%s" %s/>`
 	if flag {
@@ -23,7 +23,7 @@ func checkbox(flag bool, name string) template.HTML {
 	return template.HTML(result)
 }
 
-func boolSelectbox(flag *bool, name string) template.HTML {
+func BoolSelectbox(flag *bool, name string) template.HTML {
 	format := `<select form="overwrite" name="%s">` +
 		`<option value="true" %s>true</option>` +
 		`<option value="false" %s>false</option>` +
@@ -38,7 +38,7 @@ func boolSelectbox(flag *bool, name string) template.HTML {
 	}
 }
 
-func getBoolSelectboxValue(val map[string][]string, index int, name string) *bool {
+func GetBoolSelectboxValue(val map[string][]string, index int, name string) *bool {
 	str := val[name][index]
 	flag, err := strconv.ParseBool(str)
 	if err != nil {
@@ -47,7 +47,7 @@ func getBoolSelectboxValue(val map[string][]string, index int, name string) *boo
 	return &flag
 }
 
-func selectbox(str, name string, opts ...string) template.HTML {
+func Selectbox(str, name string, opts ...string) template.HTML {
 	start := fmt.Sprintf(`<select form="overwrite" name="%s">`, name)
 	end := `</select>`
 	result := start
@@ -63,7 +63,7 @@ func selectbox(str, name string, opts ...string) template.HTML {
 	return template.HTML(result)
 }
 
-func listTextbox(list []string, name string) template.HTML {
+func ListTextbox(list []string, name string) template.HTML {
 	str := ""
 	if list != nil {
 		str = strings.Join(list, ",")
@@ -73,7 +73,7 @@ func listTextbox(list []string, name string) template.HTML {
 	return template.HTML(result)
 }
 
-func getListTextboxValue(val map[string][]string, index int, name string) []string {
+func GetListTextboxValue(val map[string][]string, index int, name string) []string {
 	v := val[name][index]
 	result := []string{}
 	for _, s := range strings.Split(v, ",") {
@@ -85,7 +85,7 @@ func getListTextboxValue(val map[string][]string, index int, name string) []stri
 	return result
 }
 
-func textboxOfFloat64Ptr(val *float64, name string) template.HTML {
+func TextboxOfFloat64Ptr(val *float64, name string) template.HTML {
 	value := ""
 	if val != nil {
 		value = strconv.FormatFloat(*val, 'E', -1, 64)
@@ -95,7 +95,7 @@ func textboxOfFloat64Ptr(val *float64, name string) template.HTML {
 	return template.HTML(result)
 }
 
-func getFloat64Ptr(val map[string][]string, index int, name string) (*float64, error) {
+func GetFloat64Ptr(val map[string][]string, index int, name string) (*float64, error) {
 	v := val[name][index]
 	if len(v) == 0 {
 		return nil, nil
@@ -107,7 +107,7 @@ func getFloat64Ptr(val map[string][]string, index int, name string) (*float64, e
 	return &f, nil
 }
 
-func textboxOfIntPtr(val *int, name string) template.HTML {
+func TextboxOfIntPtr(val *int, name string) template.HTML {
 	value := ""
 	if val != nil {
 		value = strconv.Itoa(*val)
@@ -117,7 +117,7 @@ func textboxOfIntPtr(val *int, name string) template.HTML {
 	return template.HTML(result)
 }
 
-func getIntPtr(val map[string][]string, index int, name string) (*int, error) {
+func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	v := val[name][index]
 	if len(v) == 0 {
 		return nil, nil
