@@ -174,9 +174,13 @@ func (c *Config) Read(indent string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	switch ext {
 	case ".json":
-		enc := json.NewEncoder(buf)
-		enc.SetIndent("", indent)
+		b := new(bytes.Buffer)
+		enc := json.NewEncoder(b)
 		err := enc.Encode(c)
+		if err != nil {
+			return []byte{}, err
+		}
+		err = json.Indent(buf, b.Bytes(), "", indent)
 		if err != nil {
 			return []byte{}, err
 		}
