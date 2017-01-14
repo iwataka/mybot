@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -22,10 +21,10 @@ var (
 	config             *mybot.Config
 	cache              *mybot.Cache
 	logger             *mybot.Logger
-	status             *mybot.MybotStatus
+	status             *mybot.Status
 	ctxt               *cli.Context
-	userListenerChan   chan interface{}
-	myselfListenerChan chan interface{}
+	userListenerStream *anaconda.Stream
+	dmListenerStream   *anaconda.Stream
 )
 
 func main() {
@@ -185,7 +184,7 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	status = &mybot.MybotStatus{}
+	status = mybot.NewStatus()
 
 	return nil
 }
@@ -202,81 +201,41 @@ func run(c *cli.Context) error {
 	return nil
 }
 
-func keepConnection(f func() error, intervalStr string, maxCount int) error {
-	interval, err := time.ParseDuration(intervalStr)
-	if err != nil {
-		return err
-	}
-	t := time.Now()
-	count := 0
-	killed := false
-	for {
-		err := f()
-		if time.Now().Sub(t) >= interval {
-			count = 0
-			t = time.Now()
-		}
-		if err != nil {
-			logger.Println(err)
-			switch err.(type) {
-			case mybot.KillError:
-				killed = true
-			default:
-				count++
-			}
-		}
-		if count >= maxCount || killed {
-			break
-		}
-	}
-	msg := "Failed to keep connection"
-	logger.Println(msg)
-	return errors.New(msg)
-}
+func twitterListenDM() {
+	status.LockListenDMRoutine()
+	defer status.UnlockListenDMRoutine()
 
-func twitterListenMyself() {
-	if status.TwitterListenMyselfStatus {
+	r := twitterAPI.DefaultDirectMessageReceiver
+	listener, err := twitterAPI.ListenMyself(nil, r, ctxt.String("cache"))
+	if err != nil {
+		logger.Println(err)
 		return
 	}
-	status.TwitterListenMyselfStatus = true
-	defer func() { status.TwitterListenMyselfStatus = false }()
-	keepConnection(func() error {
-		r := twitterAPI.DefaultDirectMessageReceiver
-		listener, err := twitterAPI.ListenMyself(nil, r, ctxt.String("cache"))
-		if err != nil {
-			logger.Println(err)
-			return err
-		}
-		myselfListenerChan = listener.C
-		err = listener.Listen()
-		if err != nil {
-			logger.Println(err)
-			return err
-		}
-		return nil
-	}, "5m", 5)
+	dmListenerStream = listener.Stream
+	err = listener.Listen()
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	logger.Println("Failed to keep twitter direct message listener")
 }
 
 func twitterListenUsers() {
-	if status.TwitterListenUsersStatus {
+	status.LockListenUsersRoutine()
+	defer status.UnlockListenUsersRoutine()
+
+	listener, err := twitterAPI.ListenUsers(nil, ctxt.String("cache"))
+	if err != nil {
+		logger.Println(err)
 		return
 	}
-	status.TwitterListenUsersStatus = true
-	defer func() { status.TwitterListenUsersStatus = false }()
-	keepConnection(func() error {
-		listener, err := twitterAPI.ListenUsers(nil, ctxt.String("cache"))
-		if err != nil {
-			logger.Println(err)
-			return err
-		}
-		userListenerChan = listener.C
-		err = listener.Listen(visionAPI, languageAPI)
-		if err != nil {
-			logger.Println(err)
-			return err
-		}
-		return nil
-	}, "5m", 5)
+	userListenerStream = listener.Stream
+	err = listener.Listen(visionAPI, languageAPI)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	logger.Println("Failed to keep twitter user listener")
 }
 
 func twitterPeriodically() {
@@ -372,16 +331,16 @@ func monitorGCloudCred() {
 }
 
 func reloadListeners() {
-	if userListenerChan != nil {
-		userListenerChan <- os.Interrupt
-	} else {
-		go twitterListenUsers()
+	if userListenerStream != nil {
+		userListenerStream.Stop()
 	}
-	if myselfListenerChan != nil {
-		myselfListenerChan <- os.Interrupt
-	} else {
-		go twitterListenMyself()
+	go twitterListenUsers()
+
+	if dmListenerStream != nil {
+		dmListenerStream.Stop()
 	}
+	go twitterListenDM()
+
 	if !status.TwitterStatus {
 		go twitterPeriodically()
 	}
@@ -406,7 +365,7 @@ func httpServer() {
 func serve(c *cli.Context) error {
 	go httpServer()
 
-	go twitterListenMyself()
+	go twitterListenDM()
 	go twitterListenUsers()
 	go twitterPeriodically()
 

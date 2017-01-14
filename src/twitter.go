@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -491,14 +490,14 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 }
 
 type TwitterUserListener struct {
-	C    chan interface{}
-	api  *TwitterAPI
-	file string
+	Stream *anaconda.Stream
+	api    *TwitterAPI
+	file   string
 }
 
 func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
 	for {
-		switch c := (<-l.C).(type) {
+		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
 			if l.api.config.Twitter.Debug {
 				log.Printf("Tweet by %s created at %s\n", c.User.Name, c.CreatedAt)
@@ -537,13 +536,6 @@ func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
 			if err != nil {
 				return err
 			}
-		case os.Signal:
-			if c == os.Interrupt {
-				return nil
-			}
-			if c == os.Kill {
-				return NewKillError("User listener is killed")
-			}
 		}
 	}
 }
@@ -567,12 +559,12 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListene
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.api.PublicStreamFilter(v)
-		return &TwitterUserListener{stream.C, a, file}, nil
+		return &TwitterUserListener{stream, a, file}, nil
 	}
 }
 
 type TwitterMyselfListener struct {
-	C        chan interface{}
+	Stream   *anaconda.Stream
 	api      *TwitterAPI
 	receiver DirectMessageReceiver
 	file     string
@@ -580,7 +572,7 @@ type TwitterMyselfListener struct {
 
 func (l *TwitterMyselfListener) Listen() error {
 	for {
-		switch c := (<-l.C).(type) {
+		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
 			if l.api.config.Twitter.Debug {
 				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
@@ -605,13 +597,6 @@ func (l *TwitterMyselfListener) Listen() error {
 			if err != nil {
 				return err
 			}
-		case os.Signal:
-			if c == os.Interrupt {
-				return nil
-			}
-			if c == os.Kill {
-				return NewKillError("User listener is killed")
-			}
 		}
 	}
 }
@@ -626,7 +611,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	return &TwitterMyselfListener{stream.C, a, receiver, file}, nil
+	return &TwitterMyselfListener{stream, a, receiver, file}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {

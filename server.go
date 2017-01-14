@@ -12,7 +12,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/contrib/sessions"
 	"github.com/iwataka/mybot/src"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/twitter"
 )
 
 var (
@@ -21,6 +25,8 @@ var (
 )
 
 func init() {
+	gothic.Store = sessions.NewCookieStore([]byte("mybot_session_key"))
+
 	tmpdir := os.TempDir()
 	err := RestoreAssets(tmpdir, "assets/tmpl")
 	if err != nil {
@@ -62,19 +68,7 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		msg := ""
-		if err != nil {
-			msg = err.Error()
-		} else {
-			msg = "You should specify the below information"
-		}
-		msgCookie := &http.Cookie{
-			Name:  "mybot.setup.message",
-			Value: msg,
-			Path:  "/setup/",
-		}
-		http.SetCookie(w, msgCookie)
-		w.Header().Add("Location", "/setup/")
+		w.Header().Add("Location", "/auth/twitter/")
 		w.WriteHeader(http.StatusSeeOther)
 	}
 }
@@ -117,8 +111,12 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(getStatus),
 	)
 	http.HandleFunc(
-		"/setup/",
-		setupHandler,
+		"/auth/twitter/",
+		getAuthTwitter,
+	)
+	http.HandleFunc(
+		"/auth/twitter/callback",
+		getAuthTwitterCallback,
 	)
 
 	h := config.Server.Host
@@ -705,13 +703,17 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
-		UserName   string
-		NavbarName string
-		Status     mybot.MybotStatus
+		UserName                 string
+		NavbarName               string
+		Status                   mybot.Status
+		TwitterListenDMStatus    bool
+		TwitterListenUsersStatus bool
 	}{
 		config.Server.Name,
 		"Status",
 		*status,
+		status.CheckTwitterListenDMStatus(),
+		status.CheckTwitterListenUsersStatus(),
 	}
 	err := htmlTemplate.ExecuteTemplate(w, "status", data)
 	if err != nil {
@@ -720,96 +722,54 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func setupHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		postSetup(w, r)
-	} else if r.Method == http.MethodGet {
-		getSetup(w, r)
-	}
-}
+func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
+	setProvider(r, "twitter")
 
-func postSetup(w http.ResponseWriter, r *http.Request) {
-	msg := ""
-	defer func() {
-		if len(msg) != 0 {
-			msgCookie := &http.Cookie{
-				Name:  "mybot.setup.message",
-				Value: msg,
-				Path:  "/setup/",
-			}
-			http.SetCookie(w, msgCookie)
-		}
-		w.Header().Add("Location", "/setup/")
-		w.WriteHeader(http.StatusSeeOther)
-	}()
-
-	err := r.ParseMultipartForm(32 << 20)
-	if err != nil {
-		msg = err.Error()
-		return
-	}
-	val := r.MultipartForm.Value
-
-	ck := val["twitter-consumer-key"][0]
-	cs := val["twitter-consumer-secret"][0]
-	at := val["twitter-access-token"][0]
-	as := val["twitter-access-token-secret"][0]
-	auth := &mybot.TwitterAuth{
-		ConsumerKey:       ck,
-		ConsumerSecret:    cs,
-		AccessToken:       at,
-		AccessTokenSecret: as,
-		File:              twitterAuth.File,
-	}
-
-	err = auth.Write()
-	if err != nil {
-		msg = err.Error()
-		return
-	}
-
-	file, _, err := r.FormFile("gcloud-credential-file")
-	if err == nil {
-		bytes, err := ioutil.ReadAll(file)
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		err = ioutil.WriteFile(visionAPI.File, bytes, 0640)
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-	}
-}
-
-func getSetup(w http.ResponseWriter, r *http.Request) {
-	msg := ""
-	msgCookie, err := r.Cookie("mybot.setup.message")
-	if err == nil {
-		msg = msgCookie.Value
-	}
-
-	data := &struct {
-		UserName   string
-		NavbarName string
-		Message    string
-	}{
-		config.Server.Name,
-		"Setup",
-		msg,
-	}
-
-	if msgCookie != nil {
-		msgCookie.Value = ""
-		msgCookie.Path = "/setup/"
-		http.SetCookie(w, msgCookie)
-	}
-
-	err = htmlTemplate.ExecuteTemplate(w, "setup", data)
+	user, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	twitterAuth.AccessToken = user.AccessToken
+	twitterAuth.AccessTokenSecret = user.AccessTokenSecret
+	err = twitterAuth.Write()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	*twitterAPI = *mybot.NewTwitterAPI(twitterAuth, cache, config)
+
+	w.Header().Add("Location", "/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func getAuthTwitter(w http.ResponseWriter, r *http.Request) {
+	setProvider(r, "twitter")
+	initProvider(r.Host, "twitter")
+
+	gothic.BeginAuthHandler(w, r)
+}
+
+func setProvider(req *http.Request, name string) {
+	q := req.URL.Query()
+	q.Add("provider", name)
+	req.URL.RawQuery = q.Encode()
+}
+
+func initProvider(host, name string) {
+	callback := fmt.Sprintf("http://%s/auth/%s/callback", host, name)
+	var p goth.Provider
+	switch name {
+	case "twitter":
+		p = twitter.New(
+			twitterAuth.ConsumerKey,
+			twitterAuth.ConsumerSecret,
+			callback,
+		)
+	}
+	if p != nil {
+		goth.UseProviders(p)
 	}
 }
 
