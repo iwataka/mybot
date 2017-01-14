@@ -1,9 +1,9 @@
 package mybot
 
 import (
-	"context"
 	"os"
 
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/language/v1"
 )
