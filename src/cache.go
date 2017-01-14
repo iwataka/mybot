@@ -13,7 +13,7 @@ type MybotCache struct {
 	LatestCommitSHA      map[string]map[string]string
 	LatestTweetID        map[string]int64
 	LatestFavoriteID     map[string]int64
-	LatestDMID           int64 `json:"-"`
+	LatestDMID           int64 `json:"-" toml:"-"`
 	Tweet2Action         map[string]*TwitterAction
 	ImageURLs            []string
 	ImageSources         []string

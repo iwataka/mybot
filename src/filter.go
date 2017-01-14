@@ -10,16 +10,16 @@ import (
 
 // TweetFilterConfig is a configuration to filter out tweets
 type TweetFilterConfig struct {
-	Patterns           []string           `toml:"patterns,omitempty"`
-	URLPatterns        []string           `toml:"url_patterns,omitempty"`
-	HasMedia           *bool              `toml:"has_media,omitempty"`
-	HasURL             *bool              `toml:"has_url,omitempty"`
-	Retweeted          *bool              `toml:"retweeted,omitempty"`
-	FavoriteThreshold  *int               `toml:"favorite_threshold"`
-	RetweetedThreshold *int               `toml:"retweeted_threshold"`
-	Lang               string             `toml:"lang,omitempty"`
-	Vision             *VisionCondition   `toml:"vision,omitempty"`
-	Language           *LanguageCondition `toml:"language,omitempty"`
+	Patterns           []string           `json:"patterns,omitempty" toml:"patterns,omitempty"`
+	URLPatterns        []string           `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
+	HasMedia           *bool              `json:"has_media,omitempty" toml:"has_media,omitempty"`
+	HasURL             *bool              `json:"has_url,omitempty" toml:"has_url,omitempty"`
+	Retweeted          *bool              `json:"retweeted,omitempty" toml:"retweeted,omitempty"`
+	FavoriteThreshold  *int               `json:"favorite_threshold" toml:"favorite_threshold"`
+	RetweetedThreshold *int               `json:"retweeted_threshold" toml:"retweeted_threshold"`
+	Lang               string             `json:"lang,omitempty" toml:"lang,omitempty"`
+	Vision             *VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
+	Language           *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
 func (c *TweetFilterConfig) check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error) {

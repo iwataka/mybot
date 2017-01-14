@@ -1,6 +1,7 @@
 package mybot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,8 +10,10 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/iwataka/anaconda"
 )
 
@@ -20,32 +23,63 @@ const msgPrefix = "<bot message>\n"
 
 // TwitterAuth contains values required for Twitter's user authentication.
 type TwitterAuth struct {
-	ConsumerKey       string `json:"consumer_key",toml:"consumer_key"`
-	ConsumerSecret    string `json:"consumer_secret",toml:"consumer_secret"`
-	AccessToken       string `json:"access_token",toml:"access_token"`
-	AccessTokenSecret string `json:"access_token_secret",toml:"access_token_secret"`
-	File              string `json:"-",toml:"-"`
+	ConsumerKey       string `json:"consumer_key" toml:"consumer_key"`
+	ConsumerSecret    string `json:"consumer_secret" toml:"consumer_secret"`
+	AccessToken       string `json:"access_token" toml:"access_token"`
+	AccessTokenSecret string `json:"access_token_secret" toml:"access_token_secret"`
+	File              string `json:"-" toml:"-"`
 }
 
-func (a *TwitterAuth) FromJson(file string) error {
+// Read does nothing and returns nil if the specified file doesn't exist.
+func (a *TwitterAuth) Read(file string) error {
+	ext := filepath.Ext(file)
+	bs, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+	switch ext {
+	case ".json":
+		err = json.Unmarshal(bs, a)
+		if err != nil {
+			return err
+		}
+	case ".toml":
+		md, err := toml.Decode(string(bs), a)
+		if err != nil {
+			return err
+		}
+		if len(md.Undecoded()) != 0 {
+			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), file)
+		}
+	default:
+		return fmt.Errorf("%s is invalid extension", ext)
+	}
 	a.File = file
-	bytes, err := ioutil.ReadFile(file)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(bytes, a)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-func (a *TwitterAuth) ToJson() error {
-	bytes, err := json.Marshal(a)
-	if err != nil {
-		return err
+func (a *TwitterAuth) Write() error {
+	ext := filepath.Ext(a.File)
+	var bs []byte
+	var err error
+	switch ext {
+	case ".json":
+		bs, err = json.Marshal(a)
+		if err != nil {
+			return err
+		}
+	case ".toml":
+		buf := new(bytes.Buffer)
+		enc := toml.NewEncoder(buf)
+		err = enc.Encode(a)
+		if err != nil {
+			return err
+		}
+		bs = buf.Bytes()
+	default:
+		return fmt.Errorf("%s is invalid extension", ext)
 	}
-	err = ioutil.WriteFile(a.File, bytes, 0640)
+	err = ioutil.WriteFile(a.File, bs, 0640)
 	if err != nil {
 		return err
 	}
@@ -54,10 +88,10 @@ func (a *TwitterAuth) ToJson() error {
 
 // TwitterAction can indicate for various actions for Twitter's tweets.
 type TwitterAction struct {
-	Retweet     bool     `toml:"retweet"`
-	Favorite    bool     `toml:"favorite"`
-	Follow      bool     `toml:"follow"`
-	Collections []string `toml:"collections"`
+	Retweet     bool     `json:"retweet" toml:"retweet"`
+	Favorite    bool     `json:"favorite" toml:"favorite"`
+	Follow      bool     `json:"follow" toml:"follow"`
+	Collections []string `json:"collections" toml:"collections"`
 }
 
 func (a *TwitterAction) add(action *TwitterAction) {
@@ -675,11 +709,11 @@ var configCommand = &DirectMessageCommand{
 			return "This command can't accept any arguments", nil
 		}
 
-		bytes, err := a.config.Read(strings.Repeat(" ", 4))
+		bs, err := a.config.Read(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err
 		}
-		return string(bytes), nil
+		return string(bs), nil
 	},
 }
 

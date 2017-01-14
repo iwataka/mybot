@@ -15,17 +15,17 @@ import (
 // MybotConfig is a root of the all configurations of this applciation.
 type MybotConfig struct {
 	// Twitter is a configuration related to Twitter.
-	Twitter *TwitterConfig `toml:"twitter"`
+	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
-	Interaction *InteractionConfig `toml:"interaction"`
+	Interaction *InteractionConfig `json:"interaction" toml:"interaction"`
 	// Log is a configuration related to logging.
-	Log *LogConfig `toml:"log"`
+	Log *LogConfig `json:"log" toml:"log"`
 	// Server is a server configuration.
-	Server *ServerConfig `toml:"server"`
+	Server *ServerConfig `json:"server" toml:"server"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
-	File string `toml:"-"`
+	File string `json:"-" toml:"-"`
 }
 
 // NewMybotConfig takes the configuration file path and returns a configuration
@@ -170,23 +170,43 @@ func (c *MybotConfig) Validate() error {
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
 func (c *MybotConfig) Read(indent string) ([]byte, error) {
+	ext := filepath.Ext(c.File)
 	buf := new(bytes.Buffer)
-	enc := toml.NewEncoder(buf)
-	enc.Indent = indent
-	err := enc.Encode(c)
-	if err != nil {
-		return []byte{}, err
+	switch ext {
+	case ".json":
+		enc := json.NewEncoder(buf)
+		enc.SetIndent("", indent)
+		err := enc.Encode(c)
+		if err != nil {
+			return []byte{}, err
+		}
+	case ".toml":
+		enc := toml.NewEncoder(buf)
+		enc.Indent = indent
+		err := enc.Encode(c)
+		if err != nil {
+			return []byte{}, err
+		}
 	}
 	return buf.Bytes(), nil
 }
 
 func (c *MybotConfig) Write(bytes []byte) error {
-	md, err := toml.Decode(string(bytes), c)
-	if err != nil {
-		return err
-	}
-	if len(md.Undecoded()) != 0 {
-		return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.File)
+	ext := filepath.Ext(c.File)
+	switch ext {
+	case ".json":
+		err := json.Unmarshal(bytes, c)
+		if err != nil {
+			return err
+		}
+	case ".toml":
+		md, err := toml.Decode(string(bytes), c)
+		if err != nil {
+			return err
+		}
+		if len(md.Undecoded()) != 0 {
+			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.File)
+		}
 	}
 	return nil
 }
@@ -233,27 +253,27 @@ func (c *MybotConfig) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type SourceConfig struct {
 	// Filter filters out incoming data from sources.
-	Filter *TweetFilterConfig `toml:"filter"`
+	Filter *TweetFilterConfig `json:"filter" toml:"filter"`
 	// Action defines actions for data passing through filters.
-	Action *TwitterAction `toml:"action"`
+	Action *TwitterAction `json:"action" toml:"action"`
 }
 
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
-	Timelines []TimelineConfig `toml:"timelines,omitempty"`
-	Favorites []FavoriteConfig `toml:"favorites,omitempty"`
-	Searches  []SearchConfig   `toml:"searches,omitempty"`
+	Timelines []TimelineConfig `json:"timelines,omitempty" toml:"timelines,omitempty"`
+	Favorites []FavoriteConfig `json:"favorites,omitempty" toml:"favorites,omitempty"`
+	Searches  []SearchConfig   `json:"searches,omitempty" toml:"searches,omitempty"`
 	// Notification is a configuration related to notification for users.
 	// Currently only place notification is supported, which means that
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
-	Notification *Notification `toml:"notification"`
+	Notification *Notification `json:"notification" toml:"notification"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
-	Duration string `toml:"duration"`
+	Duration string `json:"duration" toml:"duration"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
-	Debug bool `toml:"debug"`
+	Debug bool `json:"debug" toml:"debug"`
 }
 
 // GetScreenNames returns all screen names in the TwitterConfig instance. This
@@ -272,10 +292,10 @@ func (tc *TwitterConfig) GetScreenNames() []string {
 // TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
 	*SourceConfig
-	ScreenNames    []string `toml:"screen_names"`
-	ExcludeReplies *bool    `toml:"exclude_replies"`
-	IncludeRts     *bool    `toml:"include_rts"`
-	Count          *int     `toml:"count,omitempty"`
+	ScreenNames    []string `json:"screen_names" toml:"screen_names"`
+	ExcludeReplies *bool    `json:"exclude_replies" toml:"exclude_replies"`
+	IncludeRts     *bool    `json:"include_rts" toml:"include_rts"`
+	Count          *int     `json:"count,omitempty" toml:"count,omitempty"`
 }
 
 // NewTimelineConfig returns TimelineConfig instance, which is empty but has a
@@ -297,8 +317,8 @@ func NewTimelineConfig() *TimelineConfig {
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
-	ScreenNames []string `toml:"screen_names"`
-	Count       *int     `toml:"count,omitempty"`
+	ScreenNames []string `json:"screen_names" toml:"screen_names"`
+	Count       *int     `json:"count,omitempty" toml:"count,omitempty"`
 }
 
 // NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
@@ -320,9 +340,9 @@ func NewFavoriteConfig() *FavoriteConfig {
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
 	*SourceConfig
-	Queries    []string `toml:"queries"`
-	ResultType string   `toml:"result_type,omitempty"`
-	Count      *int     `toml:"count,omitempty"`
+	Queries    []string `json:"queries" toml:"queries"`
+	ResultType string   `json:"result_type,omitempty" toml:"result_type,omitempty"`
+	Count      *int     `json:"count,omitempty" toml:"count,omitempty"`
 }
 
 // NewSearchConfig returns SearchConfig instance, which is empty but has a
@@ -344,19 +364,19 @@ func NewSearchConfig() *SearchConfig {
 // InteractionConfig is a configuration for interaction through Twitter direct
 // message
 type InteractionConfig struct {
-	AllowSelf bool     `toml:"allow_self"`
-	Users     []string `toml:"users,omitempty"`
+	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
+	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
 }
 
 // LogConfig is a configuration for logging
 type LogConfig struct {
-	AllowSelf bool     `toml:"allow_self"`
-	Users     []string `toml:"users,omitempty"`
+	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
+	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
 }
 
 type ServerConfig struct {
-	Name     string `toml:"name"`
-	Host     string `toml:"host"`
-	Port     string `toml:"port"`
-	LogLines int    `toml:"log_lines,omitempty"`
+	Name     string `json:"name" toml:"name"`
+	Host     string `json:"host" toml:"host"`
+	Port     string `json:"port" toml:"port"`
+	LogLines int    `json:"log_lines,omitempty" toml:"log_lines,omitempty"`
 }

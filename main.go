@@ -63,7 +63,7 @@ func main() {
 
 	twitterFlag := cli.StringFlag{
 		Name:  "twitter",
-		Value: filepath.Join(home, confPrefix+"twitter_authentication.json"),
+		Value: filepath.Join(home, confPrefix+"twitter_authentication.toml"),
 		Usage: "Credential file for Twitter API",
 	}
 
@@ -173,7 +173,10 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	twitterAuth := &mybot.TwitterAuth{}
-	twitterAuth.FromJson(c.String("twitter"))
+	err = twitterAuth.Read(c.String("twitter"))
+	if err != nil {
+		panic(err)
+	}
 	mybot.SetConsumer(twitterAuth)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
@@ -341,7 +344,7 @@ func monitorTwitterCred() {
 		time.Duration(1)*time.Second,
 		func() {
 			auth := &mybot.TwitterAuth{}
-			err := auth.FromJson(ctxt.String("twitter"))
+			err := auth.Read(ctxt.String("twitter"))
 			if err == nil {
 				mybot.SetConsumer(auth)
 				api := mybot.NewTwitterAPI(auth, cache, config)

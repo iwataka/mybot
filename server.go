@@ -762,7 +762,7 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 	ats := val["twitter-access-token-secret"][0]
 	auth := &mybot.TwitterAuth{ck, cs, at, ats, s.TwitterAPI.File}
 
-	err = auth.ToJson()
+	err = auth.Write()
 	if err != nil {
 		msg = err.Error()
 		return
