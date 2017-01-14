@@ -8,11 +8,42 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/iwataka/mybot/src"
 )
+
+var (
+	htmlTemplate *template.Template
+)
+
+func init() {
+	tmpdir := os.TempDir()
+	err := RestoreAssets(tmpdir, "assets/tmpl")
+	if err != nil {
+		panic(err)
+	}
+
+	funcMap := template.FuncMap{
+		"checkbox":            checkbox,
+		"boolSelectbox":       boolSelectbox,
+		"selectbox":           selectbox,
+		"listTextbox":         listTextbox,
+		"textboxOfFloat64Ptr": textboxOfFloat64Ptr,
+		"textboxOfIntPtr":     textboxOfIntPtr,
+	}
+
+	htmlTemplate, err = template.
+		New("index").
+		Funcs(funcMap).
+		ParseGlob(filepath.Join(tmpdir, "assets/tmpl/*"))
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 //go:generate go-bindata assets/...
 
@@ -157,12 +188,6 @@ func (s *MybotServer) indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("index", "assets/tmpl/index.tmpl")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	log := s.Logger.ReadString()
 	lines := strings.Split(log, "\n")
 	lineNum := s.Config.Server.LogLines
@@ -230,11 +255,7 @@ func (s *MybotServer) getIndex(w http.ResponseWriter, r *http.Request) {
 		colMap,
 	}
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	htmlTemplate.ExecuteTemplate(w, "index", data)
 }
 
 type checkboxCounter struct {
@@ -533,12 +554,6 @@ func (s *MybotServer) postConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("config", "assets/tmpl/config.tmpl")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -563,11 +578,7 @@ func (s *MybotServer) getConfig(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	htmlTemplate.ExecuteTemplate(w, "config", data)
 }
 
 func (s *MybotServer) configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -690,11 +701,6 @@ func (s *MybotServer) getAssets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("log", "assets/tmpl/log.tmpl")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	data := &struct {
 		UserName   string
 		NavbarName string
@@ -704,19 +710,10 @@ func (s *MybotServer) getLog(w http.ResponseWriter, r *http.Request) {
 		"Log",
 		s.Logger.ReadString(),
 	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	htmlTemplate.ExecuteTemplate(w, "log", data)
 }
 
 func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("status", "assets/tmpl/status.tmpl")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	data := &struct {
 		UserName   string
 		NavbarName string
@@ -726,11 +723,7 @@ func (s *MybotServer) getStatus(w http.ResponseWriter, r *http.Request) {
 		"Status",
 		*s.Status,
 	}
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	htmlTemplate.ExecuteTemplate(w, "status", data)
 }
 
 func (s *MybotServer) setupHandler(w http.ResponseWriter, r *http.Request) {
@@ -791,12 +784,6 @@ func (s *MybotServer) postSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *MybotServer) getSetup(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := generateTemplate("setup", "assets/tmpl/setup.tmpl")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.setup.message")
 	if err == nil {
@@ -819,40 +806,7 @@ func (s *MybotServer) getSetup(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	err = tmpl.Execute(w, data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func generateTemplate(name, path string) (*template.Template, error) {
-	index, err := readFile(path)
-	if err != nil {
-		return nil, err
-	}
-	header, err := readFile("assets/tmpl/header.tmpl")
-	if err != nil {
-		return nil, err
-	}
-	navbar, err := readFile("assets/tmpl/navbar.tmpl")
-	if err != nil {
-		return nil, err
-	}
-
-	funcMap := template.FuncMap{
-		"checkbox":            checkbox,
-		"boolSelectbox":       boolSelectbox,
-		"selectbox":           selectbox,
-		"listTextbox":         listTextbox,
-		"textboxOfFloat64Ptr": textboxOfFloat64Ptr,
-		"textboxOfIntPtr":     textboxOfIntPtr,
-	}
-
-	return template.
-		New("index").
-		Funcs(funcMap).
-		Parse(string(index) + string(header) + string(navbar))
+	htmlTemplate.ExecuteTemplate(w, "setup", data)
 }
 
 func readFile(path string) ([]byte, error) {
