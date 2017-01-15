@@ -31,6 +31,4 @@ users = ["foo", "bar"]
 [log]
 allow_self = true
 users = ["foo", "bar"]
-
-[server]
-name = "Iwataka"
+linenum = 8

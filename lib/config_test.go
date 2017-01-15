@@ -52,6 +52,18 @@ func TestNewConfig(t *testing.T) {
 	if n.Place.Users[0] != "foo" {
 		t.Fatalf("%s expected but %s found", "foo", n.Place.Users[0])
 	}
+	if !c.Log.AllowSelf {
+		t.Fatalf("%v expected but %v found", true, c.Log.AllowSelf)
+	}
+	if c.Log.Users[0] != "foo" {
+		t.Fatalf("%s expected but %s found", "foo", c.Log.Users[0])
+	}
+	if c.Log.Users[1] != "bar" {
+		t.Fatalf("%s expected but %s found", "bar", c.Log.Users[1])
+	}
+	if c.Log.Linenum != 8 {
+		t.Fatalf("%v expected but %v found", 8, c.Log.Linenum)
+	}
 }
 
 func TestNewConfigWhenNotExist(t *testing.T) {

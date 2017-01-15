@@ -858,6 +858,7 @@
                     <tr>
                         <td>allow self</td>
                         <td>users</td>
+                        <td>linenum</td>
                     </tr>
                 </thead>
                 <tbody>
@@ -868,35 +869,8 @@
                         <td>
                             {{listTextbox .Config.Log.Users "log.users"}}
                         </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <h3>Server</h3>
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <td>name</td>
-                        <td>host</td>
-                        <td>port</td>
-                        <td>log lines</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
                         <td>
-                            <input form="overwrite" type="text" name="server.name" value="{{.Config.Server.Name}}">
-                        </td>
-                        <td>
-                            <input form="overwrite" type="text" name="server.host" value="{{.Config.Server.Host}}">
-                        </td>
-                        <td>
-                            <input form="overwrite" type="number" name="server.port" value="{{.Config.Server.Port}}">
-                        </td>
-                        <td>
-                            <input form="overwrite" type="number" name="server.log_lines" value="{{.Config.Server.LogLines}}">
+                            <input form="overwrite" type="number" name="log.linenum" value="{{.Config.Log.Linenum}}">
                         </td>
                     </tr>
                 </tbody>

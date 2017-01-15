@@ -125,18 +125,16 @@ func startServer(host, port, cert, key string) error {
 		getAuthTwitterCallback,
 	)
 
-	h := config.Server.Host
-	if len(host) != 0 {
-		h = host
+	if len(host) == 0 {
+		host = "localhost"
 	}
 
-	p := config.Server.Port
-	if len(port) != 0 {
-		p = port
+	if len(port) == 0 {
+		port = "3256"
 	}
 
 	var err error
-	addr := h + ":" + p
+	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
 	if certErr == nil && keyErr == nil {
@@ -163,8 +161,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 func getIndex(w http.ResponseWriter, r *http.Request) {
 	log := logger.ReadString()
 	lines := strings.Split(log, "\n")
-	lineNum := config.Server.LogLines
-	head := len(lines) - lineNum
+	linenum := config.Log.Linenum
+	head := len(lines) - linenum
 	if head < 0 {
 		head = 0
 	}
@@ -207,7 +205,6 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &struct {
-		UserName            string
 		NavbarName          string
 		Log                 string
 		BotName             string
@@ -217,7 +214,6 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 		ImageAnalysisDate   string
 		CollectionMap       map[string]string
 	}{
-		config.Server.Name,
 		"",
 		log,
 		botName,
@@ -504,16 +500,12 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 
 	config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 	config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")
-
-	config.Server.Name = val["server.name"][0]
-	config.Server.Host = val["server.host"][0]
-	config.Server.Port = val["server.port"][0]
-	logLines, err := strconv.Atoi(val["server.log_lines"][0])
+	linenum, err := strconv.Atoi(val["log.linenum"][0])
 	if err != nil {
 		msg = err.Error()
 		return
 	}
-	config.Server.LogLines = logLines
+	config.Log.Linenum = linenum
 
 	err = config.Validate()
 	if err != nil {
@@ -540,12 +532,10 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &struct {
-		UserName   string
 		NavbarName string
 		Message    string
 		Config     mybot.Config
 	}{
-		config.Server.Name,
 		"Config",
 		msg,
 		*config,
@@ -692,11 +682,9 @@ func getAssets(w http.ResponseWriter, r *http.Request) {
 
 func getLog(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
-		UserName   string
 		NavbarName string
 		Log        string
 	}{
-		config.Server.Name,
 		"Log",
 		logger.ReadString(),
 	}
@@ -709,13 +697,11 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
-		UserName                 string
 		NavbarName               string
 		Status                   mybot.Status
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
 	}{
-		config.Server.Name,
 		"Status",
 		*status,
 		status.CheckTwitterListenDMStatus(),

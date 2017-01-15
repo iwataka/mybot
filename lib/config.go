@@ -21,8 +21,6 @@ type Config struct {
 	Interaction *InteractionConfig `json:"interaction" toml:"interaction"`
 	// Log is a configuration related to logging.
 	Log *LogConfig `json:"log" toml:"log"`
-	// Server is a server configuration.
-	Server *ServerConfig `json:"server" toml:"server"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
 	File string `json:"-" toml:"-"`
@@ -40,11 +38,9 @@ func NewConfig(path string) (*Config, error) {
 				Place: &PlaceNotification{},
 			},
 		},
-		Server: &ServerConfig{
-			Host: "localhost",
-			Port: "3256",
+		Log: &LogConfig{
+			Linenum: 10,
 		},
-		Log:         &LogConfig{},
 		Interaction: &InteractionConfig{},
 	}
 
@@ -377,11 +373,5 @@ type InteractionConfig struct {
 type LogConfig struct {
 	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
 	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
-}
-
-type ServerConfig struct {
-	Name     string `json:"name" toml:"name"`
-	Host     string `json:"host" toml:"host"`
-	Port     string `json:"port" toml:"port"`
-	LogLines int    `json:"log_lines,omitempty" toml:"log_lines,omitempty"`
+	Linenum   int      `json:"linenum,omitempty" toml:"linenum,omitempty"`
 }
