@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iwataka/mybot/src"
+	"github.com/iwataka/mybot/lib"
 )
 
 func TestCache(t *testing.T) {

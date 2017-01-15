@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
-	"github.com/iwataka/mybot/src"
+	"github.com/iwataka/mybot/lib"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 )

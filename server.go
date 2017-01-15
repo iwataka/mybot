@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/contrib/sessions"
-	"github.com/iwataka/mybot/src"
+	"github.com/iwataka/mybot/lib"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/twitter"
