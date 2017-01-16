@@ -807,6 +807,49 @@
             </div>
         {{end}}
 
+        <h3>API for Twitter</h3>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <td>source url</td>
+                        <td>message template</td>
+                        <td>timestamp template</td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range $index, $api := .Config.Twitter.APIs}}
+                    <tr>
+                        <input form="overwrite" type="hidden" name="twitter.apis.deleted" value="false"/>
+                        <td>
+                            <input form="overwrite" type="text" name="twitter.apis.source_url" value="{{$api.SourceURL}}">
+                        </td>
+                        <td>
+                            <input form="overwrite" type="text" name="twitter.apis.message_template" value="{{$api.MessageTemplate}}">
+                        </td>
+                        <td>
+                            <input form="overwrite" type="text" name="twitter.apis.timestamp_template" value="{{$api.TimestampTemplate}}">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-apis-filter_{{$index}}')">Delete</button>
+                        </td>
+                    </tr>
+                    {{end}}
+                    <tr>
+                        <td>
+                            <form action="/config/apis/add" method="post">
+                                <input type="submit" value="New" class="btn btn-primary"/>
+                            </form>
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <h3>Twitter Place Notification</h3>
         <div class="table-responsive">
             <table class="table table-striped table-bordered">

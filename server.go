@@ -105,6 +105,10 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configSearchAddHandler),
 	)
 	http.HandleFunc(
+		"/config/apis/add",
+		wrapHandler(configAPIAddHandler),
+	)
+	http.HandleFunc(
 		"/assets/",
 		getAssets,
 	)
@@ -492,6 +496,25 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	config.Twitter.Searches = searches
 
+	deletedFlags = val["twitter.apis.deleted"]
+	if len(deletedFlags) != len(config.Twitter.APIs) {
+		http.Error(w, "Collapsed request", http.StatusInternalServerError)
+		return
+	}
+	length = len(val["twitter.apis.source_url"])
+	apis := []mybot.APIConfig{}
+	for i := 0; i < length; i++ {
+		if deletedFlags[i] == "true" {
+			continue
+		}
+		api := *mybot.NewAPIConfig()
+		api.SourceURL = val["twitter.apis.source_url"][i]
+		api.MessageTemplate = val["twitter.apis.message_template"][i]
+		api.TimestampTemplate = val["twitter.apis.timestamp_template"][i]
+		apis = append(apis, api)
+	}
+	config.Twitter.APIs = apis
+
 	config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
 	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, "twitter.notification.place.users")
 
@@ -591,6 +614,20 @@ func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
 	searches := config.Twitter.Searches
 	searches = append(searches, *mybot.NewSearchConfig())
 	config.Twitter.Searches = searches
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func configAPIAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodPost {
+		postConfigAPIAdd(w, r)
+	}
+}
+
+func postConfigAPIAdd(w http.ResponseWriter, r *http.Request) {
+	apis := config.Twitter.APIs
+	apis = append(apis, *mybot.NewAPIConfig())
+	config.Twitter.APIs = apis
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
