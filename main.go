@@ -436,7 +436,7 @@ func runTwitterWithStream() error {
 	}
 
 	for _, a := range config.Twitter.APIs {
-		msg, err := a.Message(true)
+		msg, err := a.Message()
 		if err != nil {
 			return err
 		}

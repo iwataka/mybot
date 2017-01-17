@@ -510,7 +510,6 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		api := *mybot.NewAPIConfig()
 		api.SourceURL = val["twitter.apis.source_url"][i]
 		api.MessageTemplate = val["twitter.apis.message_template"][i]
-		api.TimestampTemplate = val["twitter.apis.timestamp_template"][i]
 		apis = append(apis, api)
 	}
 	config.Twitter.APIs = apis

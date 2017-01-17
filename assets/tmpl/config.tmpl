@@ -814,7 +814,6 @@
                     <tr>
                         <td>source url</td>
                         <td>message template</td>
-                        <td>timestamp template</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -826,10 +825,7 @@
                             <input form="overwrite" type="text" name="twitter.apis.source_url" value="{{$api.SourceURL}}">
                         </td>
                         <td>
-                            <input form="overwrite" type="text" name="twitter.apis.message_template" value="{{$api.MessageTemplate}}">
-                        </td>
-                        <td>
-                            <input form="overwrite" type="text" name="twitter.apis.timestamp_template" value="{{$api.TimestampTemplate}}">
+                            <textarea form="overwrite" name="twitter.apis.message_template" cols="30" rows="5">{{$api.MessageTemplate}}</textarea>
                         </td>
                         <td>
                             <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-apis-filter_{{$index}}')">Delete</button>
@@ -842,7 +838,6 @@
                                 <input type="submit" value="New" class="btn btn-primary"/>
                             </form>
                         </td>
-                        <td></td>
                         <td></td>
                         <td></td>
                     </tr>
