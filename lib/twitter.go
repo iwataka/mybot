@@ -792,3 +792,17 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 	}
 	return "", nil
 }
+
+func IsIgnorableError(err error) bool {
+	if err == nil {
+		return true
+	}
+	switch e := err.(type) {
+	case anaconda.TwitterError:
+		// 403 means that duplicated message exists
+		if e.Code == http.StatusForbidden {
+			return true
+		}
+	}
+	return false
+}
