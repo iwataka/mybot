@@ -22,7 +22,7 @@ type TweetFilterConfig struct {
 	Language           *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
-func (c *TweetFilterConfig) check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error) {
+func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache *Cache) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -67,39 +67,49 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI
 		return false, nil
 	}
 
-	if c.Vision != nil && v != nil && v.api != nil {
+	// If the Vision condition is empty or Vision API is not available,
+	// skip this check. Otherwise if there is at least one media to satisfy
+	// condition, the tweet will pass this check.
+	if c.Vision != nil && !c.Vision.isEmpty() && v != nil && v.Enabled() {
 		urls := make([]string, len(t.Entities.Media))
 		for i, m := range t.Entities.Media {
 			urls[i] = m.Media_url
 		}
-		if len(urls) != 0 {
-			results, matches, err := v.MatchImages(urls, c.Vision)
-			if err != nil {
-				return false, err
+
+		results, matches, err := v.MatchImages(urls, c.Vision)
+		if err != nil {
+			return false, err
+		}
+
+		// Cache the results of matching images
+		for i, result := range results {
+			// Empty result means no analysis occurred
+			if len(result) == 0 {
+				continue
 			}
 
-			result := results[len(results)-1]
-			// empty result means no Vision API analysis occurred.
-			if len(result) != 0 {
-				v.cache.ImageAnalysisDates =
-					append(v.cache.ImageAnalysisDates, time.Now().Format(time.RubyDate))
-				v.cache.ImageAnalysisResults =
-					append(v.cache.ImageAnalysisResults, results[len(results)-1])
-				srcFmt := "https://twitter.com/%s/status/%s"
-				tweetSrc := fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
-				v.cache.ImageSources = append(v.cache.ImageSources, tweetSrc)
-				v.cache.ImageURLs = append(v.cache.ImageURLs, urls[len(urls)-1])
-			}
+			cache.ImageAnalysisDates =
+				append(cache.ImageAnalysisDates, time.Now().Format(time.RubyDate))
+			cache.ImageAnalysisResults =
+				append(cache.ImageAnalysisResults, result)
+			srcFmt := "https://twitter.com/%s/status/%s"
+			tweetSrc := fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
+			cache.ImageSources = append(cache.ImageSources, tweetSrc)
+			cache.ImageURLs = append(cache.ImageURLs, urls[i])
+		}
 
-			for _, m := range matches {
-				if m {
-					return true, nil
-				}
-			}
+		match := false
+		for _, m := range matches {
+			match = match || m
+		}
+		if !match {
+			return false, nil
 		}
 	}
 
-	if c.Language != nil && l != nil && l.api != nil {
+	// If the Language condition is empty or Language API is not available,
+	// skip this check.
+	if c.Language != nil && !c.Language.isEmpty() && l != nil && l.Enabled() {
 		text := t.Text
 		_, match, err := l.MatchText(text, c.Language)
 		if err != nil {

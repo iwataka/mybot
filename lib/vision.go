@@ -14,15 +14,13 @@ import (
 
 // VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
-	api    *vision.Service
-	cache  *Cache
-	config *Config
-	File   string
+	api  *vision.Service
+	File string
 }
 
-// NewVisionAPI takes a path of a user's google-cloud credential file and cache
+// NewVisionAPI takes a path of a user's google-cloud credential file
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(cache *Cache, config *Config, file string) (*VisionAPI, error) {
+func NewVisionAPI(file string) (*VisionAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
@@ -37,7 +35,7 @@ func NewVisionAPI(cache *Cache, config *Config, file string) (*VisionAPI, error)
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, cache, config, file}, nil
+	return &VisionAPI{a, file}, nil
 }
 
 // VisionCondition is a condition to check whether images match or not by using
@@ -70,6 +68,11 @@ func (c *VisionFaceCondition) isEmpty() bool {
 		len(c.BlurredLikelihood) == 0 &&
 		len(c.HeadwearLikelihood) == 0 &&
 		len(c.JoyLikelihood) == 0
+}
+
+type VisionMatcher interface {
+	MatchImages([]string, *VisionCondition) ([]string, []bool, error)
+	Enabled() bool
 }
 
 // MatchImages takes image URLs and a Vision condition and returns whether the
@@ -181,6 +184,10 @@ func (a *VisionAPI) MatchImages(
 		matches = append(matches, match)
 	}
 	return results, matches, nil
+}
+
+func (a *VisionAPI) Enabled() bool {
+	return a.api != nil
 }
 
 func VisionFeatures(cond *VisionCondition) []*vision.Feature {

@@ -337,7 +337,7 @@ func (a *TwitterAPI) doForTweets(
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.check(t, v, l)
+		match, err := c.check(t, v, l, a.cache)
 		if err != nil {
 			return nil, err
 		}
@@ -495,7 +495,7 @@ type TwitterUserListener struct {
 	file   string
 }
 
-func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
+func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI, cache *Cache) error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
@@ -519,7 +519,7 @@ func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
 				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
 					continue
 				}
-				match, err := timeline.Filter.check(c, vis, lang)
+				match, err := timeline.Filter.check(c, vis, lang, cache)
 				if err != nil {
 					return err
 				}
@@ -643,7 +643,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error)
+	check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c *Cache) (bool, error)
 	shouldRepeat() bool
 }
 

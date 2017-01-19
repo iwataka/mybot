@@ -9,13 +9,11 @@ import (
 )
 
 type LanguageAPI struct {
-	api    *language.Service
-	cache  *Cache
-	config *Config
-	File   string
+	api  *language.Service
+	File string
 }
 
-func NewLanguageAPI(cache *Cache, config *Config, file string) (*LanguageAPI, error) {
+func NewLanguageAPI(file string) (*LanguageAPI, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
@@ -30,7 +28,7 @@ func NewLanguageAPI(cache *Cache, config *Config, file string) (*LanguageAPI, er
 	if err != nil {
 		return nil, err
 	}
-	return &LanguageAPI{a, cache, config, file}, nil
+	return &LanguageAPI{a, file}, nil
 }
 
 type LanguageCondition struct {
@@ -38,13 +36,23 @@ type LanguageCondition struct {
 	MaxSentiment *float64 `toml:"max_sentiment,omitempty"`
 }
 
+func (c *LanguageCondition) isEmpty() bool {
+	return c.MinSentiment == nil && c.MaxSentiment == nil
+}
+
+type LanguageMatcher interface {
+	MatchText(string, *LanguageCondition) (string, bool, error)
+	Enabled() bool
+}
+
 func (a *LanguageAPI) MatchText(
 	text string,
 	cond *LanguageCondition,
 ) (string, bool, error) {
 	f := LanguageFeatures(cond)
+	// This means that nothing to do with language API.
 	if !f.ExtractDocumentSentiment && !f.ExtractEntities && !f.ExtractSyntax {
-		return "", false, nil
+		return "", true, nil
 	}
 
 	doc := &language.Document{
@@ -77,6 +85,10 @@ func (a *LanguageAPI) MatchText(
 	}
 
 	return string(bytes), true, nil
+}
+
+func (a *LanguageAPI) Enabled() bool {
+	return a.api != nil
 }
 
 func LanguageFeatures(c *LanguageCondition) *language.Features {

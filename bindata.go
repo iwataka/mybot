@@ -89,7 +89,7 @@ func assetsCssCustomCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(436), modTime: time.Unix(1484466653, 0)}
+	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(436), modTime: time.Unix(1484568986, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -109,7 +109,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 48684, mode: os.FileMode(436), modTime: time.Unix(1484470615, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 48684, mode: os.FileMode(436), modTime: time.Unix(1484737158, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -149,7 +149,7 @@ func assetsTmplIndexTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(436), modTime: time.Unix(1484470487, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(436), modTime: time.Unix(1484568987, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -169,7 +169,7 @@ func assetsTmplLogTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(436), modTime: time.Unix(1484466761, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(436), modTime: time.Unix(1484568987, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -189,7 +189,7 @@ func assetsTmplNavbarTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(436), modTime: time.Unix(1484470487, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(436), modTime: time.Unix(1484472834, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -209,7 +209,7 @@ func assetsTmplStatusTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 3773, mode: os.FileMode(436), modTime: time.Unix(1484466761, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 3773, mode: os.FileMode(436), modTime: time.Unix(1484568988, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

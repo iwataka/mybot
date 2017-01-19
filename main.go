@@ -156,11 +156,11 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
-		visionAPI, err = mybot.NewVisionAPI(cache, config, c.String("gcloud"))
+		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
 		if err != nil {
 			panic(err)
 		}
-		languageAPI, err = mybot.NewLanguageAPI(cache, config, c.String("gcloud"))
+		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
 		if err != nil {
 			panic(err)
 		}
@@ -230,7 +230,7 @@ func twitterListenUsers() {
 		return
 	}
 	userListenerStream = listener.Stream
-	err = listener.Listen(visionAPI, languageAPI)
+	err = listener.Listen(visionAPI, languageAPI, cache)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -315,12 +315,12 @@ func monitorGCloudCred() {
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
 		func() {
-			vis, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
+			vis, err := mybot.NewVisionAPI(ctxt.String("gcloud"))
 			if err == nil {
 				*visionAPI = *vis
 				return
 			}
-			lang, err := mybot.NewLanguageAPI(cache, config, ctxt.String("gcloud"))
+			lang, err := mybot.NewLanguageAPI(ctxt.String("gcloud"))
 			if err == nil {
 				*languageAPI = *lang
 				return
