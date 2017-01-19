@@ -134,7 +134,28 @@ func main() {
 		Action:  serve,
 	}
 
-	app.Commands = []cli.Command{runCmd, serveCmd}
+	apiFlag := cli.BoolFlag{
+		Name:  "api",
+		Usage: "Use API to validate configuration",
+	}
+
+	validateFlags := []cli.Flag{
+		configFlag,
+		cacheFlag,
+		twitterFlag,
+		apiFlag,
+	}
+
+	validateCmd := cli.Command{
+		Name:    "validate",
+		Aliases: []string{"v"},
+		Usage:   "Validates the user configuration",
+		Flags:   validateFlags,
+		Before:  beforeValidate,
+		Action:  validate,
+	}
+
+	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd}
 	err = app.Run(os.Args)
 	if err != nil {
 		panic(err)
@@ -144,13 +165,7 @@ func main() {
 func beforeRunning(c *cli.Context) error {
 	ctxt = c
 
-	var err error
-	cache, err = mybot.NewCache(c.String("cache"))
-	if err != nil {
-		panic(err)
-	}
-
-	config, err = mybot.NewConfig(c.String("config"))
+	err := beforeValidate(c)
 	if err != nil {
 		panic(err)
 	}
@@ -171,6 +186,28 @@ func beforeRunning(c *cli.Context) error {
 		languageAPI.File = c.String("gcloud")
 	}
 
+	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
+	if err != nil {
+		panic(err)
+	}
+
+	status = mybot.NewStatus()
+
+	return nil
+}
+
+func beforeValidate(c *cli.Context) error {
+	var err error
+	cache, err = mybot.NewCache(c.String("cache"))
+	if err != nil {
+		panic(err)
+	}
+
+	config, err = mybot.NewConfig(c.String("config"))
+	if err != nil {
+		panic(err)
+	}
+
 	twitterAuth = &mybot.TwitterAuth{}
 	err = twitterAuth.Read(c.String("twitter"))
 	if err != nil {
@@ -178,13 +215,6 @@ func beforeRunning(c *cli.Context) error {
 	}
 	mybot.SetConsumer(twitterAuth)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
-
-	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
-	if err != nil {
-		panic(err)
-	}
-
-	status = mybot.NewStatus()
 
 	return nil
 }
@@ -466,6 +496,20 @@ func runTwitterWithoutStream() error {
 		err := twitterAPI.NotifyToAll(&t)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func validate(c *cli.Context) error {
+	err := config.Validate()
+	if err != nil {
+		panic(err)
+	}
+	if c.Bool("api") {
+		err := config.ValidateWithAPI(twitterAPI)
+		if err != nil {
+			panic(err)
 		}
 	}
 	return nil

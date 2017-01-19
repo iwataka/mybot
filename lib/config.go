@@ -162,6 +162,16 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func (c *Config) ValidateWithAPI(api *TwitterAPI) error {
+	for _, name := range c.Twitter.GetScreenNames() {
+		_, err := api.api.GetUsersShow(name, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Read returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
