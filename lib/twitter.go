@@ -220,8 +220,8 @@ func (a *TwitterAPI) DoForAccount(
 	name string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -252,8 +252,8 @@ func (a *TwitterAPI) DoForFavorites(
 	name string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
@@ -284,8 +284,8 @@ func (a *TwitterAPI) DoForSearch(
 	query string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
@@ -337,8 +337,8 @@ func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 func (a *TwitterAPI) doForTweets(
 	tweets []anaconda.Tweet,
 	c TweetChecker,
-	v *VisionAPI,
-	l *LanguageAPI,
+	v VisionMatcher,
+	l LanguageMatcher,
 	action *TwitterAction,
 	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
@@ -504,7 +504,7 @@ type TwitterUserListener struct {
 	file   string
 }
 
-func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI, cache *Cache) error {
+func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache *Cache) error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
