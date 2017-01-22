@@ -19,6 +19,8 @@ import (
 	"github.com/markbates/goth/providers/twitter"
 )
 
+//go:generate go-bindata assets/...
+
 const (
 	// go1.5 or lower doesn't support http.MethodPost and else.
 	methodPost = "POST"
@@ -57,8 +59,6 @@ func init() {
 		panic(err)
 	}
 }
-
-//go:generate go-bindata assets/...
 
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -6,12 +6,32 @@ import (
 	"github.com/iwataka/anaconda"
 )
 
-type EmptyVisionMatcher struct{}
+func init() {
+	visionMatcher = &EmptyVisionMatcher{}
+	languageMatcher = &EmptyLanguageMatcher{}
+
+	var err error
+	cache, err = NewCache("")
+	if err != nil {
+		panic(err)
+	}
+}
+
+var (
+	visionMatcher   *EmptyVisionMatcher
+	languageMatcher *EmptyLanguageMatcher
+	cache           *Cache
+)
+
+type (
+	EmptyVisionMatcher   struct{}
+	EmptyLanguageMatcher struct{}
+)
 
 func (m *EmptyVisionMatcher) MatchImages(urls []string, c *VisionCondition) ([]string, []bool, error) {
 	results := make([]string, len(urls), len(urls))
 	matches := make([]bool, len(urls), len(urls))
-	for i, _ := range urls {
+	for i := range urls {
 		matches[i] = true
 	}
 	return results, matches, nil
@@ -21,28 +41,12 @@ func (m *EmptyVisionMatcher) Enabled() bool {
 	return true
 }
 
-var visionMatcher = &EmptyVisionMatcher{}
-
-type EmptyLanguageMatcher struct{}
-
 func (m *EmptyLanguageMatcher) MatchText(text string, c *LanguageCondition) (string, bool, error) {
 	return "", true, nil
 }
 
 func (m *EmptyLanguageMatcher) Enabled() bool {
 	return true
-}
-
-var languageMatcher = &EmptyLanguageMatcher{}
-
-var cache *Cache
-
-func init() {
-	var err error
-	cache, err = NewCache("")
-	if err != nil {
-		panic(err)
-	}
 }
 
 func TestCheckPatternsMatched(t *testing.T) {
@@ -57,7 +61,7 @@ func TestCheckPatternsMatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !match {
-		t.Fatalf("%v is expected but %v found", true, match)
+		t.Fatalf("%v expected but %v found", true, match)
 	}
 }
 
@@ -73,7 +77,7 @@ func TestCheckPatternsUnmatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	if match {
-		t.Fatalf("%v is expected but %v found", false, match)
+		t.Fatalf("%v expected but %v found", false, match)
 	}
 }
 
@@ -90,7 +94,7 @@ func TestCheckFavoriteThresholdExceeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !match {
-		t.Fatalf("%v is expected but %v found", true, match)
+		t.Fatalf("%v expected but %v found", true, match)
 	}
 }
 
@@ -107,7 +111,7 @@ func TestCheckFavoriteThresholdNotExceeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	if match {
-		t.Fatalf("%v is expected but %v found", false, match)
+		t.Fatalf("%v expected but %v found", false, match)
 	}
 }
 
@@ -124,7 +128,7 @@ func TestCheckRetweetedThresholdExceeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !match {
-		t.Fatalf("%v is expected but %v found", true, match)
+		t.Fatalf("%v expected but %v found", true, match)
 	}
 }
 
@@ -141,7 +145,7 @@ func TestCheckRetweetedThresholdNotExceeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	if match {
-		t.Fatalf("%v is expected but %v found", false, match)
+		t.Fatalf("%v expected but %v found", false, match)
 	}
 }
 
@@ -149,7 +153,7 @@ func TestCheckVisionMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Entities: anaconda.Entities{
 			Media: []anaconda.EntityMedia{
-				anaconda.EntityMedia{},
+				{},
 			},
 		},
 	}
@@ -163,7 +167,7 @@ func TestCheckVisionMatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !match {
-		t.Fatalf("%v is expected but %v found", true, match)
+		t.Fatalf("%v expected but %v found", true, match)
 	}
 }
 
@@ -183,6 +187,6 @@ func TestCheckVisionUnmatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	if match {
-		t.Fatalf("%v is expected but %v found", false, match)
+		t.Fatalf("%v expected but %v found", false, match)
 	}
 }
