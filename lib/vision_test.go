@@ -20,7 +20,7 @@ func TestVisionFeatures(t *testing.T) {
 	}
 }
 
-func TestIsEmpty(t *testing.T) {
+func TestVisionConditionIsEmpty(t *testing.T) {
 	cond := &VisionCondition{
 		Label: []string{},
 		Face: &VisionFaceCondition{

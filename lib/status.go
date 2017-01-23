@@ -37,8 +37,8 @@ func (s *Status) LockListenDMRoutine() {
 }
 
 func (s *Status) UnlockListenDMRoutine() {
-	s.twitterListenDMStatusMutex.Unlock()
 	s.twitterListenDMStatus = false
+	s.twitterListenDMStatusMutex.Unlock()
 }
 
 func (s *Status) CheckTwitterListenDMStatus() bool {
@@ -51,8 +51,8 @@ func (s *Status) LockListenUsersRoutine() {
 }
 
 func (s *Status) UnlockListenUsersRoutine() {
-	s.twitterListenUsersStatusMutex.Unlock()
 	s.twitterListenUsersStatus = false
+	s.twitterListenUsersStatusMutex.Unlock()
 }
 
 func (s *Status) CheckTwitterListenUsersStatus() bool {

@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	c, err := NewConfig("config.template.toml")
+	c, err := NewConfig("test_assets/config.template.toml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
