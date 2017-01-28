@@ -14,15 +14,17 @@ import (
 )
 
 var (
-	twitterAPI         *mybot.TwitterAPI
-	twitterAuth        *mybot.TwitterAuth
-	visionAPI          *mybot.VisionAPI
-	languageAPI        *mybot.LanguageAPI
-	config             *mybot.Config
-	cache              *mybot.Cache
-	logger             *mybot.Logger
-	status             *mybot.Status
-	ctxt               *cli.Context
+	twitterAPI  *mybot.TwitterAPI
+	twitterAuth *mybot.TwitterAuth
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+	config      *mybot.Config
+	cache       *mybot.Cache
+	logger      *mybot.Logger
+	status      *mybot.Status
+
+	ctxt *cli.Context
+
 	userListenerStream *anaconda.Stream
 	dmListenerStream   *anaconda.Stream
 )
@@ -192,6 +194,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	status = mybot.NewStatus()
+	status.UpdateTwitterAuth(twitterAPI)
 
 	return nil
 }
@@ -213,7 +216,8 @@ func beforeValidate(c *cli.Context) error {
 	if err != nil {
 		panic(err)
 	}
-	mybot.SetConsumer(twitterAuth)
+	anaconda.SetConsumerKey(twitterAuth.ConsumerKey)
+	anaconda.SetConsumerSecret(twitterAuth.ConsumerSecret)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
 	return nil
@@ -232,6 +236,10 @@ func run(c *cli.Context) error {
 }
 
 func twitterListenDM() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	status.LockListenDMRoutine()
 	defer status.UnlockListenDMRoutine()
 
@@ -251,6 +259,10 @@ func twitterListenDM() {
 }
 
 func twitterListenUsers() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	status.LockListenUsersRoutine()
 	defer status.UnlockListenUsersRoutine()
 
@@ -269,6 +281,10 @@ func twitterListenUsers() {
 }
 
 func twitterPeriodically() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	if status.TwitterStatus {
 		return
 	}
@@ -304,11 +320,14 @@ func monitorConfig() {
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
+			status.MonitorConfigStatusMutex.Lock()
+			defer status.MonitorConfigStatusMutex.Unlock()
 			cfg, err := mybot.NewConfig(ctxt.String("config"))
 			if err == nil {
 				*config = *cfg
 				reloadListeners()
 			}
+			status.SendToMonitorConfigStatusChans(true)
 		},
 	)
 }
@@ -323,14 +342,19 @@ func monitorTwitterCred() {
 		ctxt.String("twitter"),
 		time.Duration(1)*time.Second,
 		func() {
+			status.MonitorTwitterCredMutex.Lock()
+			defer status.MonitorTwitterCredMutex.Unlock()
 			auth := &mybot.TwitterAuth{}
 			err := auth.Read(ctxt.String("twitter"))
 			if err == nil {
-				mybot.SetConsumer(auth)
+				anaconda.SetConsumerKey(auth.ConsumerKey)
+				anaconda.SetConsumerSecret(auth.ConsumerSecret)
 				api := mybot.NewTwitterAPI(auth, cache, config)
 				*twitterAPI = *api
+				status.UpdateTwitterAuth(api)
 				reloadListeners()
 			}
+			status.SendToMonitorTwitterCredChans(true)
 		},
 	)
 }
@@ -345,6 +369,8 @@ func monitorGCloudCred() {
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
 		func() {
+			status.MonitorGCloudCredMutex.Lock()
+			defer status.MonitorGCloudCredMutex.Unlock()
 			vis, err := mybot.NewVisionAPI(ctxt.String("gcloud"))
 			if err == nil {
 				*visionAPI = *vis
@@ -356,6 +382,7 @@ func monitorGCloudCred() {
 				return
 			}
 			reloadListeners()
+			status.SendToMonitorTwitterCredChans(true)
 		},
 	)
 }

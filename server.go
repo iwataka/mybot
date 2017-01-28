@@ -28,8 +28,7 @@ const (
 )
 
 var (
-	htmlTemplate     *template.Template
-	passInitlalSetup bool
+	htmlTemplate *template.Template
 )
 
 func init() {
@@ -62,20 +61,21 @@ func init() {
 
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if passInitlalSetup {
-			f(w, r)
+		status.UpdateTwitterAuth(twitterAPI)
+
+		if !status.PassTwitterApp {
+			w.Header().Add("Location", "/setup/twitter/")
+			w.WriteHeader(http.StatusSeeOther)
 			return
 		}
 
-		ok, err := twitterAPI.VerifyCredentials()
-		if ok && err == nil {
-			passInitlalSetup = true
-			f(w, r)
+		if !status.PassTwitterAuth {
+			w.Header().Add("Location", "/auth/twitter/")
+			w.WriteHeader(http.StatusSeeOther)
 			return
 		}
 
-		w.Header().Add("Location", "/auth/twitter/")
-		w.WriteHeader(http.StatusSeeOther)
+		f(w, r)
 	}
 }
 
@@ -123,6 +123,10 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/auth/twitter/callback",
 		getAuthTwitterCallback,
+	)
+	http.HandleFunc(
+		"/setup/twitter/",
+		setupTwitterHandler,
 	)
 
 	if len(host) == 0 {
@@ -714,6 +718,80 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func setupTwitterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodPost {
+		postSetupTwitter(w, r)
+	} else if r.Method == methodGet {
+		getSetupTwitter(w, r)
+	}
+}
+
+func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
+	msg := ""
+	defer func() {
+		if len(msg) != 0 {
+			msgCookie := &http.Cookie{
+				Name:  "mybot.setup.twitter.message",
+				Value: msg,
+				Path:  "/setup/twitter/",
+			}
+			http.SetCookie(w, msgCookie)
+		}
+		w.Header().Add("Location", "/")
+		w.WriteHeader(http.StatusSeeOther)
+	}()
+
+	err := r.ParseMultipartForm(32 << 20)
+	if err != nil {
+		msg = err.Error()
+		return
+	}
+	val := r.MultipartForm.Value
+
+	ck := val["twitter_setup.consumer_key"][0]
+	cs := val["twitter_setup.consumer_secret"][0]
+
+	if ck != "" && cs != "" {
+		twitterAuth.ConsumerKey = ck
+		twitterAuth.ConsumerSecret = cs
+		c := make(chan bool, 2)
+		defer close(c)
+		status.AddMonitorTwitterCredChan(c)
+		twitterAuth.Write()
+		<-c
+	} else {
+		msg = "Both of Consumer Key and Consumer Secret can't be empty"
+	}
+}
+
+func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
+	msg := ""
+	msgCookie, err := r.Cookie("mybot.setup.twitter.message")
+	if msgCookie != nil {
+		msg = msgCookie.Value
+	}
+
+	data := &struct {
+		NavbarName string
+		Message    string
+	}{
+		"",
+		msg,
+	}
+
+	if msgCookie != nil {
+		msgCookie.Value = ""
+		msgCookie.Path = "/setup/twitter/"
+		http.SetCookie(w, msgCookie)
+	}
+
+	err = htmlTemplate.ExecuteTemplate(w, "twitter_setup", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	setProvider(r, "twitter")
 
@@ -725,12 +803,15 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 
 	twitterAuth.AccessToken = user.AccessToken
 	twitterAuth.AccessTokenSecret = user.AccessTokenSecret
+	c := make(chan bool)
+	defer close(c)
+	status.AddMonitorTwitterCredChan(c)
 	err = twitterAuth.Write()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*twitterAPI = *mybot.NewTwitterAPI(twitterAuth, cache, config)
+	<-c
 
 	w.Header().Add("Location", "/")
 	w.WriteHeader(http.StatusSeeOther)

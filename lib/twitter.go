@@ -31,6 +31,7 @@ type TwitterAuth struct {
 
 // Read does nothing and returns nil if the specified file doesn't exist.
 func (a *TwitterAuth) Read(file string) error {
+	a.File = file
 	ext := filepath.Ext(file)
 	bs, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -53,7 +54,6 @@ func (a *TwitterAuth) Read(file string) error {
 	default:
 		return fmt.Errorf("%s is invalid extension", ext)
 	}
-	a.File = file
 	return nil
 }
 
@@ -144,11 +144,6 @@ type TwitterAPI struct {
 func NewTwitterAPI(auth *TwitterAuth, c *Cache, cfg *Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
 	return &TwitterAPI{api, nil, c, cfg}
-}
-
-func SetConsumer(auth *TwitterAuth) {
-	anaconda.SetConsumerKey(auth.ConsumerKey)
-	anaconda.SetConsumerSecret(auth.ConsumerSecret)
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
