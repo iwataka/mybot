@@ -15,7 +15,7 @@ import (
 
 var (
 	twitterAPI  *mybot.TwitterAPI
-	twitterAuth *mybot.TwitterAuth
+	twitterAuth *mybot.OAuthCredentials
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
 	config      *mybot.Config
@@ -211,7 +211,7 @@ func beforeValidate(c *cli.Context) error {
 		panic(err)
 	}
 
-	twitterAuth = &mybot.TwitterAuth{}
+	twitterAuth = &mybot.OAuthCredentials{}
 	err = twitterAuth.Read(c.String("twitter"))
 	if err != nil {
 		panic(err)
@@ -344,7 +344,7 @@ func monitorTwitterCred() {
 		func() {
 			status.MonitorTwitterCredMutex.Lock()
 			defer status.MonitorTwitterCredMutex.Unlock()
-			auth := &mybot.TwitterAuth{}
+			auth := &mybot.OAuthCredentials{}
 			err := auth.Read(ctxt.String("twitter"))
 			if err == nil {
 				anaconda.SetConsumerKey(auth.ConsumerKey)
