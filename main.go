@@ -498,7 +498,7 @@ func runTwitterWithStream() error {
 			return err
 		}
 		_, err = twitterAPI.PostTweet(msg, nil)
-		if err != nil {
+		if mybot.CheckTwitterError(err) {
 			return err
 		}
 	}

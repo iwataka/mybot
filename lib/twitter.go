@@ -305,30 +305,14 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 			id = t.RetweetedStatus.Id
 		}
 		_, err := a.api.Retweet(id, false)
-		if err != nil {
-			e, ok := err.(*anaconda.ApiError)
-			if ok {
-				// Already retweeted
-				if e.StatusCode != 403 {
-					return e
-				}
-			} else {
-				return err
-			}
+		if CheckTwitterError(err) {
+			return err
 		}
 	}
 	if ac.Favorite && !t.Favorited {
 		_, err := a.api.Favorite(t.Id)
 		if err != nil {
-			e, ok := err.(*anaconda.ApiError)
-			if ok {
-				// Already favorited
-				if e.StatusCode != 403 {
-					return e
-				}
-			} else {
-				return err
-			}
+			return err
 		}
 	}
 	if ac.Follow {
@@ -340,15 +324,7 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 		}
 		_, err := a.api.FollowUser(screenName)
 		if err != nil {
-			e, ok := err.(*anaconda.ApiError)
-			if ok {
-				// He/She is already friend
-				if e.StatusCode != 403 {
-					return e
-				}
-			} else {
-				return err
-			}
+			return err
 		}
 	}
 	for _, col := range ac.Collections {
@@ -728,16 +704,16 @@ func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (str
 	return "", nil
 }
 
-func IsIgnorableError(err error) bool {
+func CheckTwitterError(err error) bool {
 	if err == nil {
-		return true
+		return false
 	}
 	switch e := err.(type) {
 	case anaconda.TwitterError:
 		// 403 means that duplicated message exists
 		if e.Code == http.StatusForbidden {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
