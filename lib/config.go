@@ -178,6 +178,16 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func (c *Config) ValidateWithAPI(api *TwitterAPI) error {
+	for _, name := range c.Twitter.GetScreenNames() {
+		_, err := api.api.GetUsersShow(name, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Read returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
@@ -277,10 +287,10 @@ type SourceConfig struct {
 
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
-	Timelines []TimelineConfig `json:"timelines,omitempty" toml:"timelines,omitempty"`
-	Favorites []FavoriteConfig `json:"favorites,omitempty" toml:"favorites,omitempty"`
-	Searches  []SearchConfig   `json:"searches,omitempty" toml:"searches,omitempty"`
-	APIs      []APIConfig      `json:"api,omitempty" toml:"api,omitempty"`
+	Timelines []TimelineConfig `json:"timelines" toml:"timelines"`
+	Favorites []FavoriteConfig `json:"favorites" toml:"favorites"`
+	Searches  []SearchConfig   `json:"searches" toml:"searches"`
+	APIs      []APIConfig      `json:"api" toml:"api"`
 	// Notification is a configuration related to notification for users.
 	// Currently only place notification is supported, which means that
 	// when a tweet with place information is detected, it is notified to

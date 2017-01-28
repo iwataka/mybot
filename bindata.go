@@ -7,6 +7,7 @@
 // assets/tmpl/log.tmpl
 // assets/tmpl/navbar.tmpl
 // assets/tmpl/status.tmpl
+// assets/tmpl/twitter_setup.tmpl
 // DO NOT EDIT!
 
 package main
@@ -89,7 +90,7 @@ func assetsCssCustomCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(436), modTime: time.Unix(1484568986, 0)}
+	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -109,7 +110,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 50361, mode: os.FileMode(436), modTime: time.Unix(1484656296, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 50361, mode: os.FileMode(436), modTime: time.Unix(1485615898, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -129,7 +130,7 @@ func assetsTmplHeaderTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 943, mode: os.FileMode(436), modTime: time.Unix(1484470487, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 943, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -149,7 +150,7 @@ func assetsTmplIndexTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(436), modTime: time.Unix(1484568987, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -169,7 +170,7 @@ func assetsTmplLogTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(436), modTime: time.Unix(1484568987, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -189,7 +190,7 @@ func assetsTmplNavbarTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(436), modTime: time.Unix(1484472834, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -209,7 +210,27 @@ func assetsTmplStatusTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 3773, mode: os.FileMode(436), modTime: time.Unix(1484568988, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 3773, mode: os.FileMode(436), modTime: time.Unix(1484921411, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _assetsTmplTwitter_setupTmpl = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\xc4\x54\x31\x6f\xdb\x3c\x10\xdd\xfd\x2b\xee\xbb\xdd\x26\x92\xf1\x03\xa5\x25\xed\x14\x04\x2d\x10\x2f\x9d\x82\x93\x78\xb6\xd8\x50\x24\x41\x9e\x1c\x08\x82\xff\x7b\x21\xc9\x4e\x1c\xc7\x0e\x32\x14\xa8\x07\x4b\xc4\xbb\xf7\xf8\xf8\xee\xc4\x61\x30\xbc\xb1\x9e\x01\xe5\xc5\x8a\x70\x7a\xca\x2c\x5d\xc4\xfd\x7e\xa1\xff\xfb\xf6\xe3\x6e\xfd\xeb\xe7\x77\x68\xa4\x75\xe5\x42\x8f\x0f\x70\xe4\xb7\x05\xb2\xc7\x72\x31\x0c\xc2\x6d\x74\x24\x0c\xd8\x30\x19\x4e\x08\xab\x91\x58\x05\xd3\x97\x0b\x00\x00\x6d\xec\x0e\x6a\x47\x39\x17\x58\x07\x2f\x64\x3d\x27\x9c\xb1\xf1\x77\x2a\xe1\x69\x57\xd1\x41\xe2\x88\x9f\xf2\x7f\x77\x6d\x15\x24\x05\x7f\xc2\x9f\x6a\x9a\x9b\x72\x3d\x9b\x87\xc7\xd1\xbc\x56\xcd\xcd\x79\xc9\xed\x51\xc5\x31\x19\x2c\xd7\x8d\xcd\x60\x33\x48\xc3\xb0\xb1\x29\x0b\x64\xe1\x08\x12\xa0\xcb\x0c\x0f\x7d\x15\x44\xab\xe6\xf6\x4c\x65\x13\x52\x0b\xd6\x14\x38\x67\x04\x54\x8b\x0d\xbe\x40\x35\xad\xd5\x21\x41\x85\xd0\xb2\x34\xc1\x14\x18\x43\x16\x04\xf6\xb5\xf4\x91\x0b\x6c\x3b\x27\x36\x52\x12\x35\x2a\x2d\x0d\x09\x61\xa9\xa7\xc5\xd9\x4e\xd6\xc7\x4e\x60\x04\x5e\x37\x9b\x25\x72\x57\xb5\x56\x10\x76\xe4\x3a\x2e\xf0\x91\x76\x8c\xc7\xa3\x55\xe2\xa1\x12\xbf\x8c\xc9\xb6\x94\xfa\xe9\xdd\x6d\x4f\xd2\xd2\xca\xd8\xdd\x69\xf8\x76\x03\xab\x07\xce\x99\xb6\x7c\x25\x74\x72\x9c\x04\xa6\xff\xa5\x21\xbf\x1d\xbb\x37\x0c\x6f\xa4\x0f\x92\xec\xcd\x17\xa4\xac\xdf\x84\xf3\x36\x12\x34\x89\x37\x05\x36\x22\x31\xff\xaf\x14\xc5\x98\x57\x87\x4c\x57\x75\x68\x11\x84\xd2\x96\xa5\xc0\xa7\xca\x91\x7f\xc6\x72\x1d\xa0\x4e\x4c\xc2\xaa\x6e\xb8\x7e\x86\x3e\x74\x09\xc2\x8b\x87\xe3\x38\x50\x8c\xce\xd6\x34\x76\x09\xb6\x61\x6c\x6f\xc3\x89\xb5\xa2\xab\x99\x9c\x1a\x16\xaa\x1c\x2f\x13\xe7\x18\x7c\xb6\x3b\x3e\x37\x3c\xe1\xef\x8a\x61\xa6\x64\x49\x36\xb2\x39\xac\xaa\x90\x0c\x27\x36\x67\xf4\x59\xe2\xed\x53\xf9\x88\xa5\xcb\xc0\x0c\x9a\xf2\x2e\xf8\xdc\xb5\x9c\xe0\x9e\x7b\xad\xc4\x7c\x5e\x7d\x15\x84\x4f\xe7\x2d\x52\xce\x2f\x21\x19\x04\x4f\x2d\x17\xef\x6f\x89\x55\x7d\xb0\xf0\xf4\xcc\xfd\xeb\x4c\x0e\xc3\xea\x68\xed\x9e\xfb\xfd\xfe\xc2\xb9\x5f\xf7\xbd\x6a\x5b\xab\x6b\xc7\xff\x7a\x2e\x8f\x5c\x27\x96\x7f\x1d\x4d\x9e\x5c\x5c\x4a\x67\xf6\xf7\x57\x03\xd2\xea\xc2\x44\x69\x35\x0d\xe2\xc5\x99\x3f\xbc\x6a\x35\xd3\xb4\x9a\xef\xfa\xe3\x77\xfc\x27\x00\x00\xff\xff\x29\xfb\xad\xe7\x1f\x06\x00\x00")
+
+func assetsTmplTwitter_setupTmplBytes() ([]byte, error) {
+	return bindataRead(
+		_assetsTmplTwitter_setupTmpl,
+		"assets/tmpl/twitter_setup.tmpl",
+	)
+}
+
+func assetsTmplTwitter_setupTmpl() (*asset, error) {
+	bytes, err := assetsTmplTwitter_setupTmplBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "assets/tmpl/twitter_setup.tmpl", size: 1567, mode: os.FileMode(436), modTime: time.Unix(1485616185, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -273,6 +294,7 @@ var _bindata = map[string]func() (*asset, error){
 	"assets/tmpl/log.tmpl": assetsTmplLogTmpl,
 	"assets/tmpl/navbar.tmpl": assetsTmplNavbarTmpl,
 	"assets/tmpl/status.tmpl": assetsTmplStatusTmpl,
+	"assets/tmpl/twitter_setup.tmpl": assetsTmplTwitter_setupTmpl,
 }
 
 // AssetDir returns the file names below a certain
@@ -326,6 +348,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"log.tmpl": &bintree{assetsTmplLogTmpl, map[string]*bintree{}},
 			"navbar.tmpl": &bintree{assetsTmplNavbarTmpl, map[string]*bintree{}},
 			"status.tmpl": &bintree{assetsTmplStatusTmpl, map[string]*bintree{}},
+			"twitter_setup.tmpl": &bintree{assetsTmplTwitter_setupTmpl, map[string]*bintree{}},
 		}},
 	}},
 }}

@@ -1,5 +1,9 @@
 sudo: false
 
+branches:
+  only:
+    - master
+
 language: go
 go:
   - 1.7.x
@@ -12,6 +16,7 @@ os:
   - linux
 
 script:
+  - go get -v ./...
   - go test -v ./...
 
 notifications:

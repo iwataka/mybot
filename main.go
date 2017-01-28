@@ -14,15 +14,17 @@ import (
 )
 
 var (
-	twitterAPI         *mybot.TwitterAPI
-	twitterAuth        *mybot.TwitterAuth
-	visionAPI          *mybot.VisionAPI
-	languageAPI        *mybot.LanguageAPI
-	config             *mybot.Config
-	cache              *mybot.Cache
-	logger             *mybot.Logger
-	status             *mybot.Status
-	ctxt               *cli.Context
+	twitterAPI  *mybot.TwitterAPI
+	twitterAuth *mybot.OAuthCredentials
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+	config      *mybot.Config
+	cache       *mybot.Cache
+	logger      *mybot.Logger
+	status      *mybot.Status
+
+	ctxt *cli.Context
+
 	userListenerStream *anaconda.Stream
 	dmListenerStream   *anaconda.Stream
 )
@@ -134,7 +136,28 @@ func main() {
 		Action:  serve,
 	}
 
-	app.Commands = []cli.Command{runCmd, serveCmd}
+	apiFlag := cli.BoolFlag{
+		Name:  "api",
+		Usage: "Use API to validate configuration",
+	}
+
+	validateFlags := []cli.Flag{
+		configFlag,
+		cacheFlag,
+		twitterFlag,
+		apiFlag,
+	}
+
+	validateCmd := cli.Command{
+		Name:    "validate",
+		Aliases: []string{"v"},
+		Usage:   "Validates the user configuration",
+		Flags:   validateFlags,
+		Before:  beforeValidate,
+		Action:  validate,
+	}
+
+	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd}
 	err = app.Run(os.Args)
 	if err != nil {
 		panic(err)
@@ -144,6 +167,39 @@ func main() {
 func beforeRunning(c *cli.Context) error {
 	ctxt = c
 
+	err := beforeValidate(c)
+	if err != nil {
+		panic(err)
+	}
+
+	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
+		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
+		if err != nil {
+			panic(err)
+		}
+		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		visionAPI = &mybot.VisionAPI{}
+		visionAPI.File = c.String("gcloud")
+		languageAPI = &mybot.LanguageAPI{}
+		languageAPI.File = c.String("gcloud")
+	}
+
+	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
+	if err != nil {
+		panic(err)
+	}
+
+	status = mybot.NewStatus()
+	status.UpdateTwitterAuth(twitterAPI)
+
+	return nil
+}
+
+func beforeValidate(c *cli.Context) error {
 	var err error
 	cache, err = mybot.NewCache(c.String("cache"))
 	if err != nil {
@@ -155,36 +211,14 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
-	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
-		visionAPI, err = mybot.NewVisionAPI(cache, config, c.String("gcloud"))
-		if err != nil {
-			panic(err)
-		}
-		languageAPI, err = mybot.NewLanguageAPI(cache, config, c.String("gcloud"))
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		visionAPI = &mybot.VisionAPI{}
-		visionAPI.File = c.String("gcloud")
-		languageAPI = &mybot.LanguageAPI{}
-		languageAPI.File = c.String("gcloud")
-	}
-
-	twitterAuth = &mybot.TwitterAuth{}
+	twitterAuth = &mybot.OAuthCredentials{}
 	err = twitterAuth.Read(c.String("twitter"))
 	if err != nil {
 		panic(err)
 	}
-	mybot.SetConsumer(twitterAuth)
+	anaconda.SetConsumerKey(twitterAuth.ConsumerKey)
+	anaconda.SetConsumerSecret(twitterAuth.ConsumerSecret)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
-
-	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
-	if err != nil {
-		panic(err)
-	}
-
-	status = mybot.NewStatus()
 
 	return nil
 }
@@ -202,6 +236,10 @@ func run(c *cli.Context) error {
 }
 
 func twitterListenDM() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	status.LockListenDMRoutine()
 	defer status.UnlockListenDMRoutine()
 
@@ -221,6 +259,10 @@ func twitterListenDM() {
 }
 
 func twitterListenUsers() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	status.LockListenUsersRoutine()
 	defer status.UnlockListenUsersRoutine()
 
@@ -230,7 +272,7 @@ func twitterListenUsers() {
 		return
 	}
 	userListenerStream = listener.Stream
-	err = listener.Listen(visionAPI, languageAPI)
+	err = listener.Listen(visionAPI, languageAPI, cache)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -239,6 +281,10 @@ func twitterListenUsers() {
 }
 
 func twitterPeriodically() {
+	if !status.PassTwitterAuth {
+		return
+	}
+
 	if status.TwitterStatus {
 		return
 	}
@@ -274,11 +320,14 @@ func monitorConfig() {
 		ctxt.String("config"),
 		time.Duration(1)*time.Second,
 		func() {
+			status.MonitorConfigStatusMutex.Lock()
+			defer status.MonitorConfigStatusMutex.Unlock()
 			cfg, err := mybot.NewConfig(ctxt.String("config"))
 			if err == nil {
 				*config = *cfg
 				reloadListeners()
 			}
+			status.SendToMonitorConfigStatusChans(true)
 		},
 	)
 }
@@ -293,14 +342,19 @@ func monitorTwitterCred() {
 		ctxt.String("twitter"),
 		time.Duration(1)*time.Second,
 		func() {
-			auth := &mybot.TwitterAuth{}
+			status.MonitorTwitterCredMutex.Lock()
+			defer status.MonitorTwitterCredMutex.Unlock()
+			auth := &mybot.OAuthCredentials{}
 			err := auth.Read(ctxt.String("twitter"))
 			if err == nil {
-				mybot.SetConsumer(auth)
+				anaconda.SetConsumerKey(auth.ConsumerKey)
+				anaconda.SetConsumerSecret(auth.ConsumerSecret)
 				api := mybot.NewTwitterAPI(auth, cache, config)
 				*twitterAPI = *api
+				status.UpdateTwitterAuth(api)
 				reloadListeners()
 			}
+			status.SendToMonitorTwitterCredChans(true)
 		},
 	)
 }
@@ -315,17 +369,20 @@ func monitorGCloudCred() {
 		ctxt.String("gcloud"),
 		time.Duration(1)*time.Second,
 		func() {
-			vis, err := mybot.NewVisionAPI(cache, config, ctxt.String("gcloud"))
+			status.MonitorGCloudCredMutex.Lock()
+			defer status.MonitorGCloudCredMutex.Unlock()
+			vis, err := mybot.NewVisionAPI(ctxt.String("gcloud"))
 			if err == nil {
 				*visionAPI = *vis
 				return
 			}
-			lang, err := mybot.NewLanguageAPI(cache, config, ctxt.String("gcloud"))
+			lang, err := mybot.NewLanguageAPI(ctxt.String("gcloud"))
 			if err == nil {
 				*languageAPI = *lang
 				return
 			}
 			reloadListeners()
+			status.SendToMonitorTwitterCredChans(true)
 		},
 	)
 }
@@ -477,6 +534,20 @@ func runTwitterWithoutStream() error {
 		err := twitterAPI.NotifyToAll(&t)
 		if err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func validate(c *cli.Context) error {
+	err := config.Validate()
+	if err != nil {
+		panic(err)
+	}
+	if c.Bool("api") {
+		err := config.ValidateWithAPI(twitterAPI)
+		if err != nil {
+			panic(err)
 		}
 	}
 	return nil

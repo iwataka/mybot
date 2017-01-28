@@ -1,90 +1,20 @@
 package mybot
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strings"
 
-	"github.com/BurntSushi/toml"
 	"github.com/iwataka/anaconda"
 )
 
 // NOTE: This must be fixed because multiple applications having different
 // values cause infinite number of messages.
 const msgPrefix = "<bot message>\n"
-
-// TwitterAuth contains values required for Twitter's user authentication.
-type TwitterAuth struct {
-	ConsumerKey       string `json:"consumer_key" toml:"consumer_key"`
-	ConsumerSecret    string `json:"consumer_secret" toml:"consumer_secret"`
-	AccessToken       string `json:"access_token" toml:"access_token"`
-	AccessTokenSecret string `json:"access_token_secret" toml:"access_token_secret"`
-	File              string `json:"-" toml:"-"`
-}
-
-// Read does nothing and returns nil if the specified file doesn't exist.
-func (a *TwitterAuth) Read(file string) error {
-	ext := filepath.Ext(file)
-	bs, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil
-	}
-	switch ext {
-	case ".json":
-		err = json.Unmarshal(bs, a)
-		if err != nil {
-			return err
-		}
-	case ".toml":
-		md, err := toml.Decode(string(bs), a)
-		if err != nil {
-			return err
-		}
-		if len(md.Undecoded()) != 0 {
-			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), file)
-		}
-	default:
-		return fmt.Errorf("%s is invalid extension", ext)
-	}
-	a.File = file
-	return nil
-}
-
-func (a *TwitterAuth) Write() error {
-	ext := filepath.Ext(a.File)
-	var bs []byte
-	var err error
-	switch ext {
-	case ".json":
-		bs, err = json.Marshal(a)
-		if err != nil {
-			return err
-		}
-	case ".toml":
-		buf := new(bytes.Buffer)
-		enc := toml.NewEncoder(buf)
-		err = enc.Encode(a)
-		if err != nil {
-			return err
-		}
-		bs = buf.Bytes()
-	default:
-		return fmt.Errorf("%s is invalid extension", ext)
-	}
-	err = ioutil.WriteFile(a.File, bs, 0640)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 // TwitterAction can indicate for various actions for Twitter's tweets.
 type TwitterAction struct {
@@ -142,14 +72,9 @@ type TwitterAPI struct {
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth *TwitterAuth, c *Cache, cfg *Config) *TwitterAPI {
+func NewTwitterAPI(auth *OAuthCredentials, c *Cache, cfg *Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
 	return &TwitterAPI{api, nil, c, cfg}
-}
-
-func SetConsumer(auth *TwitterAuth) {
-	anaconda.SetConsumerKey(auth.ConsumerKey)
-	anaconda.SetConsumerSecret(auth.ConsumerSecret)
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
@@ -221,8 +146,8 @@ func (a *TwitterAPI) DoForAccount(
 	name string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestTweetID[name]
@@ -234,13 +159,13 @@ func (a *TwitterAPI) DoForAccount(
 	if err != nil {
 		return nil, err
 	}
-	var post postProcessor
+	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		post = a.postProcessEach(action)
+		pp = &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
 	} else {
-		post = a.postProcess(name, a.cache.LatestTweetID)
+		pp = &TwitterPostProcessorTop{name, a.cache.LatestTweetID}
 	}
-	result, err := a.doForTweets(tweets, c, vision, lang, action, post)
+	result, err := a.doForTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -253,8 +178,8 @@ func (a *TwitterAPI) DoForFavorites(
 	name string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.LatestFavoriteID[name]
@@ -266,13 +191,13 @@ func (a *TwitterAPI) DoForFavorites(
 	if err != nil {
 		return nil, err
 	}
-	var post postProcessor
+	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		post = a.postProcessEach(action)
+		pp = &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
 	} else {
-		post = a.postProcess(name, a.cache.LatestFavoriteID)
+		pp = &TwitterPostProcessorTop{name, a.cache.LatestFavoriteID}
 	}
-	result, err := a.doForTweets(tweets, c, vision, lang, action, post)
+	result, err := a.doForTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -285,60 +210,69 @@ func (a *TwitterAPI) DoForSearch(
 	query string,
 	v url.Values,
 	c TweetChecker,
-	vision *VisionAPI,
-	lang *LanguageAPI,
+	vision VisionMatcher,
+	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
-	result, err := a.doForTweets(res.Statuses, c, vision, lang, action, a.postProcessEach(action))
+	pp := &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
+	result, err := a.doForTweets(res.Statuses, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
 	return result, err
 }
 
-type postProcessor func(anaconda.Tweet, bool) error
-
-func (a *TwitterAPI) postProcess(name string, m map[string]int64) postProcessor {
-	return func(t anaconda.Tweet, match bool) error {
-		id, exists := m[name]
-		if (exists && t.Id > id) || !exists {
-			m[name] = t.Id
-		}
-		return nil
+type (
+	TwitterPostProcessor interface {
+		Process(anaconda.Tweet, bool) error
 	}
+	TwitterPostProcessorTop struct {
+		screenName     string
+		screenName2top map[string]int64
+	}
+	TwitterPostProcessorEach struct {
+		action       *TwitterAction
+		tweet2action map[string]*TwitterAction
+	}
+)
+
+func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
+	id, exists := p.screenName2top[p.screenName]
+	if (exists && t.Id > id) || !exists {
+		p.screenName2top[p.screenName] = t.Id
+	}
+	return nil
 }
 
-func (a *TwitterAPI) postProcessEach(action *TwitterAction) postProcessor {
-	return func(t anaconda.Tweet, match bool) error {
-		if match {
-			ac, exists := a.cache.Tweet2Action[t.IdStr]
-			if exists {
-				ac.add(action)
-			} else {
-				a.cache.Tweet2Action[t.IdStr] = action
-			}
+func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
+	if match {
+		ac, exists := p.tweet2action[t.IdStr]
+		if exists {
+			ac.add(p.action)
+		} else {
+			p.tweet2action[t.IdStr] = p.action
 		}
-		return nil
 	}
+	return nil
 }
 
 func (a *TwitterAPI) doForTweets(
 	tweets []anaconda.Tweet,
 	c TweetChecker,
-	v *VisionAPI,
-	l *LanguageAPI,
+	v VisionMatcher,
+	l LanguageMatcher,
 	action *TwitterAction,
-	post postProcessor,
+	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.check(t, v, l)
+		match, err := c.check(t, v, l, a.cache)
 		if err != nil {
 			return nil, err
 		}
@@ -350,7 +284,7 @@ func (a *TwitterAPI) doForTweets(
 			}
 			result = append(result, t)
 		}
-		err = post(t, match)
+		err = pp.Process(t, match)
 		if err != nil {
 			return nil, err
 		}
@@ -496,7 +430,7 @@ type TwitterUserListener struct {
 	file   string
 }
 
-func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
+func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache *Cache) error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
@@ -520,7 +454,7 @@ func (l *TwitterUserListener) Listen(vis *VisionAPI, lang *LanguageAPI) error {
 				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
 					continue
 				}
-				match, err := timeline.Filter.check(c, vis, lang)
+				match, err := timeline.Filter.check(c, vis, lang, cache)
 				if err != nil {
 					return err
 				}
@@ -564,14 +498,14 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListene
 	}
 }
 
-type TwitterMyselfListener struct {
+type TwitterDMListener struct {
 	Stream   *anaconda.Stream
 	api      *TwitterAPI
 	receiver DirectMessageReceiver
 	file     string
 }
 
-func (l *TwitterMyselfListener) Listen() error {
+func (l *TwitterDMListener) Listen() error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
@@ -604,7 +538,7 @@ func (l *TwitterMyselfListener) Listen() error {
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) (*TwitterMyselfListener, error) {
+func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) (*TwitterDMListener, error) {
 	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, err
@@ -612,7 +546,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	return &TwitterMyselfListener{stream, a, receiver, file}, nil
+	return &TwitterDMListener{stream, a, receiver, file}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
@@ -644,7 +578,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet, v *VisionAPI, l *LanguageAPI) (bool, error)
+	check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c *Cache) (bool, error)
 	shouldRepeat() bool
 }
 
