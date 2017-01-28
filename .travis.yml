@@ -16,6 +16,7 @@ os:
   - linux
 
 script:
+  - go get -v ./...
   - go test -v ./...
 
 notifications:
