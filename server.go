@@ -772,11 +772,15 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &struct {
-		NavbarName string
-		Message    string
+		NavbarName     string
+		Message        string
+		ConsumerKey    string
+		ConsumerSecret string
 	}{
 		"",
 		msg,
+		twitterAuth.ConsumerKey,
+		twitterAuth.ConsumerSecret,
 	}
 
 	if msgCookie != nil {
