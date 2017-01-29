@@ -19,6 +19,7 @@ type Cache struct {
 	ImageSources         []string
 	ImageAnalysisResults []string
 	ImageAnalysisDates   []string
+	File                 string `json:"-" toml:"-"`
 }
 
 // NewCache creates an instance of Cache
@@ -33,6 +34,7 @@ func NewCache(path string) (*Cache, error) {
 		[]string{},
 		[]string{},
 		[]string{},
+		path,
 	}
 
 	info, _ := os.Stat(path)
@@ -56,8 +58,8 @@ func NewCache(path string) (*Cache, error) {
 }
 
 // Save saves the cache data to the specified file
-func (c *Cache) Save(path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0600)
+func (c *Cache) Save() error {
+	err := os.MkdirAll(filepath.Dir(c.File), 0600)
 	if err != nil {
 		return err
 	}
@@ -66,7 +68,7 @@ func (c *Cache) Save(path string) error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(path, data, 0600)
+		err = ioutil.WriteFile(c.File, data, 0600)
 		if err != nil {
 			return err
 		}

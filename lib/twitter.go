@@ -403,7 +403,6 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 type TwitterUserListener struct {
 	Stream *anaconda.Stream
 	api    *TwitterAPI
-	file   string
 }
 
 func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache *Cache) error {
@@ -443,7 +442,7 @@ func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, ca
 					l.api.cache.LatestTweetID[name] = c.Id
 				}
 			}
-			err := l.api.cache.Save(l.file)
+			err := l.api.cache.Save()
 			if err != nil {
 				return err
 			}
@@ -452,7 +451,7 @@ func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, ca
 }
 
 // ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListener, error) {
+func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
@@ -470,7 +469,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values, file string) (*TwitterUserListene
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.api.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a, file}, nil
+		return &TwitterUserListener{stream, a}, nil
 	}
 }
 
@@ -478,7 +477,6 @@ type TwitterDMListener struct {
 	Stream   *anaconda.Stream
 	api      *TwitterAPI
 	receiver DirectMessageReceiver
-	file     string
 }
 
 func (l *TwitterDMListener) Listen() error {
@@ -504,7 +502,7 @@ func (l *TwitterDMListener) Listen() error {
 					}
 				}
 			}
-			err := l.api.cache.Save(l.file)
+			err := l.api.cache.Save()
 			if err != nil {
 				return err
 			}
@@ -514,7 +512,7 @@ func (l *TwitterDMListener) Listen() error {
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, file string) (*TwitterDMListener, error) {
+func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) (*TwitterDMListener, error) {
 	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, err
@@ -522,7 +520,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	return &TwitterDMListener{stream, a, receiver, file}, nil
+	return &TwitterDMListener{stream, a, receiver}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {

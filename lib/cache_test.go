@@ -14,7 +14,7 @@ func TestCacheSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Save(path)
+	c.Save()
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("%s expected to exist but not", path)
 	}

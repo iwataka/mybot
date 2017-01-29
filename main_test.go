@@ -20,7 +20,7 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.Save(path)
+	err = c.Save()
 	if err != nil {
 		t.Fatal(err)
 	}

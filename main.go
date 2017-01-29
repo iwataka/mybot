@@ -228,7 +228,7 @@ func run(c *cli.Context) error {
 	if err != nil {
 		logger.Println(err)
 	}
-	err = cache.Save(ctxt.String("cache"))
+	err = cache.Save()
 	if err != nil {
 		logger.Println(err)
 	}
@@ -244,7 +244,7 @@ func twitterListenDM() {
 	defer status.UnlockListenDMRoutine()
 
 	r := twitterAPI.DefaultDirectMessageReceiver
-	listener, err := twitterAPI.ListenMyself(nil, r, ctxt.String("cache"))
+	listener, err := twitterAPI.ListenMyself(nil, r)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -266,7 +266,7 @@ func twitterListenUsers() {
 	status.LockListenUsersRoutine()
 	defer status.UnlockListenUsersRoutine()
 
-	listener, err := twitterAPI.ListenUsers(nil, ctxt.String("cache"))
+	listener, err := twitterAPI.ListenUsers(nil)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -296,7 +296,7 @@ func twitterPeriodically() {
 			logger.Println(err)
 			return
 		}
-		err = cache.Save(ctxt.String("cache"))
+		err = cache.Save()
 		if err != nil {
 			logger.Println(err)
 			return
