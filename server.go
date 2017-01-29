@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -35,10 +34,10 @@ var (
 func init() {
 	gothic.Store = sessions.NewCookieStore([]byte("mybot_session_key"))
 
-	tmpdir := os.TempDir()
-	err := RestoreAssets(tmpdir, htmlTemplateDir)
-	if err != nil {
-		panic(err)
+	tmplTexts := []string{}
+	for _, name := range AssetNames() {
+		tmplBytes := MustAsset(name)
+		tmplTexts = append(tmplTexts, string(tmplBytes))
 	}
 
 	funcMap := template.FuncMap{
@@ -50,10 +49,11 @@ func init() {
 		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
 	}
 
-	htmlTemplate, err = template.
-		New("index").
+	tmpl, err := template.
+		New("mybot_template_root").
 		Funcs(funcMap).
-		ParseGlob(filepath.Join(tmpdir, htmlTemplateDir, "*"))
+		Parse(strings.Join(tmplTexts, "\n"))
+	htmlTemplate = tmpl
 
 	if err != nil {
 		panic(err)
@@ -110,8 +110,8 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configAPIAddHandler),
 	)
 	http.HandleFunc(
-		"/assets/",
-		getAssets,
+		"/assets/css/",
+		getAssetsCSS,
 	)
 	http.HandleFunc(
 		"/log/",
@@ -707,7 +707,7 @@ func getConfigFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
 }
 
-func getAssets(w http.ResponseWriter, r *http.Request) {
+func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path[len("/"):]
 	data, err := readFile(path)
 	if err != nil {
