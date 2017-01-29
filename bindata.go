@@ -110,7 +110,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 50361, mode: os.FileMode(436), modTime: time.Unix(1485615898, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 50361, mode: os.FileMode(436), modTime: time.Unix(1485696559, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -230,7 +230,7 @@ func assetsTmplTwitter_setupTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/twitter_setup.tmpl", size: 1567, mode: os.FileMode(436), modTime: time.Unix(1485616185, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/twitter_setup.tmpl", size: 1567, mode: os.FileMode(436), modTime: time.Unix(1485696559, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

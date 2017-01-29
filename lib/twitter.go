@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"log"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -722,12 +721,20 @@ func CheckTwitterError(err error) bool {
 	if err == nil {
 		return false
 	}
-	switch e := err.(type) {
+
+	switch twitterErr := err.(type) {
 	case anaconda.TwitterError:
-		// 403 means that duplicated message exists
-		if e.Code == http.StatusForbidden {
+		// 327 means that duplicated message exists
+		if twitterErr.Code == 327 {
 			return false
 		}
+	case *anaconda.ApiError:
+		for _, e := range twitterErr.Decoded.Errors {
+			if CheckTwitterError(e) {
+				return true
+			}
+		}
+		return false
 	}
 	return true
 }
