@@ -66,13 +66,13 @@ func (a *TwitterAction) sub(action *TwitterAction) {
 type TwitterAPI struct {
 	api    *anaconda.TwitterApi
 	self   *anaconda.User
-	cache  *Cache
+	cache  Cache
 	config *Config
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth *OAuthCredentials, c *Cache, cfg *Config) *TwitterAPI {
+func NewTwitterAPI(auth *OAuthCredentials, c Cache, cfg *Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
 	return &TwitterAPI{api, nil, c, cfg}
 }
@@ -150,10 +150,14 @@ func (a *TwitterAPI) ProcessTimeline(
 	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
-	latestID, exists := a.cache.LatestTweetID[name]
+	latestID, exists := a.cache.GetLatestTweetID(name)
 	v.Set("screen_name", name)
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
+	} else {
+		// If the latest tweet ID doesn't exist, this fetches just the
+		// latest tweet and store that ID.
+		v.Set("count", "1")
 	}
 	tweets, err := a.api.GetUserTimeline(v)
 	if err != nil {
@@ -161,9 +165,9 @@ func (a *TwitterAPI) ProcessTimeline(
 	}
 	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
+		pp = &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache.LatestTweetID}
+		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestTweetID, a.cache.GetLatestTweetID}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
@@ -182,10 +186,14 @@ func (a *TwitterAPI) ProcessFavorites(
 	lang LanguageMatcher,
 	action *TwitterAction,
 ) ([]anaconda.Tweet, error) {
-	latestID, exists := a.cache.LatestFavoriteID[name]
+	latestID, exists := a.cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
 	if exists {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
+	} else {
+		// If the latest favorite ID doesn't exist, this fetches just
+		// the latest tweet and store that ID.
+		v.Set("count", "1")
 	}
 	tweets, err := a.api.GetFavorites(v)
 	if err != nil {
@@ -193,9 +201,9 @@ func (a *TwitterAPI) ProcessFavorites(
 	}
 	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
+		pp = &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache.LatestFavoriteID}
+		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestFavoriteID, a.cache.GetLatestFavoriteID}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
@@ -218,7 +226,7 @@ func (a *TwitterAPI) ProcessSearch(
 	if err != nil {
 		return nil, err
 	}
-	pp := &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
+	pp := &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
 	result, err := a.processTweets(res.Statuses, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
@@ -231,30 +239,35 @@ type (
 		Process(anaconda.Tweet, bool) error
 	}
 	TwitterPostProcessorTop struct {
-		screenName     string
-		screenName2top map[string]int64
+		screenName string
+		setID      func(screenName string, id int64) error
+		getID      func(screenName string) (int64, bool)
 	}
 	TwitterPostProcessorEach struct {
-		action       *TwitterAction
-		tweet2action map[string]*TwitterAction
+		action    *TwitterAction
+		setAction func(id string, action *TwitterAction) error
+		getAction func(id string) (*TwitterAction, bool)
 	}
 )
 
 func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
-	id, exists := p.screenName2top[p.screenName]
+	id, exists := p.getID(p.screenName)
 	if (exists && t.Id > id) || !exists {
-		p.screenName2top[p.screenName] = t.Id
+		err := p.setID(p.screenName, t.Id)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	if match {
-		ac, exists := p.tweet2action[t.IdStr]
+		ac, exists := p.getAction(t.IdStr)
 		if exists {
 			ac.add(p.action)
 		} else {
-			p.tweet2action[t.IdStr] = p.action
+			p.setAction(t.IdStr, p.action)
 		}
 	}
 	return nil
@@ -277,7 +290,7 @@ func (a *TwitterAPI) processTweets(
 			return nil, err
 		}
 		if match {
-			done := a.cache.Tweet2Action[t.IdStr]
+			done, _ := a.cache.GetTweetAction(t.IdStr)
 			err := a.processTweet(t, action, done)
 			if err != nil {
 				return nil, err
@@ -405,7 +418,7 @@ type TwitterUserListener struct {
 	api    *TwitterAPI
 }
 
-func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache *Cache) error {
+func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache Cache) error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
@@ -434,12 +447,15 @@ func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, ca
 					return err
 				}
 				if match {
-					done := l.api.cache.Tweet2Action[c.IdStr]
+					done, _ := l.api.cache.GetTweetAction(c.IdStr)
 					err := l.api.processTweet(c, timeline.Action, done)
 					if err != nil {
 						return err
 					}
-					l.api.cache.LatestTweetID[name] = c.Id
+					err = l.api.cache.SetLatestTweetID(name, c.Id)
+					if err != nil {
+						return err
+					}
 				}
 			}
 			err := l.api.cache.Save()
@@ -493,8 +509,8 @@ func (l *TwitterDMListener) Listen() error {
 					return err
 				}
 				if match {
-					if l.api.cache.LatestDMID < c.Id {
-						l.api.cache.LatestDMID = c.Id
+					if l.api.cache.GetLatestDMID() < c.Id {
+						l.api.cache.SetLatestDMID(c.Id)
 					}
 					err := l.api.responseForDirectMessage(c, l.receiver)
 					if err != nil {
@@ -552,7 +568,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c *Cache) (bool, error)
+	check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c Cache) (bool, error)
 	shouldRepeat() bool
 }
 

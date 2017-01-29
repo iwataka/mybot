@@ -188,12 +188,13 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	imageURL := ""
 	imageAnalysisResult := ""
 	imageAnalysisDate := ""
-	if len(cache.ImageSources) != 0 {
-		imageSource = cache.ImageSources[len(cache.ImageSources)-1]
-		imageURL = cache.ImageURLs[len(cache.ImageURLs)-1]
+	if len(cache.GetLatestImages(1)) != 0 {
+		imgCache := cache.GetLatestImages(1)[0]
+		imageSource = imgCache.Src
+		imageURL = imgCache.URL
 		if cache != nil {
 			buf := new(bytes.Buffer)
-			result := cache.ImageAnalysisResults[len(cache.ImageAnalysisResults)-1]
+			result := imgCache.AnalysisResult
 			err := json.Indent(buf, []byte(result), "", "  ")
 			if err != nil {
 				imageAnalysisResult = "Error while formatting the result"
@@ -201,7 +202,7 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 				imageAnalysisResult = buf.String()
 			}
 		}
-		imageAnalysisDate = cache.ImageAnalysisDates[len(cache.ImageAnalysisDates)-1]
+		imageAnalysisDate = imgCache.AnalysisDate
 	}
 
 	colMap := make(map[string]string)

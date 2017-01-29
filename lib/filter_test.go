@@ -11,7 +11,7 @@ func init() {
 	languageMatcher = &EmptyLanguageMatcher{}
 
 	var err error
-	cache, err = NewCache("")
+	cache, err = NewFileCache("")
 	if err != nil {
 		panic(err)
 	}
@@ -20,7 +20,7 @@ func init() {
 var (
 	visionMatcher   *EmptyVisionMatcher
 	languageMatcher *EmptyLanguageMatcher
-	cache           *Cache
+	cache           Cache
 )
 
 type (

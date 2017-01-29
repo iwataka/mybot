@@ -22,7 +22,7 @@ type TweetFilterConfig struct {
 	Language           *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
-func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache *Cache) (bool, error) {
+func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache Cache) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -88,14 +88,15 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageM
 				continue
 			}
 
-			cache.ImageAnalysisDates =
-				append(cache.ImageAnalysisDates, time.Now().Format(time.RubyDate))
-			cache.ImageAnalysisResults =
-				append(cache.ImageAnalysisResults, result)
 			srcFmt := "https://twitter.com/%s/status/%s"
 			tweetSrc := fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
-			cache.ImageSources = append(cache.ImageSources, tweetSrc)
-			cache.ImageURLs = append(cache.ImageURLs, urls[i])
+			imgCache := ImageCacheData{
+				urls[i],
+				tweetSrc,
+				result,
+				time.Now().Format(time.RubyDate),
+			}
+			cache.SetImage(imgCache)
 		}
 
 		match := false

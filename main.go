@@ -19,7 +19,7 @@ var (
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
 	config      *mybot.Config
-	cache       *mybot.Cache
+	cache       mybot.Cache
 	logger      *mybot.Logger
 	status      *mybot.Status
 
@@ -201,7 +201,7 @@ func beforeRunning(c *cli.Context) error {
 
 func beforeValidate(c *cli.Context) error {
 	var err error
-	cache, err = mybot.NewCache(c.String("cache"))
+	cache, err = mybot.NewFileCache(c.String("cache"))
 	if err != nil {
 		panic(err)
 	}
