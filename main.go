@@ -465,7 +465,7 @@ func runTwitterWithStream() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			ts, err := twitterAPI.DoForSearch(query, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessSearch(query, v, a.Filter, visionAPI, languageAPI, a.Action)
 			if err != nil {
 				return err
 			}
@@ -478,7 +478,7 @@ func runTwitterWithStream() error {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForFavorites(name, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessFavorites(name, v, a.Filter, visionAPI, languageAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
@@ -523,7 +523,7 @@ func runTwitterWithoutStream() error {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.DoForAccount(name, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessTimeline(name, v, a.Filter, visionAPI, languageAPI, a.Action)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err

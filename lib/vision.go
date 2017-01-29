@@ -86,7 +86,7 @@ func (a *VisionAPI) MatchImages(
 		return []string{}, []bool{}, nil
 	}
 
-	features := VisionFeatures(cond)
+	features := cond.VisionFeatures()
 	if len(features) == 0 {
 		results := make([]string, len(urls), len(urls))
 		matches := []bool{}
@@ -190,7 +190,7 @@ func (a *VisionAPI) Enabled() bool {
 	return a.api != nil
 }
 
-func VisionFeatures(cond *VisionCondition) []*vision.Feature {
+func (cond *VisionCondition) VisionFeatures() []*vision.Feature {
 	features := []*vision.Feature{}
 	if cond.Label != nil && len(cond.Label) != 0 {
 		f := &vision.Feature{

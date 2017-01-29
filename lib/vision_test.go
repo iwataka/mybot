@@ -14,7 +14,7 @@ func TestVisionFeatures(t *testing.T) {
 		},
 		Text: []string{"text"},
 	}
-	fs := VisionFeatures(cond)
+	fs := cond.VisionFeatures()
 	if len(fs) != 3 {
 		t.Fatalf("%v has %d elements but should have %d", fs, len(fs), 3)
 	}

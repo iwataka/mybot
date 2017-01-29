@@ -140,9 +140,9 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-// DoForAccount gets tweets from the specified user's timeline and do action
+// ProcessTimeline gets tweets from the specified user's timeline and do action
 // for tweets filtered by c.
-func (a *TwitterAPI) DoForAccount(
+func (a *TwitterAPI) ProcessTimeline(
 	name string,
 	v url.Values,
 	c TweetChecker,
@@ -165,16 +165,16 @@ func (a *TwitterAPI) DoForAccount(
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache.LatestTweetID}
 	}
-	result, err := a.doForTweets(tweets, c, vision, lang, action, pp)
+	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-// DoForFavorites gets tweets from the specified user's favorite list and do
+// ProcessFavorites gets tweets from the specified user's favorite list and do
 // action for tweets filtered by c.
-func (a *TwitterAPI) DoForFavorites(
+func (a *TwitterAPI) ProcessFavorites(
 	name string,
 	v url.Values,
 	c TweetChecker,
@@ -197,16 +197,16 @@ func (a *TwitterAPI) DoForFavorites(
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache.LatestFavoriteID}
 	}
-	result, err := a.doForTweets(tweets, c, vision, lang, action, pp)
+	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-// DoForSearch gets tweets from search result by the specified query and do
+// ProcessSearch gets tweets from search result by the specified query and do
 // action for tweets filtered by c.
-func (a *TwitterAPI) DoForSearch(
+func (a *TwitterAPI) ProcessSearch(
 	query string,
 	v url.Values,
 	c TweetChecker,
@@ -219,7 +219,7 @@ func (a *TwitterAPI) DoForSearch(
 		return nil, err
 	}
 	pp := &TwitterPostProcessorEach{action, a.cache.Tweet2Action}
-	result, err := a.doForTweets(res.Statuses, c, vision, lang, action, pp)
+	result, err := a.processTweets(res.Statuses, c, vision, lang, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	return nil
 }
 
-func (a *TwitterAPI) doForTweets(
+func (a *TwitterAPI) processTweets(
 	tweets []anaconda.Tweet,
 	c TweetChecker,
 	v VisionMatcher,
@@ -604,7 +604,7 @@ var configCommand = &DirectMessageCommand{
 			return "This command can't accept any arguments", nil
 		}
 
-		bs, err := a.config.Read(strings.Repeat(" ", 4))
+		bs, err := a.config.ToText(strings.Repeat(" ", 4))
 		if err != nil {
 			return "", err
 		}

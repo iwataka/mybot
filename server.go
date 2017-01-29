@@ -23,8 +23,9 @@ import (
 
 const (
 	// go1.5 or lower doesn't support http.MethodPost and else.
-	methodPost = "POST"
-	methodGet  = "GET"
+	methodPost      = "POST"
+	methodGet       = "GET"
+	htmlTemplateDir = "assets/tmpl"
 )
 
 var (
@@ -35,7 +36,7 @@ func init() {
 	gothic.Store = sessions.NewCookieStore([]byte("mybot_session_key"))
 
 	tmpdir := os.TempDir()
-	err := RestoreAssets(tmpdir, "assets/tmpl")
+	err := RestoreAssets(tmpdir, htmlTemplateDir)
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +53,7 @@ func init() {
 	htmlTemplate, err = template.
 		New("index").
 		Funcs(funcMap).
-		ParseGlob(filepath.Join(tmpdir, "assets/tmpl/*"))
+		ParseGlob(filepath.Join(tmpdir, htmlTemplateDir, "*"))
 
 	if err != nil {
 		panic(err)
@@ -668,7 +669,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request) {
 		msg = err.Error()
 		return
 	}
-	err = config.Write(bytes)
+	err = config.FromText(bytes)
 	if err != nil {
 		msg = err.Error()
 		return

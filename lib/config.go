@@ -188,10 +188,10 @@ func (c *Config) ValidateWithAPI(api *TwitterAPI) error {
 	return nil
 }
 
-// Read returns a configuration content as a toml text. If error occurs while
+// ToText returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *Config) Read(indent string) ([]byte, error) {
+func (c *Config) ToText(indent string) ([]byte, error) {
 	ext := filepath.Ext(c.File)
 	buf := new(bytes.Buffer)
 	switch ext {
@@ -218,7 +218,7 @@ func (c *Config) Read(indent string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Config) Write(bytes []byte) error {
+func (c *Config) FromText(bytes []byte) error {
 	ext := filepath.Ext(c.File)
 	switch ext {
 	case ".json":
@@ -268,7 +268,7 @@ func (c *Config) Load() error {
 		if err != nil {
 			return err
 		}
-		err = c.Write(bytes)
+		err = c.FromText(bytes)
 		if err != nil {
 			return err
 		}
