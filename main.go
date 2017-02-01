@@ -36,48 +36,48 @@ func main() {
 		panic(err)
 	}
 
-	confPrefix := ".config/mybot/"
-	cachePrefix := ".cache/mybot/"
+	configDir := filepath.Join(home, ".config", "mybot")
+	cacheDir := filepath.Join(home, ".cache", "mybot")
 
 	logFlag := cli.StringFlag{
 		Name:  "log",
-		Value: filepath.Join(home, cachePrefix+"mybot.log"),
+		Value: filepath.Join(cacheDir, "mybot.log"),
 		Usage: "Log file's location",
 	}
 
 	configFlag := cli.StringFlag{
 		Name:  "config",
-		Value: filepath.Join(home, confPrefix+"config.toml"),
+		Value: filepath.Join(configDir, "config.toml"),
 		Usage: "Config file's location",
 	}
 
 	cacheFlag := cli.StringFlag{
 		Name:  "cache",
-		Value: filepath.Join(home, cachePrefix+"cache.json"),
+		Value: filepath.Join(cacheDir, "cache.json"),
 		Usage: "Cache file's location",
 	}
 
 	gcloudFlag := cli.StringFlag{
 		Name:  "gcloud",
-		Value: filepath.Join(home, confPrefix+"google_application_credentials.json"),
+		Value: filepath.Join(configDir, "google_application_credentials.json"),
 		Usage: "Credential file for Google Cloud Platform",
 	}
 
 	twitterFlag := cli.StringFlag{
 		Name:  "twitter",
-		Value: filepath.Join(home, confPrefix+"twitter_authentication.toml"),
+		Value: filepath.Join(configDir, "twitter_authentication.toml"),
 		Usage: "Credential file for Twitter API",
 	}
 
 	certFlag := cli.StringFlag{
 		Name:  "cert",
-		Value: filepath.Join(home, confPrefix+"mybot.crt"),
+		Value: filepath.Join(configDir, "mybot.crt"),
 		Usage: "Certification file for server",
 	}
 
 	keyFlag := cli.StringFlag{
 		Name:  "key",
-		Value: filepath.Join(home, confPrefix+"mybot.key"),
+		Value: filepath.Join(configDir, "mybot.key"),
 		Usage: "Key file for server",
 	}
 
