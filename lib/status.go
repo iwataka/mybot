@@ -13,15 +13,9 @@ type Status struct {
 	twitterListenUsersStatusMutex *sync.Mutex
 	TwitterStatus                 bool
 
-	MonitorConfigStatus      bool
-	MonitorTwitterCred       bool
-	MonitorGCloudCred        bool
-	monitorConfigStatusChans []chan bool
-	monitorTwitterCredChans  []chan bool
-	monitorGCloudCredChans   []chan bool
-	MonitorConfigStatusMutex *sync.Mutex
-	MonitorTwitterCredMutex  *sync.Mutex
-	MonitorGCloudCredMutex   *sync.Mutex
+	MonitorStatus map[string]bool
+	MonitorChans  map[string][]chan bool
+	MonitorMutex  map[string]*sync.Mutex
 
 	ServerStatus bool
 
@@ -37,15 +31,9 @@ func NewStatus() *Status {
 		new(sync.Mutex),
 		false,
 
-		false,
-		false,
-		false,
-		[]chan bool{},
-		[]chan bool{},
-		[]chan bool{},
-		new(sync.Mutex),
-		new(sync.Mutex),
-		new(sync.Mutex),
+		make(map[string]bool),
+		make(map[string][]chan bool),
+		make(map[string]*sync.Mutex),
 
 		false,
 
@@ -82,43 +70,60 @@ func (s *Status) CheckTwitterListenUsersStatus() bool {
 	return s.twitterListenUsersStatus
 }
 
-func (s *Status) AddMonitorConfigStatusChan(c chan bool) {
-	s.MonitorConfigStatusMutex.Lock()
-	s.monitorConfigStatusChans = append(s.monitorConfigStatusChans, c)
-	s.MonitorConfigStatusMutex.Unlock()
+func (s *Status) initStatus(file string) {
+	_, exists := s.MonitorStatus[file]
+	if !exists {
+		s.MonitorStatus[file] = false
+	}
 }
 
-func (s *Status) AddMonitorTwitterCredChan(c chan bool) {
-	s.MonitorTwitterCredMutex.Lock()
-	s.monitorTwitterCredChans = append(s.monitorTwitterCredChans, c)
-	s.MonitorTwitterCredMutex.Unlock()
+func (s *Status) GetMonitorStatus(file string) bool {
+	s.initStatus(file)
+	return s.MonitorStatus[file]
 }
 
-func (s *Status) AddMonitorGCloudCredChan(c chan bool) {
-	s.MonitorGCloudCredMutex.Lock()
-	s.monitorGCloudCredChans = append(s.monitorGCloudCredChans, c)
-	s.MonitorGCloudCredMutex.Unlock()
+func (s *Status) SetMonitorStatus(file string, flag bool) {
+	s.initStatus(file)
+	s.MonitorStatus[file] = flag
 }
 
-func (s *Status) SendToMonitorConfigStatusChans(flag bool) {
-	for _, c := range s.monitorConfigStatusChans {
+func (s *Status) initMutex(file string) {
+	_, exists := s.MonitorMutex[file]
+	if !exists {
+		s.MonitorMutex[file] = new(sync.Mutex)
+	}
+}
+
+func (s *Status) LockMonitor(file string) {
+	s.initMutex(file)
+	s.MonitorMutex[file].Lock()
+}
+
+func (s *Status) UnlockMonitor(file string) {
+	s.initMutex(file)
+	s.MonitorMutex[file].Unlock()
+}
+
+func (s *Status) initChans(file string) {
+	_, exists := s.MonitorChans[file]
+	if !exists {
+		s.MonitorChans[file] = []chan bool{}
+	}
+}
+
+func (s *Status) AddMonitorChan(file string, c chan bool) {
+	s.initChans(file)
+	s.LockMonitor(file)
+	s.MonitorChans[file] = append(s.MonitorChans[file], c)
+	s.UnlockMonitor(file)
+}
+
+func (s *Status) SendToMonitor(file string, flag bool) {
+	s.initChans(file)
+	for _, c := range s.MonitorChans[file] {
 		c <- flag
 	}
-	s.monitorConfigStatusChans = []chan bool{}
-}
-
-func (s *Status) SendToMonitorTwitterCredChans(flag bool) {
-	for _, c := range s.monitorTwitterCredChans {
-		c <- flag
-	}
-	s.monitorTwitterCredChans = []chan bool{}
-}
-
-func (s *Status) SendToMonitorGCloudCredChans(flag bool) {
-	for _, c := range s.monitorGCloudCredChans {
-		c <- flag
-	}
-	s.monitorGCloudCredChans = []chan bool{}
+	s.initChans(file)
 }
 
 func (s *Status) UpdateTwitterAuth(api *TwitterAPI) {

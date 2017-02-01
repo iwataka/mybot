@@ -792,10 +792,10 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	if ck != "" && cs != "" {
 		twitterApp.ConsumerKey = ck
 		twitterApp.ConsumerSecret = cs
-		c := make(chan bool, 2)
+		c := make(chan bool)
 		defer close(c)
-		status.AddMonitorTwitterCredChan(c)
-		twitterAuth.Encode()
+		status.AddMonitorChan(ctxt.String("twitter-app"), c)
+		twitterApp.Encode()
 		<-c
 	} else {
 		msg = "Both of Consumer Key and Consumer Secret can't be empty"
@@ -847,7 +847,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	twitterAuth.AccessTokenSecret = user.AccessTokenSecret
 	c := make(chan bool)
 	defer close(c)
-	status.AddMonitorTwitterCredChan(c)
+	status.AddMonitorChan(ctxt.String("twitter"), c)
 	err = twitterAuth.Encode()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

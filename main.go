@@ -63,6 +63,12 @@ func main() {
 		Usage: "Credential file for Google Cloud Platform",
 	}
 
+	twitterAppFlag := cli.StringFlag{
+		Name:  "twitter-app",
+		Value: filepath.Join(configDir, "twitter_application_settings.toml"),
+		Usage: "Application Setting file for Twitter API",
+	}
+
 	twitterFlag := cli.StringFlag{
 		Name:  "twitter",
 		Value: filepath.Join(configDir, "twitter_authentication.toml"),
@@ -98,19 +104,19 @@ func main() {
 		configFlag,
 		cacheFlag,
 		gcloudFlag,
+		twitterAppFlag,
 		twitterFlag,
 	}
 
 	serveFlags := []cli.Flag{
-		logFlag,
-		configFlag,
-		cacheFlag,
-		gcloudFlag,
-		twitterFlag,
 		certFlag,
 		keyFlag,
 		hostFlag,
 		portFlag,
+	}
+	// All `run` flags should be `serve` flag
+	for _, f := range runFlags {
+		serveFlags = append(serveFlags, f)
 	}
 
 	app := cli.NewApp()
@@ -213,8 +219,8 @@ func beforeValidate(c *cli.Context) error {
 	}
 
 	twitterApp = &mybot.OAuthApp{}
-	err = twitterApp.Decode(c.String("twitter"))
-	if _, ok := err.(*mybot.TomlUndecodedKeysError); !ok && err != nil {
+	err = twitterApp.Decode(c.String("twitter-app"))
+	if err != nil {
 		panic(err)
 	}
 
@@ -319,90 +325,118 @@ func twitterPeriodically() {
 }
 
 func monitorConfig() {
-	if status.MonitorConfigStatus {
+	file := ctxt.String("config")
+
+	if status.GetMonitorStatus(file) {
 		return
 	}
-	status.MonitorConfigStatus = true
-	defer func() { status.MonitorConfigStatus = false }()
+	status.SetMonitorStatus(file, true)
+	defer func() { status.SetMonitorStatus(file, false) }()
+
 	monitorFile(
-		ctxt.String("config"),
+		file,
 		time.Duration(1)*time.Second,
 		func() {
-			status.MonitorConfigStatusMutex.Lock()
-			defer status.MonitorConfigStatusMutex.Unlock()
-			cfg, err := mybot.NewConfig(ctxt.String("config"))
+			status.LockMonitor(file)
+			defer status.UnlockMonitor(file)
+			cfg, err := mybot.NewConfig(file)
 			if err == nil {
 				*config = *cfg
 				reloadListeners()
 			}
-			status.SendToMonitorConfigStatusChans(true)
+			status.SendToMonitor(file, true)
+		},
+	)
+}
+
+func monitorTwitterApp() {
+	file := ctxt.String("twitter-app")
+
+	if status.GetMonitorStatus(file) {
+		return
+	}
+	status.SetMonitorStatus(file, true)
+	defer func() { status.SetMonitorStatus(file, false) }()
+
+	monitorFile(
+		file,
+		time.Duration(1)*time.Second,
+		func() {
+			status.LockMonitor(file)
+			defer status.UnlockMonitor(file)
+
+			app := &mybot.OAuthApp{}
+			err := app.Decode(file)
+			if err == nil {
+				*twitterApp = *app
+				anaconda.SetConsumerKey(app.ConsumerKey)
+				anaconda.SetConsumerSecret(app.ConsumerSecret)
+				status.UpdateTwitterAuth(twitterAPI)
+				reloadListeners()
+			}
+
+			status.SendToMonitor(file, true)
 		},
 	)
 }
 
 func monitorTwitterCred() {
-	if status.MonitorTwitterCred {
+	file := ctxt.String("twitter")
+
+	if status.GetMonitorStatus(file) {
 		return
 	}
-	status.MonitorTwitterCred = true
-	defer func() { status.MonitorTwitterCred = false }()
+	status.SetMonitorStatus(file, true)
+	defer func() { status.SetMonitorStatus(file, false) }()
+
 	monitorFile(
-		ctxt.String("twitter"),
+		file,
 		time.Duration(1)*time.Second,
 		func() {
-			status.MonitorTwitterCredMutex.Lock()
-			defer status.MonitorTwitterCredMutex.Unlock()
-
-			app := &mybot.OAuthApp{}
-			err := app.Decode(ctxt.String("twitter"))
-			_, ok := err.(*mybot.TomlUndecodedKeysError)
-			success := ok || err == nil
-			if success {
-				*twitterApp = *app
-				anaconda.SetConsumerKey(app.ConsumerKey)
-				anaconda.SetConsumerSecret(app.ConsumerSecret)
-			}
+			status.LockMonitor(file)
+			defer status.UnlockMonitor(file)
 
 			auth := &mybot.OAuthCredentials{}
-			err = auth.Decode(ctxt.String("twitter"))
-			success = success && err == nil
-			if success {
+			err := auth.Decode(file)
+			if err == nil {
 				*twitterAuth = *auth
-				api := mybot.NewTwitterAPI(auth, cache, config)
-				*twitterAPI = *api
-				status.UpdateTwitterAuth(api)
+				*twitterAPI = *mybot.NewTwitterAPI(auth, cache, config)
+				status.UpdateTwitterAuth(twitterAPI)
 				reloadListeners()
 			}
 
-			status.SendToMonitorTwitterCredChans(true)
+			status.SendToMonitor(file, true)
 		},
 	)
 }
 
 func monitorGCloudCred() {
-	if status.MonitorGCloudCred {
+	file := ctxt.String("gcloud")
+
+	if status.GetMonitorStatus(file) {
 		return
 	}
-	status.MonitorGCloudCred = true
-	defer func() { status.MonitorGCloudCred = false }()
+	status.SetMonitorStatus(file, true)
+	defer func() { status.SetMonitorStatus(file, false) }()
+
 	monitorFile(
-		ctxt.String("gcloud"),
+		file,
 		time.Duration(1)*time.Second,
 		func() {
-			status.MonitorGCloudCredMutex.Lock()
-			defer status.MonitorGCloudCredMutex.Unlock()
-			vis, err := mybot.NewVisionAPI(ctxt.String("gcloud"))
+			status.LockMonitor(file)
+			defer status.UnlockMonitor(file)
+			vis, err := mybot.NewVisionAPI(file)
 			if err == nil {
 				*visionAPI = *vis
 				return
 			}
-			lang, err := mybot.NewLanguageAPI(ctxt.String("gcloud"))
+			lang, err := mybot.NewLanguageAPI(file)
 			if err == nil {
 				*languageAPI = *lang
 				return
 			}
 			reloadListeners()
-			status.SendToMonitorTwitterCredChans(true)
+			status.SendToMonitor(file, true)
 		},
 	)
 }
@@ -448,6 +482,7 @@ func serve(c *cli.Context) error {
 
 	go monitorConfig()
 	go monitorTwitterCred()
+	go monitorTwitterApp()
 	go monitorGCloudCred()
 
 	ch := make(chan bool)
