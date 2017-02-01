@@ -790,12 +790,12 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	cs := val["twitter_setup.consumer_secret"][0]
 
 	if ck != "" && cs != "" {
-		twitterAuth.ConsumerKey = ck
-		twitterAuth.ConsumerSecret = cs
+		twitterApp.ConsumerKey = ck
+		twitterApp.ConsumerSecret = cs
 		c := make(chan bool, 2)
 		defer close(c)
 		status.AddMonitorTwitterCredChan(c)
-		twitterAuth.Write()
+		twitterAuth.Encode()
 		<-c
 	} else {
 		msg = "Both of Consumer Key and Consumer Secret can't be empty"
@@ -817,8 +817,8 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	}{
 		"",
 		msg,
-		twitterAuth.ConsumerKey,
-		twitterAuth.ConsumerSecret,
+		twitterApp.ConsumerKey,
+		twitterApp.ConsumerSecret,
 	}
 
 	if msgCookie != nil {
@@ -848,7 +848,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	c := make(chan bool)
 	defer close(c)
 	status.AddMonitorTwitterCredChan(c)
-	err = twitterAuth.Write()
+	err = twitterAuth.Encode()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -878,8 +878,8 @@ func initProvider(host, name string) {
 	switch name {
 	case "twitter":
 		p = twitter.New(
-			twitterAuth.ConsumerKey,
-			twitterAuth.ConsumerSecret,
+			twitterApp.ConsumerKey,
+			twitterApp.ConsumerSecret,
 			callback,
 		)
 	}

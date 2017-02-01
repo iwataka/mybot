@@ -1,8 +1,6 @@
 package mybot
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -52,19 +50,9 @@ func NewFileCache(path string) (*FileCache, error) {
 
 	info, _ := os.Stat(path)
 	if info != nil && !info.IsDir() {
-		data, err := ioutil.ReadFile(path)
-
-		// If the specified file is empty, returns empty cache
-		if len(data) == 0 {
-			return c, nil
-		}
-
+		err := DecodeFile(path, c)
 		if err != nil {
-			return c, err
-		}
-		err = json.Unmarshal(data, c)
-		if err != nil {
-			return c, err
+			return nil, err
 		}
 	}
 	return c, nil
@@ -129,11 +117,7 @@ func (c *FileCache) Save() error {
 		return err
 	}
 	if c != nil {
-		data, err := json.Marshal(c)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(c.File, data, 0600)
+		err := EncodeFile(c.File, c)
 		if err != nil {
 			return err
 		}

@@ -15,6 +15,7 @@ import (
 
 var (
 	twitterAPI  *mybot.TwitterAPI
+	twitterApp  *mybot.OAuthApp
 	twitterAuth *mybot.OAuthCredentials
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
@@ -211,13 +212,20 @@ func beforeValidate(c *cli.Context) error {
 		panic(err)
 	}
 
+	twitterApp = &mybot.OAuthApp{}
+	err = twitterApp.Decode(c.String("twitter"))
+	if _, ok := err.(*mybot.TomlUndecodedKeysError); !ok && err != nil {
+		panic(err)
+	}
+
 	twitterAuth = &mybot.OAuthCredentials{}
-	err = twitterAuth.Read(c.String("twitter"))
+	err = twitterAuth.Decode(c.String("twitter"))
 	if err != nil {
 		panic(err)
 	}
-	anaconda.SetConsumerKey(twitterAuth.ConsumerKey)
-	anaconda.SetConsumerSecret(twitterAuth.ConsumerSecret)
+
+	anaconda.SetConsumerKey(twitterApp.ConsumerKey)
+	anaconda.SetConsumerSecret(twitterApp.ConsumerSecret)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
 	return nil
@@ -344,16 +352,28 @@ func monitorTwitterCred() {
 		func() {
 			status.MonitorTwitterCredMutex.Lock()
 			defer status.MonitorTwitterCredMutex.Unlock()
+
+			app := &mybot.OAuthApp{}
+			err := app.Decode(ctxt.String("twitter"))
+			_, ok := err.(*mybot.TomlUndecodedKeysError)
+			success := ok || err == nil
+			if success {
+				*twitterApp = *app
+				anaconda.SetConsumerKey(app.ConsumerKey)
+				anaconda.SetConsumerSecret(app.ConsumerSecret)
+			}
+
 			auth := &mybot.OAuthCredentials{}
-			err := auth.Read(ctxt.String("twitter"))
-			if err == nil {
-				anaconda.SetConsumerKey(auth.ConsumerKey)
-				anaconda.SetConsumerSecret(auth.ConsumerSecret)
+			err = auth.Decode(ctxt.String("twitter"))
+			success = success && err == nil
+			if success {
+				*twitterAuth = *auth
 				api := mybot.NewTwitterAPI(auth, cache, config)
 				*twitterAPI = *api
 				status.UpdateTwitterAuth(api)
 				reloadListeners()
 			}
+
 			status.SendToMonitorTwitterCredChans(true)
 		},
 	)
