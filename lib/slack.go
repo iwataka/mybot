@@ -1,6 +1,8 @@
 package mybot
 
 import (
+	"fmt"
+
 	"github.com/iwataka/anaconda"
 	"github.com/nlopes/slack"
 )
@@ -91,7 +93,14 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 		if err.Error() == "channel_not_found" {
 			_, err := a.api.CreateChannel(channel)
 			if err != nil {
-				return err
+				if err.Error() == "user_is_bot" {
+					err := a.notifyCreateChannel(channel)
+					if err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
 			}
 			err = a.PostTweet(channel, tweet)
 			if err != nil {
@@ -102,4 +111,11 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 		}
 	}
 	return nil
+}
+
+func (a *SlackAPI) notifyCreateChannel(ch string) error {
+	params := slack.PostMessageParameters{}
+	msg := fmt.Sprintf("Create #%s instead of me", ch)
+	_, _, err := a.api.PostMessage("general", msg, params)
+	return err
 }
