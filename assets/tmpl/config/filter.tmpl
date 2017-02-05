@@ -1,0 +1,136 @@
+{{define "filter_config"}}
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <td></td>
+                <td></td>
+                <td>name</td>
+                <td>value</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td rowspan="8">General</td>
+                <td rowspan="8">General</td>
+                <td>patterns</td>
+                <td>
+                    {{listTextbox .Main.Patterns (printf "%s%s" .Prefix ".filter.patterns")}}
+                </td>
+            </tr>
+            <tr>
+                <td>url patterns</td>
+                <td>
+                    {{listTextbox .Main.URLPatterns (printf "%s%s" .Prefix ".filter.url_patterns")}}
+                </td>
+            </tr>
+            <tr>
+                <td>has media</td>
+                <td>
+                    {{boolSelectbox .Main.HasMedia (printf "%s%s" .Prefix ".filter.has_media")}}
+                </td>
+            </tr>
+            <tr>
+                <td>has url</td>
+                <td>
+                    {{boolSelectbox .Main.HasURL (printf "%s%s" .Prefix ".filter.has_url")}}
+                </td>
+            </tr>
+            <tr>
+                <td>retweeted</td>
+                <td>
+                    {{boolSelectbox .Main.Retweeted (printf "%s%s" .Prefix ".filter.retweeted")}}
+                </td>
+            </tr>
+            <tr>
+                <td>favorite threshold</td>
+                <td>
+                    {{textboxOfIntPtr .Main.FavoriteThreshold (printf "%s%s" .Prefix ".filter.favorite_threshold")}}
+                </td>
+            </tr>
+            <tr>
+                <td>retweeted threshold</td>
+                <td>
+                    {{textboxOfIntPtr .Main.RetweetedThreshold (printf "%s%s" .Prefix ".filter.retweeted_threshold")}}
+                </td>
+            </tr>
+            <tr>
+                <td>lang</td>
+                <td>
+                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.filter.lang`}}" value="{{.Main.Lang}}">
+                </td>
+            </tr>
+            <!-- Vision API -->
+            <tr>
+                <td rowspan="8">Vision</td>
+                <td>Label</td>
+                <td>label</td>
+                <td>
+                    {{listTextbox .Main.Vision.Label (printf "%s%s" .Prefix ".filter.vision.label")}}
+                </td>
+            </tr>
+            <tr>
+                <td rowspan="4">Face</td>
+                <td>anger likelihood</td>
+                <td>
+                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.filter.vision.face.anger_likelihood`}}" value="{{.Main.Vision.Face.AngerLikelihood}}">
+                </td>
+            </tr>
+            <tr>
+                <td>blurred likelihood</td>
+                <td>
+                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.filter.vision.face.blurred_likelihood`}}"`value="{{.Main.Vision.Face.BlurredLikelihood}}">
+                </td>
+            </tr>
+            <tr>
+                <td>headwear likelihood</td>
+                <td>
+                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.filter.vision.face.headwear_likelihood`}}" value="{{.Main.Vision.Face.HeadwearLikelihood}}">
+                </td>
+            </tr>
+            <tr>
+                <td>joy likelihood</td>
+                <td>
+                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.filter.vision.face.joy_likelihood`}}" value="{{.Main.Vision.Face.JoyLikelihood}}">
+                </td>
+            </tr>
+            <tr>
+                <td>Text</td>
+                <td>text</td>
+                <td>
+                    {{listTextbox .Main.Vision.Text (printf "%s%s" .Prefix ".filter.vision.text")}}
+                </td>
+            </tr>
+            <tr>
+                <td>Landmark</td>
+                <td>landmark</td>
+                <td>
+                    {{listTextbox .Main.Vision.Landmark (printf "%s%s" .Prefix ".filter.vision.landmark")}}
+                </td>
+            </tr>
+            <tr>
+                <td>Logo</td>
+                <td>logo</td>
+                <td>
+                    {{listTextbox .Main.Vision.Logo (printf "%s%s" .Prefix ".filter.vision.logo")}}
+                </td>
+            </tr>
+            <!-- Language API -->
+            <tr>
+                <td rowspan="2">Language</td>
+                <td rowspan="2">Language</td>
+                <td>min sentiment</td>
+                <td>
+                    {{textboxOfFloat64Ptr .Main.Language.MinSentiment (printf "%s%s" .Prefix ".filter.language.min_sentiment")}}
+                </td>
+            </tr>
+            <tr>
+                <td>max sentiment</td>
+                <td>
+                    {{textboxOfFloat64Ptr .Main.Language.MaxSentiment (printf "%s%s" .Prefix ".filter.language.max_sentiment")}}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{{end}}

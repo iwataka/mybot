@@ -47,6 +47,7 @@ func init() {
 		"listTextbox":         mybot.ListTextbox,
 		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
 		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
+		"withPrefix":          mybot.NewWithPrefix,
 	}
 
 	tmpl, err := template.
@@ -289,9 +290,9 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
-	actionRetweetCounter := checkboxCounter{"twitter.timelines.action.retweet", 0}
-	actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.favorite", 0}
-	actionFollowCounter := checkboxCounter{"twitter.timelines.action.follow", 0}
+	actionRetweetCounter := checkboxCounter{"twitter.timelines.action.twitter.retweet", 0}
+	actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.twitter.favorite", 0}
+	actionFollowCounter := checkboxCounter{"twitter.timelines.action.twitter.follow", 0}
 	length := len(val["twitter.timelines.count"])
 	timelines := []mybot.TimelineConfig{}
 	for i := 0; i < length; i++ {
@@ -311,48 +312,21 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		timeline.Count = count
-		timeline.Filter.Patterns = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.patterns")
-		timeline.Filter.URLPatterns = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.url_patterns")
-		timeline.Filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, "twitter.timelines.filter.has_media")
-		timeline.Filter.HasURL = mybot.GetBoolSelectboxValue(val, i, "twitter.timelines.filter.has_url")
-		timeline.Filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, "twitter.timelines.filter.retweeted")
-		fThreshold, err := mybot.GetIntPtr(val, i, "twitter.timelines.filter.favorite_threshold")
+		filter, err := postConfigForFilter(val, i, "twitter.timelines")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		timeline.Filter.FavoriteThreshold = fThreshold
-		rThreshold, err := mybot.GetIntPtr(val, i, "twitter.timelines.filter.retweeted_threshold")
+		timeline.Filter = filter
+		action, err := postConfigForAction(val, i, "twitter.timelines")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		timeline.Filter.RetweetedThreshold = rThreshold
-		timeline.Filter.Lang = val["twitter.timelines.filter.lang"][i]
-		timeline.Filter.Vision.Label = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.vision.label")
-		timeline.Filter.Vision.Face.AngerLikelihood = val["twitter.timelines.filter.vision.face.anger_likelihood"][i]
-		timeline.Filter.Vision.Face.BlurredLikelihood = val["twitter.timelines.filter.vision.face.blurred_likelihood"][i]
-		timeline.Filter.Vision.Face.HeadwearLikelihood = val["twitter.timelines.filter.vision.face.headwear_likelihood"][i]
-		timeline.Filter.Vision.Face.JoyLikelihood = val["twitter.timelines.filter.vision.face.joy_likelihood"][i]
-		timeline.Filter.Vision.Text = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.vision.text")
-		timeline.Filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.vision.landmark")
-		timeline.Filter.Vision.Logo = mybot.GetListTextboxValue(val, i, "twitter.timelines.filter.vision.logo")
-		minSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.timelines.filter.language.min_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		timeline.Filter.Language.MinSentiment = minSentiment
-		maxSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.timelines.filter.language.max_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		timeline.Filter.Language.MaxSentiment = maxSentiment
-		timeline.Action.Retweet = actionRetweetCounter.returnValue(i, val)
-		timeline.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
-		timeline.Action.Follow = actionFollowCounter.returnValue(i, val)
-		timeline.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.timelines.action.collections")
+		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
+		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
+		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
+		timeline.Action = action
 		timelines = append(timelines, timeline)
 	}
 	config.Twitter.Timelines = timelines
@@ -362,9 +336,9 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
-	actionRetweetCounter = checkboxCounter{"twitter.favorites.action.retweet", 0}
-	actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.favorite", 0}
-	actionFollowCounter = checkboxCounter{"twitter.favorites.action.follow", 0}
+	actionRetweetCounter = checkboxCounter{"twitter.favorites.action.twitter.retweet", 0}
+	actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.twitter.favorite", 0}
+	actionFollowCounter = checkboxCounter{"twitter.favorites.action.twitter.follow", 0}
 	length = len(val["twitter.favorites.count"])
 	favorites := []mybot.FavoriteConfig{}
 	for i := 0; i < length; i++ {
@@ -382,49 +356,21 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		favorite.Count = count
-		config.Twitter.Favorites[i] = favorite
-		favorite.Filter.Patterns = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.patterns")
-		favorite.Filter.URLPatterns = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.url_patterns")
-		favorite.Filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, "twitter.favorites.filter.has_media")
-		favorite.Filter.HasURL = mybot.GetBoolSelectboxValue(val, i, "twitter.favorites.filter.has_url")
-		favorite.Filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, "twitter.favorites.filter.retweeted")
-		fThreshold, err := mybot.GetIntPtr(val, i, "twitter.favorites.filter.favorite_threshold")
+		filter, err := postConfigForFilter(val, i, "twitter.favorites")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		favorite.Filter.FavoriteThreshold = fThreshold
-		rThreshold, err := mybot.GetIntPtr(val, i, "twitter.favorites.filter.retweeted_threshold")
+		favorite.Filter = filter
+		action, err := postConfigForAction(val, i, "twitter.favorites")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		favorite.Filter.RetweetedThreshold = rThreshold
-		favorite.Filter.Lang = val["twitter.favorites.filter.lang"][i]
-		favorite.Filter.Vision.Label = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.vision.label")
-		favorite.Filter.Vision.Face.AngerLikelihood = val["twitter.favorites.filter.vision.face.anger_likelihood"][i]
-		favorite.Filter.Vision.Face.BlurredLikelihood = val["twitter.favorites.filter.vision.face.blurred_likelihood"][i]
-		favorite.Filter.Vision.Face.HeadwearLikelihood = val["twitter.favorites.filter.vision.face.headwear_likelihood"][i]
-		favorite.Filter.Vision.Face.JoyLikelihood = val["twitter.favorites.filter.vision.face.joy_likelihood"][i]
-		favorite.Filter.Vision.Text = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.vision.text")
-		favorite.Filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.vision.landmark")
-		favorite.Filter.Vision.Logo = mybot.GetListTextboxValue(val, i, "twitter.favorites.filter.vision.logo")
-		minSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.favorites.filter.language.min_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		favorite.Filter.Language.MinSentiment = minSentiment
-		maxSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.favorites.filter.language.max_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		favorite.Filter.Language.MaxSentiment = maxSentiment
-		favorite.Action.Retweet = actionRetweetCounter.returnValue(i, val)
-		favorite.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
-		favorite.Action.Follow = actionFollowCounter.returnValue(i, val)
-		favorite.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.favorites.action.collections")
+		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
+		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
+		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
+		favorite.Action = action
 		favorites = append(favorites, favorite)
 	}
 	config.Twitter.Favorites = favorites
@@ -434,9 +380,9 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Collapsed request", http.StatusInternalServerError)
 		return
 	}
-	actionRetweetCounter = checkboxCounter{"twitter.searches.action.retweet", 0}
-	actionFavoriteCounter = checkboxCounter{"twitter.searches.action.favorite", 0}
-	actionFollowCounter = checkboxCounter{"twitter.searches.action.follow", 0}
+	actionRetweetCounter = checkboxCounter{"twitter.searches.action.twitter.retweet", 0}
+	actionFavoriteCounter = checkboxCounter{"twitter.searches.action.twitter.favorite", 0}
+	actionFollowCounter = checkboxCounter{"twitter.searches.action.twitter.follow", 0}
 	length = len(val["twitter.searches.count"])
 	searches := []mybot.SearchConfig{}
 	for i := 0; i < length; i++ {
@@ -455,49 +401,21 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		search.Count = count
-		config.Twitter.Searches[i] = search
-		search.Filter.Patterns = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.patterns")
-		search.Filter.URLPatterns = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.url_patterns")
-		search.Filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, "twitter.searches.filter.has_media")
-		search.Filter.HasURL = mybot.GetBoolSelectboxValue(val, i, "twitter.searches.filter.has_url")
-		search.Filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, "twitter.searches.filter.retweeted")
-		fThreshold, err := mybot.GetIntPtr(val, i, "twitter.searches.filter.favorite_threshold")
+		filter, err := postConfigForFilter(val, i, "twitter.searches")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		search.Filter.FavoriteThreshold = fThreshold
-		rThreshold, err := mybot.GetIntPtr(val, i, "twitter.searches.filter.retweeted_threshold")
+		search.Filter = filter
+		action, err := postConfigForAction(val, i, "twitter.searches")
 		if err != nil {
 			msg = err.Error()
 			return
 		}
-		search.Filter.RetweetedThreshold = rThreshold
-		search.Filter.Lang = val["twitter.searches.filter.lang"][i]
-		search.Filter.Vision.Label = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.vision.label")
-		search.Filter.Vision.Face.AngerLikelihood = val["twitter.searches.filter.vision.face.anger_likelihood"][i]
-		search.Filter.Vision.Face.BlurredLikelihood = val["twitter.searches.filter.vision.face.blurred_likelihood"][i]
-		search.Filter.Vision.Face.HeadwearLikelihood = val["twitter.searches.filter.vision.face.headwear_likelihood"][i]
-		search.Filter.Vision.Face.JoyLikelihood = val["twitter.searches.filter.vision.face.joy_likelihood"][i]
-		search.Filter.Vision.Text = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.vision.text")
-		search.Filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.vision.landmark")
-		search.Filter.Vision.Logo = mybot.GetListTextboxValue(val, i, "twitter.searches.filter.vision.logo")
-		minSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.searches.filter.language.min_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		search.Filter.Language.MinSentiment = minSentiment
-		maxSentiment, err := mybot.GetFloat64Ptr(val, i, "twitter.searches.filter.language.max_sentiment")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		search.Filter.Language.MaxSentiment = maxSentiment
-		search.Action.Retweet = actionRetweetCounter.returnValue(i, val)
-		search.Action.Favorite = actionFavoriteCounter.returnValue(i, val)
-		search.Action.Follow = actionFollowCounter.returnValue(i, val)
-		search.Action.Collections = mybot.GetListTextboxValue(val, i, "twitter.searches.action.collections")
+		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
+		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
+		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
+		search.Action = action
 		searches = append(searches, search)
 	}
 	config.Twitter.Searches = searches
@@ -550,6 +468,52 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		msg = err.Error()
 		return
 	}
+}
+
+func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.TweetFilter, error) {
+	filter := mybot.NewTweetFilter()
+	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+".filter.patterns")
+	filter.URLPatterns = mybot.GetListTextboxValue(val, i, prefix+".filter.url_patterns")
+	filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.has_media")
+	filter.HasURL = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.has_url")
+	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.retweeted")
+	fThreshold, err := mybot.GetIntPtr(val, i, prefix+".filter.favorite_threshold")
+	if err != nil {
+		return nil, err
+	}
+	filter.FavoriteThreshold = fThreshold
+	rThreshold, err := mybot.GetIntPtr(val, i, prefix+".filter.retweeted_threshold")
+	if err != nil {
+		return nil, err
+	}
+	filter.RetweetedThreshold = rThreshold
+	filter.Lang = val[prefix+".filter.lang"][i]
+	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.label")
+	filter.Vision.Face.AngerLikelihood = val[prefix+".filter.vision.face.anger_likelihood"][i]
+	filter.Vision.Face.BlurredLikelihood = val[prefix+".filter.vision.face.blurred_likelihood"][i]
+	filter.Vision.Face.HeadwearLikelihood = val[prefix+".filter.vision.face.headwear_likelihood"][i]
+	filter.Vision.Face.JoyLikelihood = val[prefix+".filter.vision.face.joy_likelihood"][i]
+	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.text")
+	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.landmark")
+	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.logo")
+	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+".filter.language.min_sentiment")
+	if err != nil {
+		return nil, err
+	}
+	filter.Language.MinSentiment = minSentiment
+	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+".filter.language.max_sentiment")
+	if err != nil {
+		return nil, err
+	}
+	filter.Language.MaxSentiment = maxSentiment
+	return filter, nil
+}
+
+func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.TweetAction, error) {
+	action := mybot.NewTweetAction()
+	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+".action.twitter.collections")
+	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+".action.slack.channels")
+	return action, nil
 }
 
 func getConfig(w http.ResponseWriter, r *http.Request) {

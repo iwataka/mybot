@@ -87,11 +87,14 @@ func TestFileCacheTweetAction(t *testing.T) {
 	}
 	var tweetID string
 	tweetID = "1"
-	action := &TwitterAction{
-		Retweet:     true,
-		Favorite:    false,
-		Follow:      false,
-		Collections: []string{"Collection"},
+	action := &TweetAction{
+		Twitter: &TwitterAction{
+			Retweet:     true,
+			Favorite:    false,
+			Follow:      false,
+			Collections: []string{"Collection"},
+		},
+		Slack: NewSlackAction(),
 	}
 	err = c.SetTweetAction(tweetID, action)
 	if err != nil {

@@ -8,8 +8,8 @@ import (
 	"github.com/iwataka/anaconda"
 )
 
-// TweetFilterConfig is a configuration to filter out tweets
-type TweetFilterConfig struct {
+// TweetFilter is a configuration to filter out tweets
+type TweetFilter struct {
 	Patterns           []string           `json:"patterns,omitempty" toml:"patterns,omitempty"`
 	URLPatterns        []string           `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
 	HasMedia           *bool              `json:"has_media,omitempty" toml:"has_media,omitempty"`
@@ -22,7 +22,14 @@ type TweetFilterConfig struct {
 	Language           *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
-func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache Cache) (bool, error) {
+func NewTweetFilter() *TweetFilter {
+	return &TweetFilter{
+		Vision:   NewVisionCondition(),
+		Language: &LanguageCondition{},
+	}
+}
+
+func (c *TweetFilter) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache Cache) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -124,6 +131,6 @@ func (c *TweetFilterConfig) check(t anaconda.Tweet, v VisionMatcher, l LanguageM
 	return true, nil
 }
 
-func (c *TweetFilterConfig) shouldRepeat() bool {
+func (c *TweetFilter) shouldRepeat() bool {
 	return c.RetweetedThreshold != nil || c.FavoriteThreshold != nil
 }

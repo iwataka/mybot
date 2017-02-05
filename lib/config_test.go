@@ -29,8 +29,11 @@ func TestNewConfig(t *testing.T) {
 	if f.Vision.Label[0] != "cartoon|clip art|artwork" {
 		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", f.Vision.Label[0])
 	}
-	if a.Action.Retweet != true {
-		t.Fatalf("%v expected but %v found", true, a.Action.Retweet)
+	if a.Action.Twitter.Retweet != true {
+		t.Fatalf("%v expected but %v found", true, a.Action.Twitter.Retweet)
+	}
+	if a.Action.Slack.Channels[0] != "foo" {
+		t.Fatalf("%v expected but %v found", "foo", a.Action.Slack.Channels[0])
 	}
 	s := c.Twitter.Searches[0]
 	if s.Queries[0] != "foo" {
@@ -42,8 +45,8 @@ func TestNewConfig(t *testing.T) {
 	if *s.Filter.RetweetedThreshold != 100 {
 		t.Fatalf("%d expected but %d found", 100, *s.Filter.RetweetedThreshold)
 	}
-	if s.Action.Retweet != true {
-		t.Fatalf("%v expected but %v found", true, s.Action.Retweet)
+	if s.Action.Twitter.Retweet != true {
+		t.Fatalf("%v expected but %v found", true, s.Action.Twitter.Retweet)
 	}
 	n := c.Twitter.Notification
 	if n.Place.AllowSelf != true {

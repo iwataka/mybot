@@ -1,0 +1,47 @@
+{{define "action_config"}}
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <td></td>
+                <td>name</td>
+                <td>value</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td rowspan="4">Twitter</td>
+                <td>retweet</td>
+                <td>
+                    {{checkbox .Main.Twitter.Retweet (printf "%s%s" .Prefix ".action.twitter.retweet")}}
+                </td>
+            </tr>
+            <tr>
+                <td>favorite</td>
+                <td>
+                    {{checkbox .Main.Twitter.Favorite (printf "%s%s" .Prefix ".action.twitter.favorite")}}
+                </td>
+            </tr>
+            <tr>
+                <td>follow</td>
+                <td>
+                    {{checkbox .Main.Twitter.Follow (printf "%s%s" .Prefix ".action.twitter.follow")}}
+                </td>
+            </tr>
+            <tr>
+                <td>collections</td>
+                <td>
+                    {{listTextbox .Main.Twitter.Collections (printf "%s%s" .Prefix ".action.twitter.collections")}}
+                </td>
+            </tr>
+            <tr>
+                <td rowspan="1">Slack</td>
+                <td>channels</td>
+                <td>
+                    {{listTextbox .Main.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels")}}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{{end}}

@@ -19,6 +19,7 @@ var (
 	twitterAuth *mybot.OAuthCredentials
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
+	slackAPI    *mybot.SlackAPI
 	config      *mybot.Config
 	cache       mybot.Cache
 	logger      *mybot.Logger
@@ -179,6 +180,9 @@ func beforeRunning(c *cli.Context) error {
 		panic(err)
 	}
 
+	slackToken := os.Getenv("MYBOT_SLACK_TOKEN")
+	slackAPI = mybot.NewSlackAPI(slackToken)
+
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
 		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
 		if err != nil {
@@ -219,9 +223,16 @@ func beforeValidate(c *cli.Context) error {
 	}
 
 	twitterApp = &mybot.OAuthApp{}
-	err = twitterApp.Decode(c.String("twitter-app"))
-	if err != nil {
-		panic(err)
+	ck := os.Getenv("MYBOT_TWITTER_CONSUMER_KEY")
+	cs := os.Getenv("MYBOT_TWITTER_CONSUMER_SECRET")
+	if ck != "" && cs != "" {
+		twitterApp.ConsumerKey = ck
+		twitterApp.ConsumerSecret = cs
+	} else {
+		err = twitterApp.Decode(c.String("twitter-app"))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	twitterAuth = &mybot.OAuthCredentials{}
@@ -286,7 +297,7 @@ func twitterListenUsers() {
 		return
 	}
 	userListenerStream = listener.Stream
-	err = listener.Listen(visionAPI, languageAPI, cache)
+	err = listener.Listen(visionAPI, languageAPI, slackAPI, cache)
 	if err != nil {
 		logger.Println(err)
 		return
@@ -520,7 +531,15 @@ func runTwitterWithStream() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			ts, err := twitterAPI.ProcessSearch(query, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessSearch(
+				query,
+				v,
+				a.Filter,
+				visionAPI,
+				languageAPI,
+				slackAPI,
+				a.Action,
+			)
 			if err != nil {
 				return err
 			}
@@ -533,7 +552,15 @@ func runTwitterWithStream() error {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.ProcessFavorites(name, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessFavorites(
+				name,
+				v,
+				a.Filter,
+				visionAPI,
+				languageAPI,
+				slackAPI,
+				a.Action,
+			)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err
@@ -578,7 +605,15 @@ func runTwitterWithoutStream() error {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := twitterAPI.ProcessTimeline(name, v, a.Filter, visionAPI, languageAPI, a.Action)
+			ts, err := twitterAPI.ProcessTimeline(
+				name,
+				v,
+				a.Filter,
+				visionAPI,
+				languageAPI,
+				slackAPI,
+				a.Action,
+			)
 			tweets = append(tweets, ts...)
 			if err != nil {
 				return err

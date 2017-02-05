@@ -48,6 +48,12 @@ type VisionCondition struct {
 	Logo     []string             `toml:"logo,omitempty"`
 }
 
+func NewVisionCondition() *VisionCondition {
+	return &VisionCondition{
+		Face: &VisionFaceCondition{},
+	}
+}
+
 func (c *VisionCondition) isEmpty() bool {
 	return (c.Label == nil || len(c.Label) == 0) &&
 		(c.Face == nil || c.Face.isEmpty()) &&

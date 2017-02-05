@@ -19,7 +19,7 @@ func TestTwitterAction(t *testing.T) {
 		Collections: []string{"col1", "col3"},
 	}
 
-	a1.add(&a3)
+	a1.Add(&a3)
 	if a1.Retweet != true {
 		t.Fatalf("%v expected but %v found", false, a1.Retweet)
 	}
@@ -33,7 +33,7 @@ func TestTwitterAction(t *testing.T) {
 		t.Fatalf("%d expected but %d found", 3, len(a1.Collections))
 	}
 
-	a2.sub(&a3)
+	a2.Sub(&a3)
 	if a2.Retweet != false {
 		t.Fatalf("%v expected but %v found", false, a2.Retweet)
 	}

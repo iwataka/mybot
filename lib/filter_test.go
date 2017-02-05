@@ -53,7 +53,7 @@ func TestCheckPatternsMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "foo is bar",
 	}
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		Patterns: []string{"foo"},
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -69,7 +69,7 @@ func TestCheckPatternsUnmatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "fizz buzz",
 	}
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		Patterns: []string{"foo"},
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -86,7 +86,7 @@ func TestCheckFavoriteThresholdExceeded(t *testing.T) {
 		FavoriteCount: 100,
 	}
 	threshold := 80
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		FavoriteThreshold: &threshold,
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -103,7 +103,7 @@ func TestCheckFavoriteThresholdNotExceeded(t *testing.T) {
 		FavoriteCount: 100,
 	}
 	threshold := 120
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		FavoriteThreshold: &threshold,
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -120,7 +120,7 @@ func TestCheckRetweetedThresholdExceeded(t *testing.T) {
 		RetweetCount: 100,
 	}
 	threshold := 80
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		RetweetedThreshold: &threshold,
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -137,7 +137,7 @@ func TestCheckRetweetedThresholdNotExceeded(t *testing.T) {
 		RetweetCount: 100,
 	}
 	threshold := 120
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		RetweetedThreshold: &threshold,
 	}
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
@@ -157,7 +157,7 @@ func TestCheckVisionMatched(t *testing.T) {
 			},
 		},
 	}
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},
@@ -177,7 +177,7 @@ func TestCheckVisionUnmatched(t *testing.T) {
 			Media: []anaconda.EntityMedia{},
 		},
 	}
-	conf := &TweetFilterConfig{
+	conf := &TweetFilter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},

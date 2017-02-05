@@ -12,8 +12,8 @@ type Cache interface {
 	SetLatestFavoriteID(screenName string, id int64) error
 	GetLatestDMID() int64
 	SetLatestDMID(id int64) error
-	GetTweetAction(tweetID string) (*TwitterAction, bool)
-	SetTweetAction(tweetID string, action *TwitterAction) error
+	GetTweetAction(tweetID string) (*TweetAction, bool)
+	SetTweetAction(tweetID string, action *TweetAction) error
 	GetLatestImages(num int) []ImageCacheData
 	SetImage(data ImageCacheData) error
 	Save() error
@@ -22,12 +22,12 @@ type Cache interface {
 // FileCache is a cache data of mybot
 // TODO: This should be stored in DB, not .json file.
 type FileCache struct {
-	LatestTweetID    map[string]int64          `json:"latest_tweet_id" toml:"latest_tweet_id"`
-	LatestFavoriteID map[string]int64          `json:"latest_favorite_id" toml:"lates_favorite_id"`
-	LatestDMID       int64                     `json:"latest_dm_id" toml:"latest_dm_id"`
-	Tweet2Action     map[string]*TwitterAction `json:"tweet_to_action" toml:"tweet_to_action"`
-	Images           []ImageCacheData          `json:"images" toml:"images"`
-	File             string                    `json:"-" toml:"-"`
+	LatestTweetID    map[string]int64        `json:"latest_tweet_id" toml:"latest_tweet_id"`
+	LatestFavoriteID map[string]int64        `json:"latest_favorite_id" toml:"lates_favorite_id"`
+	LatestDMID       int64                   `json:"latest_dm_id" toml:"latest_dm_id"`
+	Tweet2Action     map[string]*TweetAction `json:"tweet_to_action" toml:"tweet_to_action"`
+	Images           []ImageCacheData        `json:"images" toml:"images"`
+	File             string                  `json:"-" toml:"-"`
 }
 
 type ImageCacheData struct {
@@ -43,7 +43,7 @@ func NewFileCache(path string) (*FileCache, error) {
 		make(map[string]int64),
 		make(map[string]int64),
 		0,
-		make(map[string]*TwitterAction),
+		make(map[string]*TweetAction),
 		[]ImageCacheData{},
 		path,
 	}
@@ -87,12 +87,12 @@ func (c *FileCache) SetLatestDMID(id int64) error {
 	return nil
 }
 
-func (c *FileCache) GetTweetAction(tweetID string) (*TwitterAction, bool) {
+func (c *FileCache) GetTweetAction(tweetID string) (*TweetAction, bool) {
 	action, exists := c.Tweet2Action[tweetID]
-	return action, exists
+	return action, exists && action != nil
 }
 
-func (c *FileCache) SetTweetAction(tweetID string, action *TwitterAction) error {
+func (c *FileCache) SetTweetAction(tweetID string, action *TweetAction) error {
 	c.Tweet2Action[tweetID] = action
 	return nil
 }

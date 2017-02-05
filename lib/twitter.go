@@ -23,39 +23,59 @@ type TwitterAction struct {
 	Collections []string `json:"collections" toml:"collections"`
 }
 
-func (a *TwitterAction) add(action *TwitterAction) {
+func NewTwitterAction() *TwitterAction {
+	return &TwitterAction{
+		Collections: []string{},
+	}
+}
+
+func (a *TwitterAction) Add(action *TwitterAction) {
+	// If action is nil, you have nothing to do
+	if action == nil {
+		return
+	}
+
 	a.Retweet = a.Retweet || action.Retweet
 	a.Favorite = a.Favorite || action.Favorite
 	a.Follow = a.Follow || action.Follow
-	cols := a.Collections
-	for _, col := range a.Collections {
-		exists := false
-		for _, c := range action.Collections {
-			if col == c {
-				exists = true
-			}
-		}
-		if !exists {
-			cols = append(cols, col)
+
+	m := make(map[string]bool)
+	for _, c := range a.Collections {
+		m[c] = true
+	}
+	for _, c := range action.Collections {
+		m[c] = true
+	}
+	cols := []string{}
+	for c, exists := range m {
+		if exists {
+			cols = append(cols, c)
 		}
 	}
 	a.Collections = cols
 }
 
-func (a *TwitterAction) sub(action *TwitterAction) {
+func (a *TwitterAction) Sub(action *TwitterAction) {
+	// If action is nil, you have nothing to do
+	if action == nil {
+		return
+	}
+
 	a.Retweet = a.Retweet && !action.Retweet
 	a.Favorite = a.Favorite && !action.Favorite
 	a.Follow = a.Follow && !action.Follow
+
+	m := make(map[string]bool)
+	for _, c := range a.Collections {
+		m[c] = true
+	}
+	for _, c := range action.Collections {
+		m[c] = false
+	}
 	cols := []string{}
-	for _, col := range a.Collections {
-		exists := false
-		for _, c := range action.Collections {
-			if col == c {
-				exists = true
-			}
-		}
-		if !exists {
-			cols = append(cols, col)
+	for c, exists := range m {
+		if exists {
+			cols = append(cols, c)
 		}
 	}
 	a.Collections = cols
@@ -147,7 +167,8 @@ func (a *TwitterAPI) ProcessTimeline(
 	c TweetChecker,
 	vision VisionMatcher,
 	lang LanguageMatcher,
-	action *TwitterAction,
+	slack *SlackAPI,
+	action *TweetAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.GetLatestTweetID(name)
 	v.Set("screen_name", name)
@@ -168,7 +189,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestTweetID, a.cache.GetLatestTweetID}
 	}
-	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
+	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +204,8 @@ func (a *TwitterAPI) ProcessFavorites(
 	c TweetChecker,
 	vision VisionMatcher,
 	lang LanguageMatcher,
-	action *TwitterAction,
+	slack *SlackAPI,
+	action *TweetAction,
 ) ([]anaconda.Tweet, error) {
 	latestID, exists := a.cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
@@ -204,7 +226,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestFavoriteID, a.cache.GetLatestFavoriteID}
 	}
-	result, err := a.processTweets(tweets, c, vision, lang, action, pp)
+	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -219,14 +241,15 @@ func (a *TwitterAPI) ProcessSearch(
 	c TweetChecker,
 	vision VisionMatcher,
 	lang LanguageMatcher,
-	action *TwitterAction,
+	slack *SlackAPI,
+	action *TweetAction,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
 	pp := &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
-	result, err := a.processTweets(res.Statuses, c, vision, lang, action, pp)
+	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +266,9 @@ type (
 		getID      func(screenName string) (int64, bool)
 	}
 	TwitterPostProcessorEach struct {
-		action    *TwitterAction
-		setAction func(id string, action *TwitterAction) error
-		getAction func(id string) (*TwitterAction, bool)
+		action    *TweetAction
+		setAction func(id string, action *TweetAction) error
+		getAction func(id string) (*TweetAction, bool)
 	}
 )
 
@@ -264,7 +287,7 @@ func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	if match {
 		ac, exists := p.getAction(t.IdStr)
 		if exists {
-			ac.add(p.action)
+			ac.Add(p.action)
 		} else {
 			p.setAction(t.IdStr, p.action)
 		}
@@ -277,7 +300,8 @@ func (a *TwitterAPI) processTweets(
 	c TweetChecker,
 	v VisionMatcher,
 	l LanguageMatcher,
-	action *TwitterAction,
+	slack *SlackAPI,
+	action *TweetAction,
 	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
@@ -290,7 +314,7 @@ func (a *TwitterAPI) processTweets(
 		}
 		if match {
 			done, _ := a.cache.GetTweetAction(t.IdStr)
-			err := a.processTweet(t, action, done)
+			err := a.processTweet(t, action, done, slack)
 			if err != nil {
 				return nil, err
 			}
@@ -304,12 +328,17 @@ func (a *TwitterAPI) processTweets(
 	return result, nil
 }
 
-func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done *TwitterAction) error {
+func (a *TwitterAPI) processTweet(
+	t anaconda.Tweet,
+	action *TweetAction,
+	done *TweetAction,
+	slack *SlackAPI,
+) error {
 	ac := *action
 	if done != nil {
-		ac.sub(done)
+		ac.Sub(done)
 	}
-	if ac.Retweet && !t.Retweeted {
+	if ac.Twitter.Retweet && !t.Retweeted {
 		var id int64
 		if t.RetweetedStatus == nil {
 			id = t.Id
@@ -321,13 +350,13 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 			return err
 		}
 	}
-	if ac.Favorite && !t.Favorited {
+	if ac.Twitter.Favorite && !t.Favorited {
 		_, err := a.api.Favorite(t.Id)
 		if err != nil {
 			return err
 		}
 	}
-	if ac.Follow {
+	if ac.Twitter.Follow {
 		var screenName string
 		if t.RetweetedStatus == nil {
 			screenName = t.User.ScreenName
@@ -339,12 +368,22 @@ func (a *TwitterAPI) processTweet(t anaconda.Tweet, action *TwitterAction, done 
 			return err
 		}
 	}
-	for _, col := range ac.Collections {
+	for _, col := range ac.Twitter.Collections {
 		err := a.collectTweet(t, col)
 		if err != nil {
 			return err
 		}
 	}
+
+	if slack.Enabled() && ac.Slack != nil {
+		for _, ch := range ac.Slack.Channels {
+			err := slack.PostTweet(ch, t)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -417,7 +456,12 @@ type TwitterUserListener struct {
 	api    *TwitterAPI
 }
 
-func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, cache Cache) error {
+func (l *TwitterUserListener) Listen(
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	slack *SlackAPI,
+	cache Cache,
+) error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
@@ -447,7 +491,7 @@ func (l *TwitterUserListener) Listen(vis VisionMatcher, lang LanguageMatcher, ca
 				}
 				if match {
 					done, _ := l.api.cache.GetTweetAction(c.IdStr)
-					err := l.api.processTweet(c, timeline.Action, done)
+					err := l.api.processTweet(c, timeline.Action, done, slack)
 					if err != nil {
 						return err
 					}
@@ -631,7 +675,7 @@ var retweetCommand = &DirectMessageCommand{
 	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
 		timeline := NewTimelineConfig()
 		timeline.ScreenNames = args
-		timeline.Action.Retweet = true
+		timeline.Action.Twitter.Retweet = true
 		a.config.Twitter.Timelines = append(a.config.Twitter.Timelines, *timeline)
 		err := a.config.Validate()
 		if err != nil {
@@ -652,7 +696,7 @@ var favoriteCommand = &DirectMessageCommand{
 	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
 		favorite := NewFavoriteConfig()
 		favorite.ScreenNames = args
-		favorite.Action.Favorite = true
+		favorite.Action.Twitter.Favorite = true
 		a.config.Twitter.Favorites = append(a.config.Twitter.Favorites, *favorite)
 		err := a.config.Validate()
 		if err != nil {

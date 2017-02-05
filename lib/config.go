@@ -55,37 +55,13 @@ func NewConfig(path string) (*Config, error) {
 	// Assign empty values to config instance to prevent nil pointer
 	// reference error.
 	for _, t := range c.Twitter.Timelines {
-		if t.Filter.Vision == nil {
-			t.Filter.Vision = new(VisionCondition)
-		}
-		if t.Filter.Vision.Face == nil {
-			t.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		if t.Filter.Language == nil {
-			t.Filter.Language = new(LanguageCondition)
-		}
+		t.Init()
 	}
 	for _, f := range c.Twitter.Favorites {
-		if f.Filter.Vision == nil {
-			f.Filter.Vision = new(VisionCondition)
-		}
-		if f.Filter.Vision.Face == nil {
-			f.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		if f.Filter.Language == nil {
-			f.Filter.Language = new(LanguageCondition)
-		}
+		f.Init()
 	}
 	for _, s := range c.Twitter.Searches {
-		if s.Filter.Vision == nil {
-			s.Filter.Vision = new(VisionCondition)
-		}
-		if s.Filter.Vision.Face == nil {
-			s.Filter.Vision.Face = new(VisionFaceCondition)
-		}
-		if s.Filter.Language == nil {
-			s.Filter.Language = new(LanguageCondition)
-		}
+		s.Init()
 	}
 
 	err = c.Validate()
@@ -280,9 +256,64 @@ func (c *Config) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type SourceConfig struct {
 	// Filter filters out incoming data from sources.
-	Filter *TweetFilterConfig `json:"filter" toml:"filter"`
+	Filter *TweetFilter `json:"filter" toml:"filter"`
 	// Action defines actions for data passing through filters.
-	Action *TwitterAction `json:"action" toml:"action"`
+	Action *TweetAction `json:"action" toml:"action"`
+}
+
+func (c *SourceConfig) Init() {
+	if c.Filter.Vision == nil {
+		c.Filter.Vision = new(VisionCondition)
+	}
+	if c.Filter.Vision.Face == nil {
+		c.Filter.Vision.Face = new(VisionFaceCondition)
+	}
+	if c.Filter.Language == nil {
+		c.Filter.Language = new(LanguageCondition)
+	}
+
+	if c.Action.Twitter == nil {
+		c.Action.Twitter = NewTwitterAction()
+	}
+	if c.Action.Slack == nil {
+		c.Action.Slack = NewSlackAction()
+	}
+}
+
+type TweetAction struct {
+	Twitter *TwitterAction `json:"twitter" toml:"twitter"`
+	Slack   *SlackAction   `json:"slack" toml:"slack"`
+}
+
+func NewTweetAction() *TweetAction {
+	return &TweetAction{
+		Twitter: NewTwitterAction(),
+		Slack:   NewSlackAction(),
+	}
+}
+
+func (a *TweetAction) Add(action *TweetAction) {
+	if a.Twitter == nil {
+		a.Twitter = action.Twitter
+	} else {
+		a.Twitter.Add(action.Twitter)
+	}
+
+	if a.Slack == nil {
+		a.Twitter = action.Twitter
+	} else {
+		a.Slack.Add(action.Slack)
+	}
+}
+
+func (a *TweetAction) Sub(action *TweetAction) {
+	if a.Twitter != nil {
+		a.Twitter.Sub(action.Twitter)
+	}
+
+	if a.Slack != nil {
+		a.Slack.Sub(action.Slack)
+	}
 }
 
 // TwitterConfig is a configuration related to Twitter.
@@ -331,13 +362,8 @@ type TimelineConfig struct {
 func NewTimelineConfig() *TimelineConfig {
 	return &TimelineConfig{
 		SourceConfig: &SourceConfig{
-			Filter: &TweetFilterConfig{
-				Vision: &VisionCondition{
-					Face: &VisionFaceCondition{},
-				},
-				Language: &LanguageCondition{},
-			},
-			Action: &TwitterAction{},
+			Filter: NewTweetFilter(),
+			Action: NewTweetAction(),
 		},
 	}
 }
@@ -354,13 +380,8 @@ type FavoriteConfig struct {
 func NewFavoriteConfig() *FavoriteConfig {
 	return &FavoriteConfig{
 		SourceConfig: &SourceConfig{
-			Filter: &TweetFilterConfig{
-				Vision: &VisionCondition{
-					Face: &VisionFaceCondition{},
-				},
-				Language: &LanguageCondition{},
-			},
-			Action: &TwitterAction{},
+			Filter: NewTweetFilter(),
+			Action: NewTweetAction(),
 		},
 	}
 }
@@ -378,13 +399,8 @@ type SearchConfig struct {
 func NewSearchConfig() *SearchConfig {
 	return &SearchConfig{
 		SourceConfig: &SourceConfig{
-			Filter: &TweetFilterConfig{
-				Vision: &VisionCondition{
-					Face: &VisionFaceCondition{},
-				},
-				Language: &LanguageCondition{},
-			},
-			Action: &TwitterAction{},
+			Filter: NewTweetFilter(),
+			Action: NewTweetAction(),
 		},
 	}
 }

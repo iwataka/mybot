@@ -129,3 +129,12 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	result := int(i)
 	return &result, nil
 }
+
+type WithPrefix struct {
+	Main   interface{}
+	Prefix string
+}
+
+func NewWithPrefix(main interface{}, prefix string) WithPrefix {
+	return WithPrefix{main, prefix}
+}

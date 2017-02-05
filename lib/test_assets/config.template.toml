@@ -7,14 +7,16 @@ retweeted = false
 lang = "en"
 [twitter.timelines.filter.vision]
 label = ["cartoon|clip art|artwork"]
-[twitter.timelines.action]
+[twitter.timelines.action.twitter]
 retweet = true
+[twitter.timelines.action.slack]
+channels = ["foo"]
 
 [[twitter.searches]]
 queries = ["foo", "bar"]
 [twitter.searches.filter]
 retweeted_threshold = 100
-[twitter.searches.action]
+[twitter.searches.action.twitter]
 retweet = true
 
 [twitter.notification]
