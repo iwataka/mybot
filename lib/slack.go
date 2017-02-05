@@ -94,10 +94,7 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 			_, err := a.api.CreateChannel(channel)
 			if err != nil {
 				if err.Error() == "user_is_bot" {
-					err := a.notifyCreateChannel(channel)
-					if err != nil {
-						return err
-					}
+					return a.notifyCreateChannel(channel)
 				} else {
 					return err
 				}
@@ -115,7 +112,7 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	params := slack.PostMessageParameters{}
-	msg := fmt.Sprintf("Create #%s instead of me", ch)
+	msg := fmt.Sprintf("Create #%s and invite me to it", ch)
 	_, _, err := a.api.PostMessage("general", msg, params)
 	return err
 }
