@@ -88,6 +88,12 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	params := slack.PostMessageParameters{}
 	params.Attachments = []slack.Attachment{att}
 
+	for _, m := range tweet.Entities.Media {
+		a := slack.Attachment{}
+		a.ImageURL = m.Display_url
+		params.Attachments = append(params.Attachments, a)
+	}
+
 	_, _, err := a.api.PostMessage(channel, "", params)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
