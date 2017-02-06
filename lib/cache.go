@@ -19,8 +19,7 @@ type Cache interface {
 	Save() error
 }
 
-// FileCache is a cache data of mybot
-// TODO: This should be stored in DB, not .json file.
+// FileCache is a cache data stored in the specified file.
 type FileCache struct {
 	LatestTweetID    map[string]int64        `json:"latest_tweet_id" toml:"latest_tweet_id"`
 	LatestFavoriteID map[string]int64        `json:"latest_favorite_id" toml:"lates_favorite_id"`
@@ -37,7 +36,9 @@ type ImageCacheData struct {
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date"`
 }
 
-// NewFileCache creates an instance of Cache
+// NewFileCache creates a Cache instance by using the specified file.
+// If no file specified, this returns an emtpy Cache instance which doesn't
+// have read/write features.
 func NewFileCache(path string) (*FileCache, error) {
 	c := &FileCache{
 		make(map[string]int64),

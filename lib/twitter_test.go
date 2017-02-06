@@ -1,7 +1,10 @@
 package mybot
 
 import (
+	"reflect"
 	"testing"
+
+	"github.com/iwataka/anaconda"
 )
 
 func TestTwitterAction(t *testing.T) {
@@ -45,5 +48,35 @@ func TestTwitterAction(t *testing.T) {
 	}
 	if len(a2.Collections) != 1 {
 		t.Fatalf("%d expected but %d found", 1, len(a2.Collections))
+	}
+}
+
+func TestPostProcessorEach(t *testing.T) {
+	action := &TweetAction{
+		Twitter: &TwitterAction{
+			Retweet:     true,
+			Favorite:    false,
+			Follow:      false,
+			Collections: []string{"foo"},
+		},
+		Slack: &SlackAction{
+			Channels: []string{"bar"},
+		},
+	}
+	cache, err := NewFileCache("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tweet := anaconda.Tweet{}
+	tweet.IdStr = "000"
+	pp := TwitterPostProcessorEach{action, cache}
+
+	err = pp.Process(tweet, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ac, exists := cache.GetTweetAction(tweet.IdStr)
+	if !exists || !reflect.DeepEqual(ac, action) {
+		t.Fatalf("%v is not cached properly", action)
 	}
 }

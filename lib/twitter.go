@@ -185,9 +185,9 @@ func (a *TwitterAPI) ProcessTimeline(
 	}
 	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
+		pp = &TwitterPostProcessorEach{action, a.cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestTweetID, a.cache.GetLatestTweetID}
+		pp = &TwitterPostProcessorTop{name, a.cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -222,9 +222,9 @@ func (a *TwitterAPI) ProcessFavorites(
 	}
 	var pp TwitterPostProcessor
 	if c.shouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
+		pp = &TwitterPostProcessorEach{action, a.cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache.SetLatestFavoriteID, a.cache.GetLatestFavoriteID}
+		pp = &TwitterPostProcessorTop{name, a.cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -248,7 +248,7 @@ func (a *TwitterAPI) ProcessSearch(
 	if err != nil {
 		return nil, err
 	}
-	pp := &TwitterPostProcessorEach{action, a.cache.SetTweetAction, a.cache.GetTweetAction}
+	pp := &TwitterPostProcessorEach{action, a.cache}
 	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
 	if err != nil {
 		return nil, err
@@ -262,20 +262,18 @@ type (
 	}
 	TwitterPostProcessorTop struct {
 		screenName string
-		setID      func(screenName string, id int64) error
-		getID      func(screenName string) (int64, bool)
+		cache      Cache
 	}
 	TwitterPostProcessorEach struct {
-		action    *TweetAction
-		setAction func(id string, action *TweetAction) error
-		getAction func(id string) (*TweetAction, bool)
+		action *TweetAction
+		cache  Cache
 	}
 )
 
 func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
-	id, exists := p.getID(p.screenName)
+	id, exists := p.cache.GetLatestTweetID(p.screenName)
 	if (exists && t.Id > id) || !exists {
-		err := p.setID(p.screenName, t.Id)
+		err := p.cache.SetLatestTweetID(p.screenName, t.Id)
 		if err != nil {
 			return err
 		}
@@ -285,11 +283,11 @@ func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
 
 func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	if match {
-		ac, exists := p.getAction(t.IdStr)
+		ac, exists := p.cache.GetTweetAction(t.IdStr)
 		if exists {
 			ac.Add(p.action)
 		} else {
-			p.setAction(t.IdStr, p.action)
+			p.cache.SetTweetAction(t.IdStr, p.action)
 		}
 	}
 	return nil
