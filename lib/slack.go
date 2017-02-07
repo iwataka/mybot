@@ -78,6 +78,9 @@ func (a *SlackAPI) Enabled() bool {
 }
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
+	statusURL := TwitterStatusURL(tweet)
+	text := fmt.Sprintf("%s\n%s created at %s", statusURL, tweet.User.Name, tweet.CreatedAt)
+
 	att := slack.Attachment{}
 	att.AuthorName = tweet.User.Name
 	att.AuthorSubname = tweet.User.ScreenName
@@ -90,11 +93,11 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 
 	for _, m := range tweet.Entities.Media {
 		a := slack.Attachment{}
-		a.ImageURL = m.Display_url
+		a.ImageURL = m.Media_url
 		params.Attachments = append(params.Attachments, a)
 	}
 
-	_, _, err := a.api.PostMessage(channel, "", params)
+	_, _, err := a.api.PostMessage(channel, text, params)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
 			_, err := a.api.CreateChannel(channel)

@@ -1,7 +1,6 @@
 package mybot
 
 import (
-	"fmt"
 	"regexp"
 	"time"
 
@@ -95,8 +94,7 @@ func (c *TweetFilter) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher
 				continue
 			}
 
-			srcFmt := "https://twitter.com/%s/status/%s"
-			tweetSrc := fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
+			tweetSrc := TwitterStatusURL(t)
 			imgCache := ImageCacheData{
 				urls[i],
 				tweetSrc,

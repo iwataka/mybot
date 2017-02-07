@@ -780,3 +780,8 @@ func CheckTwitterError(err error) bool {
 	}
 	return true
 }
+
+func TwitterStatusURL(t anaconda.Tweet) string {
+	srcFmt := "https://twitter.com/%s/status/%s"
+	return fmt.Sprintf(srcFmt, t.User.IdStr, t.IdStr)
+}
