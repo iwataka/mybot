@@ -1,6 +1,7 @@
 package mybot
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -112,5 +113,71 @@ func TestNewSearchConfig(t *testing.T) {
 	}
 	if s.Action == nil {
 		t.Fatalf("Non-nil expected but nil found")
+	}
+}
+
+func TestTweetAction_AddNil(t *testing.T) {
+	a1 := &TweetAction{
+		Twitter: nil,
+		Slack:   nil,
+	}
+	a2 := &TweetAction{
+		Twitter: &TwitterAction{
+			Retweet:     true,
+			Collections: []string{"foo"},
+		},
+		Slack: &SlackAction{
+			Channels: []string{"bar"},
+		},
+	}
+
+	result1 := *a1
+	result1.Add(a2)
+	if !reflect.DeepEqual(&result1, a2) {
+		t.Fatalf("Failed to add %v to %v: %v", a2, a1, result1)
+	}
+
+	result2 := *a2
+	result2.Add(a1)
+	if !reflect.DeepEqual(&result2, a2) {
+		t.Fatalf("Failed to add %v to %v: %v", a1, a2, result2)
+	}
+}
+
+func TestTweetAction_Add(t *testing.T) {
+	a1 := &TweetAction{
+		Twitter: &TwitterAction{
+			Retweet:     true,
+			Collections: []string{"twitter"},
+		},
+		Slack: &SlackAction{
+			Channels: []string{"slack"},
+		},
+	}
+	a2 := &TweetAction{
+		Twitter: &TwitterAction{
+			Favorite:    true,
+			Collections: []string{"facebook"},
+		},
+		Slack: &SlackAction{
+			Channels: []string{"mattermost"},
+		},
+	}
+	a1.Add(a2)
+
+	if !a1.Twitter.Retweet {
+		t.Fatalf("%v expected but %v found", true, a1.Twitter.Retweet)
+	}
+	if !a1.Twitter.Favorite {
+		t.Fatalf("%v expected but %v found", true, a1.Twitter.Favorite)
+	}
+	if a1.Twitter.Follow {
+		t.Fatalf("%v expected but %v found", false, a1.Twitter.Follow)
+	}
+	if len(a1.Twitter.Collections) != 2 {
+		t.Fatalf("%d expected but %d found", 2, len(a1.Twitter.Collections))
+	}
+	if len(a1.Slack.Channels) != 2 {
+		t.Fatalf("%d expected but %d found", 2, len(a1.Slack.Channels))
 	}
 }

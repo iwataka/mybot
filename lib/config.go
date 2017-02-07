@@ -300,7 +300,7 @@ func (a *TweetAction) Add(action *TweetAction) {
 	}
 
 	if a.Slack == nil {
-		a.Twitter = action.Twitter
+		a.Slack = action.Slack
 	} else {
 		a.Slack.Add(action.Slack)
 	}
