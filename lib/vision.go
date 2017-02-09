@@ -41,11 +41,11 @@ func NewVisionAPI(file string) (*VisionAPI, error) {
 // VisionCondition is a condition to check whether images match or not by using
 // Google Vision API.
 type VisionCondition struct {
-	Label    []string             `toml:"label,omitempty"`
-	Face     *VisionFaceCondition `toml:"face,omitempty"`
-	Text     []string             `toml:"text,omitempty"`
-	Landmark []string             `toml:"landmark,omitempty"`
-	Logo     []string             `toml:"logo,omitempty"`
+	Label    []string             `json:"label,omitempty" toml:"label,omitempty"`
+	Face     *VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty"`
+	Text     []string             `json:"text,omitempty" toml:"text,omitempty"`
+	Landmark []string             `json:"landmark,omitempty" toml:"landmark,omitempty"`
+	Logo     []string             `json:"logo,omitempty" toml:"logo,omitempty"`
 }
 
 func NewVisionCondition() *VisionCondition {
@@ -63,10 +63,10 @@ func (c *VisionCondition) isEmpty() bool {
 }
 
 type VisionFaceCondition struct {
-	AngerLikelihood    string `toml:"anger_likelihood,omitempty"`
-	BlurredLikelihood  string `toml:"blurred_likelihood,omitempty"`
-	HeadwearLikelihood string `toml:"headwear_likelihood,omitempty"`
-	JoyLikelihood      string `toml:"joy_likelihood,omitempty"`
+	AngerLikelihood    string `json:"anger_likelihood,omitempty" toml:"anger_likelihood,omitempty"`
+	BlurredLikelihood  string `json:"blurred_likelihood,omitempty" toml:"blurred_likelihood,omitempty"`
+	HeadwearLikelihood string `json:"headwear_likelihood,omitempty" toml:"headwear_likelihood,omitempty"`
+	JoyLikelihood      string `json:"joy_likelihood,omitempty" toml:"joy_likelihood,omitempty"`
 }
 
 func (c *VisionFaceCondition) isEmpty() bool {

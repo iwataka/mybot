@@ -1,6 +1,9 @@
 package mybot
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -67,6 +70,15 @@ func TestNewConfig(t *testing.T) {
 	}
 	if c.Log.Linenum != 8 {
 		t.Fatalf("%v expected but %v found", 8, c.Log.Linenum)
+	}
+
+	clone := *c
+	err = clone.Validate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(&clone, c) {
+		t.Fatalf("%v expected but %v found", c, &clone)
 	}
 }
 
@@ -179,5 +191,47 @@ func TestTweetAction_Add(t *testing.T) {
 	}
 	if len(a1.Slack.Channels) != 2 {
 		t.Fatalf("%d expected but %d found", 2, len(a1.Slack.Channels))
+	}
+}
+
+func TestSaveLoad(t *testing.T) {
+	c, err := NewConfig("test_assets/config.template.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir, err := ioutil.TempDir(os.TempDir(), "mybot_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	jsonCfg := *c
+	jsonCfg.File = filepath.Join(dir, "config.json")
+	err = jsonCfg.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = jsonCfg.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonCfg.File = c.File
+	if !reflect.DeepEqual(&jsonCfg, c) {
+		t.Fatalf("%v expected but %v found", c, jsonCfg)
+	}
+
+	tomlCfg := *c
+	tomlCfg.File = filepath.Join(dir, "config.toml")
+	err = tomlCfg.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tomlCfg.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tomlCfg.File = c.File
+	if !reflect.DeepEqual(&tomlCfg, c) {
+		t.Fatalf("%v expected but %v found", c, tomlCfg)
 	}
 }

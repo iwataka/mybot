@@ -19,3 +19,10 @@ func TestLanguageConditionIsNotEmpty(t *testing.T) {
 		t.Fatalf("%v expected not empty but empty", c)
 	}
 }
+
+func TestLanguageAPIEnabled(t *testing.T) {
+	a := &LanguageAPI{}
+	if a.Enabled() {
+		t.Fatalf("%v expected to be enabled, but not", a)
+	}
+}

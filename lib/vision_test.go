@@ -73,3 +73,10 @@ func TestMatchFace(t *testing.T) {
 		t.Fatalf("%v expeted but %v found", true, flag)
 	}
 }
+
+func TestVisionAPIEnabled(t *testing.T) {
+	a := &VisionAPI{}
+	if a.Enabled() {
+		t.Fatalf("%v expected to be enabled, but not", a)
+	}
+}

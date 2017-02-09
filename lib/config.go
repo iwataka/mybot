@@ -222,13 +222,11 @@ func (c *Config) Save() error {
 		return err
 	}
 	if c != nil {
-		writer := new(bytes.Buffer)
-		enc := toml.NewEncoder(writer)
-		err := enc.Encode(c)
+		bs, err := c.ToText("")
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(c.File, writer.Bytes(), 0640)
+		err = ioutil.WriteFile(c.File, bs, 0640)
 		if err != nil {
 			return err
 		}
