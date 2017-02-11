@@ -170,9 +170,12 @@ func (a *TwitterAPI) ProcessTimeline(
 	slack *SlackAPI,
 	action *TweetAction,
 ) ([]anaconda.Tweet, error) {
-	latestID, exists := a.cache.GetLatestTweetID(name)
+	latestID, err := a.cache.GetLatestTweetID(name)
+	if err != nil {
+		return nil, err
+	}
 	v.Set("screen_name", name)
-	if exists {
+	if latestID > 0 {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	} else {
 		// If the latest tweet ID doesn't exist, this fetches just the
@@ -207,9 +210,12 @@ func (a *TwitterAPI) ProcessFavorites(
 	slack *SlackAPI,
 	action *TweetAction,
 ) ([]anaconda.Tweet, error) {
-	latestID, exists := a.cache.GetLatestFavoriteID(name)
+	latestID, err := a.cache.GetLatestFavoriteID(name)
+	if err != nil {
+		return nil, err
+	}
 	v.Set("screen_name", name)
-	if exists {
+	if latestID > 0 {
 		v.Set("since_id", fmt.Sprintf("%d", latestID))
 	} else {
 		// If the latest favorite ID doesn't exist, this fetches just
@@ -271,8 +277,11 @@ type (
 )
 
 func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
-	id, exists := p.cache.GetLatestTweetID(p.screenName)
-	if (exists && t.Id > id) || !exists {
+	id, err := p.cache.GetLatestTweetID(p.screenName)
+	if err != nil {
+		return err
+	}
+	if t.Id > id {
 		err := p.cache.SetLatestTweetID(p.screenName, t.Id)
 		if err != nil {
 			return err
@@ -283,11 +292,14 @@ func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
 
 func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	if match {
-		ac, exists := p.cache.GetTweetAction(t.IdStr)
-		if exists {
+		ac, err := p.cache.GetTweetAction(t.Id)
+		if err != nil {
+			return err
+		}
+		if ac != nil {
 			ac.Add(p.action)
 		} else {
-			p.cache.SetTweetAction(t.IdStr, p.action)
+			p.cache.SetTweetAction(t.Id, p.action)
 		}
 	}
 	return nil
@@ -311,8 +323,11 @@ func (a *TwitterAPI) processTweets(
 			return nil, err
 		}
 		if match {
-			done, _ := a.cache.GetTweetAction(t.IdStr)
-			err := a.processTweet(t, action, done, slack)
+			done, err := a.cache.GetTweetAction(t.Id)
+			if err != nil {
+				return nil, err
+			}
+			err = a.processTweet(t, action, done, slack)
 			if err != nil {
 				return nil, err
 			}
@@ -488,8 +503,11 @@ func (l *TwitterUserListener) Listen(
 					return err
 				}
 				if match {
-					done, _ := l.api.cache.GetTweetAction(c.IdStr)
-					err := l.api.processTweet(c, timeline.Action, done, slack)
+					done, err := l.api.cache.GetTweetAction(c.Id)
+					if err != nil {
+						return err
+					}
+					err = l.api.processTweet(c, timeline.Action, done, slack)
 					if err != nil {
 						return err
 					}
@@ -550,10 +568,14 @@ func (l *TwitterDMListener) Listen() error {
 					return err
 				}
 				if match {
-					if l.api.cache.GetLatestDMID() < c.Id {
+					id, err := l.api.cache.GetLatestDMID()
+					if err != nil {
+						return err
+					}
+					if id < c.Id {
 						l.api.cache.SetLatestDMID(c.Id)
 					}
-					err := l.api.responseForDirectMessage(c, l.receiver)
+					err = l.api.responseForDirectMessage(c, l.receiver)
 					if err != nil {
 						return err
 					}

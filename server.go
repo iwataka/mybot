@@ -189,8 +189,9 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	imageURL := ""
 	imageAnalysisResult := ""
 	imageAnalysisDate := ""
-	if len(cache.GetLatestImages(1)) != 0 {
-		imgCache := cache.GetLatestImages(1)[0]
+	images, err := cache.GetLatestImages(1)
+	if err == nil && len(images) != 0 {
+		imgCache := images[0]
 		imageSource = imgCache.Src
 		imageURL = imgCache.URL
 		if cache != nil {

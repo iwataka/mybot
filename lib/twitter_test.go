@@ -75,8 +75,11 @@ func TestPostProcessorEach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ac, exists := cache.GetTweetAction(tweet.IdStr)
-	if !exists || !reflect.DeepEqual(ac, action) {
+	ac, err := cache.GetTweetAction(tweet.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(ac, action) {
 		t.Fatalf("%v is not cached properly", action)
 	}
 
@@ -92,8 +95,11 @@ func TestPostProcessorEach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ac2, exists := cache.GetTweetAction(tweet.IdStr)
-	if !exists || !ac2.Twitter.Favorite {
+	ac2, err := cache.GetTweetAction(tweet.Id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ac2.Twitter.Favorite {
 		t.Fatalf("%v is not cached properly", action2)
 	}
 }
