@@ -81,19 +81,27 @@ func (a *TwitterAction) Sub(action *TwitterAction) {
 	a.Collections = cols
 }
 
+func (a *TwitterAction) IsEmpty() bool {
+	return !a.Retweet &&
+		!a.Favorite &&
+		!a.Follow &&
+		len(a.Collections) == 0
+}
+
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
 	api    *anaconda.TwitterApi
 	self   *anaconda.User
 	cache  Cache
-	config *Config
+	config Config
+	debug  bool
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth *OAuthCredentials, c Cache, cfg *Config) *TwitterAPI {
+func NewTwitterAPI(auth *OAuthCredentials, c Cache, cfg Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg}
+	return &TwitterAPI{api, nil, c, cfg, true}
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
@@ -299,7 +307,10 @@ func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 		if ac != nil {
 			ac.Add(p.action)
 		} else {
-			p.cache.SetTweetAction(t.Id, p.action)
+			err := p.cache.SetTweetAction(t.Id, p.action)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -432,7 +443,10 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 // NotifyToAll sends metadata about the specified tweet, such as place, to the
 // all users specified in the configuration.
 func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
-	n := a.config.Twitter.Notification
+	n, err := a.config.GetTwitterNotification()
+	if err != nil {
+		return err
+	}
 	if n.Place != nil && t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
 		allowSelf := n.Place.AllowSelf
@@ -478,12 +492,16 @@ func (l *TwitterUserListener) Listen(
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
-			if l.api.config.Twitter.Debug {
+			if l.api.debug {
 				log.Printf("Tweet by %s created at %s\n", c.User.Name, c.CreatedAt)
 			}
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
-			for _, t := range l.api.config.Twitter.Timelines {
+			ts, err := l.api.config.GetTwitterTimelines()
+			if err != nil {
+				return err
+			}
+			for _, t := range ts {
 				for _, n := range t.ScreenNames {
 					if n == name {
 						timelines = append(timelines, t)
@@ -517,7 +535,7 @@ func (l *TwitterUserListener) Listen(
 					}
 				}
 			}
-			err := l.api.cache.Save()
+			err = l.api.cache.Save()
 			if err != nil {
 				return err
 			}
@@ -530,7 +548,14 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
-	usernames := strings.Join(a.config.Twitter.GetScreenNames(), ",")
+	names, err := a.config.GetTwitterScreenNames()
+	if err != nil {
+		return nil, err
+	}
+	usernames := strings.Join(names, ",")
+	if err != nil {
+		return nil, err
+	}
 	if len(usernames) == 0 {
 		return nil, errors.New("No user specified")
 	} else {
@@ -558,11 +583,14 @@ func (l *TwitterDMListener) Listen() error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
-			if l.api.config.Twitter.Debug {
+			if l.api.debug {
 				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
 			}
-			if l.api.config.Interaction != nil {
-				conf := l.api.config.Interaction
+			conf, err := l.api.config.GetInteraction()
+			if err != nil {
+				return err
+			}
+			if conf != nil {
 				match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
 				if err != nil {
 					return err
@@ -573,7 +601,10 @@ func (l *TwitterDMListener) Listen() error {
 						return err
 					}
 					if id < c.Id {
-						l.api.cache.SetLatestDMID(c.Id)
+						err := l.api.cache.SetLatestDMID(c.Id)
+						if err != nil {
+							return err
+						}
 					}
 					err = l.api.responseForDirectMessage(c, l.receiver)
 					if err != nil {
@@ -581,7 +612,7 @@ func (l *TwitterDMListener) Listen() error {
 					}
 				}
 			}
-			err := l.api.cache.Save()
+			err = l.api.cache.Save()
 			if err != nil {
 				return err
 			}
@@ -603,8 +634,12 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) 
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
-	allowSelf := a.config.Interaction.AllowSelf
-	users := a.config.Interaction.Users
+	interaction, err := a.config.GetInteraction()
+	if err != nil {
+		return err
+	}
+	allowSelf := interaction.AllowSelf
+	users := interaction.Users
 	if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
 		return nil
 	}
@@ -673,22 +708,6 @@ var collectionsCommand = &DirectMessageCommand{
 	},
 }
 
-var configCommand = &DirectMessageCommand{
-	Name:        "configuration,config,conf",
-	Description: "Shows the configuration of this app.",
-	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
-		if len(args) != 0 {
-			return "This command can't accept any arguments", nil
-		}
-
-		bs, err := a.config.ToText(strings.Repeat(" ", 4))
-		if err != nil {
-			return "", err
-		}
-		return string(bs), nil
-	},
-}
-
 var retweetCommand = &DirectMessageCommand{
 	Name:        "retweet",
 	Description: "Add configuration to retweet all tweet of the specified users",
@@ -696,10 +715,12 @@ var retweetCommand = &DirectMessageCommand{
 		timeline := NewTimelineConfig()
 		timeline.ScreenNames = args
 		timeline.Action.Twitter.Retweet = true
-		a.config.Twitter.Timelines = append(a.config.Twitter.Timelines, *timeline)
-		err := a.config.Validate()
+		timelines, err := a.config.GetTwitterTimelines()
 		if err != nil {
-			a.config.Load()
+			return "", err
+		}
+		err = a.config.SetTwitterTimelines(append(timelines, *timeline))
+		if err != nil {
 			return "", err
 		}
 		err = a.config.Save()
@@ -717,10 +738,12 @@ var favoriteCommand = &DirectMessageCommand{
 		favorite := NewFavoriteConfig()
 		favorite.ScreenNames = args
 		favorite.Action.Twitter.Favorite = true
-		a.config.Twitter.Favorites = append(a.config.Twitter.Favorites, *favorite)
-		err := a.config.Validate()
+		favorites, err := a.config.GetTwitterFavorites()
 		if err != nil {
-			a.config.Load()
+			return "", err
+		}
+		err = a.config.SetTwitterFavorites(append(favorites, *favorite))
+		if err != nil {
 			return "", err
 		}
 		err = a.config.Save()
@@ -747,7 +770,6 @@ var helpCommand = &DirectMessageCommand{
 
 var directMessageCommandList = []*DirectMessageCommand{
 	collectionsCommand,
-	configCommand,
 	helpCommand,
 	retweetCommand,
 	favoriteCommand,

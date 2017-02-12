@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	c, err := NewConfig("test_assets/config.template.toml")
+	c, err := NewFileConfig("test_assets/config.template.toml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -83,7 +83,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewConfigWhenNotExist(t *testing.T) {
-	_, err := NewConfig("config_not_exist.toml")
+	_, err := NewFileConfig("config_not_exist.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +195,7 @@ func TestTweetAction_Add(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	c, err := NewConfig("test_assets/config.template.toml")
+	c, err := NewFileConfig("test_assets/config.template.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,5 +233,229 @@ func TestSaveLoad(t *testing.T) {
 	tomlCfg.File = c.File
 	if !reflect.DeepEqual(&tomlCfg, c) {
 		t.Fatalf("%v expected but %v found", c, tomlCfg)
+	}
+}
+
+func TestFileConfigTwitterTimelines(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterTimelines(t, c)
+}
+
+func testConfigTwitterTimelines(t *testing.T, c Config) {
+	action := NewTweetAction()
+	action.Twitter.Retweet = true
+	timelines := []TimelineConfig{
+		TimelineConfig{
+			SourceConfig: &SourceConfig{
+				Action: action,
+			},
+			ScreenNames: []string{"foo"},
+		},
+	}
+	err := c.SetTwitterTimelines(timelines)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts, err := c.GetTwitterTimelines()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(timelines, ts) {
+		t.Fatalf("%v is not set properly", timelines)
+	}
+}
+
+func TestFileConfigTwitterFavorites(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterFavorites(t, c)
+}
+
+func testConfigTwitterFavorites(t *testing.T, c Config) {
+	action := NewTweetAction()
+	action.Twitter.Retweet = true
+	favorites := []FavoriteConfig{
+		FavoriteConfig{
+			SourceConfig: &SourceConfig{
+				Action: action,
+			},
+			ScreenNames: []string{"foo"},
+		},
+	}
+	err := c.SetTwitterFavorites(favorites)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fs, err := c.GetTwitterFavorites()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(favorites, fs) {
+		t.Fatalf("%v is not set properly", favorites)
+	}
+}
+
+func TestFileConfigTwitterSearches(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterSearches(t, c)
+}
+
+func testConfigTwitterSearches(t *testing.T, c Config) {
+	action := NewTweetAction()
+	action.Twitter.Retweet = true
+	searches := []SearchConfig{
+		SearchConfig{
+			SourceConfig: &SourceConfig{
+				Action: action,
+			},
+			Queries: []string{"foo"},
+		},
+	}
+	err := c.SetTwitterSearches(searches)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ss, err := c.GetTwitterSearches()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(searches, ss) {
+		t.Fatalf("%v is not set properly", searches)
+	}
+}
+
+func TestFileConfigTwitterAPIs(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterAPIs(t, c)
+}
+
+func testConfigTwitterAPIs(t *testing.T, c Config) {
+	apis := []APIConfig{
+		APIConfig{
+			SourceURL:       "foo",
+			MessageTemplate: "bar",
+		},
+	}
+	err := c.SetTwitterAPIs(apis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	as, err := c.GetTwitterAPIs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(apis, as) {
+		t.Fatalf("%v is not set properly", apis)
+	}
+}
+
+func TestFileConfigTwitterNotification(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterNotification(t, c)
+}
+
+func testConfigTwitterNotification(t *testing.T, c Config) {
+	notification := &Notification{
+		Place: &PlaceNotification{
+			Users: []string{"foo"},
+		},
+	}
+	err := c.SetTwitterNotification(notification)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := c.GetTwitterNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(notification, n) {
+		t.Fatalf("%v is not set properly", notification)
+	}
+}
+
+func TestFileConfigInteraction(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigInteraction(t, c)
+}
+
+func testConfigInteraction(t *testing.T, c Config) {
+	interaction := &InteractionConfig{
+		Users: []string{"foo"},
+	}
+	err := c.SetInteraction(interaction)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, err := c.GetInteraction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(interaction, i) {
+		t.Fatalf("%v is not set properly", interaction)
+	}
+}
+
+func TestFileConfigLog(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigLog(t, c)
+}
+
+func testConfigLog(t *testing.T, c Config) {
+	log := &LogConfig{
+		Users: []string{"foo"},
+	}
+	err := c.SetLog(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, err := c.GetLog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(log, l) {
+		t.Fatalf("%v is not set properly", log)
+	}
+}
+
+func TestFileConfigTwitterDuration(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigTwitterDuration(t, c)
+}
+
+func testConfigTwitterDuration(t *testing.T, c Config) {
+	duration := "20m"
+	err := c.SetTwitterDuration(duration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dur, err := c.GetTwitterDuration()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if duration != dur {
+		t.Fatalf("%v is not set properly", duration)
 	}
 }

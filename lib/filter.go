@@ -1,6 +1,7 @@
 package mybot
 
 import (
+	"fmt"
 	"regexp"
 	"time"
 
@@ -26,6 +27,15 @@ func NewTweetFilter() *TweetFilter {
 		Vision:   NewVisionCondition(),
 		Language: &LanguageCondition{},
 	}
+}
+
+func (f *TweetFilter) Validate() error {
+	flag := (f.Vision != nil && !f.Vision.isEmpty()) &&
+		(f.RetweetedThreshold != nil || f.FavoriteThreshold != nil)
+	if flag {
+		return fmt.Errorf("%v use both of Vision API and retweeted/favorite threshold", f)
+	}
+	return nil
 }
 
 func (c *TweetFilter) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, cache Cache) (bool, error) {
@@ -101,7 +111,10 @@ func (c *TweetFilter) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher
 				result,
 				time.Now().Format(time.RubyDate),
 			}
-			cache.SetImage(imgCache)
+			err := cache.SetImage(imgCache)
+			if err != nil {
+				return false, err
+			}
 		}
 
 		match := false

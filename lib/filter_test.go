@@ -190,3 +190,17 @@ func TestCheckVisionUnmatched(t *testing.T) {
 		t.Fatalf("%v expected but %v found", false, match)
 	}
 }
+
+func TestFilterValidate(t *testing.T) {
+	threshold := 100
+	f := &TweetFilter{
+		FavoriteThreshold: &threshold,
+		Vision: &VisionCondition{
+			Label: []string{"foo"},
+		},
+	}
+	err := f.Validate()
+	if err == nil {
+		t.Fatalf("%v should be invalid but not", f)
+	}
+}

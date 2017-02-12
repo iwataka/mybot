@@ -527,7 +527,7 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
 		NavbarName string
 		Message    string
-		Config     mybot.Config
+		Config     mybot.FileConfig
 	}{
 		"Config",
 		msg,

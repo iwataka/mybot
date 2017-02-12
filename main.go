@@ -20,7 +20,7 @@ var (
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
 	slackAPI    *mybot.SlackAPI
-	config      *mybot.Config
+	config      *mybot.FileConfig
 	cache       mybot.Cache
 	logger      *mybot.Logger
 	status      *mybot.Status
@@ -217,7 +217,7 @@ func beforeValidate(c *cli.Context) error {
 		panic(err)
 	}
 
-	config, err = mybot.NewConfig(c.String("config"))
+	config, err = mybot.NewFileConfig(c.String("config"))
 	if err != nil {
 		panic(err)
 	}
@@ -350,7 +350,7 @@ func monitorConfig() {
 		func() {
 			status.LockMonitor(file)
 			defer status.UnlockMonitor(file)
-			cfg, err := mybot.NewConfig(file)
+			cfg, err := mybot.NewFileConfig(file)
 			if err == nil {
 				*config = *cfg
 				reloadListeners()

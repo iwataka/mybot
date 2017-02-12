@@ -3,7 +3,6 @@ package mybot
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,8 +13,30 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// Config is a root of the all configurations of this applciation.
-type Config struct {
+type Config interface {
+	GetTwitterScreenNames() ([]string, error)
+	GetTwitterTimelines() ([]TimelineConfig, error)
+	SetTwitterTimelines(timelines []TimelineConfig) error
+	GetTwitterFavorites() ([]FavoriteConfig, error)
+	SetTwitterFavorites(favorites []FavoriteConfig) error
+	GetTwitterSearches() ([]SearchConfig, error)
+	SetTwitterSearches(searches []SearchConfig) error
+	GetTwitterAPIs() ([]APIConfig, error)
+	SetTwitterAPIs(apis []APIConfig) error
+	GetTwitterNotification() (*Notification, error)
+	SetTwitterNotification(notification *Notification) error
+	GetInteraction() (*InteractionConfig, error)
+	SetInteraction(interaction *InteractionConfig) error
+	GetLog() (*LogConfig, error)
+	SetLog(log *LogConfig) error
+	GetTwitterDuration() (string, error)
+	SetTwitterDuration(dur string) error
+	Load() error
+	Save() error
+}
+
+// FileConfig is a root of the all configurations of this applciation.
+type FileConfig struct {
 	// Twitter is a configuration related to Twitter.
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
 	// Interaction is a configuration related to interaction with users
@@ -28,21 +49,88 @@ type Config struct {
 	File string `json:"-" toml:"-"`
 }
 
-// NewConfig takes the configuration file path and returns a configuration
+func (c *FileConfig) GetTwitterScreenNames() ([]string, error) {
+	return c.Twitter.GetScreenNames(), nil
+}
+
+func (c *FileConfig) GetTwitterTimelines() ([]TimelineConfig, error) {
+	return c.Twitter.Timelines, nil
+}
+
+func (c *FileConfig) SetTwitterTimelines(timelines []TimelineConfig) error {
+	c.Twitter.Timelines = timelines
+	return nil
+}
+
+func (c *FileConfig) GetTwitterFavorites() ([]FavoriteConfig, error) {
+	return c.Twitter.Favorites, nil
+}
+
+func (c *FileConfig) SetTwitterFavorites(favorites []FavoriteConfig) error {
+	c.Twitter.Favorites = favorites
+	return nil
+}
+
+func (c *FileConfig) GetTwitterSearches() ([]SearchConfig, error) {
+	return c.Twitter.Searches, nil
+}
+
+func (c *FileConfig) SetTwitterSearches(searches []SearchConfig) error {
+	c.Twitter.Searches = searches
+	return nil
+}
+
+func (c *FileConfig) GetTwitterAPIs() ([]APIConfig, error) {
+	return c.Twitter.APIs, nil
+}
+
+func (c *FileConfig) SetTwitterAPIs(apis []APIConfig) error {
+	c.Twitter.APIs = apis
+	return nil
+}
+
+func (c *FileConfig) GetTwitterNotification() (*Notification, error) {
+	return c.Twitter.Notification, nil
+}
+
+func (c *FileConfig) SetTwitterNotification(notification *Notification) error {
+	c.Twitter.Notification = notification
+	return nil
+}
+
+func (c *FileConfig) GetInteraction() (*InteractionConfig, error) {
+	return c.Interaction, nil
+}
+
+func (c *FileConfig) SetInteraction(interaction *InteractionConfig) error {
+	c.Interaction = interaction
+	return nil
+}
+
+func (c *FileConfig) GetLog() (*LogConfig, error) {
+	return c.Log, nil
+}
+
+func (c *FileConfig) SetLog(log *LogConfig) error {
+	c.Log = log
+	return nil
+}
+
+func (c *FileConfig) GetTwitterDuration() (string, error) {
+	return c.Twitter.Duration, nil
+}
+
+func (c *FileConfig) SetTwitterDuration(dur string) error {
+	c.Twitter.Duration = dur
+	return nil
+}
+
+// NewFileConfig takes the configuration file path and returns a configuration
 // instance.
-func NewConfig(path string) (*Config, error) {
-	c := &Config{
-		Twitter: &TwitterConfig{
-			Timelines: []TimelineConfig{},
-			Searches:  []SearchConfig{},
-			Duration:  "1h",
-			Notification: &Notification{
-				Place: &PlaceNotification{},
-			},
-		},
-		Log: &LogConfig{
-			Linenum: 10,
-		},
+func NewFileConfig(path string) (*FileConfig, error) {
+	c := &FileConfig{
+		Twitter:     NewTwitterConfig(),
+		Log:         NewLogConfig(),
 		Interaction: &InteractionConfig{},
 	}
 
@@ -74,87 +162,43 @@ func NewConfig(path string) (*Config, error) {
 
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
-func (c *Config) Validate() error {
+func (c *FileConfig) Validate() error {
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
-		if timeline.Action == nil {
-			msg := fmt.Sprintf("%v has no action", timeline)
-			return errors.New(msg)
-		}
-		if len(timeline.ScreenNames) == 0 {
-			msg := fmt.Sprintf("%v has no name", timeline)
-			return errors.New(msg)
-		}
-		filter := timeline.Filter
-		if !filter.Vision.isEmpty() &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
-			bytes, _ := json.Marshal(timeline)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
+		err := timeline.Validate()
+		if err != nil {
+			return err
 		}
 	}
 
 	// Validate favorite configurations
 	for _, favorite := range c.Twitter.Favorites {
-		if favorite.Action == nil {
-			msg := fmt.Sprintf("%v has no action", favorite)
-			return errors.New(msg)
-		}
-		if len(favorite.ScreenNames) == 0 {
-			msg := fmt.Sprintf("%v has no name", favorite)
-			return errors.New(msg)
-		}
-		filter := favorite.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
-			bytes, _ := json.Marshal(favorite)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
+		err := favorite.Validate()
+		if err != nil {
+			return err
 		}
 	}
 
 	// Validate search configurations
 	for _, search := range c.Twitter.Searches {
-		if search.Action == nil {
-			msg := fmt.Sprintf("%v has no action", search)
-			return errors.New(msg)
-		}
-		if len(search.Queries) == 0 {
-			msg := fmt.Sprintf("%v has no query", search)
-			return errors.New(msg)
-		}
-		filter := search.Filter
-		if (filter.Vision != nil && !filter.Vision.isEmpty()) &&
-			(filter.RetweetedThreshold != nil || filter.FavoriteThreshold != nil) {
-			bytes, _ := json.Marshal(search)
-			msg := fmt.Sprintf("%s\n%s",
-				"Don't use both of Vision API and retweeted/favorite threshold",
-				string(bytes),
-			)
-			return errors.New(msg)
+		err := search.Validate()
+		if err != nil {
+			return err
 		}
 	}
 
 	// Validate API configurations
 	for _, api := range c.Twitter.APIs {
-		if len(api.SourceURL) == 0 {
-			return errors.New("API source URL shouldn't be empty")
-		}
-		if len(api.MessageTemplate) == 0 {
-			return errors.New("API message template shouldn't be empty")
+		err := api.Validate()
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (c *Config) ValidateWithAPI(api *TwitterAPI) error {
+func (c *FileConfig) ValidateWithAPI(api *TwitterAPI) error {
 	for _, name := range c.Twitter.GetScreenNames() {
 		_, err := api.api.GetUsersShow(name, nil)
 		if err != nil {
@@ -167,7 +211,7 @@ func (c *Config) ValidateWithAPI(api *TwitterAPI) error {
 // ToText returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *Config) ToText(indent string) ([]byte, error) {
+func (c *FileConfig) ToText(indent string) ([]byte, error) {
 	ext := filepath.Ext(c.File)
 	buf := new(bytes.Buffer)
 	switch ext {
@@ -194,7 +238,7 @@ func (c *Config) ToText(indent string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Config) FromText(bytes []byte) error {
+func (c *FileConfig) FromText(bytes []byte) error {
 	ext := filepath.Ext(c.File)
 	switch ext {
 	case ".json":
@@ -215,7 +259,7 @@ func (c *Config) FromText(bytes []byte) error {
 }
 
 // Save saves the specified configuration to the source file.
-func (c *Config) Save() error {
+func (c *FileConfig) Save() error {
 	// Make a directory before all.
 	err := os.MkdirAll(filepath.Dir(c.File), 0751)
 	if err != nil {
@@ -236,7 +280,7 @@ func (c *Config) Save() error {
 
 // Load loads the configuration from the source file. If the specified source
 // file doesn't exist, this method does nothing and returns nil.
-func (c *Config) Load() error {
+func (c *FileConfig) Load() error {
 	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
 		bytes, err := ioutil.ReadFile(c.File)
 		if err != nil {
@@ -278,6 +322,13 @@ func (c *SourceConfig) Init() {
 	}
 }
 
+func (c *SourceConfig) Validate() error {
+	if c.Action == nil || c.Action.IsEmpty() {
+		return fmt.Errorf("%v has no action", c)
+	}
+	return nil
+}
+
 type TweetAction struct {
 	Twitter *TwitterAction `json:"twitter" toml:"twitter"`
 	Slack   *SlackAction   `json:"slack" toml:"slack"`
@@ -314,6 +365,10 @@ func (a *TweetAction) Sub(action *TweetAction) {
 	}
 }
 
+func (a *TweetAction) IsEmpty() bool {
+	return a.Twitter.IsEmpty() && a.Slack.IsEmpty()
+}
+
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
 	Timelines []TimelineConfig `json:"timelines" toml:"timelines"`
@@ -331,6 +386,15 @@ type TwitterConfig struct {
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
 	Debug bool `json:"debug" toml:"debug"`
+}
+
+func NewTwitterConfig() *TwitterConfig {
+	return &TwitterConfig{
+		Timelines:    []TimelineConfig{},
+		Searches:     []SearchConfig{},
+		Duration:     "1h",
+		Notification: NewNotification(),
+	}
 }
 
 // GetScreenNames returns all screen names in the TwitterConfig instance. This
@@ -366,6 +430,17 @@ func NewTimelineConfig() *TimelineConfig {
 	}
 }
 
+func (c *TimelineConfig) Validate() error {
+	err := c.SourceConfig.Validate()
+	if err != nil {
+		return err
+	}
+	if len(c.ScreenNames) == 0 {
+		return fmt.Errorf("%v has no screen names", c)
+	}
+	return c.Filter.Validate()
+}
+
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
 	*SourceConfig
@@ -382,6 +457,17 @@ func NewFavoriteConfig() *FavoriteConfig {
 			Action: NewTweetAction(),
 		},
 	}
+}
+
+func (c *FavoriteConfig) Validate() error {
+	err := c.SourceConfig.Validate()
+	if err != nil {
+		return err
+	}
+	if len(c.ScreenNames) == 0 {
+		return fmt.Errorf("%v has no screen names", c)
+	}
+	return c.Filter.Validate()
 }
 
 // SearchConfig is a configuration for Twitter searches
@@ -403,6 +489,17 @@ func NewSearchConfig() *SearchConfig {
 	}
 }
 
+func (c *SearchConfig) Validate() error {
+	err := c.SourceConfig.Validate()
+	if err != nil {
+		return err
+	}
+	if len(c.Queries) == 0 {
+		return fmt.Errorf("%v has no queries", c)
+	}
+	return c.Filter.Validate()
+}
+
 type APIConfig struct {
 	SourceURL       string `json:"source_url,omitempty" toml:"source_url,omitempty"`
 	MessageTemplate string `json:"message_template,omitempty" toml:"message_template,omitempty"`
@@ -410,6 +507,16 @@ type APIConfig struct {
 
 func NewAPIConfig() *APIConfig {
 	return &APIConfig{}
+}
+
+func (c *APIConfig) Validate() error {
+	if len(c.SourceURL) == 0 {
+		return fmt.Errorf("%v has no source URL", c)
+	}
+	if len(c.MessageTemplate) == 0 {
+		return fmt.Errorf("%v has no message template", c)
+	}
+	return nil
 }
 
 func (c *APIConfig) Message() (string, error) {
@@ -457,4 +564,10 @@ type LogConfig struct {
 	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
 	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
 	Linenum   int      `json:"linenum,omitempty" toml:"linenum,omitempty"`
+}
+
+func NewLogConfig() *LogConfig {
+	return &LogConfig{
+		Linenum: 10,
+	}
 }

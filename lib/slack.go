@@ -61,6 +61,10 @@ func (a *SlackAction) Sub(action *SlackAction) {
 	a.Channels = chans
 }
 
+func (a *SlackAction) IsEmpty() bool {
+	return len(a.Channels) == 0
+}
+
 type SlackAPI struct {
 	api *slack.Client
 }

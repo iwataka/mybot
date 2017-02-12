@@ -15,21 +15,37 @@ func TestFileCacheSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Save()
+	err = c.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("%s expected to exist but not", path)
 	}
 }
 
 func TestFileCacheLatestTweetID(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+	cache, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
+	testCacheLatestTweetID(t, cache)
+}
+
+func TestDBCacheLatestTweetID(t *testing.T) {
+	c, err := NewDBCache("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("test.db")
+	testCacheLatestTweetID(t, c)
+}
+
+func testCacheLatestTweetID(t *testing.T, c Cache) {
 	name := "foo"
 	var tweetID int64
 	tweetID = 1
-	err = c.SetLatestTweetID(name, tweetID)
+	err := c.SetLatestTweetID(name, tweetID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,10 +63,23 @@ func TestFileCacheLatestFavoriteID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	testCacheLatestFavoriteID(t, c)
+}
+
+func TesDBCacheLatestFavoriteID(t *testing.T) {
+	c, err := NewDBCache("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("test.db")
+	testCacheLatestFavoriteID(t, c)
+}
+
+func testCacheLatestFavoriteID(t *testing.T, c Cache) {
 	name := "foo"
 	var favoriteID int64
 	favoriteID = 1
-	err = c.SetLatestFavoriteID(name, favoriteID)
+	err := c.SetLatestFavoriteID(name, favoriteID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,9 +97,22 @@ func TestFileCacheLatestDMID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	testCacheLatestDMID(t, c)
+}
+
+func TestDBCacheLatestDMID(t *testing.T) {
+	c, err := NewDBCache("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("test.db")
+	testCacheLatestDMID(t, c)
+}
+
+func testCacheLatestDMID(t *testing.T, c Cache) {
 	var dmID int64
 	dmID = 1
-	err = c.SetLatestDMID(dmID)
+	err := c.SetLatestDMID(dmID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,6 +130,19 @@ func TestFileCacheTweetAction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	testCacheTweetAction(t, c)
+}
+
+func TestDBCacheTweetAction(t *testing.T) {
+	c, err := NewDBCache("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("test.db")
+	testCacheTweetAction(t, c)
+}
+
+func testCacheTweetAction(t *testing.T, c Cache) {
 	var tweetID int64 = 1
 	action := &TweetAction{
 		Twitter: &TwitterAction{
@@ -98,7 +153,7 @@ func TestFileCacheTweetAction(t *testing.T) {
 		},
 		Slack: NewSlackAction(),
 	}
-	err = c.SetTweetAction(tweetID, action)
+	err := c.SetTweetAction(tweetID, action)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,13 +171,26 @@ func TestFileCacheImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	testCacheImage(t, c)
+}
+
+func TestDBCacheImage(t *testing.T) {
+	c, err := NewDBCache("sqlite3", "test.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove("test.db")
+	testCacheImage(t, c)
+}
+
+func testCacheImage(t *testing.T, c Cache) {
 	img := ImageCacheData{
 		URL:            "",
 		Src:            "",
 		AnalysisResult: "",
 		AnalysisDate:   "",
 	}
-	err = c.SetImage(img)
+	err := c.SetImage(img)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,94 +200,5 @@ func TestFileCacheImage(t *testing.T) {
 	}
 	if !reflect.DeepEqual(img, is[0]) {
 		t.Fatalf("%v expected but %v found", img, is[0])
-	}
-}
-
-func TestDBCache(t *testing.T) {
-	file := "test.db"
-	if info, _ := os.Stat(file); info != nil && !info.IsDir() {
-		os.Remove(file)
-	}
-	cache, err := NewDBCache("sqlite3", file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cache.client.Error != nil {
-		t.Fatal(cache.client.Error)
-	}
-
-	action := &TweetAction{
-		Twitter: &TwitterAction{
-			Retweet:     true,
-			Collections: []string{"foo"},
-		},
-		Slack: &SlackAction{
-			Channels: []string{"bar"},
-		},
-	}
-	err = cache.SetTweetAction(7, action)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ac, err := cache.GetTweetAction(7)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(action, ac) {
-		t.Fatalf("Tweet Action %v is not set", action)
-	}
-
-	image := ImageCacheData{
-		URL:            "url",
-		Src:            "src",
-		AnalysisResult: "result",
-		AnalysisDate:   "date",
-	}
-	err = cache.SetImage(image)
-	if err != nil {
-		t.Fatal(err)
-	}
-	imgs, err := cache.GetLatestImages(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(image, imgs[0]) {
-		t.Fatalf("Image %v is not set", image)
-	}
-
-	err = cache.SetLatestFavoriteID("golang", 13)
-	if err != nil {
-		t.Fatal(err)
-	}
-	favID, err := cache.GetLatestFavoriteID("golang")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if favID != 13 {
-		t.Fatalf("Latest Favorite ID %v is not set", 13)
-	}
-
-	err = cache.SetLatestTweetID("golang", 17)
-	if err != nil {
-		t.Fatal(err)
-	}
-	twID, err := cache.GetLatestTweetID("golang")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if twID != 17 {
-		t.Fatalf("Latest Tweet ID %v is not set", 17)
-	}
-
-	err = cache.SetLatestDMID(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dmID, err := cache.GetLatestDMID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if dmID != 1 {
-		t.Fatalf("Latest DM ID %v is not set", 1)
 	}
 }
