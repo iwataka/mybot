@@ -86,9 +86,8 @@ func TestCheckFavoriteThresholdExceeded(t *testing.T) {
 		FavoriteCount: 100,
 	}
 	threshold := 80
-	conf := &TweetFilter{
-		FavoriteThreshold: &threshold,
-	}
+	conf := NewTweetFilter()
+	conf.FavoriteThreshold = &threshold
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -103,9 +102,8 @@ func TestCheckFavoriteThresholdNotExceeded(t *testing.T) {
 		FavoriteCount: 100,
 	}
 	threshold := 120
-	conf := &TweetFilter{
-		FavoriteThreshold: &threshold,
-	}
+	conf := NewTweetFilter()
+	conf.FavoriteThreshold = &threshold
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -120,9 +118,8 @@ func TestCheckRetweetedThresholdExceeded(t *testing.T) {
 		RetweetCount: 100,
 	}
 	threshold := 80
-	conf := &TweetFilter{
-		RetweetedThreshold: &threshold,
-	}
+	conf := NewTweetFilter()
+	conf.RetweetedThreshold = &threshold
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -137,9 +134,8 @@ func TestCheckRetweetedThresholdNotExceeded(t *testing.T) {
 		RetweetCount: 100,
 	}
 	threshold := 120
-	conf := &TweetFilter{
-		RetweetedThreshold: &threshold,
-	}
+	conf := NewTweetFilter()
+	conf.RetweetedThreshold = &threshold
 	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -193,12 +189,9 @@ func TestCheckVisionUnmatched(t *testing.T) {
 
 func TestFilterValidate(t *testing.T) {
 	threshold := 100
-	f := &TweetFilter{
-		FavoriteThreshold: &threshold,
-		Vision: &VisionCondition{
-			Label: []string{"foo"},
-		},
-	}
+	f := NewTweetFilter()
+	f.FavoriteThreshold = &threshold
+	f.Vision.Label = []string{"foo"}
 	err := f.Validate()
 	if err == nil {
 		t.Fatalf("%v should be invalid but not", f)

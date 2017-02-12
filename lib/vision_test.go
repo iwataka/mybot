@@ -7,13 +7,10 @@ import (
 )
 
 func TestVisionFeatures(t *testing.T) {
-	cond := &VisionCondition{
-		Label: []string{"label"},
-		Face: &VisionFaceCondition{
-			BlurredLikelihood: "VERY_LIKELY",
-		},
-		Text: []string{"text"},
-	}
+	cond := NewVisionCondition()
+	cond.Label = []string{"label"}
+	cond.Face.BlurredLikelihood = "VERY_LIKELY"
+	cond.Text = []string{"text"}
 	fs := cond.VisionFeatures()
 	if len(fs) != 3 {
 		t.Fatalf("%v has %d elements but should have %d", fs, len(fs), 3)
@@ -21,13 +18,10 @@ func TestVisionFeatures(t *testing.T) {
 }
 
 func TestVisionConditionIsEmpty(t *testing.T) {
-	cond := &VisionCondition{
-		Label: []string{},
-		Face: &VisionFaceCondition{
-			BlurredLikelihood: "",
-		},
-		Text: []string{},
-	}
+	cond := NewVisionCondition()
+	cond.Label = []string{}
+	cond.Face.BlurredLikelihood = ""
+	cond.Text = []string{}
 	if !cond.isEmpty() {
 		t.Fatalf("%v is expected to be empty but not", cond)
 	}
@@ -62,9 +56,8 @@ func TestMatchFace(t *testing.T) {
 			BlurredLikelihood: "VERY_UNLIKELY",
 		},
 	}
-	face := &VisionFaceCondition{
-		AngerLikelihood: "LIKELY|VERY_LIKELY",
-	}
+	face := &VisionFaceCondition{}
+	face.AngerLikelihood = "LIKELY|VERY_LIKELY"
 	flag, err := matchFace(as, face)
 	if err != nil {
 		t.Fatal(err)

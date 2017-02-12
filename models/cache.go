@@ -9,17 +9,21 @@ type Cache struct {
 	gorm.Model
 	Tweets       []TweetActionCache
 	TwitterUsers []TwitterUserCache
-	LatestDMID   int64 `gorm:"latest_dm_id"`
+	LatestDMID   int64
 	Visions      []VisionCache
 }
 
 type VisionCache struct {
 	gorm.Model
-	CacheID        uint
-	URL            string
-	Src            string
-	AnalysisResult string
-	AnalysisDate   string
+	VisionCacheProperties
+	CacheID uint
+}
+
+type VisionCacheProperties struct {
+	URL            string `json:"url" toml:"url"`
+	Src            string `json:"src" toml:"src"`
+	AnalysisResult string `json:"analysis_result" toml:"analysis_result"`
+	AnalysisDate   string `json:"analysis_date" toml:"analysis_date"`
 }
 
 type TwitterUserCache struct {
@@ -38,33 +42,6 @@ type TweetActionCache struct {
 	TwitterAction   TwitterAction
 	SlackActionID   uint
 	SlackAction     SlackAction
-}
-
-type TwitterAction struct {
-	gorm.Model
-	Retweet     bool
-	Favorite    bool
-	Follow      bool
-	Collections []TwitterCollection
-}
-
-func (a *TwitterAction) GetCollections() []string {
-	result := []string{}
-	for _, c := range a.Collections {
-		result = append(result, c.Name)
-	}
-	return result
-}
-
-func (a *TwitterAction) SetCollections(cols []string) {
-	a.Collections = []TwitterCollection{}
-	for _, col := range cols {
-		c := TwitterCollection{
-			TwitterActionID: a.ID,
-			Name:            col,
-		}
-		a.Collections = append(a.Collections, c)
-	}
 }
 
 type SlackAction struct {
@@ -95,10 +72,4 @@ type TwitterCollection struct {
 	gorm.Model
 	TwitterActionID uint
 	Name            string
-}
-
-type SlackChannel struct {
-	gorm.Model
-	SlackActionID uint
-	Name          string
 }

@@ -3,6 +3,7 @@ package mybot
 import (
 	"os"
 
+	"github.com/iwataka/mybot/models"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/language/v1"
@@ -32,8 +33,7 @@ func NewLanguageAPI(file string) (*LanguageAPI, error) {
 }
 
 type LanguageCondition struct {
-	MinSentiment *float64 `json:"min_sentiment,omitempty" toml:"min_sentiment,omitempty"`
-	MaxSentiment *float64 `json:"max_sentiment,omitempty" toml:"max_sentiment,omitempty"`
+	models.LanguageConditionProperties
 }
 
 func (c *LanguageCondition) isEmpty() bool {

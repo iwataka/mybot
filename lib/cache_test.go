@@ -146,13 +146,11 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 	var tweetID int64 = 1
 	action := &TweetAction{
 		Twitter: &TwitterAction{
-			Retweet:     true,
-			Favorite:    false,
-			Follow:      false,
-			Collections: []string{"Collection"},
+			Collections: []string{"foo"},
 		},
 		Slack: NewSlackAction(),
 	}
+	action.Twitter.Retweet = true
 	err := c.SetTweetAction(tweetID, action)
 	if err != nil {
 		t.Fatal(err)
@@ -184,12 +182,7 @@ func TestDBCacheImage(t *testing.T) {
 }
 
 func testCacheImage(t *testing.T, c Cache) {
-	img := ImageCacheData{
-		URL:            "",
-		Src:            "",
-		AnalysisResult: "",
-		AnalysisDate:   "",
-	}
+	img := ImageCacheData{}
 	err := c.SetImage(img)
 	if err != nil {
 		t.Fatal(err)

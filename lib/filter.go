@@ -6,20 +6,16 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/models"
 )
 
 // TweetFilter is a configuration to filter out tweets
 type TweetFilter struct {
-	Patterns           []string           `json:"patterns,omitempty" toml:"patterns,omitempty"`
-	URLPatterns        []string           `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
-	HasMedia           *bool              `json:"has_media,omitempty" toml:"has_media,omitempty"`
-	HasURL             *bool              `json:"has_url,omitempty" toml:"has_url,omitempty"`
-	Retweeted          *bool              `json:"retweeted,omitempty" toml:"retweeted,omitempty"`
-	FavoriteThreshold  *int               `json:"favorite_threshold" toml:"favorite_threshold"`
-	RetweetedThreshold *int               `json:"retweeted_threshold" toml:"retweeted_threshold"`
-	Lang               string             `json:"lang,omitempty" toml:"lang,omitempty"`
-	Vision             *VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
-	Language           *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
+	models.TweetFilterProperties
+	Patterns    []string           `json:"patterns,omitempty" toml:"patterns,omitempty"`
+	URLPatterns []string           `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
+	Vision      *VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
+	Language    *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
 func NewTweetFilter() *TweetFilter {
@@ -105,12 +101,11 @@ func (c *TweetFilter) check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher
 			}
 
 			tweetSrc := TwitterStatusURL(t)
-			imgCache := ImageCacheData{
-				urls[i],
-				tweetSrc,
-				result,
-				time.Now().Format(time.RubyDate),
-			}
+			imgCache := ImageCacheData{}
+			imgCache.URL = urls[i]
+			imgCache.Src = tweetSrc
+			imgCache.AnalysisResult = result
+			imgCache.AnalysisDate = time.Now().Format(time.RubyDate)
 			err := cache.SetImage(imgCache)
 			if err != nil {
 				return false, err

@@ -135,13 +135,13 @@ func TestTweetAction_AddNil(t *testing.T) {
 	}
 	a2 := &TweetAction{
 		Twitter: &TwitterAction{
-			Retweet:     true,
 			Collections: []string{"foo"},
 		},
 		Slack: &SlackAction{
 			Channels: []string{"bar"},
 		},
 	}
+	a2.Twitter.Retweet = true
 
 	result1 := *a1
 	result1.Add(a2)
@@ -159,22 +159,22 @@ func TestTweetAction_AddNil(t *testing.T) {
 func TestTweetAction_Add(t *testing.T) {
 	a1 := &TweetAction{
 		Twitter: &TwitterAction{
-			Retweet:     true,
 			Collections: []string{"twitter"},
 		},
 		Slack: &SlackAction{
 			Channels: []string{"slack"},
 		},
 	}
+	a1.Twitter.Retweet = true
 	a2 := &TweetAction{
 		Twitter: &TwitterAction{
-			Favorite:    true,
 			Collections: []string{"facebook"},
 		},
 		Slack: &SlackAction{
 			Channels: []string{"mattermost"},
 		},
 	}
+	a2.Twitter.Favorite = true
 	a1.Add(a2)
 
 	if !a1.Twitter.Retweet {
@@ -247,14 +247,10 @@ func TestFileConfigTwitterTimelines(t *testing.T) {
 func testConfigTwitterTimelines(t *testing.T, c Config) {
 	action := NewTweetAction()
 	action.Twitter.Retweet = true
-	timelines := []TimelineConfig{
-		TimelineConfig{
-			SourceConfig: &SourceConfig{
-				Action: action,
-			},
-			ScreenNames: []string{"foo"},
-		},
-	}
+	timeline := TimelineConfig{}
+	timeline.Action = action
+	timeline.ScreenNames = []string{"foo"}
+	timelines := []TimelineConfig{timeline}
 	err := c.SetTwitterTimelines(timelines)
 	if err != nil {
 		t.Fatal(err)
@@ -279,14 +275,10 @@ func TestFileConfigTwitterFavorites(t *testing.T) {
 func testConfigTwitterFavorites(t *testing.T, c Config) {
 	action := NewTweetAction()
 	action.Twitter.Retweet = true
-	favorites := []FavoriteConfig{
-		FavoriteConfig{
-			SourceConfig: &SourceConfig{
-				Action: action,
-			},
-			ScreenNames: []string{"foo"},
-		},
-	}
+	favorite := FavoriteConfig{}
+	favorite.Action = action
+	favorite.ScreenNames = []string{"foo"}
+	favorites := []FavoriteConfig{favorite}
 	err := c.SetTwitterFavorites(favorites)
 	if err != nil {
 		t.Fatal(err)
@@ -311,14 +303,10 @@ func TestFileConfigTwitterSearches(t *testing.T) {
 func testConfigTwitterSearches(t *testing.T, c Config) {
 	action := NewTweetAction()
 	action.Twitter.Retweet = true
-	searches := []SearchConfig{
-		SearchConfig{
-			SourceConfig: &SourceConfig{
-				Action: action,
-			},
-			Queries: []string{"foo"},
-		},
-	}
+	search := SearchConfig{}
+	search.Action = action
+	search.Queries = []string{"foo"}
+	searches := []SearchConfig{search}
 	err := c.SetTwitterSearches(searches)
 	if err != nil {
 		t.Fatal(err)
@@ -396,9 +384,8 @@ func TestFileConfigInteraction(t *testing.T) {
 }
 
 func testConfigInteraction(t *testing.T, c Config) {
-	interaction := &InteractionConfig{
-		Users: []string{"foo"},
-	}
+	interaction := &InteractionConfig{}
+	interaction.Users = []string{"foo"}
 	err := c.SetInteraction(interaction)
 	if err != nil {
 		t.Fatal(err)
@@ -421,9 +408,8 @@ func TestFileConfigLog(t *testing.T) {
 }
 
 func testConfigLog(t *testing.T, c Config) {
-	log := &LogConfig{
-		Users: []string{"foo"},
-	}
+	log := &LogConfig{}
+	log.Users = []string{"foo"}
 	err := c.SetLog(log)
 	if err != nil {
 		t.Fatal(err)

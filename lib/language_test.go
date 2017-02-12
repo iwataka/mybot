@@ -14,7 +14,9 @@ func TestLanguageConditionIsEmpty(t *testing.T) {
 func TestLanguageConditionIsNotEmpty(t *testing.T) {
 	min := 0.2
 	max := 0.5
-	c := &LanguageCondition{&min, &max}
+	c := &LanguageCondition{}
+	c.MinSentiment = &min
+	c.MaxSentiment = &max
 	if c.isEmpty() {
 		t.Fatalf("%v expected not empty but empty", c)
 	}

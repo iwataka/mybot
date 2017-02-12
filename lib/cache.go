@@ -36,10 +36,7 @@ type FileCache struct {
 }
 
 type ImageCacheData struct {
-	URL            string `json:"url" toml:"url"`
-	Src            string `json:"src" toml:"src"`
-	AnalysisResult string `json:"analysis_result" toml:"analysis_result"`
-	AnalysisDate   string `json:"analysis_date" toml:"analysis_date"`
+	models.VisionCacheProperties
 }
 
 // NewFileCache creates a Cache instance by using the specified file.
@@ -237,17 +234,10 @@ func (c *DBCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
 	}
 	record.SlackAction = *slack
 
-	result := &TweetAction{
-		Twitter: &TwitterAction{
-			Retweet:     record.TwitterAction.Retweet,
-			Favorite:    record.TwitterAction.Favorite,
-			Follow:      record.TwitterAction.Follow,
-			Collections: record.TwitterAction.GetCollections(),
-		},
-		Slack: &SlackAction{
-			Channels: record.SlackAction.GetChannels(),
-		},
-	}
+	result := NewTweetAction()
+	result.Twitter.TwitterActionProperties = record.TwitterAction.TwitterActionProperties
+	result.Twitter.Collections = record.TwitterAction.GetCollections()
+	result.Slack.Channels = record.SlackAction.GetChannels()
 	return result, c.client.Error
 }
 
@@ -329,12 +319,11 @@ func (c *DBCache) GetLatestImages(num int) ([]ImageCacheData, error) {
 	c.client.Order("id desc").Limit(num).Find(&records)
 	results := []ImageCacheData{}
 	for _, r := range records {
-		img := ImageCacheData{
-			URL:            r.URL,
-			Src:            r.Src,
-			AnalysisResult: r.AnalysisResult,
-			AnalysisDate:   r.AnalysisDate,
-		}
+		img := ImageCacheData{}
+		img.URL = r.URL
+		img.Src = r.Src
+		img.AnalysisResult = r.AnalysisResult
+		img.AnalysisDate = r.AnalysisDate
 		results = append(results, img)
 	}
 

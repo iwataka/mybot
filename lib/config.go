@@ -11,16 +11,20 @@ import (
 	"text/template"
 
 	"github.com/BurntSushi/toml"
+	"github.com/iwataka/mybot/models"
 )
 
 type Config interface {
 	GetTwitterScreenNames() ([]string, error)
 	GetTwitterTimelines() ([]TimelineConfig, error)
 	SetTwitterTimelines(timelines []TimelineConfig) error
+	AddTwitterTimeline(timeline *TimelineConfig) error
 	GetTwitterFavorites() ([]FavoriteConfig, error)
 	SetTwitterFavorites(favorites []FavoriteConfig) error
+	AddTwitterFavorite(favorite *FavoriteConfig) error
 	GetTwitterSearches() ([]SearchConfig, error)
 	SetTwitterSearches(searches []SearchConfig) error
+	AddTwitterSearch(search *SearchConfig) error
 	GetTwitterAPIs() ([]APIConfig, error)
 	SetTwitterAPIs(apis []APIConfig) error
 	GetTwitterNotification() (*Notification, error)
@@ -62,6 +66,14 @@ func (c *FileConfig) SetTwitterTimelines(timelines []TimelineConfig) error {
 	return nil
 }
 
+func (c *FileConfig) AddTwitterTimeline(timeline *TimelineConfig) error {
+	if timeline == nil {
+		return nil
+	}
+	c.Twitter.Timelines = append(c.Twitter.Timelines, *timeline)
+	return nil
+}
+
 func (c *FileConfig) GetTwitterFavorites() ([]FavoriteConfig, error) {
 	return c.Twitter.Favorites, nil
 }
@@ -71,12 +83,28 @@ func (c *FileConfig) SetTwitterFavorites(favorites []FavoriteConfig) error {
 	return nil
 }
 
+func (c *FileConfig) AddTwitterFavorite(favorite *FavoriteConfig) error {
+	if favorite == nil {
+		return nil
+	}
+	c.Twitter.Favorites = append(c.Twitter.Favorites, *favorite)
+	return nil
+}
+
 func (c *FileConfig) GetTwitterSearches() ([]SearchConfig, error) {
 	return c.Twitter.Searches, nil
 }
 
 func (c *FileConfig) SetTwitterSearches(searches []SearchConfig) error {
 	c.Twitter.Searches = searches
+	return nil
+}
+
+func (c *FileConfig) AddTwitterSearch(search *SearchConfig) error {
+	if search == nil {
+		return nil
+	}
+	c.Twitter.Searches = append(c.Twitter.Searches, *search)
 	return nil
 }
 
@@ -412,18 +440,17 @@ func (tc *TwitterConfig) GetScreenNames() []string {
 
 // TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
-	*SourceConfig
-	ScreenNames    []string `json:"screen_names" toml:"screen_names"`
-	ExcludeReplies *bool    `json:"exclude_replies" toml:"exclude_replies"`
-	IncludeRts     *bool    `json:"include_rts" toml:"include_rts"`
-	Count          *int     `json:"count,omitempty" toml:"count,omitempty"`
+	SourceConfig
+	models.SourceProperties
+	models.AccountProperties
+	models.TimelineProperties
 }
 
 // NewTimelineConfig returns TimelineConfig instance, which is empty but has a
 // non-nil filter and action.
 func NewTimelineConfig() *TimelineConfig {
 	return &TimelineConfig{
-		SourceConfig: &SourceConfig{
+		SourceConfig: SourceConfig{
 			Filter: NewTweetFilter(),
 			Action: NewTweetAction(),
 		},
@@ -443,16 +470,17 @@ func (c *TimelineConfig) Validate() error {
 
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
-	*SourceConfig
-	ScreenNames []string `json:"screen_names" toml:"screen_names"`
-	Count       *int     `json:"count,omitempty" toml:"count,omitempty"`
+	SourceConfig
+	models.SourceProperties
+	models.AccountProperties
+	models.FavoriteProperties
 }
 
 // NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
 // non-nil filter and action.
 func NewFavoriteConfig() *FavoriteConfig {
 	return &FavoriteConfig{
-		SourceConfig: &SourceConfig{
+		SourceConfig: SourceConfig{
 			Filter: NewTweetFilter(),
 			Action: NewTweetAction(),
 		},
@@ -472,17 +500,16 @@ func (c *FavoriteConfig) Validate() error {
 
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
-	*SourceConfig
-	Queries    []string `json:"queries" toml:"queries"`
-	ResultType string   `json:"result_type,omitempty" toml:"result_type,omitempty"`
-	Count      *int     `json:"count,omitempty" toml:"count,omitempty"`
+	SourceConfig
+	models.SourceProperties
+	models.SearchProperties
 }
 
 // NewSearchConfig returns SearchConfig instance, which is empty but has a
 // non-nil filter and action.
 func NewSearchConfig() *SearchConfig {
 	return &SearchConfig{
-		SourceConfig: &SourceConfig{
+		SourceConfig: SourceConfig{
 			Filter: NewTweetFilter(),
 			Action: NewTweetAction(),
 		},
@@ -555,15 +582,18 @@ func (c *APIConfig) Message() (string, error) {
 // InteractionConfig is a configuration for interaction through Twitter direct
 // message
 type InteractionConfig struct {
-	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
-	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
+	UsersConfigProperties
 }
 
 // LogConfig is a configuration for logging
 type LogConfig struct {
+	UsersConfigProperties
+	Linenum int `json:"linenum,omitempty" toml:"linenum,omitempty"`
+}
+
+type UsersConfigProperties struct {
 	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
 	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
-	Linenum   int      `json:"linenum,omitempty" toml:"linenum,omitempty"`
 }
 
 func NewLogConfig() *LogConfig {

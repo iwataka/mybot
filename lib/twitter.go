@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/models"
 )
 
 // NOTE: This must be fixed because multiple applications having different
@@ -17,9 +18,7 @@ const msgPrefix = "<bot message>\n"
 
 // TwitterAction can indicate for various actions for Twitter's tweets.
 type TwitterAction struct {
-	Retweet     bool     `json:"retweet" toml:"retweet"`
-	Favorite    bool     `json:"favorite" toml:"favorite"`
-	Follow      bool     `json:"follow" toml:"follow"`
+	models.TwitterActionProperties
 	Collections []string `json:"collections" toml:"collections"`
 }
 
@@ -715,11 +714,7 @@ var retweetCommand = &DirectMessageCommand{
 		timeline := NewTimelineConfig()
 		timeline.ScreenNames = args
 		timeline.Action.Twitter.Retweet = true
-		timelines, err := a.config.GetTwitterTimelines()
-		if err != nil {
-			return "", err
-		}
-		err = a.config.SetTwitterTimelines(append(timelines, *timeline))
+		err := a.config.AddTwitterTimeline(timeline)
 		if err != nil {
 			return "", err
 		}
@@ -738,11 +733,7 @@ var favoriteCommand = &DirectMessageCommand{
 		favorite := NewFavoriteConfig()
 		favorite.ScreenNames = args
 		favorite.Action.Twitter.Favorite = true
-		favorites, err := a.config.GetTwitterFavorites()
-		if err != nil {
-			return "", err
-		}
-		err = a.config.SetTwitterFavorites(append(favorites, *favorite))
+		err := a.config.AddTwitterFavorite(favorite)
 		if err != nil {
 			return "", err
 		}

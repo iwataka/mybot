@@ -9,18 +9,16 @@ import (
 
 func TestTwitterAction(t *testing.T) {
 	a1 := TwitterAction{
-		Retweet:     true,
-		Favorite:    false,
-		Follow:      true,
 		Collections: []string{"col1", "col2"},
 	}
+	a1.Retweet = true
+	a1.Follow = true
 	a2 := a1
 	a3 := TwitterAction{
-		Retweet:     true,
-		Favorite:    true,
-		Follow:      false,
 		Collections: []string{"col1", "col3"},
 	}
+	a3.Retweet = true
+	a3.Favorite = true
 
 	a1.Add(&a3)
 	if a1.Retweet != true {
@@ -54,15 +52,13 @@ func TestTwitterAction(t *testing.T) {
 func TestPostProcessorEach(t *testing.T) {
 	action := &TweetAction{
 		Twitter: &TwitterAction{
-			Retweet:     true,
-			Favorite:    false,
-			Follow:      false,
 			Collections: []string{"foo"},
 		},
 		Slack: &SlackAction{
 			Channels: []string{"bar"},
 		},
 	}
+	action.Twitter.Retweet = true
 	cache, err := NewFileCache("")
 	if err != nil {
 		t.Fatal(err)
@@ -84,11 +80,10 @@ func TestPostProcessorEach(t *testing.T) {
 	}
 
 	action2 := &TweetAction{
-		Twitter: &TwitterAction{
-			Favorite: true,
-		},
-		Slack: NewSlackAction(),
+		Twitter: NewTwitterAction(),
+		Slack:   NewSlackAction(),
 	}
+	action2.Twitter.Favorite = true
 	pp2 := TwitterPostProcessorEach{action2, cache}
 
 	err = pp2.Process(tweet, true)
