@@ -7,16 +7,22 @@ import (
 	"os"
 )
 
-// Logger represents a logger of this app
-type Logger struct {
+type Logger interface {
+	Println(v ...interface{}) error
+	HandleError(err error)
+	ReadString() string
+}
+
+// TwitterLogger represents a logger of this app
+type TwitterLogger struct {
 	logger     *log.Logger
 	logFile    string
 	twitterAPI *TwitterAPI
 	config     Config
 }
 
-// NewLogger creates an instance of Logger
-func NewLogger(path string, flag int, a *TwitterAPI, c *FileConfig) (*Logger, error) {
+// NewTwitterLogger creates an instance of Logger
+func NewTwitterLogger(path string, flag int, a *TwitterAPI, c Config) (*TwitterLogger, error) {
 	if flag < 0 {
 		flag = log.Ldate | log.Ltime | log.Lshortfile
 	}
@@ -26,12 +32,12 @@ func NewLogger(path string, flag int, a *TwitterAPI, c *FileConfig) (*Logger, er
 	}
 	l := log.New(f, "", flag)
 	l.SetOutput(f)
-	result := &Logger{l, path, a, c}
+	result := &TwitterLogger{l, path, a, c}
 	return result, nil
 }
 
 // Println prints the specified values with a trailing newline
-func (l *Logger) Println(v ...interface{}) error {
+func (l *TwitterLogger) Println(v ...interface{}) error {
 	if l.twitterAPI != nil {
 		c, err := l.config.GetLog()
 		if err != nil {
@@ -49,14 +55,14 @@ func (l *Logger) Println(v ...interface{}) error {
 }
 
 // HandleError prints the specified error if it is not nil
-func (l *Logger) HandleError(err error) {
+func (l *TwitterLogger) HandleError(err error) {
 	if err != nil {
 		l.Println(err)
 	}
 }
 
 // ReadString returns a content of logging
-func (l *Logger) ReadString() string {
+func (l *TwitterLogger) ReadString() string {
 	out, err := ioutil.ReadFile(l.logFile)
 	if err != nil {
 		return ""

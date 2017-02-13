@@ -540,11 +540,13 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	err = htmlTemplate.ExecuteTemplate(w, "config", data)
+	buf := new(bytes.Buffer)
+	err = htmlTemplate.ExecuteTemplate(buf, "config", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Write(buf.Bytes())
 }
 
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -695,11 +697,14 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 		"Log",
 		logger.ReadString(),
 	}
-	err := htmlTemplate.ExecuteTemplate(w, "log", data)
+
+	buf := new(bytes.Buffer)
+	err := htmlTemplate.ExecuteTemplate(buf, "log", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Write(buf.Bytes())
 }
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
@@ -714,11 +719,14 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 		status.CheckTwitterListenDMStatus(),
 		status.CheckTwitterListenUsersStatus(),
 	}
-	err := htmlTemplate.ExecuteTemplate(w, "status", data)
+
+	buf := new(bytes.Buffer)
+	err := htmlTemplate.ExecuteTemplate(buf, "status", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Write(buf.Bytes())
 }
 
 func setupTwitterHandler(w http.ResponseWriter, r *http.Request) {
@@ -792,11 +800,13 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	err = htmlTemplate.ExecuteTemplate(w, "twitter_setup", data)
+	buf := new(bytes.Buffer)
+	err = htmlTemplate.ExecuteTemplate(buf, "twitter_setup", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Write(buf.Bytes())
 }
 
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {

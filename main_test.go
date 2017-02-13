@@ -35,7 +35,7 @@ func TestLogger(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	tmp := filepath.Join(dir, "mybot-test-logger.log")
-	_, err = mybot.NewLogger(tmp, -1, nil, nil)
+	_, err = mybot.NewTwitterLogger(tmp, -1, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

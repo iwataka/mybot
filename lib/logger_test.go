@@ -12,7 +12,7 @@ func TestInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmp.Name())
-	_, err = NewLogger(tmp.Name(), -1, nil, nil)
+	_, err = NewTwitterLogger(tmp.Name(), -1, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

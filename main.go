@@ -22,7 +22,7 @@ var (
 	slackAPI    *mybot.SlackAPI
 	config      *mybot.FileConfig
 	cache       mybot.Cache
-	logger      *mybot.Logger
+	logger      mybot.Logger
 	status      *mybot.Status
 
 	ctxt *cli.Context
@@ -199,7 +199,7 @@ func beforeRunning(c *cli.Context) error {
 		languageAPI.File = c.String("gcloud")
 	}
 
-	logger, err = mybot.NewLogger(c.String("log"), -1, twitterAPI, config)
+	logger, err = mybot.NewTwitterLogger(c.String("log"), -1, twitterAPI, config)
 	if err != nil {
 		panic(err)
 	}
