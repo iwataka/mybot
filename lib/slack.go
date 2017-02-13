@@ -82,24 +82,7 @@ func (a *SlackAPI) Enabled() bool {
 }
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
-	statusURL := TwitterStatusURL(tweet)
-	text := fmt.Sprintf("%s\n%s created at %s", statusURL, tweet.User.Name, tweet.CreatedAt)
-
-	att := slack.Attachment{}
-	att.AuthorName = tweet.User.Name
-	att.AuthorSubname = tweet.User.ScreenName
-	att.Text = tweet.Text
-	att.AuthorIcon = tweet.User.ProfileImageURL
-	att.AuthorLink = tweet.User.URL
-
-	params := slack.PostMessageParameters{}
-	params.Attachments = []slack.Attachment{att}
-
-	for _, m := range tweet.Entities.Media {
-		a := slack.Attachment{}
-		a.ImageURL = m.Media_url
-		params.Attachments = append(params.Attachments, a)
-	}
+	text, params := a.convertFromTweet(tweet)
 
 	_, _, err := a.api.PostMessage(channel, text, params)
 	if err != nil {
@@ -121,6 +104,37 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 		}
 	}
 	return nil
+}
+
+func (a *SlackAPI) convertFromTweet(t anaconda.Tweet) (string, slack.PostMessageParameters) {
+	statusURL := TwitterStatusURL(t)
+	text := fmt.Sprintf("%s\n%s created at %s", statusURL, t.User.Name, t.CreatedAt)
+
+	att := slack.Attachment{}
+	att.AuthorName = t.User.Name
+	att.AuthorSubname = t.User.ScreenName
+	att.Text = t.Text
+	att.AuthorIcon = t.User.ProfileImageURL
+	att.AuthorLink = t.User.URL
+
+	params := slack.PostMessageParameters{}
+	params.Attachments = []slack.Attachment{}
+
+	for i, m := range t.Entities.Media {
+		a := slack.Attachment{}
+		if i == 0 {
+			a = att
+		}
+		a.ImageURL = m.Media_url
+		if a.Text == "" {
+			a.Text = m.Media_url
+		} else {
+			a.Text += fmt.Sprintf("\n%s", m.Media_url)
+		}
+		params.Attachments = append(params.Attachments, a)
+	}
+
+	return text, params
 }
 
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
