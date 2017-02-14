@@ -345,7 +345,7 @@ func (a *TwitterAPI) processTweets(
 			if err != nil {
 				return nil, err
 			}
-			err = a.processTweet(t, action, done, slack)
+			err = a.processTweet(t, action.Sub(done), slack)
 			if err != nil {
 				return nil, err
 			}
@@ -362,11 +362,9 @@ func (a *TwitterAPI) processTweets(
 func (a *TwitterAPI) processTweet(
 	t anaconda.Tweet,
 	action *TweetAction,
-	done *TweetAction,
 	slack *SlackAPI,
 ) error {
-	ac := action.Sub(done)
-	if ac.Twitter.Retweet && !t.Retweeted {
+	if action.Twitter.Retweet && !t.Retweeted {
 		var id int64
 		if t.RetweetedStatus == nil {
 			id = t.Id
@@ -378,13 +376,13 @@ func (a *TwitterAPI) processTweet(
 			return err
 		}
 	}
-	if ac.Twitter.Favorite && !t.Favorited {
+	if action.Twitter.Favorite && !t.Favorited {
 		_, err := a.api.Favorite(t.Id)
 		if err != nil {
 			return err
 		}
 	}
-	if ac.Twitter.Follow {
+	if action.Twitter.Follow {
 		var screenName string
 		if t.RetweetedStatus == nil {
 			screenName = t.User.ScreenName
@@ -396,15 +394,15 @@ func (a *TwitterAPI) processTweet(
 			return err
 		}
 	}
-	for _, col := range ac.Twitter.Collections {
+	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
 		if err != nil {
 			return err
 		}
 	}
 
-	if slack.Enabled() && ac.Slack != nil {
-		for _, ch := range ac.Slack.Channels {
+	if slack.Enabled() && action.Slack != nil {
+		for _, ch := range action.Slack.Channels {
 			err := slack.PostTweet(ch, t)
 			if err != nil {
 				return err
@@ -529,7 +527,7 @@ func (l *TwitterUserListener) Listen(
 					if err != nil {
 						return err
 					}
-					err = l.api.processTweet(c, timeline.Action, done, slack)
+					err = l.api.processTweet(c, timeline.Action.Sub(done), slack)
 					if err != nil {
 						return err
 					}

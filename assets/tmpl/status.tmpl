@@ -48,18 +48,6 @@
                             {{end}}
                         </td>
                     </tr>
-                    {{range $file, $status := .Status.MonitorStatus}}
-                    <tr>
-                        <td>Monitoring {{$file}}</td>
-                        <td>
-                            {{if $status}}
-                            <span style="color:blue">Active</span>
-                            {{else}}
-                            <span style="color:red">Stop</span>
-                            {{end}}
-                        </td>
-                    </tr>
-                    {{end}}
                     <tr>
                         <td>HTTP Listener</td>
                         <td>

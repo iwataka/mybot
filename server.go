@@ -765,11 +765,7 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	if ck != "" && cs != "" {
 		twitterApp.ConsumerKey = ck
 		twitterApp.ConsumerSecret = cs
-		c := make(chan bool)
-		defer close(c)
-		status.AddMonitorChan(ctxt.String("twitter-app"), c)
 		twitterApp.Encode()
-		<-c
 	} else {
 		msg = "Both of Consumer Key and Consumer Secret can't be empty"
 	}
@@ -820,15 +816,12 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 
 	twitterAuth.AccessToken = user.AccessToken
 	twitterAuth.AccessTokenSecret = user.AccessTokenSecret
-	c := make(chan bool)
-	defer close(c)
-	status.AddMonitorChan(ctxt.String("twitter"), c)
 	err = twitterAuth.Encode()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	<-c
+	*twitterAPI = *mybot.NewTwitterAPI(twitterAuth, cache, config)
 
 	w.Header().Add("Location", "/")
 	w.WriteHeader(http.StatusSeeOther)

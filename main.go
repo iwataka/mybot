@@ -335,123 +335,6 @@ func twitterPeriodically() {
 	}
 }
 
-func monitorConfig() {
-	file := ctxt.String("config")
-
-	if status.GetMonitorStatus(file) {
-		return
-	}
-	status.SetMonitorStatus(file, true)
-	defer func() { status.SetMonitorStatus(file, false) }()
-
-	monitorFile(
-		file,
-		time.Duration(1)*time.Second,
-		func() {
-			status.LockMonitor(file)
-			defer status.UnlockMonitor(file)
-			cfg, err := mybot.NewFileConfig(file)
-			if err == nil {
-				*config = *cfg
-				reloadListeners()
-			}
-			status.SendToMonitor(file, true)
-		},
-	)
-}
-
-func monitorTwitterApp() {
-	file := ctxt.String("twitter-app")
-
-	if status.GetMonitorStatus(file) {
-		return
-	}
-	status.SetMonitorStatus(file, true)
-	defer func() { status.SetMonitorStatus(file, false) }()
-
-	monitorFile(
-		file,
-		time.Duration(1)*time.Second,
-		func() {
-			status.LockMonitor(file)
-			defer status.UnlockMonitor(file)
-
-			app := &mybot.OAuthApp{}
-			err := app.Decode(file)
-			if err == nil {
-				*twitterApp = *app
-				anaconda.SetConsumerKey(app.ConsumerKey)
-				anaconda.SetConsumerSecret(app.ConsumerSecret)
-				status.UpdateTwitterAuth(twitterAPI)
-				reloadListeners()
-			}
-
-			status.SendToMonitor(file, true)
-		},
-	)
-}
-
-func monitorTwitterCred() {
-	file := ctxt.String("twitter")
-
-	if status.GetMonitorStatus(file) {
-		return
-	}
-	status.SetMonitorStatus(file, true)
-	defer func() { status.SetMonitorStatus(file, false) }()
-
-	monitorFile(
-		file,
-		time.Duration(1)*time.Second,
-		func() {
-			status.LockMonitor(file)
-			defer status.UnlockMonitor(file)
-
-			auth := &mybot.OAuthCredentials{}
-			err := auth.Decode(file)
-			if err == nil {
-				*twitterAuth = *auth
-				*twitterAPI = *mybot.NewTwitterAPI(auth, cache, config)
-				status.UpdateTwitterAuth(twitterAPI)
-				reloadListeners()
-			}
-
-			status.SendToMonitor(file, true)
-		},
-	)
-}
-
-func monitorGCloudCred() {
-	file := ctxt.String("gcloud")
-
-	if status.GetMonitorStatus(file) {
-		return
-	}
-	status.SetMonitorStatus(file, true)
-	defer func() { status.SetMonitorStatus(file, false) }()
-
-	monitorFile(
-		file,
-		time.Duration(1)*time.Second,
-		func() {
-			status.LockMonitor(file)
-			defer status.UnlockMonitor(file)
-			vis, err := mybot.NewVisionAPI(file)
-			if err == nil {
-				*visionAPI = *vis
-				return
-			}
-			lang, err := mybot.NewLanguageAPI(file)
-			if err == nil {
-				*languageAPI = *lang
-				return
-			}
-			reloadListeners()
-			status.SendToMonitor(file, true)
-		},
-	)
-}
-
 func reloadListeners() {
 	if userListenerStream != nil {
 		userListenerStream.Stop()
@@ -491,33 +374,9 @@ func serve(c *cli.Context) error {
 	go twitterListenUsers()
 	go twitterPeriodically()
 
-	go monitorConfig()
-	go monitorTwitterCred()
-	go monitorTwitterApp()
-	go monitorGCloudCred()
-
 	ch := make(chan bool)
 	<-ch
 	return nil
-}
-
-func monitorFile(file string, d time.Duration, f func()) {
-	info, _ := os.Stat(file)
-	modTime := time.Now()
-	if info != nil {
-		modTime = info.ModTime()
-	}
-	for {
-		info, _ := os.Stat(file)
-		if info != nil {
-			mt := info.ModTime()
-			if mt.After(modTime) {
-				modTime = mt
-				f()
-			}
-		}
-		time.Sleep(d)
-	}
 }
 
 func runTwitterWithStream() error {
