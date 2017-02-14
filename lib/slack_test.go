@@ -14,9 +14,9 @@ func TestSlackActionAdd(t *testing.T) {
 	a2 := &SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
-	a1.Add(a2)
-	if len(a1.Channels) != 3 {
-		t.Fatalf("%v expected but %v found", 3, len(a1.Channels))
+	result := a1.Add(a2)
+	if len(result.Channels) != 3 {
+		t.Fatalf("%v expected but %v found", 3, len(result.Channels))
 	}
 }
 
@@ -27,9 +27,9 @@ func TestSlackActionSub(t *testing.T) {
 	a2 := &SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
-	a1.Sub(a2)
-	if len(a1.Channels) != 1 {
-		t.Fatalf("%v expected but %v found", 1, len(a1.Channels))
+	result := a1.Sub(a2)
+	if len(result.Channels) != 1 {
+		t.Fatalf("%v expected but %v found", 1, len(result.Channels))
 	}
 }
 

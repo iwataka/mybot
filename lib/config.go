@@ -369,28 +369,43 @@ func NewTweetAction() *TweetAction {
 	}
 }
 
-func (a *TweetAction) Add(action *TweetAction) {
+func (a *TweetAction) Add(action *TweetAction) *TweetAction {
+	if action == nil {
+		return a
+	}
+
+	result := *a
+
 	if a.Twitter == nil {
-		a.Twitter = action.Twitter
+		result.Twitter = action.Twitter
 	} else {
-		a.Twitter.Add(action.Twitter)
+		result.Twitter = a.Twitter.Add(action.Twitter)
 	}
 
 	if a.Slack == nil {
-		a.Slack = action.Slack
+		result.Slack = action.Slack
 	} else {
-		a.Slack.Add(action.Slack)
+		result.Slack = a.Slack.Add(action.Slack)
 	}
+
+	return &result
 }
 
-func (a *TweetAction) Sub(action *TweetAction) {
-	if a.Twitter != nil {
-		a.Twitter.Sub(action.Twitter)
+func (a *TweetAction) Sub(action *TweetAction) *TweetAction {
+	if action == nil {
+		return a
 	}
 
-	if a.Slack != nil {
-		a.Slack.Sub(action.Slack)
+	result := *a
+
+	if a.Twitter != nil {
+		result.Twitter = a.Twitter.Sub(action.Twitter)
 	}
+	if a.Slack != nil {
+		result.Slack = a.Slack.Sub(action.Slack)
+	}
+
+	return &result
 }
 
 func (a *TweetAction) IsEmpty() bool {

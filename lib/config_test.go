@@ -143,15 +143,13 @@ func TestTweetAction_AddNil(t *testing.T) {
 	}
 	a2.Twitter.Retweet = true
 
-	result1 := *a1
-	result1.Add(a2)
-	if !reflect.DeepEqual(&result1, a2) {
+	result1 := a1.Add(a2)
+	if !reflect.DeepEqual(result1, a2) {
 		t.Fatalf("Failed to add %v to %v: %v", a2, a1, result1)
 	}
 
-	result2 := *a2
-	result2.Add(a1)
-	if !reflect.DeepEqual(&result2, a2) {
+	result2 := a2.Add(a1)
+	if !reflect.DeepEqual(result2, a2) {
 		t.Fatalf("Failed to add %v to %v: %v", a1, a2, result2)
 	}
 }
@@ -175,22 +173,22 @@ func TestTweetAction_Add(t *testing.T) {
 		},
 	}
 	a2.Twitter.Favorite = true
-	a1.Add(a2)
+	result := a1.Add(a2)
 
-	if !a1.Twitter.Retweet {
-		t.Fatalf("%v expected but %v found", true, a1.Twitter.Retweet)
+	if !result.Twitter.Retweet {
+		t.Fatalf("%v expected but %v found", true, result.Twitter.Retweet)
 	}
-	if !a1.Twitter.Favorite {
-		t.Fatalf("%v expected but %v found", true, a1.Twitter.Favorite)
+	if !result.Twitter.Favorite {
+		t.Fatalf("%v expected but %v found", true, result.Twitter.Favorite)
 	}
-	if a1.Twitter.Follow {
-		t.Fatalf("%v expected but %v found", false, a1.Twitter.Follow)
+	if result.Twitter.Follow {
+		t.Fatalf("%v expected but %v found", false, result.Twitter.Follow)
 	}
-	if len(a1.Twitter.Collections) != 2 {
-		t.Fatalf("%d expected but %d found", 2, len(a1.Twitter.Collections))
+	if len(result.Twitter.Collections) != 2 {
+		t.Fatalf("%d expected but %d found", 2, len(result.Twitter.Collections))
 	}
-	if len(a1.Slack.Channels) != 2 {
-		t.Fatalf("%d expected but %d found", 2, len(a1.Slack.Channels))
+	if len(result.Slack.Channels) != 2 {
+		t.Fatalf("%d expected but %d found", 2, len(result.Slack.Channels))
 	}
 }
 

@@ -28,15 +28,17 @@ func NewTwitterAction() *TwitterAction {
 	}
 }
 
-func (a *TwitterAction) Add(action *TwitterAction) {
+func (a *TwitterAction) Add(action *TwitterAction) *TwitterAction {
+	result := *a
+
 	// If action is nil, you have nothing to do
 	if action == nil {
-		return
+		return &result
 	}
 
-	a.Retweet = a.Retweet || action.Retweet
-	a.Favorite = a.Favorite || action.Favorite
-	a.Follow = a.Follow || action.Follow
+	result.Retweet = a.Retweet || action.Retweet
+	result.Favorite = a.Favorite || action.Favorite
+	result.Follow = a.Follow || action.Follow
 
 	m := make(map[string]bool)
 	for _, c := range a.Collections {
@@ -51,18 +53,22 @@ func (a *TwitterAction) Add(action *TwitterAction) {
 			cols = append(cols, c)
 		}
 	}
-	a.Collections = cols
+	result.Collections = cols
+
+	return &result
 }
 
-func (a *TwitterAction) Sub(action *TwitterAction) {
+func (a *TwitterAction) Sub(action *TwitterAction) *TwitterAction {
+	result := *a
+
 	// If action is nil, you have nothing to do
 	if action == nil {
-		return
+		return &result
 	}
 
-	a.Retweet = a.Retweet && !action.Retweet
-	a.Favorite = a.Favorite && !action.Favorite
-	a.Follow = a.Follow && !action.Follow
+	result.Retweet = a.Retweet && !action.Retweet
+	result.Favorite = a.Favorite && !action.Favorite
+	result.Follow = a.Follow && !action.Follow
 
 	m := make(map[string]bool)
 	for _, c := range a.Collections {
@@ -77,7 +83,9 @@ func (a *TwitterAction) Sub(action *TwitterAction) {
 			cols = append(cols, c)
 		}
 	}
-	a.Collections = cols
+	result.Collections = cols
+
+	return &result
 }
 
 func (a *TwitterAction) IsEmpty() bool {
@@ -304,12 +312,12 @@ func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 			return err
 		}
 		if ac != nil {
-			ac.Add(p.action)
+			err = p.cache.SetTweetAction(t.Id, ac.Add(p.action))
 		} else {
-			err := p.cache.SetTweetAction(t.Id, p.action)
-			if err != nil {
-				return err
-			}
+			err = p.cache.SetTweetAction(t.Id, p.action)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -357,10 +365,7 @@ func (a *TwitterAPI) processTweet(
 	done *TweetAction,
 	slack *SlackAPI,
 ) error {
-	ac := *action
-	if done != nil {
-		ac.Sub(done)
-	}
+	ac := action.Sub(done)
 	if ac.Twitter.Retweet && !t.Retweeted {
 		var id int64
 		if t.RetweetedStatus == nil {

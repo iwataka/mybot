@@ -17,10 +17,12 @@ func NewSlackAction() *SlackAction {
 	}
 }
 
-func (a *SlackAction) Add(action *SlackAction) {
+func (a *SlackAction) Add(action *SlackAction) *SlackAction {
+	result := *a
+
 	// If action is nil, you have nothing to do
 	if action == nil {
-		return
+		return &result
 	}
 
 	m := make(map[string]bool)
@@ -36,13 +38,17 @@ func (a *SlackAction) Add(action *SlackAction) {
 			chans = append(chans, c)
 		}
 	}
-	a.Channels = chans
+	result.Channels = chans
+
+	return &result
 }
 
-func (a *SlackAction) Sub(action *SlackAction) {
+func (a *SlackAction) Sub(action *SlackAction) *SlackAction {
+	result := *a
+
 	// If action is nil, you have nothing to do
 	if action == nil {
-		return
+		return &result
 	}
 
 	m := make(map[string]bool)
@@ -58,7 +64,9 @@ func (a *SlackAction) Sub(action *SlackAction) {
 			chans = append(chans, c)
 		}
 	}
-	a.Channels = chans
+	result.Channels = chans
+
+	return &result
 }
 
 func (a *SlackAction) IsEmpty() bool {

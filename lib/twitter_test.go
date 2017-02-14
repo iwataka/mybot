@@ -20,32 +20,32 @@ func TestTwitterAction(t *testing.T) {
 	a3.Retweet = true
 	a3.Favorite = true
 
-	a1.Add(&a3)
-	if a1.Retweet != true {
-		t.Fatalf("%v expected but %v found", false, a1.Retweet)
+	result1 := a1.Add(&a3)
+	if result1.Retweet != true {
+		t.Fatalf("%v expected but %v found", false, result1.Retweet)
 	}
-	if a1.Favorite != true {
-		t.Fatalf("%v expected but %v found", true, a1.Favorite)
+	if result1.Favorite != true {
+		t.Fatalf("%v expected but %v found", true, result1.Favorite)
 	}
-	if a1.Follow != true {
-		t.Fatalf("%v expected but %v found", true, a1.Follow)
+	if result1.Follow != true {
+		t.Fatalf("%v expected but %v found", true, result1.Follow)
 	}
-	if len(a1.Collections) != 3 {
-		t.Fatalf("%d expected but %d found", 3, len(a1.Collections))
+	if len(result1.Collections) != 3 {
+		t.Fatalf("%d expected but %d found", 3, len(result1.Collections))
 	}
 
-	a2.Sub(&a3)
-	if a2.Retweet != false {
-		t.Fatalf("%v expected but %v found", false, a2.Retweet)
+	result2 := a2.Sub(&a3)
+	if result2.Retweet != false {
+		t.Fatalf("%v expected but %v found", false, result2.Retweet)
 	}
-	if a2.Favorite != false {
-		t.Fatalf("%v expected but %v found", false, a2.Favorite)
+	if result2.Favorite != false {
+		t.Fatalf("%v expected but %v found", false, result2.Favorite)
 	}
-	if a2.Follow != true {
-		t.Fatalf("%v expected but %v found", true, a2.Follow)
+	if result2.Follow != true {
+		t.Fatalf("%v expected but %v found", true, result2.Follow)
 	}
-	if len(a2.Collections) != 1 {
-		t.Fatalf("%d expected but %d found", 1, len(a2.Collections))
+	if len(result2.Collections) != 1 {
+		t.Fatalf("%d expected but %d found", 1, len(result2.Collections))
 	}
 }
 
