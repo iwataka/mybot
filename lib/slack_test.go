@@ -1,7 +1,6 @@
 package mybot
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/iwataka/anaconda"
@@ -34,29 +33,19 @@ func TestSlackActionSub(t *testing.T) {
 }
 
 func TestSlackConvertFromTweet(t *testing.T) {
-	tweet := anaconda.Tweet{}
-	tweet.Text = "some texts"
-	m1 := anaconda.EntityMedia{}
-	m1.Media_url = "foo"
-	m2 := anaconda.EntityMedia{}
-	m2.Media_url = "bar"
-	tweet.Entities.Media = []anaconda.EntityMedia{m1, m2}
-
-	api := NewSlackAPI("")
-	_, params := api.convertFromTweet(tweet)
-	if len(params.Attachments) != 2 {
-		t.Fatalf("%d expected but %d found", 2, len(params.Attachments))
+	slack := NewSlackAPI("")
+	tweet := anaconda.Tweet{
+		IdStr: "1",
+		User: anaconda.User{
+			IdStr: "1",
+		},
 	}
-	att1 := params.Attachments[0]
-	if !strings.HasSuffix(att1.Text, m1.Media_url) {
-		t.Fatalf(`"%s" should have the suffix "%s"`, att1.Text, m1.Media_url)
+	text, params := slack.convertFromTweet(tweet)
+	if text != TwitterStatusURL(tweet) {
+		t.Fatal("Text is invalid")
 	}
-	if !strings.HasPrefix(att1.Text, tweet.Text) {
-		t.Fatalf(`"%s" should have the prefix "%s"`, att1.Text, tweet.Text)
-	}
-	att2 := params.Attachments[1]
-	if !strings.HasSuffix(att2.Text, m2.Media_url) {
-		t.Fatalf(`"%s" should have the suffix "%s"`, att2.Text, m2.Media_url)
+	if !params.UnfurlLinks || !params.UnfurlMedia {
+		t.Fatal("Should unfurl all kinds of things")
 	}
 }
 

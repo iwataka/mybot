@@ -115,33 +115,11 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 }
 
 func (a *SlackAPI) convertFromTweet(t anaconda.Tweet) (string, slack.PostMessageParameters) {
-	statusURL := TwitterStatusURL(t)
-	text := fmt.Sprintf("%s\n%s created at %s", statusURL, t.User.Name, t.CreatedAt)
-
-	att := slack.Attachment{}
-	att.AuthorName = t.User.Name
-	att.AuthorSubname = t.User.ScreenName
-	att.Text = t.Text
-	att.AuthorIcon = t.User.ProfileImageURL
-	att.AuthorLink = t.User.URL
-
+	text := TwitterStatusURL(t)
 	params := slack.PostMessageParameters{}
-	params.Attachments = []slack.Attachment{}
-
-	for i, m := range t.Entities.Media {
-		a := slack.Attachment{}
-		if i == 0 {
-			a = att
-		}
-		a.ImageURL = m.Media_url
-		if a.Text == "" {
-			a.Text = m.Media_url
-		} else {
-			a.Text += fmt.Sprintf("\n%s", m.Media_url)
-		}
-		params.Attachments = append(params.Attachments, a)
-	}
-
+	params.UnfurlLinks = true
+	params.UnfurlMedia = true
+	params.AsUser = false
 	return text, params
 }
 
