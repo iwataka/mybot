@@ -442,8 +442,8 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
 	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, "twitter.notification.place.users")
 
-	config.Interaction.AllowSelf = len(val["interaction.allow_self"]) > 1
-	config.Interaction.Users = mybot.GetListTextboxValue(val, 0, "interaction.users")
+	config.Twitter.Interaction.AllowSelf = len(val["twitter.interaction.allow_self"]) > 1
+	config.Twitter.Interaction.Users = mybot.GetListTextboxValue(val, 0, "twitter.interaction.users")
 
 	config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 	config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")

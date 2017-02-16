@@ -327,7 +327,7 @@
             </table>
         </div>
 
-        <h3>Interaction</h3>
+        <h3>Twitter Interaction</h3>
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead>
@@ -339,10 +339,10 @@
                 <tbody>
                     <tr>
                         <td>
-                            {{checkbox .Config.Interaction.AllowSelf "interaction.allow_self"}}
+                            {{checkbox .Config.Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}
                         </td>
                         <td>
-                            {{listTextbox .Config.Interaction.Users "interaction.users"}}
+                            {{listTextbox .Config.Twitter.Interaction.Users "twitter.interaction.users"}}
                         </td>
                     </tr>
                 </tbody>

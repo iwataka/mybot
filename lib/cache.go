@@ -3,6 +3,7 @@ package mybot
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/iwataka/mybot/models"
 	"github.com/jinzhu/gorm"
@@ -96,12 +97,18 @@ func (c *FileCache) SetLatestDMID(id int64) error {
 }
 
 func (c *FileCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
-	action, _ := c.Tweet2Action[string(tweetID)]
+	// Do not use string(tweetID) because it returns broken characters if
+	// tweetID is enough large
+	key := strconv.FormatInt(tweetID, 10)
+	action, _ := c.Tweet2Action[key]
 	return action, nil
 }
 
 func (c *FileCache) SetTweetAction(tweetID int64, action *TweetAction) error {
-	c.Tweet2Action[string(tweetID)] = action
+	// Do not use string(tweetID) because it returns broken characters if
+	// tweetID is enough large
+	key := strconv.FormatInt(tweetID, 10)
+	c.Tweet2Action[key] = action
 	return nil
 }
 

@@ -36,7 +36,7 @@ func TestGetConfig(t *testing.T) {
 	config = c
 	defer func() { config = tmpCfg }()
 
-	testGet(t, s.URL)
+	testGet(t, s.URL, "Get /config")
 }
 
 func TestGetLog(t *testing.T) {
@@ -47,7 +47,7 @@ func TestGetLog(t *testing.T) {
 	logger = &LoggerMock{}
 	defer func() { logger = tmpLogger }()
 
-	testGet(t, s.URL)
+	testGet(t, s.URL, "Get /log")
 }
 
 func TestGetStatus(t *testing.T) {
@@ -58,7 +58,7 @@ func TestGetStatus(t *testing.T) {
 	status = mybot.NewStatus()
 	defer func() { status = tmpStatus }()
 
-	testGet(t, s.URL)
+	testGet(t, s.URL, "Get /status")
 }
 
 func TestGetSetupTwitter(t *testing.T) {
@@ -69,27 +69,27 @@ func TestGetSetupTwitter(t *testing.T) {
 	twitterApp = &mybot.OAuthApp{}
 	defer func() { twitterApp = tmpTwitterApp }()
 
-	testGet(t, s.URL)
+	testGet(t, s.URL, "Get /setup/twitter")
 }
 
-func testGet(t *testing.T, url string) {
+func testGet(t *testing.T, url string, msg string) {
 	res, err := http.Get(url)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertHTTPResponse(t, res)
+	assertHTTPResponse(t, res, msg)
 }
 
-func testPost(t *testing.T, url string, bodyType string, body io.Reader) {
+func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertHTTPResponse(t, res)
+	assertHTTPResponse(t, res, msg)
 }
 
-func assertHTTPResponse(t *testing.T, res *http.Response) {
+func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("Error code: %d", res.StatusCode)
+		t.Fatalf("Error code %d: %s", res.StatusCode, msg)
 	}
 }

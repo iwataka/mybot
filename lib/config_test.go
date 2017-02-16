@@ -384,11 +384,11 @@ func TestFileConfigInteraction(t *testing.T) {
 func testConfigInteraction(t *testing.T, c Config) {
 	interaction := &InteractionConfig{}
 	interaction.Users = []string{"foo"}
-	err := c.SetInteraction(interaction)
+	err := c.SetTwitterInteraction(interaction)
 	if err != nil {
 		t.Fatal(err)
 	}
-	i, err := c.GetInteraction()
+	i, err := c.GetTwitterInteraction()
 	if err != nil {
 		t.Fatal(err)
 	}

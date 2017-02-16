@@ -29,8 +29,8 @@ type Config interface {
 	SetTwitterAPIs(apis []APIConfig) error
 	GetTwitterNotification() (*Notification, error)
 	SetTwitterNotification(notification *Notification) error
-	GetInteraction() (*InteractionConfig, error)
-	SetInteraction(interaction *InteractionConfig) error
+	GetTwitterInteraction() (*InteractionConfig, error)
+	SetTwitterInteraction(interaction *InteractionConfig) error
 	GetLog() (*LogConfig, error)
 	SetLog(log *LogConfig) error
 	GetTwitterDuration() (string, error)
@@ -43,9 +43,6 @@ type Config interface {
 type FileConfig struct {
 	// Twitter is a configuration related to Twitter.
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
-	// Interaction is a configuration related to interaction with users
-	// such as Twitter's direct message exchange.
-	Interaction *InteractionConfig `json:"interaction" toml:"interaction"`
 	// Log is a configuration related to logging.
 	Log *LogConfig `json:"log" toml:"log"`
 	// source is a configuration file from which this was loaded. This is
@@ -126,12 +123,12 @@ func (c *FileConfig) SetTwitterNotification(notification *Notification) error {
 	return nil
 }
 
-func (c *FileConfig) GetInteraction() (*InteractionConfig, error) {
-	return c.Interaction, nil
+func (c *FileConfig) GetTwitterInteraction() (*InteractionConfig, error) {
+	return c.Twitter.Interaction, nil
 }
 
-func (c *FileConfig) SetInteraction(interaction *InteractionConfig) error {
-	c.Interaction = interaction
+func (c *FileConfig) SetTwitterInteraction(interaction *InteractionConfig) error {
+	c.Twitter.Interaction = interaction
 	return nil
 }
 
@@ -157,9 +154,8 @@ func (c *FileConfig) SetTwitterDuration(dur string) error {
 // instance.
 func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{
-		Twitter:     NewTwitterConfig(),
-		Log:         NewLogConfig(),
-		Interaction: &InteractionConfig{},
+		Twitter: NewTwitterConfig(),
+		Log:     NewLogConfig(),
 	}
 
 	c.File = path
@@ -423,6 +419,9 @@ type TwitterConfig struct {
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
 	Notification *Notification `json:"notification" toml:"notification"`
+	// Interaction is a configuration related to interaction with users
+	// such as Twitter's direct message exchange.
+	Interaction *InteractionConfig `json:"interaction" toml:"interaction"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
 	Duration string `json:"duration" toml:"duration"`
@@ -435,6 +434,7 @@ func NewTwitterConfig() *TwitterConfig {
 	return &TwitterConfig{
 		Timelines:    []TimelineConfig{},
 		Searches:     []SearchConfig{},
+		Interaction:  &InteractionConfig{},
 		Duration:     "1h",
 		Notification: NewNotification(),
 	}

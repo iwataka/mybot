@@ -24,11 +24,11 @@ retweet = true
 allow_self = true
 users = ["foo"]
 
+[twitter.interaction]
+users = ["foo", "bar"]
+
 [twitter]
 duration = "30m"
-
-[interaction]
-users = ["foo", "bar"]
 
 [log]
 allow_self = true

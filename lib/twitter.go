@@ -588,7 +588,7 @@ func (l *TwitterDMListener) Listen() error {
 			if l.api.debug {
 				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
 			}
-			conf, err := l.api.config.GetInteraction()
+			conf, err := l.api.config.GetTwitterInteraction()
 			if err != nil {
 				return err
 			}
@@ -636,7 +636,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) 
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
-	interaction, err := a.config.GetInteraction()
+	interaction, err := a.config.GetTwitterInteraction()
 	if err != nil {
 		return err
 	}
