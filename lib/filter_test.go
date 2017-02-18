@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/iwataka/anaconda"
+	"github.com/nlopes/slack"
 )
 
 func init() {
@@ -49,14 +50,14 @@ func (m *EmptyLanguageMatcher) Enabled() bool {
 	return true
 }
 
-func TestCheckPatternsMatched(t *testing.T) {
+func TestCheckTweetPatternsMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "foo is bar",
 	}
-	conf := &TweetFilter{
+	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,14 +66,29 @@ func TestCheckPatternsMatched(t *testing.T) {
 	}
 }
 
-func TestCheckPatternsUnmatched(t *testing.T) {
+func TestCheckSlackMsgPatternsMatched(t *testing.T) {
+	text := "foo is bar"
+	conf := &Filter{
+		Patterns: []string{"foo"},
+	}
+	atts := []slack.Attachment{}
+	match, err := conf.CheckSlackMsg(text, atts, visionMatcher, languageMatcher, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !match {
+		t.Fatalf("%v expected but %v found", true, match)
+	}
+}
+
+func TestCheckTweetPatternsUnmatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "fizz buzz",
 	}
-	conf := &TweetFilter{
+	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,14 +97,29 @@ func TestCheckPatternsUnmatched(t *testing.T) {
 	}
 }
 
-func TestCheckFavoriteThresholdExceeded(t *testing.T) {
+func TestCheckSlackMsgPatternsUnmatched(t *testing.T) {
+	text := "fizz buzz"
+	conf := &Filter{
+		Patterns: []string{"foo"},
+	}
+	atts := []slack.Attachment{}
+	match, err := conf.CheckSlackMsg(text, atts, visionMatcher, languageMatcher, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if match {
+		t.Fatalf("%v expected but %v found", false, match)
+	}
+}
+
+func TestCheckTweetFavoriteThresholdExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		FavoriteCount: 100,
 	}
 	threshold := 80
-	conf := NewTweetFilter()
+	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,14 +128,14 @@ func TestCheckFavoriteThresholdExceeded(t *testing.T) {
 	}
 }
 
-func TestCheckFavoriteThresholdNotExceeded(t *testing.T) {
+func TestCheckTweetFavoriteThresholdNotExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		FavoriteCount: 100,
 	}
 	threshold := 120
-	conf := NewTweetFilter()
+	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,14 +144,14 @@ func TestCheckFavoriteThresholdNotExceeded(t *testing.T) {
 	}
 }
 
-func TestCheckRetweetedThresholdExceeded(t *testing.T) {
+func TestCheckTweetRetweetedThresholdExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		RetweetCount: 100,
 	}
 	threshold := 80
-	conf := NewTweetFilter()
+	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,14 +160,14 @@ func TestCheckRetweetedThresholdExceeded(t *testing.T) {
 	}
 }
 
-func TestCheckRetweetedThresholdNotExceeded(t *testing.T) {
+func TestCheckTweetRetweetedThresholdNotExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		RetweetCount: 100,
 	}
 	threshold := 120
-	conf := NewTweetFilter()
+	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +176,7 @@ func TestCheckRetweetedThresholdNotExceeded(t *testing.T) {
 	}
 }
 
-func TestCheckVisionMatched(t *testing.T) {
+func TestCheckTweetVisionMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Entities: anaconda.Entities{
 			Media: []anaconda.EntityMedia{
@@ -153,12 +184,12 @@ func TestCheckVisionMatched(t *testing.T) {
 			},
 		},
 	}
-	conf := &TweetFilter{
+	conf := &Filter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,18 +198,33 @@ func TestCheckVisionMatched(t *testing.T) {
 	}
 }
 
-func TestCheckVisionUnmatched(t *testing.T) {
-	tweet := anaconda.Tweet{
-		Entities: anaconda.Entities{
-			Media: []anaconda.EntityMedia{},
-		},
+func TestCheckSlackMsgVisionMatched(t *testing.T) {
+	att := slack.Attachment{
+		ImageURL: "url",
 	}
-	conf := &TweetFilter{
+	atts := []slack.Attachment{att}
+	conf := &Filter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
-	match, err := conf.check(tweet, visionMatcher, languageMatcher, cache)
+	match, err := conf.CheckSlackMsg("", atts, visionMatcher, languageMatcher, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !match {
+		t.Fatalf("%v expected but %v found", true, match)
+	}
+}
+
+func TestCheckTweetVisionUnmatched(t *testing.T) {
+	atts := []slack.Attachment{}
+	conf := &Filter{
+		Vision: &VisionCondition{
+			Label: []string{"foo"},
+		},
+	}
+	match, err := conf.CheckSlackMsg("", atts, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +235,7 @@ func TestCheckVisionUnmatched(t *testing.T) {
 
 func TestFilterValidate(t *testing.T) {
 	threshold := 100
-	f := NewTweetFilter()
+	f := NewFilter()
 	f.FavoriteThreshold = &threshold
 	f.Vision.Label = []string{"foo"}
 	err := f.Validate()

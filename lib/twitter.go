@@ -10,6 +10,7 @@ import (
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
+	"github.com/nlopes/slack"
 )
 
 // NOTE: This must be fixed because multiple applications having different
@@ -29,36 +30,14 @@ func NewTwitterAction() *TwitterAction {
 }
 
 func (a *TwitterAction) Add(action *TwitterAction) *TwitterAction {
-	result := *a
-
-	// If action is nil, you have nothing to do
-	if action == nil {
-		return &result
-	}
-
-	result.Retweet = a.Retweet || action.Retweet
-	result.Favorite = a.Favorite || action.Favorite
-	result.Follow = a.Follow || action.Follow
-
-	m := make(map[string]bool)
-	for _, c := range a.Collections {
-		m[c] = true
-	}
-	for _, c := range action.Collections {
-		m[c] = true
-	}
-	cols := []string{}
-	for c, exists := range m {
-		if exists {
-			cols = append(cols, c)
-		}
-	}
-	result.Collections = cols
-
-	return &result
+	return a.op(action, true)
 }
 
 func (a *TwitterAction) Sub(action *TwitterAction) *TwitterAction {
+	return a.op(action, false)
+}
+
+func (a *TwitterAction) op(action *TwitterAction, add bool) *TwitterAction {
 	result := *a
 
 	// If action is nil, you have nothing to do
@@ -66,32 +45,18 @@ func (a *TwitterAction) Sub(action *TwitterAction) *TwitterAction {
 		return &result
 	}
 
-	result.Retweet = a.Retweet && !action.Retweet
-	result.Favorite = a.Favorite && !action.Favorite
-	result.Follow = a.Follow && !action.Follow
-
-	m := make(map[string]bool)
-	for _, c := range a.Collections {
-		m[c] = true
-	}
-	for _, c := range action.Collections {
-		m[c] = false
-	}
-	cols := []string{}
-	for c, exists := range m {
-		if exists {
-			cols = append(cols, c)
-		}
-	}
-	result.Collections = cols
+	result.Tweet = BoolOp(a.Tweet, action.Tweet, add)
+	result.Retweet = BoolOp(a.Retweet, action.Retweet, add)
+	result.Favorite = BoolOp(a.Favorite, action.Favorite, add)
+	result.Collections = StringsOp(a.Collections, action.Collections, add)
 
 	return &result
 }
 
 func (a *TwitterAction) IsEmpty() bool {
-	return !a.Retweet &&
+	return !a.Tweet &&
+		!a.Retweet &&
 		!a.Favorite &&
-		!a.Follow &&
 		len(a.Collections) == 0
 }
 
@@ -134,6 +99,10 @@ func (a *TwitterAPI) GetCollectionListByUserId(userId int64, v url.Values) (anac
 // PostTweet is just a wrapper of anaconda.TwitterApi#PostTweet
 func (a *TwitterAPI) PostTweet(msg string, v url.Values) (anaconda.Tweet, error) {
 	return a.api.PostTweet(msg, v)
+}
+
+func (a *TwitterAPI) PostSlackMsg(text string, atts []slack.Attachment) (anaconda.Tweet, error) {
+	return a.PostTweet(text, nil)
 }
 
 // GetFriendsList is just a wrapper of anaconda.TwitterApi#GetFriendsList
@@ -183,7 +152,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *TweetAction,
+	action *Action,
 ) ([]anaconda.Tweet, error) {
 	latestID, err := a.cache.GetLatestTweetID(name)
 	if err != nil {
@@ -202,7 +171,7 @@ func (a *TwitterAPI) ProcessTimeline(
 		return nil, err
 	}
 	var pp TwitterPostProcessor
-	if c.shouldRepeat() {
+	if c.ShouldRepeat() {
 		pp = &TwitterPostProcessorEach{action, a.cache}
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache}
@@ -223,7 +192,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *TweetAction,
+	action *Action,
 ) ([]anaconda.Tweet, error) {
 	latestID, err := a.cache.GetLatestFavoriteID(name)
 	if err != nil {
@@ -242,7 +211,7 @@ func (a *TwitterAPI) ProcessFavorites(
 		return nil, err
 	}
 	var pp TwitterPostProcessor
-	if c.shouldRepeat() {
+	if c.ShouldRepeat() {
 		pp = &TwitterPostProcessorEach{action, a.cache}
 	} else {
 		pp = &TwitterPostProcessorTop{name, a.cache}
@@ -263,7 +232,7 @@ func (a *TwitterAPI) ProcessSearch(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *TweetAction,
+	action *Action,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.api.GetSearch(query, v)
 	if err != nil {
@@ -286,7 +255,7 @@ type (
 		cache      Cache
 	}
 	TwitterPostProcessorEach struct {
-		action *TweetAction
+		action *Action
 		cache  Cache
 	}
 )
@@ -329,14 +298,14 @@ func (a *TwitterAPI) processTweets(
 	v VisionMatcher,
 	l LanguageMatcher,
 	slack *SlackAPI,
-	action *TweetAction,
+	action *Action,
 	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.check(t, v, l, a.cache)
+		match, err := c.CheckTweet(t, v, l, a.cache)
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +330,7 @@ func (a *TwitterAPI) processTweets(
 
 func (a *TwitterAPI) processTweet(
 	t anaconda.Tweet,
-	action *TweetAction,
+	action *Action,
 	slack *SlackAPI,
 ) error {
 	if action.Twitter.Retweet && !t.Retweeted {
@@ -378,18 +347,6 @@ func (a *TwitterAPI) processTweet(
 	}
 	if action.Twitter.Favorite && !t.Favorited {
 		_, err := a.api.Favorite(t.Id)
-		if err != nil {
-			return err
-		}
-	}
-	if action.Twitter.Follow {
-		var screenName string
-		if t.RetweetedStatus == nil {
-			screenName = t.User.ScreenName
-		} else {
-			screenName = t.RetweetedStatus.User.ScreenName
-		}
-		_, err := a.api.FollowUser(screenName)
 		if err != nil {
 			return err
 		}
@@ -518,7 +475,7 @@ func (l *TwitterUserListener) Listen(
 				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
 					continue
 				}
-				match, err := timeline.Filter.check(c, vis, lang, cache)
+				match, err := timeline.Filter.CheckTweet(c, vis, lang, cache)
 				if err != nil {
 					return err
 				}
@@ -668,8 +625,8 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	check(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c Cache) (bool, error)
-	shouldRepeat() bool
+	CheckTweet(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c Cache) (bool, error)
+	ShouldRepeat() bool
 }
 
 // DirectMessageReceiver function receives the specified direct message and
@@ -809,6 +766,11 @@ func CheckTwitterError(err error) bool {
 			return false
 		}
 	case *anaconda.ApiError:
+		code := twitterErr.StatusCode
+		// Status code 5?? means server error
+		if code >= 500 && code < 600 {
+			return false
+		}
 		for _, e := range twitterErr.Decoded.Errors {
 			if CheckTwitterError(e) {
 				return true

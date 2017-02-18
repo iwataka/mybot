@@ -4,46 +4,32 @@ import (
 	"fmt"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
 )
 
 type SlackAction struct {
-	Channels []string `json:"channels" toml:"channels"`
+	models.SlackActionProperties
+	Reactions []string `json:"reactions" toml:"reactions"`
+	Channels  []string `json:"channels" toml:"channels"`
 }
 
 func NewSlackAction() *SlackAction {
 	return &SlackAction{
-		Channels: []string{},
+		Channels:  []string{},
+		Reactions: []string{},
 	}
 }
 
 func (a *SlackAction) Add(action *SlackAction) *SlackAction {
-	result := *a
-
-	// If action is nil, you have nothing to do
-	if action == nil {
-		return &result
-	}
-
-	m := make(map[string]bool)
-	for _, c := range a.Channels {
-		m[c] = true
-	}
-	for _, c := range action.Channels {
-		m[c] = true
-	}
-	chans := []string{}
-	for c, exists := range m {
-		if exists {
-			chans = append(chans, c)
-		}
-	}
-	result.Channels = chans
-
-	return &result
+	return a.op(action, true)
 }
 
 func (a *SlackAction) Sub(action *SlackAction) *SlackAction {
+	return a.op(action, false)
+}
+
+func (a *SlackAction) op(action *SlackAction, add bool) *SlackAction {
 	result := *a
 
 	// If action is nil, you have nothing to do
@@ -51,38 +37,35 @@ func (a *SlackAction) Sub(action *SlackAction) *SlackAction {
 		return &result
 	}
 
-	m := make(map[string]bool)
-	for _, c := range a.Channels {
-		m[c] = true
-	}
-	for _, c := range action.Channels {
-		m[c] = false
-	}
-	chans := []string{}
-	for c, exists := range m {
-		if exists {
-			chans = append(chans, c)
-		}
-	}
-	result.Channels = chans
+	result.Pin = BoolOp(a.Pin, action.Pin, add)
+	result.Star = BoolOp(a.Star, action.Star, add)
+	result.Reactions = StringsOp(a.Reactions, action.Reactions, add)
+	result.Channels = StringsOp(a.Channels, action.Channels, add)
 
 	return &result
+
 }
 
 func (a *SlackAction) IsEmpty() bool {
-	return len(a.Channels) == 0
+	return !a.Pin &&
+		!a.Star &&
+		len(a.Channels) == 0 &&
+		len(a.Reactions) == 0
+
 }
 
 type SlackAPI struct {
-	api *slack.Client
+	api    *slack.Client
+	config Config
+	cache  Cache
 }
 
-func NewSlackAPI(token string) *SlackAPI {
+func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
 	var api *slack.Client
 	if token != "" {
 		api = slack.New(token)
 	}
-	return &SlackAPI{api}
+	return &SlackAPI{api, config, cache}
 }
 
 func (a *SlackAPI) Enabled() bool {
@@ -90,8 +73,11 @@ func (a *SlackAPI) Enabled() bool {
 }
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
-	text, params := a.convertFromTweet(tweet)
+	text, params := convertFromTweetToSlackMsg(tweet)
+	return a.postMesage(channel, text, params)
+}
 
+func (a *SlackAPI) postMesage(channel, text string, params slack.PostMessageParameters) error {
 	_, _, err := a.api.PostMessage(channel, text, params)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
@@ -103,7 +89,7 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 					return err
 				}
 			}
-			err = a.PostTweet(channel, tweet)
+			_, _, err = a.api.PostMessage(channel, text, params)
 			if err != nil {
 				return err
 			}
@@ -114,9 +100,11 @@ func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	return nil
 }
 
-func (a *SlackAPI) convertFromTweet(t anaconda.Tweet) (string, slack.PostMessageParameters) {
+func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, slack.PostMessageParameters) {
 	text := TwitterStatusURL(t)
 	params := slack.PostMessageParameters{}
+	params.IconURL = t.User.ProfileImageURL
+	params.Username = fmt.Sprintf("%s@%s", t.User.Name, t.User.ScreenName)
 	params.UnfurlLinks = true
 	params.UnfurlMedia = true
 	params.AsUser = false
@@ -128,4 +116,116 @@ func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	msg := fmt.Sprintf("Create #%s and invite me to it", ch)
 	_, _, err := a.api.PostMessage("general", msg, params)
 	return err
+}
+
+func (a *SlackAPI) Listen() *SlackListener {
+	return &SlackListener{true, a}
+}
+
+type SlackListener struct {
+	enabled bool
+	api     *SlackAPI
+}
+
+func (l *SlackListener) Start(
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	twitterAPI *TwitterAPI,
+) error {
+	rtm := l.api.api.NewRTM()
+	go rtm.ManageConnection()
+
+	for l.enabled {
+		select {
+		case msg := <-rtm.IncomingEvents:
+			switch ev := msg.Data.(type) {
+			case *slack.MessageEvent:
+				l.processMsgEvent(ev, vis, lang, twitterAPI)
+			case *slack.RTMError:
+				return ev
+			case *slack.InvalidAuthEvent:
+				return fmt.Errorf("Invalid authentication")
+			}
+		}
+	}
+	return nil
+}
+
+func (l *SlackListener) Stop() {
+	l.enabled = false
+}
+
+func (l *SlackListener) processMsgEvent(
+	ev *slack.MessageEvent,
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	twitterAPI *TwitterAPI,
+) error {
+	ch := ev.Channel
+	msgs, err := l.api.config.GetSlackMessages()
+	if err != nil {
+		return err
+	}
+	for _, msg := range msgs {
+		if !StringsContains(msg.Channels, ch) {
+			continue
+		}
+		match, err := msg.Filter.CheckSlackMsg(ev.Text, ev.Attachments, vis, lang, l.api.cache)
+		if err != nil {
+			return err
+		}
+		if match {
+			err := l.processMsgEventWithAction(ev, msg.Action, twitterAPI)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (l *SlackListener) processMsgEventWithAction(
+	ev *slack.MessageEvent,
+	action *Action,
+	twitterAPI *TwitterAPI,
+) error {
+	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
+	if action.Slack.Pin {
+		err := l.api.api.AddPin(ev.Channel, item)
+		if err != nil {
+			return err
+		}
+	}
+	if action.Slack.Star {
+		err := l.api.api.AddStar(ev.Channel, item)
+		if err != nil {
+			return err
+		}
+	}
+	for _, r := range action.Slack.Reactions {
+		err := l.api.api.AddReaction(r, item)
+		if err != nil {
+			return err
+		}
+	}
+	for _, c := range action.Slack.Channels {
+		if ev.Channel == c {
+			continue
+		}
+		params := slack.PostMessageParameters{
+			Attachments: ev.Attachments,
+		}
+		err := l.api.postMesage(c, ev.Text, params)
+		if err != nil {
+			return err
+		}
+	}
+
+	if action.Twitter.Tweet {
+		_, err := twitterAPI.PostSlackMsg(ev.Text, ev.Attachments)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -1,6 +1,7 @@
 package mybot
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -77,5 +78,19 @@ func TestGetIntPtr(t *testing.T) {
 	}
 	if second != nil {
 		t.Fatalf("%v expected but %v found", nil, second)
+	}
+}
+
+func TestNewMap(t *testing.T) {
+	key1 := "1"
+	key2 := "2"
+	val1 := 1
+	val2 := []string{"foo"}
+	m := NewMap(key1, val1, key2, val2)
+	if m[key1] != val1 {
+		t.Fatal("%v expected but %v found", val1, m[key1])
+	}
+	if !reflect.DeepEqual(m[key2], val2) {
+		t.Fatal("%v expected but %v found", val2, m[key2])
 	}
 }

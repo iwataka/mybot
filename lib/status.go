@@ -11,6 +11,8 @@ type Status struct {
 	twitterListenDMStatusMutex    *sync.Mutex
 	twitterListenUsersStatus      bool
 	twitterListenUsersStatusMutex *sync.Mutex
+	slackListen                   bool
+	slackListenMutex              *sync.Mutex
 	TwitterStatus                 bool
 	ServerStatus                  bool
 	PassTwitterApp                bool
@@ -19,6 +21,8 @@ type Status struct {
 
 func NewStatus() *Status {
 	return &Status{
+		false,
+		new(sync.Mutex),
 		false,
 		new(sync.Mutex),
 		false,
@@ -52,6 +56,20 @@ func (s *Status) LockListenUsersRoutine() {
 func (s *Status) UnlockListenUsersRoutine() {
 	s.twitterListenUsersStatus = false
 	s.twitterListenUsersStatusMutex.Unlock()
+}
+
+func (s *Status) CheckSlackListen() bool {
+	return s.slackListen
+}
+
+func (s *Status) LockSlackListenRoutine() {
+	s.slackListenMutex.Lock()
+	s.slackListen = true
+}
+
+func (s *Status) UnlockSlackListenRoutine() {
+	s.slackListen = false
+	s.slackListenMutex.Unlock()
 }
 
 func (s *Status) CheckTwitterListenUsersStatus() bool {

@@ -1,0 +1,93 @@
+[twitter]
+favorites = []
+api = []
+duration = "30m"
+debug = false
+
+[[twitter.timelines]]
+screen_names = ["golang"]
+[twitter.timelines.filter]
+retweeted = false
+lang = "en"
+patterns = ["is released!", "#golang"]
+url_patterns = []
+[twitter.timelines.filter.vision]
+label = ["cartoon|clip art|artwork"]
+text = []
+landmark = []
+logo = []
+[twitter.timelines.filter.vision.face]
+anger_likelihood = "LIKELY"
+blurred_likelihood = "LIKELY"
+headwear_likelihood = "LIKELY"
+joy_likelihood = "LIKELY"
+[twitter.timelines.filter.language]
+[twitter.timelines.action]
+[twitter.timelines.action.twitter]
+retweet = true
+favorite = false
+collections = ["foo"]
+[twitter.timelines.action.slack]
+pin = false
+star = false
+channels = ["foo"]
+reactions = []
+
+[[twitter.searches]]
+queries = ["foo", "bar"]
+[twitter.searches.filter]
+patterns = []
+url_patterns = ["foo"]
+retweeted_threshold = 100
+[twitter.searches.filter.vision]
+label = []
+text = []
+landmark = []
+logo = []
+[twitter.searches.filter.vision.face]
+[twitter.searches.filter.language]
+[twitter.searches.action]
+[twitter.searches.action.twitter]
+tweet = false
+retweet = true
+favorite = false
+collections = ["foo"]
+[twitter.searches.action.slack]
+pin = false
+star = false
+channels = ["foo"]
+reactions = []
+[twitter.notification]
+[twitter.notification.Place]
+allow_self = true
+users = ["foo"]
+[twitter.interaction]
+allow_self = false
+users = ["foo", "bar"]
+
+[slack]
+[[slack.messages]]
+channels = ["foo"]
+[slack.messages.filter]
+patterns = ["foo"]
+url_patterns = []
+[slack.messages.filter.vision]
+label = []
+text = []
+landmark = []
+logo = []
+[slack.messages.filter.vision.face]
+[slack.messages.filter.language]
+[slack.messages.action.twitter]
+tweet = true
+collections = []
+[slack.messages.action.slack]
+pin = true
+star = false
+channels = ["bar"]
+reactions = []
+
+[log]
+allow_self = true
+users = ["foo", "bar"]
+linenum = 8

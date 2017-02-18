@@ -16,8 +16,8 @@ type Cache interface {
 	SetLatestFavoriteID(screenName string, id int64) error
 	GetLatestDMID() (int64, error)
 	SetLatestDMID(id int64) error
-	GetTweetAction(tweetID int64) (*TweetAction, error)
-	SetTweetAction(tweetID int64, action *TweetAction) error
+	GetTweetAction(tweetID int64) (*Action, error)
+	SetTweetAction(tweetID int64, action *Action) error
 	GetLatestImages(num int) ([]ImageCacheData, error)
 	SetImage(data ImageCacheData) error
 	Save() error
@@ -29,9 +29,9 @@ type FileCache struct {
 	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id"`
 	LatestDMID       int64            `json:"latest_dm_id" toml:"latest_dm_id"`
 	// map[int64]interface{} can't be converted to json by go1.6 or older
-	Tweet2Action map[string]*TweetAction `json:"tweet_to_action" toml:"tweet_to_action"`
-	Images       []ImageCacheData        `json:"images" toml:"images"`
-	File         string                  `json:"-" toml:"-"`
+	Tweet2Action map[string]*Action `json:"tweet_to_action" toml:"tweet_to_action"`
+	Images       []ImageCacheData   `json:"images" toml:"images"`
+	File         string             `json:"-" toml:"-"`
 }
 
 type ImageCacheData struct {
@@ -46,7 +46,7 @@ func NewFileCache(path string) (*FileCache, error) {
 		make(map[string]int64),
 		make(map[string]int64),
 		0,
-		make(map[string]*TweetAction),
+		make(map[string]*Action),
 		[]ImageCacheData{},
 		path,
 	}
@@ -96,7 +96,7 @@ func (c *FileCache) SetLatestDMID(id int64) error {
 	return nil
 }
 
-func (c *FileCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
+func (c *FileCache) GetTweetAction(tweetID int64) (*Action, error) {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
 	key := strconv.FormatInt(tweetID, 10)
@@ -104,7 +104,7 @@ func (c *FileCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
 	return action, nil
 }
 
-func (c *FileCache) SetTweetAction(tweetID int64, action *TweetAction) error {
+func (c *FileCache) SetTweetAction(tweetID int64, action *Action) error {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
 	key := strconv.FormatInt(tweetID, 10)
@@ -220,7 +220,7 @@ func (c *DBCache) SetLatestDMID(id int64) error {
 	return c.client.Error
 }
 
-func (c *DBCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
+func (c *DBCache) GetTweetAction(tweetID int64) (*Action, error) {
 	record := &models.TweetActionCache{}
 	c.client.AutoMigrate(record)
 	c.client.Where("tweet_id = ?", tweetID).First(record)
@@ -239,10 +239,12 @@ func (c *DBCache) GetTweetAction(tweetID int64) (*TweetAction, error) {
 	}
 	record.SlackAction = *slack
 
-	result := NewTweetAction()
+	result := NewAction()
 	result.Twitter.TwitterActionProperties = record.TwitterAction.TwitterActionProperties
 	result.Twitter.Collections = record.TwitterAction.GetCollections()
+	result.Slack.SlackActionProperties = record.SlackAction.SlackActionProperties
 	result.Slack.Channels = record.SlackAction.GetChannels()
+	result.Slack.Reactions = record.SlackAction.GetReactions()
 	return result, c.client.Error
 }
 
@@ -274,6 +276,11 @@ func (c *DBCache) getSlackAction(id uint) (*models.SlackAction, error) {
 		return nil, err
 	}
 	record.Channels = chs
+	rs, err := c.getSlackReactions(id)
+	if err != nil {
+		return nil, err
+	}
+	record.Reactions = rs
 	return record, c.client.Error
 }
 
@@ -284,7 +291,14 @@ func (c *DBCache) getSlackChannels(id uint) ([]models.SlackChannel, error) {
 	return records, c.client.Error
 }
 
-func (c *DBCache) SetTweetAction(tweetID int64, action *TweetAction) error {
+func (c *DBCache) getSlackReactions(id uint) ([]models.SlackReaction, error) {
+	records := []models.SlackReaction{}
+	c.client.AutoMigrate(&models.SlackReaction{})
+	c.client.Where("slack_action_id = ?", id).Find(&records)
+	return records, c.client.Error
+}
+
+func (c *DBCache) SetTweetAction(tweetID int64, action *Action) error {
 	cache := &models.Cache{}
 	c.client.AutoMigrate(cache)
 	c.client.FirstOrCreate(cache)
@@ -293,17 +307,21 @@ func (c *DBCache) SetTweetAction(tweetID int64, action *TweetAction) error {
 	c.client.AutoMigrate(&models.SlackAction{})
 	c.client.AutoMigrate(&models.TwitterCollection{})
 	c.client.AutoMigrate(&models.SlackChannel{})
+	c.client.AutoMigrate(&models.SlackReaction{})
 	record := &models.TweetActionCache{}
 	c.client.AutoMigrate(record)
 
 	c.client.Where("tweet_id = ?", tweetID).FirstOrCreate(record)
 	record.CacheID = cache.ID
 	record.TweetID = tweetID
+	record.TwitterAction.Tweet = action.Twitter.Tweet
 	record.TwitterAction.Retweet = action.Twitter.Retweet
 	record.TwitterAction.Favorite = action.Twitter.Favorite
-	record.TwitterAction.Follow = action.Twitter.Follow
 	record.TwitterAction.SetCollections(action.Twitter.Collections)
+	record.SlackAction.Pin = action.Slack.Pin
+	record.SlackAction.Star = action.Slack.Star
 	record.SlackAction.SetChannels(action.Slack.Channels)
+	record.SlackAction.SetReactions(action.Slack.Reactions)
 
 	c.client.Save(record)
 	for _, col := range record.TwitterAction.Collections {
@@ -313,6 +331,10 @@ func (c *DBCache) SetTweetAction(tweetID int64, action *TweetAction) error {
 	for _, ch := range record.SlackAction.Channels {
 		ch.SlackActionID = record.SlackAction.ID
 		c.client.Save(ch)
+	}
+	for _, r := range record.SlackAction.Reactions {
+		r.SlackActionID = record.SlackAction.ID
+		c.client.Save(r)
 	}
 	return c.client.Error
 }

@@ -14,21 +14,20 @@ import (
 )
 
 var (
-	twitterAPI  *mybot.TwitterAPI
-	twitterApp  *mybot.OAuthApp
-	twitterAuth *mybot.OAuthCredentials
-	visionAPI   *mybot.VisionAPI
-	languageAPI *mybot.LanguageAPI
-	slackAPI    *mybot.SlackAPI
-	config      *mybot.FileConfig
-	cache       mybot.Cache
-	logger      mybot.Logger
-	status      *mybot.Status
-
-	ctxt *cli.Context
-
+	twitterAPI         *mybot.TwitterAPI
 	userListenerStream *anaconda.Stream
 	dmListenerStream   *anaconda.Stream
+	twitterApp         *mybot.OAuthApp
+	twitterAuth        *mybot.OAuthCredentials
+	visionAPI          *mybot.VisionAPI
+	languageAPI        *mybot.LanguageAPI
+	slackAPI           *mybot.SlackAPI
+	slackListener      *mybot.SlackListener
+	config             *mybot.FileConfig
+	cache              mybot.Cache
+	logger             mybot.Logger
+	status             *mybot.Status
+	ctxt               *cli.Context
 )
 
 func main() {
@@ -181,7 +180,7 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	slackToken := os.Getenv("MYBOT_SLACK_TOKEN")
-	slackAPI = mybot.NewSlackAPI(slackToken)
+	slackAPI = mybot.NewSlackAPI(slackToken, config, cache)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
 		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
@@ -335,6 +334,23 @@ func twitterPeriodically() {
 	}
 }
 
+func slackListens() {
+	if !slackAPI.Enabled() {
+		return
+	}
+
+	status.LockSlackListenRoutine()
+	defer status.UnlockSlackListenRoutine()
+
+	slackListener = slackAPI.Listen()
+	err := slackListener.Start(visionAPI, languageAPI, twitterAPI)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	logger.Println("Failed to keep slack listener")
+}
+
 func reloadListeners() {
 	if userListenerStream != nil {
 		userListenerStream.Stop()
@@ -346,9 +362,19 @@ func reloadListeners() {
 	}
 	go twitterListenDM()
 
+	if dmListenerStream != nil {
+		dmListenerStream.Stop()
+	}
+	go twitterListenDM()
+
 	if !status.TwitterStatus {
 		go twitterPeriodically()
 	}
+
+	if slackListener != nil {
+		slackListener.Stop()
+	}
+	go slackListens()
 }
 
 func httpServer() {
@@ -369,10 +395,10 @@ func httpServer() {
 
 func serve(c *cli.Context) error {
 	go httpServer()
-
 	go twitterListenDM()
 	go twitterListenUsers()
 	go twitterPeriodically()
+	go slackListens()
 
 	ch := make(chan bool)
 	<-ch

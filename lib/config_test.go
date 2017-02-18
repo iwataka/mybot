@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewConfig(t *testing.T) {
-	c, err := NewFileConfig("test_assets/config.template.toml")
+	c, err := NewFileConfig("testdata/config.template.toml")
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
@@ -20,9 +20,6 @@ func TestNewConfig(t *testing.T) {
 	f := a.Filter
 	if f.Patterns[0] != "is released!" {
 		t.Fatalf("%s expected but %s found", "is released!", f.Patterns[0])
-	}
-	if *f.HasURL != true {
-		t.Fatalf("%v expected but %v found", true, *f.HasURL)
 	}
 	if *f.Retweeted != false {
 		t.Fatalf("%v expected but %v found", false, *f.Retweeted)
@@ -51,6 +48,10 @@ func TestNewConfig(t *testing.T) {
 	}
 	if s.Action.Twitter.Retweet != true {
 		t.Fatalf("%v expected but %v found", true, s.Action.Twitter.Retweet)
+	}
+	ch := c.Slack.Messages[0].Channels[0]
+	if ch != "foo" {
+		t.Fatalf("%s expected but %v found", "foo", ch)
 	}
 	n := c.Twitter.Notification
 	if n.Place.AllowSelf != true {
@@ -129,11 +130,11 @@ func TestNewSearchConfig(t *testing.T) {
 }
 
 func TestTweetAction_AddNil(t *testing.T) {
-	a1 := &TweetAction{
+	a1 := &Action{
 		Twitter: nil,
 		Slack:   nil,
 	}
-	a2 := &TweetAction{
+	a2 := &Action{
 		Twitter: &TwitterAction{
 			Collections: []string{"foo"},
 		},
@@ -155,7 +156,7 @@ func TestTweetAction_AddNil(t *testing.T) {
 }
 
 func TestTweetAction_Add(t *testing.T) {
-	a1 := &TweetAction{
+	a1 := &Action{
 		Twitter: &TwitterAction{
 			Collections: []string{"twitter"},
 		},
@@ -164,7 +165,7 @@ func TestTweetAction_Add(t *testing.T) {
 		},
 	}
 	a1.Twitter.Retweet = true
-	a2 := &TweetAction{
+	a2 := &Action{
 		Twitter: &TwitterAction{
 			Collections: []string{"facebook"},
 		},
@@ -181,9 +182,6 @@ func TestTweetAction_Add(t *testing.T) {
 	if !result.Twitter.Favorite {
 		t.Fatalf("%v expected but %v found", true, result.Twitter.Favorite)
 	}
-	if result.Twitter.Follow {
-		t.Fatalf("%v expected but %v found", false, result.Twitter.Follow)
-	}
 	if len(result.Twitter.Collections) != 2 {
 		t.Fatalf("%d expected but %d found", 2, len(result.Twitter.Collections))
 	}
@@ -193,7 +191,7 @@ func TestTweetAction_Add(t *testing.T) {
 }
 
 func TestSaveLoad(t *testing.T) {
-	c, err := NewFileConfig("test_assets/config.template.toml")
+	c, err := NewFileConfig("testdata/config.template.toml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +241,7 @@ func TestFileConfigTwitterTimelines(t *testing.T) {
 }
 
 func testConfigTwitterTimelines(t *testing.T, c Config) {
-	action := NewTweetAction()
+	action := NewAction()
 	action.Twitter.Retweet = true
 	timeline := TimelineConfig{}
 	timeline.Action = action
@@ -271,7 +269,7 @@ func TestFileConfigTwitterFavorites(t *testing.T) {
 }
 
 func testConfigTwitterFavorites(t *testing.T, c Config) {
-	action := NewTweetAction()
+	action := NewAction()
 	action.Twitter.Retweet = true
 	favorite := FavoriteConfig{}
 	favorite.Action = action
@@ -299,7 +297,7 @@ func TestFileConfigTwitterSearches(t *testing.T) {
 }
 
 func testConfigTwitterSearches(t *testing.T, c Config) {
-	action := NewTweetAction()
+	action := NewAction()
 	action.Twitter.Retweet = true
 	search := SearchConfig{}
 	search.Action = action
@@ -370,6 +368,40 @@ func testConfigTwitterNotification(t *testing.T, c Config) {
 	}
 	if !reflect.DeepEqual(notification, n) {
 		t.Fatalf("%v is not set properly", notification)
+	}
+}
+
+func TestFileConfigSlackMessages(t *testing.T) {
+	c, err := NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	testConfigSlackMessages(t, c)
+}
+
+func testConfigSlackMessages(t *testing.T, c Config) {
+	filter := NewFilter()
+	filter.Lang = "ja"
+	action := NewAction()
+	action.Slack.Channels = []string{"foo"}
+	action.Slack.Reactions = []string{":smile:"}
+	msg := MessageConfig{
+		Channels: []string{"foo"},
+	}
+	msg.Filter = filter
+	msg.Action = action
+	msgs := []MessageConfig{msg}
+
+	err := c.SetSlackMessages(msgs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms, err := c.GetSlackMessages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(msgs, ms) {
+		t.Fatalf("%v expected but %v found", msgs, ms)
 	}
 }
 

@@ -39,7 +39,11 @@ func BoolSelectbox(flag *bool, name string) template.HTML {
 }
 
 func GetBoolSelectboxValue(val map[string][]string, index int, name string) *bool {
-	str := val[name][index]
+	vs := val[name]
+	if len(vs) <= index {
+		return nil
+	}
+	str := vs[index]
 	flag, err := strconv.ParseBool(str)
 	if err != nil {
 		return nil
@@ -74,7 +78,11 @@ func ListTextbox(list []string, name string) template.HTML {
 }
 
 func GetListTextboxValue(val map[string][]string, index int, name string) []string {
-	v := val[name][index]
+	vs := val[name]
+	if len(vs) <= index {
+		return []string{}
+	}
+	v := vs[index]
 	result := []string{}
 	for _, s := range strings.Split(v, ",") {
 		trimmed := strings.TrimSpace(s)
@@ -96,7 +104,11 @@ func TextboxOfFloat64Ptr(val *float64, name string) template.HTML {
 }
 
 func GetFloat64Ptr(val map[string][]string, index int, name string) (*float64, error) {
-	v := val[name][index]
+	vs := val[name]
+	if len(vs) <= index {
+		return nil, nil
+	}
+	v := vs[index]
 	if len(v) == 0 {
 		return nil, nil
 	}
@@ -118,7 +130,11 @@ func TextboxOfIntPtr(val *int, name string) template.HTML {
 }
 
 func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
-	v := val[name][index]
+	vs := val[name]
+	if len(vs) <= index {
+		return nil, nil
+	}
+	v := vs[index]
 	if len(v) == 0 {
 		return nil, nil
 	}
@@ -130,11 +146,22 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	return &result, nil
 }
 
-type WithPrefix struct {
-	Main   interface{}
-	Prefix string
+func GetString(vals []string, index int, def string) string {
+	if len(vals) <= index {
+		return def
+	}
+	return vals[index]
 }
 
-func NewWithPrefix(main interface{}, prefix string) WithPrefix {
-	return WithPrefix{main, prefix}
+func NewMap(objs ...interface{}) map[string]interface{} {
+	m := make(map[string]interface{})
+	for i := 0; i < len(objs); i = i + 2 {
+		key, ok := objs[i].(string)
+		if !ok {
+			panic("NewMap failed")
+		}
+		val := objs[i+1]
+		m[key] = val
+	}
+	return m
 }

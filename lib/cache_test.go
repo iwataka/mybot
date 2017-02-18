@@ -146,13 +146,17 @@ func TestDBCacheTweetAction(t *testing.T) {
 
 func testCacheTweetAction(t *testing.T, c Cache) {
 	var tweetID int64 = 1
-	action := &TweetAction{
+	action := &Action{
 		Twitter: &TwitterAction{
 			Collections: []string{"foo"},
 		},
-		Slack: NewSlackAction(),
+		Slack: &SlackAction{
+			Reactions: []string{":smile:"},
+			Channels:  []string{"bar"},
+		},
 	}
 	action.Twitter.Retweet = true
+	action.Slack.Pin = true
 	err := c.SetTweetAction(tweetID, action)
 	if err != nil {
 		t.Fatal(err)
@@ -161,8 +165,11 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(action, a) {
-		t.Fatalf("%v expected but %v found", action, a)
+	if !reflect.DeepEqual(action.Twitter, a.Twitter) {
+		t.Fatalf("%v expected but %v found", action.Twitter, a.Twitter)
+	}
+	if !reflect.DeepEqual(action.Slack, a.Slack) {
+		t.Fatalf("%v expected but %v found", action.Slack, a.Slack)
 	}
 }
 

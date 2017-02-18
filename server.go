@@ -47,7 +47,7 @@ func init() {
 		"listTextbox":         mybot.ListTextbox,
 		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
 		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
-		"withPrefix":          mybot.NewWithPrefix,
+		"newMap":              mybot.NewMap,
 	}
 
 	tmpl, err := template.
@@ -109,6 +109,10 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/config/apis/add",
 		wrapHandler(configAPIAddHandler),
+	)
+	http.HandleFunc(
+		"/config/messages/add",
+		wrapHandler(configMessageAddHandler),
 	)
 	http.HandleFunc(
 		"/assets/css/",
@@ -248,7 +252,11 @@ type checkboxCounter struct {
 	extraCount int
 }
 
-func (c *checkboxCounter) returnValue(index int, val map[string][]string) bool {
+func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bool) bool {
+	vs := val[c.name]
+	if len(vs) <= index {
+		return def
+	}
 	if val[c.name][index+c.extraCount] == "true" {
 		c.extraCount++
 		return true
@@ -265,12 +273,20 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfig(w http.ResponseWriter, r *http.Request) {
-	msg := ""
+	var err error
+	valid := false
+
 	defer func() {
-		if len(msg) != 0 {
+		if valid {
+			err = config.Save()
+		} else {
+			err = config.Load()
+		}
+
+		if err != nil {
 			msgCookie := &http.Cookie{
 				Name:  "mybot.config.message",
-				Value: msg,
+				Value: err.Error(),
 				Path:  "/config/",
 			}
 			http.SetCookie(w, msgCookie)
@@ -279,230 +295,181 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusSeeOther)
 	}()
 
-	err := r.ParseMultipartForm(32 << 20)
+	err = r.ParseMultipartForm(32 << 20)
 	if err != nil {
-		msg = err.Error()
 		return
 	}
 	val := r.MultipartForm.Value
 
-	deletedFlags := val["twitter.timelines.deleted"]
-	if len(deletedFlags) != len(config.Twitter.Timelines) {
-		http.Error(w, "Collapsed request", http.StatusInternalServerError)
+	prefix := "twitter.timelines"
+	deletedFlags := val[prefix+".deleted"]
+	timelines := []mybot.TimelineConfig{}
+	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
 		return
 	}
-	actionRetweetCounter := checkboxCounter{"twitter.timelines.action.twitter.retweet", 0}
-	actionFavoriteCounter := checkboxCounter{"twitter.timelines.action.twitter.favorite", 0}
-	actionFollowCounter := checkboxCounter{"twitter.timelines.action.twitter.follow", 0}
-	length := len(val["twitter.timelines.count"])
-	timelines := []mybot.TimelineConfig{}
-	for i := 0; i < length; i++ {
+	for i := 0; i < len(deletedFlags); i++ {
 		if deletedFlags[i] == "true" {
-			actionRetweetCounter.returnValue(i, val)
-			actionFavoriteCounter.returnValue(i, val)
-			actionFollowCounter.returnValue(i, val)
 			continue
 		}
 		timeline := *mybot.NewTimelineConfig()
-		timeline.ScreenNames = mybot.GetListTextboxValue(val, i, "twitter.timelines.screen_names")
-		timeline.ExcludeReplies = mybot.GetBoolSelectboxValue(val, i, "twitter.timelines.exclude_replies")
-		timeline.IncludeRts = mybot.GetBoolSelectboxValue(val, i, "twitter.timelines.include_rts")
-		count, err := mybot.GetIntPtr(val, i, "twitter.timelines.count")
-		if err != nil {
-			msg = err.Error()
+		timeline.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
+		timeline.ExcludeReplies = mybot.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
+		timeline.IncludeRts = mybot.GetBoolSelectboxValue(val, i, prefix+".include_rts")
+		if timeline.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
-		timeline.Count = count
-		filter, err := postConfigForFilter(val, i, "twitter.timelines")
-		if err != nil {
-			msg = err.Error()
+		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
 		}
-		timeline.Filter = filter
-		action, err := postConfigForAction(val, i, "twitter.timelines")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
-		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
-		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
-		timeline.Action = action
+		timeline.Action = actions[i]
 		timelines = append(timelines, timeline)
 	}
 	config.Twitter.Timelines = timelines
 
-	deletedFlags = val["twitter.favorites.deleted"]
-	if len(deletedFlags) != len(config.Twitter.Favorites) {
-		http.Error(w, "Collapsed request", http.StatusInternalServerError)
+	prefix = "twitter.favorites"
+	deletedFlags = val[prefix+".deleted"]
+	favorites := []mybot.FavoriteConfig{}
+	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
 		return
 	}
-	actionRetweetCounter = checkboxCounter{"twitter.favorites.action.twitter.retweet", 0}
-	actionFavoriteCounter = checkboxCounter{"twitter.favorites.action.twitter.favorite", 0}
-	actionFollowCounter = checkboxCounter{"twitter.favorites.action.twitter.follow", 0}
-	length = len(val["twitter.favorites.count"])
-	favorites := []mybot.FavoriteConfig{}
-	for i := 0; i < length; i++ {
+	for i := 0; i < len(deletedFlags); i++ {
 		if deletedFlags[i] == "true" {
-			actionRetweetCounter.returnValue(i, val)
-			actionFavoriteCounter.returnValue(i, val)
-			actionFollowCounter.returnValue(i, val)
 			continue
 		}
 		favorite := *mybot.NewFavoriteConfig()
-		favorite.ScreenNames = mybot.GetListTextboxValue(val, i, "twitter.favorites.screen_names")
-		count, err := mybot.GetIntPtr(val, i, "twitter.favorites.count")
-		if err != nil {
-			msg = err.Error()
+		favorite.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
+		if favorite.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
-		favorite.Count = count
-		filter, err := postConfigForFilter(val, i, "twitter.favorites")
-		if err != nil {
-			msg = err.Error()
+		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
 		}
-		favorite.Filter = filter
-		action, err := postConfigForAction(val, i, "twitter.favorites")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
-		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
-		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
-		favorite.Action = action
+		favorite.Action = actions[i]
 		favorites = append(favorites, favorite)
 	}
 	config.Twitter.Favorites = favorites
 
-	deletedFlags = val["twitter.searches.deleted"]
-	if len(deletedFlags) != len(config.Twitter.Searches) {
-		http.Error(w, "Collapsed request", http.StatusInternalServerError)
+	prefix = "twitter.searches"
+	deletedFlags = val[prefix+".deleted"]
+	searches := []mybot.SearchConfig{}
+	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
 		return
 	}
-	actionRetweetCounter = checkboxCounter{"twitter.searches.action.twitter.retweet", 0}
-	actionFavoriteCounter = checkboxCounter{"twitter.searches.action.twitter.favorite", 0}
-	actionFollowCounter = checkboxCounter{"twitter.searches.action.twitter.follow", 0}
-	length = len(val["twitter.searches.count"])
-	searches := []mybot.SearchConfig{}
-	for i := 0; i < length; i++ {
+	for i := 0; i < len(deletedFlags); i++ {
 		if deletedFlags[i] == "true" {
-			actionRetweetCounter.returnValue(i, val)
-			actionFavoriteCounter.returnValue(i, val)
-			actionFollowCounter.returnValue(i, val)
 			continue
 		}
 		search := *mybot.NewSearchConfig()
-		search.Queries = mybot.GetListTextboxValue(val, i, "twitter.searches.queries")
-		search.ResultType = val["twitter.searches.result_type"][i]
-		count, err := mybot.GetIntPtr(val, i, "twitter.searches.count")
-		if err != nil {
-			msg = err.Error()
+		search.Queries = mybot.GetListTextboxValue(val, i, prefix+".queries")
+		search.ResultType = val[prefix+".result_type"][i]
+		if search.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
-		search.Count = count
-		filter, err := postConfigForFilter(val, i, "twitter.searches")
-		if err != nil {
-			msg = err.Error()
+		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
 		}
-		search.Filter = filter
-		action, err := postConfigForAction(val, i, "twitter.searches")
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		action.Twitter.Retweet = actionRetweetCounter.returnValue(i, val)
-		action.Twitter.Favorite = actionFavoriteCounter.returnValue(i, val)
-		action.Twitter.Follow = actionFollowCounter.returnValue(i, val)
-		search.Action = action
+		search.Action = actions[i]
 		searches = append(searches, search)
 	}
 	config.Twitter.Searches = searches
 
-	deletedFlags = val["twitter.apis.deleted"]
-	if len(deletedFlags) != len(config.Twitter.APIs) {
-		http.Error(w, "Collapsed request", http.StatusInternalServerError)
-		return
-	}
-	length = len(val["twitter.apis.source_url"])
+	prefix = "twitter.apis"
+	deletedFlags = val[prefix+".deleted"]
 	apis := []mybot.APIConfig{}
-	for i := 0; i < length; i++ {
+	for i := 0; i < len(deletedFlags); i++ {
 		if deletedFlags[i] == "true" {
 			continue
 		}
 		api := *mybot.NewAPIConfig()
-		api.SourceURL = val["twitter.apis.source_url"][i]
-		api.MessageTemplate = val["twitter.apis.message_template"][i]
+		api.SourceURL = val[prefix+".source_url"][i]
+		api.MessageTemplate = val[prefix+".message_template"][i]
 		apis = append(apis, api)
 	}
 	config.Twitter.APIs = apis
 
-	config.Twitter.Notification.Place.AllowSelf = len(val["twitter.notification.place.allow_self"]) > 1
-	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, "twitter.notification.place.users")
+	prefix = "slack.messages"
+	deletedFlags = val[prefix+".deleted"]
+	msgs := []mybot.MessageConfig{}
+	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == "true" {
+			continue
+		}
+		msg := *mybot.NewMessageConfig()
+		msg.Channels = mybot.GetListTextboxValue(val, i, prefix+".channels")
+		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+			return
+		}
+		msg.Action = actions[i]
+		msgs = append(msgs, msg)
+	}
+	config.Slack.Messages = msgs
 
-	config.Twitter.Interaction.AllowSelf = len(val["twitter.interaction.allow_self"]) > 1
-	config.Twitter.Interaction.Users = mybot.GetListTextboxValue(val, 0, "twitter.interaction.users")
+	prefix = "twitter.notification"
+	config.Twitter.Notification.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
+	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
+
+	prefix = "twitter.interaction"
+	config.Twitter.Interaction.AllowSelf = len(val[prefix+".allow_self"]) > 1
+	config.Twitter.Interaction.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
+
+	config.Twitter.Duration = val["twitter.duration"][0]
+	if config.Twitter.Debug, err = strconv.ParseBool(val["twitter.debug"][0]); err != nil {
+		return
+	}
 
 	config.Log.AllowSelf = len(val["log.allow_self"]) > 1
 	config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")
-	linenum, err := strconv.Atoi(val["log.linenum"][0])
-	if err != nil {
-		msg = err.Error()
+	if config.Log.Linenum, err = strconv.Atoi(val["log.linenum"][0]); err != nil {
 		return
 	}
-	config.Log.Linenum = linenum
 
 	err = config.Validate()
-	if err != nil {
-		msg = err.Error()
-		err = config.Load()
-		if err != nil {
-			msg = err.Error()
-		}
-		return
-	}
-
-	err = config.Save()
-	if err != nil {
-		msg = err.Error()
+	if err == nil {
+		valid = true
+	} else {
 		return
 	}
 }
 
-func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.TweetFilter, error) {
-	filter := mybot.NewTweetFilter()
-	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+".filter.patterns")
-	filter.URLPatterns = mybot.GetListTextboxValue(val, i, prefix+".filter.url_patterns")
-	filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.has_media")
-	filter.HasURL = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.has_url")
-	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+".filter.retweeted")
-	fThreshold, err := mybot.GetIntPtr(val, i, prefix+".filter.favorite_threshold")
+func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.Filter, error) {
+	prefix = prefix + ".filter."
+	filter := mybot.NewFilter()
+	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+"patterns")
+	filter.URLPatterns = mybot.GetListTextboxValue(val, i, prefix+"url_patterns")
+	filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, prefix+"has_media")
+	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+"retweeted")
+	fThreshold, err := mybot.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
 		return nil, err
 	}
 	filter.FavoriteThreshold = fThreshold
-	rThreshold, err := mybot.GetIntPtr(val, i, prefix+".filter.retweeted_threshold")
+	rThreshold, err := mybot.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
 		return nil, err
 	}
 	filter.RetweetedThreshold = rThreshold
-	filter.Lang = val[prefix+".filter.lang"][i]
-	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.label")
-	filter.Vision.Face.AngerLikelihood = val[prefix+".filter.vision.face.anger_likelihood"][i]
-	filter.Vision.Face.BlurredLikelihood = val[prefix+".filter.vision.face.blurred_likelihood"][i]
-	filter.Vision.Face.HeadwearLikelihood = val[prefix+".filter.vision.face.headwear_likelihood"][i]
-	filter.Vision.Face.JoyLikelihood = val[prefix+".filter.vision.face.joy_likelihood"][i]
-	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.text")
-	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.landmark")
-	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+".filter.vision.logo")
-	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+".filter.language.min_sentiment")
+	filter.Lang = mybot.GetString(val[prefix+"lang"], i, "")
+	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+"vision.label")
+	filter.Vision.Face.AngerLikelihood = mybot.GetString(val[prefix+"vision.face.anger_likelihood"], i, "")
+	filter.Vision.Face.BlurredLikelihood = mybot.GetString(val[prefix+"vision.face.blurred_likelihood"], i, "")
+	filter.Vision.Face.HeadwearLikelihood = mybot.GetString(val[prefix+"vision.face.headwear_likelihood"], i, "")
+	filter.Vision.Face.JoyLikelihood = mybot.GetString(val[prefix+"vision.face.joy_likelihood"], i, "")
+	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+"vision.text")
+	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+"vision.landmark")
+	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
+	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
 		return nil, err
 	}
 	filter.Language.MinSentiment = minSentiment
-	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+".filter.language.max_sentiment")
+	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
 		return nil, err
 	}
@@ -510,10 +477,46 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.
 	return filter, nil
 }
 
-func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.TweetAction, error) {
-	action := mybot.NewTweetAction()
-	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+".action.twitter.collections")
-	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+".action.slack.channels")
+func postConfigForActions(
+	val map[string][]string,
+	prefix string,
+	deletedFlags []string,
+) ([]*mybot.Action, error) {
+	prefix = prefix + ".action."
+	tweetCounter := checkboxCounter{prefix + "twitter.tweet", 0}
+	retweetCounter := checkboxCounter{prefix + "twitter.retweet", 0}
+	favoriteCounter := checkboxCounter{prefix + "twitter.favorite", 0}
+	pinCounter := checkboxCounter{prefix + "slack.pin", 0}
+	starCounter := checkboxCounter{prefix + "slack.star", 0}
+	results := []*mybot.Action{}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == "true" {
+			tweetCounter.returnValue(i, val, false)
+			retweetCounter.returnValue(i, val, false)
+			favoriteCounter.returnValue(i, val, false)
+			pinCounter.returnValue(i, val, false)
+			starCounter.returnValue(i, val, false)
+			continue
+		}
+		a, err := postConfigForAction(val, i, prefix)
+		if err != nil {
+			return nil, err
+		}
+		a.Twitter.Tweet = tweetCounter.returnValue(i, val, false)
+		a.Twitter.Retweet = retweetCounter.returnValue(i, val, false)
+		a.Twitter.Favorite = favoriteCounter.returnValue(i, val, false)
+		a.Slack.Pin = pinCounter.returnValue(i, val, false)
+		a.Slack.Star = starCounter.returnValue(i, val, false)
+		results = append(results, a)
+	}
+	return results, nil
+}
+
+func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.Action, error) {
+	action := mybot.NewAction()
+	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
+	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
+	action.Slack.Reactions = mybot.GetListTextboxValue(val, i, prefix+"slack.reactions")
 	return action, nil
 }
 
@@ -600,6 +603,20 @@ func postConfigAPIAdd(w http.ResponseWriter, r *http.Request) {
 	apis := config.Twitter.APIs
 	apis = append(apis, *mybot.NewAPIConfig())
 	config.Twitter.APIs = apis
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodPost {
+		postConfigMessageAdd(w, r)
+	}
+}
+
+func postConfigMessageAdd(w http.ResponseWriter, r *http.Request) {
+	msgs := config.Slack.Messages
+	msgs = append(msgs, *mybot.NewMessageConfig())
+	config.Slack.Messages = msgs
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
@@ -713,11 +730,13 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 		Status                   mybot.Status
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
+		SlackListenerStatus      bool
 	}{
 		"Status",
 		*status,
 		status.CheckTwitterListenDMStatus(),
 		status.CheckTwitterListenUsersStatus(),
+		status.CheckSlackListen(),
 	}
 
 	buf := new(bytes.Buffer)

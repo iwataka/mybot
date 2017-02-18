@@ -78,3 +78,36 @@ func EncodeFile(file string, v interface{}) error {
 	}
 	return nil
 }
+
+func StringsOp(s1, s2 []string, add bool) []string {
+	m := make(map[string]bool)
+	for _, v := range s1 {
+		m[v] = true
+	}
+	for _, v := range s2 {
+		m[v] = add
+	}
+	results := []string{}
+	for c, exists := range m {
+		if exists {
+			results = append(results, c)
+		}
+	}
+	return results
+}
+
+func BoolOp(b1, b2 bool, add bool) bool {
+	if add {
+		return b1 || b2
+	}
+	return b1 && !b2
+}
+
+func StringsContains(ss []string, str string) bool {
+	for _, s := range ss {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}

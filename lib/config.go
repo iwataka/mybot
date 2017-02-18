@@ -31,6 +31,8 @@ type Config interface {
 	SetTwitterNotification(notification *Notification) error
 	GetTwitterInteraction() (*InteractionConfig, error)
 	SetTwitterInteraction(interaction *InteractionConfig) error
+	GetSlackMessages() ([]MessageConfig, error)
+	SetSlackMessages(msgs []MessageConfig) error
 	GetLog() (*LogConfig, error)
 	SetLog(log *LogConfig) error
 	GetTwitterDuration() (string, error)
@@ -43,6 +45,8 @@ type Config interface {
 type FileConfig struct {
 	// Twitter is a configuration related to Twitter.
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
+	// Slack is a configuration related to Slack
+	Slack *SlackConfig `json:"slack" toml:"slack"`
 	// Log is a configuration related to logging.
 	Log *LogConfig `json:"log" toml:"log"`
 	// source is a configuration file from which this was loaded. This is
@@ -132,6 +136,15 @@ func (c *FileConfig) SetTwitterInteraction(interaction *InteractionConfig) error
 	return nil
 }
 
+func (c *FileConfig) GetSlackMessages() ([]MessageConfig, error) {
+	return c.Slack.Messages, nil
+}
+
+func (c *FileConfig) SetSlackMessages(msgs []MessageConfig) error {
+	c.Slack.Messages = msgs
+	return nil
+}
+
 func (c *FileConfig) GetLog() (*LogConfig, error) {
 	return c.Log, nil
 }
@@ -155,6 +168,7 @@ func (c *FileConfig) SetTwitterDuration(dur string) error {
 func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{
 		Twitter: NewTwitterConfig(),
+		Slack:   NewSlackConfig(),
 		Log:     NewLogConfig(),
 	}
 
@@ -322,9 +336,16 @@ func (c *FileConfig) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type SourceConfig struct {
 	// Filter filters out incoming data from sources.
-	Filter *TweetFilter `json:"filter" toml:"filter"`
+	Filter *Filter `json:"filter" toml:"filter"`
 	// Action defines actions for data passing through filters.
-	Action *TweetAction `json:"action" toml:"action"`
+	Action *Action `json:"action" toml:"action"`
+}
+
+func NewSourceConfig() SourceConfig {
+	return SourceConfig{
+		Filter: NewFilter(),
+		Action: NewAction(),
+	}
 }
 
 func (c *SourceConfig) Init() {
@@ -353,19 +374,19 @@ func (c *SourceConfig) Validate() error {
 	return nil
 }
 
-type TweetAction struct {
+type Action struct {
 	Twitter *TwitterAction `json:"twitter" toml:"twitter"`
 	Slack   *SlackAction   `json:"slack" toml:"slack"`
 }
 
-func NewTweetAction() *TweetAction {
-	return &TweetAction{
+func NewAction() *Action {
+	return &Action{
 		Twitter: NewTwitterAction(),
 		Slack:   NewSlackAction(),
 	}
 }
 
-func (a *TweetAction) Add(action *TweetAction) *TweetAction {
+func (a *Action) Add(action *Action) *Action {
 	if action == nil {
 		return a
 	}
@@ -387,7 +408,7 @@ func (a *TweetAction) Add(action *TweetAction) *TweetAction {
 	return &result
 }
 
-func (a *TweetAction) Sub(action *TweetAction) *TweetAction {
+func (a *Action) Sub(action *Action) *Action {
 	if action == nil {
 		return a
 	}
@@ -404,7 +425,7 @@ func (a *TweetAction) Sub(action *TweetAction) *TweetAction {
 	return &result
 }
 
-func (a *TweetAction) IsEmpty() bool {
+func (a *Action) IsEmpty() bool {
 	return a.Twitter.IsEmpty() && a.Slack.IsEmpty()
 }
 
@@ -465,10 +486,7 @@ type TimelineConfig struct {
 // non-nil filter and action.
 func NewTimelineConfig() *TimelineConfig {
 	return &TimelineConfig{
-		SourceConfig: SourceConfig{
-			Filter: NewTweetFilter(),
-			Action: NewTweetAction(),
-		},
+		SourceConfig: NewSourceConfig(),
 	}
 }
 
@@ -495,10 +513,7 @@ type FavoriteConfig struct {
 // non-nil filter and action.
 func NewFavoriteConfig() *FavoriteConfig {
 	return &FavoriteConfig{
-		SourceConfig: SourceConfig{
-			Filter: NewTweetFilter(),
-			Action: NewTweetAction(),
-		},
+		SourceConfig: NewSourceConfig(),
 	}
 }
 
@@ -524,10 +539,7 @@ type SearchConfig struct {
 // non-nil filter and action.
 func NewSearchConfig() *SearchConfig {
 	return &SearchConfig{
-		SourceConfig: SourceConfig{
-			Filter: NewTweetFilter(),
-			Action: NewTweetAction(),
-		},
+		SourceConfig: NewSourceConfig(),
 	}
 }
 
@@ -592,6 +604,27 @@ func (c *APIConfig) Message() (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+type SlackConfig struct {
+	Messages []MessageConfig `json:"messages" toml:"messages"`
+}
+
+func NewSlackConfig() *SlackConfig {
+	return &SlackConfig{
+		Messages: []MessageConfig{},
+	}
+}
+
+type MessageConfig struct {
+	SourceConfig
+	Channels []string `json:"channels" toml:"channels"`
+}
+
+func NewMessageConfig() *MessageConfig {
+	return &MessageConfig{
+		SourceConfig: NewSourceConfig(),
+	}
 }
 
 // InteractionConfig is a configuration for interaction through Twitter direct

@@ -44,30 +44,6 @@ type TweetActionCache struct {
 	SlackAction     SlackAction
 }
 
-type SlackAction struct {
-	gorm.Model
-	Channels []SlackChannel
-}
-
-func (a *SlackAction) GetChannels() []string {
-	result := []string{}
-	for _, c := range a.Channels {
-		result = append(result, c.Name)
-	}
-	return result
-}
-
-func (a *SlackAction) SetChannels(chs []string) {
-	a.Channels = []SlackChannel{}
-	for _, ch := range chs {
-		c := SlackChannel{
-			SlackActionID: a.ID,
-			Name:          ch,
-		}
-		a.Channels = append(a.Channels, c)
-	}
-}
-
 type TwitterCollection struct {
 	gorm.Model
 	TwitterActionID uint

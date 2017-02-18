@@ -49,6 +49,16 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Slack Listener</td>
+                        <td>
+                            {{if .SlackListenerStatus}}
+                            <span style="color:blue">Active</span>
+                            {{else}}
+                            <span style="color:red">Stop</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
                         <td>HTTP Listener</td>
                         <td>
                             {{if .Status.ServerStatus}}

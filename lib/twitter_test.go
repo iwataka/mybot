@@ -12,37 +12,29 @@ func TestTwitterAction(t *testing.T) {
 		Collections: []string{"col1", "col2"},
 	}
 	a1.Retweet = true
-	a1.Follow = true
-	a2 := a1
-	a3 := TwitterAction{
+	a2 := TwitterAction{
 		Collections: []string{"col1", "col3"},
 	}
-	a3.Retweet = true
-	a3.Favorite = true
+	a2.Retweet = true
+	a2.Favorite = true
 
-	result1 := a1.Add(&a3)
+	result1 := a1.Add(&a2)
 	if result1.Retweet != true {
 		t.Fatalf("%v expected but %v found", false, result1.Retweet)
 	}
 	if result1.Favorite != true {
 		t.Fatalf("%v expected but %v found", true, result1.Favorite)
 	}
-	if result1.Follow != true {
-		t.Fatalf("%v expected but %v found", true, result1.Follow)
-	}
 	if len(result1.Collections) != 3 {
 		t.Fatalf("%d expected but %d found", 3, len(result1.Collections))
 	}
 
-	result2 := a2.Sub(&a3)
+	result2 := a1.Sub(&a2)
 	if result2.Retweet != false {
 		t.Fatalf("%v expected but %v found", false, result2.Retweet)
 	}
 	if result2.Favorite != false {
 		t.Fatalf("%v expected but %v found", false, result2.Favorite)
-	}
-	if result2.Follow != true {
-		t.Fatalf("%v expected but %v found", true, result2.Follow)
 	}
 	if len(result2.Collections) != 1 {
 		t.Fatalf("%d expected but %d found", 1, len(result2.Collections))
@@ -50,7 +42,7 @@ func TestTwitterAction(t *testing.T) {
 }
 
 func TestPostProcessorEach(t *testing.T) {
-	action := &TweetAction{
+	action := &Action{
 		Twitter: &TwitterAction{
 			Collections: []string{"foo"},
 		},
@@ -79,7 +71,7 @@ func TestPostProcessorEach(t *testing.T) {
 		t.Fatalf("%v is not cached properly", action)
 	}
 
-	action2 := &TweetAction{
+	action2 := &Action{
 		Twitter: NewTwitterAction(),
 		Slack:   NewSlackAction(),
 	}
