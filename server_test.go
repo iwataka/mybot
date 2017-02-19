@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -241,6 +243,22 @@ func testPostConfigError(
 	if !reflect.DeepEqual(c, config) {
 		t.Fatalf("%v expected but %v found", c, config)
 	}
+}
+
+func TestPostIncoming(t *testing.T) {
+	slackAPI = mybot.NewSlackAPI("", nil, nil)
+
+	tmpCfg := config
+	config = newFileConfig("lib/testdata/config.template.toml", t)
+	defer func() { config = tmpCfg }()
+
+	s := httptest.NewServer(http.HandlerFunc(incomingWebhookHandler))
+	defer s.Close()
+
+	dest := "/incoming/webhook"
+	buf := new(bytes.Buffer)
+	buf.WriteString(`{"text": "foo"}`)
+	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))
 }
 
 func newFileConfig(path string, t *testing.T) *mybot.FileConfig {

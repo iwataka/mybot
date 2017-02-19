@@ -121,17 +121,19 @@ func (c *Filter) CheckTweet(
 }
 
 func (c *Filter) CheckSlackMsg(
-	text string,
-	atts []slack.Attachment,
+	ev *slack.MessageEvent,
 	v VisionMatcher,
 	l LanguageMatcher,
 	cache Cache,
 ) (bool, error) {
+	text := ev.Text
+	atts := ev.Attachments
+
 	logFields := log.Fields{
 		"type":   "slack",
 		"action": "filter",
 	}
-	log.WithFields(logFields).Infoln("Slack Message coming")
+	log.WithFields(logFields).Infof("Slack Message created by %s at %s", ev.Username, ev.Timestamp)
 
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, text)

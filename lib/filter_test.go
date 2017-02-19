@@ -67,12 +67,13 @@ func TestCheckTweetPatternsMatched(t *testing.T) {
 }
 
 func TestCheckSlackMsgPatternsMatched(t *testing.T) {
-	text := "foo is bar"
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	atts := []slack.Attachment{}
-	match, err := conf.CheckSlackMsg(text, atts, visionMatcher, languageMatcher, cache)
+	ev := &slack.MessageEvent{}
+	ev.Attachments = []slack.Attachment{}
+	ev.Text = "foo is bar"
+	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,12 +99,13 @@ func TestCheckTweetPatternsUnmatched(t *testing.T) {
 }
 
 func TestCheckSlackMsgPatternsUnmatched(t *testing.T) {
-	text := "fizz buzz"
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	atts := []slack.Attachment{}
-	match, err := conf.CheckSlackMsg(text, atts, visionMatcher, languageMatcher, cache)
+	ev := &slack.MessageEvent{}
+	ev.Attachments = []slack.Attachment{}
+	ev.Text = "fizz buzz"
+	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,13 +204,14 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 	att := slack.Attachment{
 		ImageURL: "url",
 	}
-	atts := []slack.Attachment{att}
 	conf := &Filter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
-	match, err := conf.CheckSlackMsg("", atts, visionMatcher, languageMatcher, cache)
+	ev := &slack.MessageEvent{}
+	ev.Attachments = []slack.Attachment{att}
+	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,13 +221,14 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 }
 
 func TestCheckTweetVisionUnmatched(t *testing.T) {
-	atts := []slack.Attachment{}
 	conf := &Filter{
 		Vision: &VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
-	match, err := conf.CheckSlackMsg("", atts, visionMatcher, languageMatcher, cache)
+	ev := &slack.MessageEvent{}
+	ev.Attachments = []slack.Attachment{}
+	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
 	if err != nil {
 		t.Fatal(err)
 	}

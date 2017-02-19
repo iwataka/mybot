@@ -35,6 +35,8 @@ type Config interface {
 	SetTwitterDuration(dur string) error
 	GetSlackMessages() ([]MessageConfig, error)
 	SetSlackMessages(msgs []MessageConfig) error
+	GetIncomingWebhooks() ([]IncomingConfig, error)
+	SetIncomingWebhooks([]IncomingConfig) error
 	Load() error
 	Save() error
 }
@@ -45,6 +47,8 @@ type FileConfig struct {
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
 	// Slack is a configuration related to Slack
 	Slack *SlackConfig `json:"slack" toml:"slack"`
+	// Webhook is a configuration related to incoming/outcoming webhooks
+	Webhook *WebhookConfig `json:"webhook" toml:"webhook"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
 	File string `json:"-" toml:"-"`
@@ -141,6 +145,15 @@ func (c *FileConfig) SetSlackMessages(msgs []MessageConfig) error {
 	return nil
 }
 
+func (c *FileConfig) GetIncomingWebhooks() ([]IncomingConfig, error) {
+	return c.Webhook.Incomings, nil
+}
+
+func (c *FileConfig) SetIncomingWebhooks(hooks []IncomingConfig) error {
+	c.Webhook.Incomings = hooks
+	return nil
+}
+
 func (c *FileConfig) GetTwitterDuration() (string, error) {
 	return c.Twitter.Duration, nil
 }
@@ -156,6 +169,7 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{
 		Twitter: NewTwitterConfig(),
 		Slack:   NewSlackConfig(),
+		Webhook: NewWebhookConfig(),
 	}
 
 	c.File = path
@@ -175,6 +189,12 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	for _, s := range c.Twitter.Searches {
 		s.Init()
 	}
+	for _, m := range c.Slack.Messages {
+		m.Init()
+	}
+	for _, i := range c.Webhook.Incomings {
+		i.Init()
+	}
 
 	err = c.Validate()
 	if err != nil {
@@ -189,32 +209,40 @@ func NewFileConfig(path string) (*FileConfig, error) {
 func (c *FileConfig) Validate() error {
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
-		err := timeline.Validate()
-		if err != nil {
+		if err := timeline.Validate(); err != nil {
 			return err
 		}
 	}
 
 	// Validate favorite configurations
 	for _, favorite := range c.Twitter.Favorites {
-		err := favorite.Validate()
-		if err != nil {
+		if err := favorite.Validate(); err != nil {
 			return err
 		}
 	}
 
 	// Validate search configurations
 	for _, search := range c.Twitter.Searches {
-		err := search.Validate()
-		if err != nil {
+		if err := search.Validate(); err != nil {
 			return err
 		}
 	}
 
 	// Validate API configurations
 	for _, api := range c.Twitter.APIs {
-		err := api.Validate()
-		if err != nil {
+		if err := api.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, msg := range c.Slack.Messages {
+		if err := msg.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, in := range c.Webhook.Incomings {
+		if err := in.Validate(); err != nil {
 			return err
 		}
 	}
@@ -318,23 +346,23 @@ func (c *FileConfig) Load() error {
 	return nil
 }
 
-// SourceConfig is a configuration for common data sources such as Twitter's
+// Source is a configuration for common data sources such as Twitter's
 // timelines, favorites and searches. Sources should have filters and actions.
-type SourceConfig struct {
+type Source struct {
 	// Filter filters out incoming data from sources.
 	Filter *Filter `json:"filter" toml:"filter"`
 	// Action defines actions for data passing through filters.
 	Action *Action `json:"action" toml:"action"`
 }
 
-func NewSourceConfig() SourceConfig {
-	return SourceConfig{
+func NewSource() Source {
+	return Source{
 		Filter: NewFilter(),
 		Action: NewAction(),
 	}
 }
 
-func (c *SourceConfig) Init() {
+func (c *Source) Init() {
 	if c.Filter.Vision == nil {
 		c.Filter.Vision = new(VisionCondition)
 	}
@@ -353,7 +381,7 @@ func (c *SourceConfig) Init() {
 	}
 }
 
-func (c *SourceConfig) Validate() error {
+func (c *Source) Validate() error {
 	if c.Action == nil || c.Action.IsEmpty() {
 		return fmt.Errorf("%v has no action", c)
 	}
@@ -462,7 +490,7 @@ func (tc *TwitterConfig) GetScreenNames() []string {
 
 // TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
-	SourceConfig
+	Source
 	models.SourceProperties
 	models.AccountProperties
 	models.TimelineProperties
@@ -472,12 +500,12 @@ type TimelineConfig struct {
 // non-nil filter and action.
 func NewTimelineConfig() *TimelineConfig {
 	return &TimelineConfig{
-		SourceConfig: NewSourceConfig(),
+		Source: NewSource(),
 	}
 }
 
 func (c *TimelineConfig) Validate() error {
-	err := c.SourceConfig.Validate()
+	err := c.Source.Validate()
 	if err != nil {
 		return err
 	}
@@ -489,7 +517,7 @@ func (c *TimelineConfig) Validate() error {
 
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
-	SourceConfig
+	Source
 	models.SourceProperties
 	models.AccountProperties
 	models.FavoriteProperties
@@ -499,12 +527,12 @@ type FavoriteConfig struct {
 // non-nil filter and action.
 func NewFavoriteConfig() *FavoriteConfig {
 	return &FavoriteConfig{
-		SourceConfig: NewSourceConfig(),
+		Source: NewSource(),
 	}
 }
 
 func (c *FavoriteConfig) Validate() error {
-	err := c.SourceConfig.Validate()
+	err := c.Source.Validate()
 	if err != nil {
 		return err
 	}
@@ -516,7 +544,7 @@ func (c *FavoriteConfig) Validate() error {
 
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
-	SourceConfig
+	Source
 	models.SourceProperties
 	models.SearchProperties
 }
@@ -525,12 +553,12 @@ type SearchConfig struct {
 // non-nil filter and action.
 func NewSearchConfig() *SearchConfig {
 	return &SearchConfig{
-		SourceConfig: NewSourceConfig(),
+		Source: NewSource(),
 	}
 }
 
 func (c *SearchConfig) Validate() error {
-	err := c.SourceConfig.Validate()
+	err := c.Source.Validate()
 	if err != nil {
 		return err
 	}
@@ -592,6 +620,12 @@ func (c *APIConfig) Message() (string, error) {
 	return buf.String(), nil
 }
 
+// InteractionConfig is a configuration for interaction through Twitter direct
+// message
+type InteractionConfig struct {
+	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
+	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
+}
 type SlackConfig struct {
 	Messages []MessageConfig `json:"messages" toml:"messages"`
 }
@@ -603,19 +637,84 @@ func NewSlackConfig() *SlackConfig {
 }
 
 type MessageConfig struct {
-	SourceConfig
+	Source
 	Channels []string `json:"channels" toml:"channels"`
+}
+
+func (c *MessageConfig) Validate() error {
+	err := c.Source.Validate()
+	if err != nil {
+		return err
+	}
+	if len(c.Channels) == 0 {
+		return fmt.Errorf("At least one channel required")
+	}
+	return nil
 }
 
 func NewMessageConfig() *MessageConfig {
 	return &MessageConfig{
-		SourceConfig: NewSourceConfig(),
+		Source: NewSource(),
 	}
 }
 
-// InteractionConfig is a configuration for interaction through Twitter direct
-// message
-type InteractionConfig struct {
-	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
-	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
+type WebhookConfig struct {
+	Incomings []IncomingConfig `json:"incoming" toml:"incoming"`
+}
+
+func NewWebhookConfig() *WebhookConfig {
+	return &WebhookConfig{
+		Incomings: []IncomingConfig{},
+	}
+}
+
+type Webhook struct {
+	Action *Action `json:"action" toml:"action"`
+}
+
+func NewWebhook() Webhook {
+	return Webhook{
+		Action: NewAction(),
+	}
+}
+
+func (h *Webhook) Init() {
+	if h.Action.Twitter == nil {
+		h.Action.Twitter = NewTwitterAction()
+	}
+	if h.Action.Slack == nil {
+		h.Action.Slack = NewSlackAction()
+	}
+}
+
+func (h Webhook) Validate() error {
+	if h.Action.IsEmpty() {
+		return fmt.Errorf("Action must not be empty")
+	}
+	return nil
+}
+
+type IncomingConfig struct {
+	Webhook
+	Endpoint        string `json:"endpoint" toml:"endpoint"`
+	MessageTemplate string `json:"message_template" toml:"message_template"`
+}
+
+func NewIncomingConfig() *IncomingConfig {
+	return &IncomingConfig{
+		Webhook: NewWebhook(),
+	}
+}
+
+func (i *IncomingConfig) Validate() error {
+	if err := i.Webhook.Validate(); err != nil {
+		return err
+	}
+	if i.Endpoint == "" {
+		return fmt.Errorf("Endpoint must not be empty")
+	}
+	if i.MessageTemplate == "" {
+		return fmt.Errorf("Message Template must not be empty")
+	}
+	return nil
 }

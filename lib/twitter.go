@@ -456,9 +456,15 @@ func (l *TwitterUserListener) Listen(
 	slack *SlackAPI,
 	cache Cache,
 ) error {
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "fetch",
+	}
+
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
+			log.WithFields(logFields).Infof("%T", c)
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
 			ts, err := l.api.config.GetTwitterTimelines()
@@ -544,9 +550,15 @@ type TwitterDMListener struct {
 }
 
 func (l *TwitterDMListener) Listen() error {
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "fetch",
+	}
+
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
+			log.WithFields(logFields).Infof("%T", c)
 			conf, err := l.api.config.GetTwitterInteraction()
 			if err != nil {
 				return err

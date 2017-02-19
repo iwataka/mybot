@@ -115,6 +115,10 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configMessageAddHandler),
 	)
 	http.HandleFunc(
+		"/config/incomings/add",
+		wrapHandler(configIncomingAddHandler),
+	)
+	http.HandleFunc(
 		"/assets/css/",
 		getAssetsCSS,
 	)
@@ -137,6 +141,10 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/setup/twitter/",
 		setupTwitterHandler,
+	)
+	http.HandleFunc(
+		"/incoming/",
+		incomingWebhookHandler,
 	)
 
 	if len(host) == 0 {
@@ -403,6 +411,25 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	config.Slack.Messages = msgs
 
+	prefix = "webhook.incomings"
+	deletedFlags = val[prefix+".deleted"]
+	incomings := []mybot.IncomingConfig{}
+	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == "true" {
+			continue
+		}
+		in := *mybot.NewIncomingConfig()
+		in.Endpoint = mybot.GetString(val[prefix+".endpoint"], i, "")
+		in.MessageTemplate = mybot.GetString(val[prefix+".message_template"], i, "")
+		in.Action = actions[i]
+		incomings = append(incomings, in)
+	}
+	config.Webhook.Incomings = incomings
+
 	prefix = "twitter.notification"
 	config.Twitter.Notification.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
 	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
@@ -600,6 +627,20 @@ func postConfigMessageAdd(w http.ResponseWriter, r *http.Request) {
 	msgs := config.Slack.Messages
 	msgs = append(msgs, *mybot.NewMessageConfig())
 	config.Slack.Messages = msgs
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodPost {
+		postConfigIncomingAdd(w, r)
+	}
+}
+
+func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
+	msgs := config.Webhook.Incomings
+	msgs = append(msgs, *mybot.NewIncomingConfig())
+	config.Webhook.Incomings = msgs
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
@@ -854,6 +895,63 @@ func initProvider(host, name string) {
 	}
 	if p != nil {
 		goth.UseProviders(p)
+	}
+}
+
+func incomingWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodPost {
+		postIncomingWebhook(w, r)
+	}
+}
+
+func postIncomingWebhook(w http.ResponseWriter, r *http.Request) {
+	cs := []mybot.IncomingConfig{}
+	for _, c := range config.Webhook.Incomings {
+		if r.URL.Path == fmt.Sprintf("/incoming/%s", c.Endpoint) {
+			cs = append(cs, c)
+		}
+	}
+	if len(cs) == 0 {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	bs, err := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := new(interface{})
+	if len(bs) != 0 {
+		err = json.Unmarshal(bs, data)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, c := range cs {
+		buf := new(bytes.Buffer)
+		tmpl, err := template.New("template").Parse(c.MessageTemplate)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err = tmpl.Execute(buf, data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if slackAPI.Enabled() {
+			for _, ch := range c.Action.Slack.Channels {
+				err := slackAPI.PostMesage(ch, buf.String(), nil)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+			}
+		}
 	}
 }
 

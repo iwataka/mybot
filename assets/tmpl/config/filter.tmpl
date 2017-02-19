@@ -12,11 +12,9 @@
         <tbody>
             <tr>
                 {{if eq .Type "twitter"}}
-                <td rowspan="6">General</td>
-                <td rowspan="6">General</td>
+                <td rowspan="7" colspan="2">General</td>
                 {{else if eq .Type "slack"}}
-                <td rowspan="2">General</td>
-                <td rowspan="2">General</td>
+                <td rowspan="2" colspan="2">General</td>
                 {{end}}
                 <td>patterns</td>
                 <td>
@@ -64,8 +62,7 @@
             <!-- Vision API -->
             <tr>
                 <td rowspan="8">Vision</td>
-                <td>Label</td>
-                <td>label</td>
+                <td colspan="2">Label</td>
                 <td>
                     {{listTextbox .Filter.Vision.Label (printf "%s%s" .Prefix ".filter.vision.label")}}
                 </td>
@@ -96,30 +93,26 @@
                 </td>
             </tr>
             <tr>
-                <td>Text</td>
-                <td>text</td>
+                <td colspan="2">Text</td>
                 <td>
                     {{listTextbox .Filter.Vision.Text (printf "%s%s" .Prefix ".filter.vision.text")}}
                 </td>
             </tr>
             <tr>
-                <td>Landmark</td>
-                <td>landmark</td>
+                <td colspan="2">Landmark</td>
                 <td>
                     {{listTextbox .Filter.Vision.Landmark (printf "%s%s" .Prefix ".filter.vision.landmark")}}
                 </td>
             </tr>
             <tr>
-                <td>Logo</td>
-                <td>logo</td>
+                <td colspan="2">Logo</td>
                 <td>
                     {{listTextbox .Filter.Vision.Logo (printf "%s%s" .Prefix ".filter.vision.logo")}}
                 </td>
             </tr>
             <!-- Language API -->
             <tr>
-                <td rowspan="2">Language</td>
-                <td rowspan="2">Language</td>
+                <td rowspan="2" colspan="2">Language</td>
                 <td>min sentiment</td>
                 <td>
                     {{textboxOfFloat64Ptr .Filter.Language.MinSentiment (printf "%s%s" .Prefix ".filter.language.min_sentiment")}}

@@ -75,11 +75,15 @@ func (a *SlackAPI) Enabled() bool {
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.postMesage(channel, text, params)
+	return a.PostMesage(channel, text, &params)
 }
 
-func (a *SlackAPI) postMesage(channel, text string, params slack.PostMessageParameters) error {
-	_, _, err := a.api.PostMessage(channel, text, params)
+func (a *SlackAPI) PostMesage(channel, text string, params *slack.PostMessageParameters) error {
+	var ps slack.PostMessageParameters
+	if params != nil {
+		ps = *params
+	}
+	_, _, err := a.api.PostMessage(channel, text, ps)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
 			_, err := a.api.CreateChannel(channel)
@@ -90,7 +94,7 @@ func (a *SlackAPI) postMesage(channel, text string, params slack.PostMessagePara
 					return err
 				}
 			}
-			_, _, err = a.api.PostMessage(channel, text, params)
+			_, _, err = a.api.PostMessage(channel, text, ps)
 			if err != nil {
 				return err
 			}
@@ -136,18 +140,26 @@ func (l *SlackListener) Start(
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
 
+	logFields := log.Fields{
+		"type":   "slack",
+		"action": "fetch",
+	}
+
 	for l.enabled {
 		select {
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.MessageEvent:
+				log.WithFields(logFields).Infof("%T", ev)
 				err := l.processMsgEvent(ev, vis, lang, twitterAPI)
 				if err != nil {
 					return err
 				}
 			case *slack.RTMError:
+				log.WithFields(logFields).Infof("%T", ev)
 				return ev
 			case *slack.InvalidAuthEvent:
+				log.WithFields(logFields).Infof("%T", ev)
 				return fmt.Errorf("Invalid authentication")
 			}
 		}
@@ -174,7 +186,7 @@ func (l *SlackListener) processMsgEvent(
 		if !StringsContains(msg.Channels, ch) {
 			continue
 		}
-		match, err := msg.Filter.CheckSlackMsg(ev.Text, ev.Attachments, vis, lang, l.api.cache)
+		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, l.api.cache)
 		if err != nil {
 			return err
 		}
@@ -227,7 +239,7 @@ func (l *SlackListener) processMsgEventWithAction(
 		params := slack.PostMessageParameters{
 			Attachments: ev.Attachments,
 		}
-		err := l.api.postMesage(c, ev.Text, params)
+		err := l.api.PostMesage(c, ev.Text, &params)
 		if err != nil {
 			return err
 		}

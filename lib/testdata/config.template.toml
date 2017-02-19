@@ -86,3 +86,13 @@ pin = true
 star = false
 channels = ["bar"]
 reactions = []
+
+[webhook]
+[[webhook.incoming]]
+endpoint = "webhook"
+message_template = "{{.text}}"
+[webhook.incoming.action.twitter]
+collections = []
+[webhook.incoming.action.slack]
+channels = ["webhook"]
+reactions = []
