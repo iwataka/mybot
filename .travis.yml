@@ -17,11 +17,13 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y sqlite3
   - sudo apt-get install phantomjs
+  - go get github.com/mattn/goveralls
 
 script:
   - git config --global http.https://gopkg.in.followRedirects true
   - go get -v -t ./...
   - go test -v ./...
+  - $HOME/gopath/bin/goveralls -service=travis-ci
 
 notifications:
   slack:
