@@ -181,11 +181,14 @@ func testPostConfigDelete(
 	if len(config.Twitter.Searches) != 0 {
 		t.Fatalf("%d expected but %d found", 0, len(config.Twitter.Searches))
 	}
-	if len(config.Twitter.APIs) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Twitter.APIs))
-	}
 	if len(config.Slack.Messages) != 0 {
 		t.Fatalf("%d expected but %d found", 0, len(config.Slack.Messages))
+	}
+	if len(config.Webhook.Incomings) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.Webhook.Incomings))
+	}
+	if len(config.Webhook.APIs) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.Webhook.APIs))
 	}
 
 	*config = *c
@@ -255,7 +258,7 @@ func TestPostIncoming(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(incomingWebhookHandler))
 	defer s.Close()
 
-	dest := "/incoming/webhook"
+	dest := config.Webhook.Incomings[0].Endpoint
 	buf := new(bytes.Buffer)
 	buf.WriteString(`{"text": "foo"}`)
 	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))

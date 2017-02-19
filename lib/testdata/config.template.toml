@@ -1,6 +1,5 @@
 [twitter]
 favorites = []
-api = []
 duration = "30m"
 debug = false
 
@@ -88,11 +87,21 @@ channels = ["bar"]
 reactions = []
 
 [webhook]
-[[webhook.incoming]]
-endpoint = "webhook"
-message_template = "{{.text}}"
-[webhook.incoming.action.twitter]
+[[webhook.incomings]]
+endpoint = "/hooks/aaaaaaaaaa/bbbbbbbbbb/cccccccccccccccccccc"
+template = "{{.text}}"
+[webhook.incomings.action.twitter]
+tweet = false
 collections = []
-[webhook.incoming.action.slack]
+[webhook.incomings.action.slack]
+channels = ["webhook"]
+reactions = []
+[[webhook.apis]]
+endpoint = "https://example.com/api"
+template = "{{.text}}"
+[webhook.apis.action.twitter]
+tweet = true
+collections = []
+[webhook.apis.action.slack]
 channels = ["webhook"]
 reactions = []

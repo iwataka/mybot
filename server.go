@@ -376,20 +376,6 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	config.Twitter.Searches = searches
 
-	prefix = "twitter.apis"
-	deletedFlags = val[prefix+".deleted"]
-	apis := []mybot.APIConfig{}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		api := *mybot.NewAPIConfig()
-		api.SourceURL = val[prefix+".source_url"][i]
-		api.MessageTemplate = val[prefix+".message_template"][i]
-		apis = append(apis, api)
-	}
-	config.Twitter.APIs = apis
-
 	prefix = "slack.messages"
 	deletedFlags = val[prefix+".deleted"]
 	msgs := []mybot.MessageConfig{}
@@ -424,11 +410,30 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		in := *mybot.NewIncomingConfig()
 		in.Endpoint = mybot.GetString(val[prefix+".endpoint"], i, "")
-		in.MessageTemplate = mybot.GetString(val[prefix+".message_template"], i, "")
+		in.Template = mybot.GetString(val[prefix+".template"], i, "")
 		in.Action = actions[i]
 		incomings = append(incomings, in)
 	}
 	config.Webhook.Incomings = incomings
+
+	prefix = "webhook.apis"
+	deletedFlags = val[prefix+".deleted"]
+	apis := []mybot.APIConfig{}
+	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == "true" {
+			continue
+		}
+		api := *mybot.NewAPIConfig()
+		api.Endpoint = val[prefix+".endpoint"][i]
+		api.Template = val[prefix+".template"][i]
+		api.Action = actions[i]
+		apis = append(apis, api)
+	}
+	config.Webhook.APIs = apis
 
 	prefix = "twitter.notification"
 	config.Twitter.Notification.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
@@ -610,9 +615,9 @@ func configAPIAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigAPIAdd(w http.ResponseWriter, r *http.Request) {
-	apis := config.Twitter.APIs
+	apis := config.Webhook.APIs
 	apis = append(apis, *mybot.NewAPIConfig())
-	config.Twitter.APIs = apis
+	config.Webhook.APIs = apis
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
@@ -638,9 +643,9 @@ func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
-	msgs := config.Webhook.Incomings
-	msgs = append(msgs, *mybot.NewIncomingConfig())
-	config.Webhook.Incomings = msgs
+	hooks := config.Webhook.Incomings
+	hooks = append(hooks, *mybot.NewIncomingConfig())
+	config.Webhook.Incomings = hooks
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
@@ -907,7 +912,7 @@ func incomingWebhookHandler(w http.ResponseWriter, r *http.Request) {
 func postIncomingWebhook(w http.ResponseWriter, r *http.Request) {
 	cs := []mybot.IncomingConfig{}
 	for _, c := range config.Webhook.Incomings {
-		if r.URL.Path == fmt.Sprintf("/incoming/%s", c.Endpoint) {
+		if r.URL.Path == c.Endpoint {
 			cs = append(cs, c)
 		}
 	}
@@ -934,7 +939,7 @@ func postIncomingWebhook(w http.ResponseWriter, r *http.Request) {
 
 	for _, c := range cs {
 		buf := new(bytes.Buffer)
-		tmpl, err := template.New("template").Parse(c.MessageTemplate)
+		tmpl, err := template.New("template").Parse(c.Template)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -943,13 +948,19 @@ func postIncomingWebhook(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		msg := buf.String()
 		if slackAPI.Enabled() {
 			for _, ch := range c.Action.Slack.Channels {
-				err := slackAPI.PostMesage(ch, buf.String(), nil)
-				if err != nil {
+				if err := slackAPI.PostMesage(ch, msg, nil); err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
+			}
+		}
+		if c.Action.Twitter.Tweet {
+			if _, err := twitterAPI.PostTweet(msg, nil); mybot.CheckTwitterError(err) {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 	}

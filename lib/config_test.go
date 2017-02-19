@@ -304,26 +304,24 @@ func testConfigTwitterSearches(t *testing.T, c Config) {
 	}
 }
 
-func TestFileConfigTwitterAPIs(t *testing.T) {
+func TestFileConfigAPIWebhook(t *testing.T) {
 	c, err := NewFileConfig("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	testConfigTwitterAPIs(t, c)
+	testConfigAPIWebhook(t, c)
 }
 
-func testConfigTwitterAPIs(t *testing.T, c Config) {
-	apis := []APIConfig{
-		APIConfig{
-			SourceURL:       "foo",
-			MessageTemplate: "bar",
-		},
-	}
-	err := c.SetTwitterAPIs(apis)
+func testConfigAPIWebhook(t *testing.T, c Config) {
+	api := APIConfig{}
+	api.Endpoint = "foo"
+	api.Template = "bar"
+	apis := []APIConfig{api}
+	err := c.SetAPIWebhooks(apis)
 	if err != nil {
 		t.Fatal(err)
 	}
-	as, err := c.GetTwitterAPIs()
+	as, err := c.GetAPIWebhooks()
 	if err != nil {
 		t.Fatal(err)
 	}

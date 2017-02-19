@@ -9,7 +9,7 @@
             </tr>
         </thead>
         <tbody>
-            {{if eq .Type "slack"}}
+            {{if or (eq .Type "slack") (eq .Type "webhook")}}
             <tr>
                 <td rowspan="1">Twitter</td>
                 <td>tweet</td>

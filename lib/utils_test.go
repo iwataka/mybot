@@ -43,3 +43,15 @@ func TestStringsContains(t *testing.T) {
 		t.Fatalf("%v contains %s", ss, str)
 	}
 }
+
+func TestRandString(t *testing.T) {
+	if str := RandString(0); len(str) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(str))
+	}
+	if str := RandString(1); len(str) != 1 {
+		t.Fatalf("%d expected but %d found", 1, len(str))
+	}
+	if str := RandString(10); len(str) != 10 {
+		t.Fatalf("%d expected but %d found", 10, len(str))
+	}
+}
