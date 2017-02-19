@@ -150,7 +150,9 @@ func (l *SlackListener) Start(
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.MessageEvent:
-				log.WithFields(logFields).Infof("%T", ev)
+				log.WithFields(
+					logFields,
+				).Infof("Message to %s by %s", ev.Channel, ev.Username)
 				err := l.processMsgEvent(ev, vis, lang, twitterAPI)
 				if err != nil {
 					return err

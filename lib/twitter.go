@@ -464,7 +464,10 @@ func (l *TwitterUserListener) Listen(
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
-			log.WithFields(logFields).Infof("%T", c)
+			log.WithFields(
+				logFields,
+			).Infof("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAtTime)
+
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
 			ts, err := l.api.config.GetTwitterTimelines()
@@ -558,7 +561,10 @@ func (l *TwitterDMListener) Listen() error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
-			log.WithFields(logFields).Infof("%T", c)
+			log.WithFields(
+				logFields,
+			).Infof("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
+
 			conf, err := l.api.config.GetTwitterInteraction()
 			if err != nil {
 				return err

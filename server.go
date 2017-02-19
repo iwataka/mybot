@@ -143,8 +143,8 @@ func startServer(host, port, cert, key string) error {
 		setupTwitterHandler,
 	)
 	http.HandleFunc(
-		"/incoming/",
-		incomingWebhookHandler,
+		"/hooks/",
+		hooksHandler,
 	)
 
 	if len(host) == 0 {
@@ -903,13 +903,13 @@ func initProvider(host, name string) {
 	}
 }
 
-func incomingWebhookHandler(w http.ResponseWriter, r *http.Request) {
+func hooksHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == methodPost {
-		postIncomingWebhook(w, r)
+		postHooks(w, r)
 	}
 }
 
-func postIncomingWebhook(w http.ResponseWriter, r *http.Request) {
+func postHooks(w http.ResponseWriter, r *http.Request) {
 	cs := []mybot.IncomingConfig{}
 	for _, c := range config.Webhook.Incomings {
 		if r.URL.Path == c.Endpoint {

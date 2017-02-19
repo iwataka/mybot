@@ -255,7 +255,7 @@ func TestPostIncoming(t *testing.T) {
 	config = newFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
 
-	s := httptest.NewServer(http.HandlerFunc(incomingWebhookHandler))
+	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
 	defer s.Close()
 
 	dest := config.Webhook.Incomings[0].Endpoint

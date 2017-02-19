@@ -126,9 +126,6 @@ func (c *Filter) CheckSlackMsg(
 	l LanguageMatcher,
 	cache Cache,
 ) (bool, error) {
-	text := ev.Text
-	atts := ev.Attachments
-
 	logFields := log.Fields{
 		"type":   "slack",
 		"action": "filter",
@@ -136,7 +133,7 @@ func (c *Filter) CheckSlackMsg(
 	log.WithFields(logFields).Infof("Slack Message created by %s at %s", ev.Username, ev.Timestamp)
 
 	for _, p := range c.Patterns {
-		match, err := regexp.MatchString(p, text)
+		match, err := regexp.MatchString(p, ev.Text)
 		if err != nil {
 			return false, err
 		}
@@ -147,7 +144,7 @@ func (c *Filter) CheckSlackMsg(
 
 	if c.HasMedia != nil {
 		hasMedia := false
-		for _, a := range atts {
+		for _, a := range ev.Attachments {
 			if a.ImageURL != "" {
 				hasMedia = true
 				break
@@ -162,7 +159,7 @@ func (c *Filter) CheckSlackMsg(
 	// skip this check. Otherwise if there is at least one media to satisfy
 	// condition, the tweet will pass this check.
 	if c.Vision != nil && !c.Vision.isEmpty() && v != nil && v.Enabled() {
-		match, err := c.matchSlackImages(atts, v, cache)
+		match, err := c.matchSlackImages(ev.Attachments, v, cache)
 		if err != nil {
 			return false, err
 		}
@@ -174,7 +171,7 @@ func (c *Filter) CheckSlackMsg(
 	// If the Language condition is empty or Language API is not available,
 	// skip this check.
 	if c.Language != nil && !c.Language.isEmpty() && l != nil && l.Enabled() {
-		_, match, err := l.MatchText(text, c.Language)
+		_, match, err := l.MatchText(ev.Text, c.Language)
 		if err != nil {
 			return false, err
 		}
