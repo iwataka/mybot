@@ -153,9 +153,20 @@ func (l *SlackListener) Start(
 				log.WithFields(
 					logFields,
 				).Infof("Message to %s by %s", ev.Channel, ev.Username)
-				err := l.processMsgEvent(ev, vis, lang, twitterAPI)
-				if err != nil {
-					return err
+				chs, err := l.api.api.GetChannels(true)
+				exists := false
+				for _, c := range chs {
+					if c.ID == ev.Channel {
+						ev.Channel = c.Name
+						exists = true
+						break
+					}
+				}
+				if exists {
+					err = l.processMsgEvent(ev, vis, lang, twitterAPI)
+					if err != nil {
+						return err
+					}
 				}
 			case *slack.RTMError:
 				log.WithFields(logFields).Infof("%T", ev)
@@ -179,13 +190,12 @@ func (l *SlackListener) processMsgEvent(
 	lang LanguageMatcher,
 	twitterAPI *TwitterAPI,
 ) error {
-	ch := ev.Channel
 	msgs, err := l.api.config.GetSlackMessages()
 	if err != nil {
 		return err
 	}
 	for _, msg := range msgs {
-		if !StringsContains(msg.Channels, ch) {
+		if !StringsContains(msg.Channels, ev.Channel) {
 			continue
 		}
 		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, l.api.cache)
