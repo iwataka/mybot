@@ -173,14 +173,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getIndex(w http.ResponseWriter, r *http.Request) {
-	log := logger.ReadString()
-	lines := strings.Split(log, "\n")
-	linenum := config.Log.Linenum
-	head := len(lines) - linenum
-	if head < 0 {
-		head = 0
-	}
-	log = strings.Join(lines[head:len(lines)], "\n")
 	var botName string
 	self, err := twitterAPI.GetSelf()
 	if err == nil {
@@ -231,7 +223,7 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 		CollectionMap       map[string]string
 	}{
 		"",
-		log,
+		"Currently you cannot see the log here",
 		botName,
 		imageURL,
 		imageSource,
@@ -420,15 +412,6 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	config.Twitter.Interaction.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
 
 	config.Twitter.Duration = val["twitter.duration"][0]
-	if config.Twitter.Debug, err = strconv.ParseBool(val["twitter.debug"][0]); err != nil {
-		return
-	}
-
-	config.Log.AllowSelf = len(val["log.allow_self"]) > 1
-	config.Log.Users = mybot.GetListTextboxValue(val, 0, "log.users")
-	if config.Log.Linenum, err = strconv.Atoi(val["log.linenum"][0]); err != nil {
-		return
-	}
 
 	err = config.Validate()
 	if err == nil {
@@ -712,12 +695,11 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 		Log        string
 	}{
 		"Log",
-		logger.ReadString(),
+		"Currently you cannot see the log here",
 	}
 
 	buf := new(bytes.Buffer)
-	err := htmlTemplate.ExecuteTemplate(buf, "log", data)
-	if err != nil {
+	if err := htmlTemplate.ExecuteTemplate(buf, "log", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

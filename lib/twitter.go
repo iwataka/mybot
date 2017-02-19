@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"log"
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
@@ -66,14 +66,13 @@ type TwitterAPI struct {
 	self   *anaconda.User
 	cache  Cache
 	config Config
-	debug  bool
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
 func NewTwitterAPI(auth *OAuthCredentials, c Cache, cfg Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg, true}
+	return &TwitterAPI{api, nil, c, cfg}
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
@@ -333,6 +332,11 @@ func (a *TwitterAPI) processTweet(
 	action *Action,
 	slack *SlackAPI,
 ) error {
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "process",
+	}
+
 	if action.Twitter.Retweet && !t.Retweeted {
 		var id int64
 		if t.RetweetedStatus == nil {
@@ -344,18 +348,21 @@ func (a *TwitterAPI) processTweet(
 		if CheckTwitterError(err) {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Retweet the tweet")
 	}
 	if action.Twitter.Favorite && !t.Favorited {
 		_, err := a.api.Favorite(t.Id)
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Favorite the tweet")
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Collect the tweet to %s", col)
 	}
 
 	if slack.Enabled() && action.Slack != nil {
@@ -364,6 +371,7 @@ func (a *TwitterAPI) processTweet(
 			if err != nil {
 				return err
 			}
+			log.WithFields(logFields).Infoln("Send the tweet to #%s", ch)
 		}
 	}
 
@@ -451,9 +459,6 @@ func (l *TwitterUserListener) Listen(
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
-			if l.api.debug {
-				log.Printf("Tweet by %s created at %s\n", c.User.Name, c.CreatedAt)
-			}
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
 			ts, err := l.api.config.GetTwitterTimelines()
@@ -542,9 +547,6 @@ func (l *TwitterDMListener) Listen() error {
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
-			if l.api.debug {
-				log.Printf("Message by %s created at %s\n", c.Sender.Name, c.CreatedAt)
-			}
 			conf, err := l.api.config.GetTwitterInteraction()
 			if err != nil {
 				return err

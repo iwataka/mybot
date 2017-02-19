@@ -60,18 +60,6 @@ func TestNewConfig(t *testing.T) {
 	if n.Place.Users[0] != "foo" {
 		t.Fatalf("%s expected but %s found", "foo", n.Place.Users[0])
 	}
-	if !c.Log.AllowSelf {
-		t.Fatalf("%v expected but %v found", true, c.Log.AllowSelf)
-	}
-	if c.Log.Users[0] != "foo" {
-		t.Fatalf("%s expected but %s found", "foo", c.Log.Users[0])
-	}
-	if c.Log.Users[1] != "bar" {
-		t.Fatalf("%s expected but %s found", "bar", c.Log.Users[1])
-	}
-	if c.Log.Linenum != 8 {
-		t.Fatalf("%v expected but %v found", 8, c.Log.Linenum)
-	}
 
 	clone := *c
 	err = clone.Validate()
@@ -426,30 +414,6 @@ func testConfigInteraction(t *testing.T, c Config) {
 	}
 	if !reflect.DeepEqual(interaction, i) {
 		t.Fatalf("%v is not set properly", interaction)
-	}
-}
-
-func TestFileConfigLog(t *testing.T) {
-	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testConfigLog(t, c)
-}
-
-func testConfigLog(t *testing.T, c Config) {
-	log := &LogConfig{}
-	log.Users = []string{"foo"}
-	err := c.SetLog(log)
-	if err != nil {
-		t.Fatal(err)
-	}
-	l, err := c.GetLog()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(log, l) {
-		t.Fatalf("%v is not set properly", log)
 	}
 }
 

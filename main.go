@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/mitchellh/go-homedir"
@@ -25,7 +26,6 @@ var (
 	slackListener      *mybot.SlackListener
 	config             *mybot.FileConfig
 	cache              mybot.Cache
-	logger             mybot.Logger
 	status             *mybot.Status
 	ctxt               *cli.Context
 )
@@ -34,6 +34,14 @@ func main() {
 	home, err := homedir.Dir()
 	if err != nil {
 		panic(err)
+	}
+
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetOutput(os.Stdout)
+	if os.Getenv("MYBOT_ENV") == "production" {
+		log.SetLevel(log.WarnLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 
 	configDir := filepath.Join(home, ".config", "mybot")
@@ -198,11 +206,6 @@ func beforeRunning(c *cli.Context) error {
 		languageAPI.File = c.String("gcloud")
 	}
 
-	logger, err = mybot.NewTwitterLogger(c.String("log"), -1, twitterAPI, config)
-	if err != nil {
-		panic(err)
-	}
-
 	status = mybot.NewStatus()
 	status.UpdateTwitterAuth(twitterAPI)
 
@@ -247,16 +250,20 @@ func beforeValidate(c *cli.Context) error {
 	return nil
 }
 
-func run(c *cli.Context) error {
-	err := runTwitterWithoutStream()
-	if err != nil {
-		logger.Println(err)
+func run(c *cli.Context) {
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "error",
 	}
-	err = cache.Save()
-	if err != nil {
-		logger.Println(err)
+
+	if err := runTwitterWithoutStream(); err != nil {
+		log.WithFields(logFields).Error(err)
+		return
 	}
-	return nil
+	if err := cache.Save(); err != nil {
+		log.WithFields(logFields).Error(err)
+		return
+	}
 }
 
 func twitterListenDM() {
@@ -267,19 +274,23 @@ func twitterListenDM() {
 	status.LockListenDMRoutine()
 	defer status.UnlockListenDMRoutine()
 
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "error",
+	}
+
 	r := twitterAPI.DefaultDirectMessageReceiver
 	listener, err := twitterAPI.ListenMyself(nil, r)
 	if err != nil {
-		logger.Println(err)
+		log.WithFields(logFields).Error(err)
 		return
 	}
 	dmListenerStream = listener.Stream
-	err = listener.Listen()
-	if err != nil {
-		logger.Println(err)
+	if err := listener.Listen(); err != nil {
+		log.WithFields(logFields).Error(err)
 		return
 	}
-	logger.Println("Failed to keep twitter direct message listener")
+	log.WithFields(logFields).Error("Failed to keep connection")
 }
 
 func twitterListenUsers() {
@@ -290,18 +301,22 @@ func twitterListenUsers() {
 	status.LockListenUsersRoutine()
 	defer status.UnlockListenUsersRoutine()
 
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "error",
+	}
+
 	listener, err := twitterAPI.ListenUsers(nil)
 	if err != nil {
-		logger.Println(err)
+		log.WithFields(logFields).Error(err)
 		return
 	}
 	userListenerStream = listener.Stream
-	err = listener.Listen(visionAPI, languageAPI, slackAPI, cache)
-	if err != nil {
-		logger.Println(err)
+	if err := listener.Listen(visionAPI, languageAPI, slackAPI, cache); err != nil {
+		log.WithFields(logFields).Error(err)
 		return
 	}
-	logger.Println("Failed to keep twitter user listener")
+	log.WithFields(logFields).Error("Failed to keep connection")
 }
 
 func twitterPeriodically() {
@@ -314,20 +329,24 @@ func twitterPeriodically() {
 	}
 	status.TwitterStatus = true
 	defer func() { status.TwitterStatus = false }()
+
+	logFields := log.Fields{
+		"type":   "twitter",
+		"action": "error",
+	}
+
 	for {
-		err := runTwitterWithStream()
-		if err != nil {
-			logger.Println(err)
+		if err := runTwitterWithStream(); err != nil {
+			log.WithFields(logFields).Error(err)
 			return
 		}
-		err = cache.Save()
-		if err != nil {
-			logger.Println(err)
+		if err := cache.Save(); err != nil {
+			log.WithFields(logFields).Error(err)
 			return
 		}
 		d, err := time.ParseDuration(config.Twitter.Duration)
 		if err != nil {
-			logger.Println(err)
+			log.WithFields(logFields).Error(err)
 			return
 		}
 		time.Sleep(d)
@@ -342,13 +361,17 @@ func slackListens() {
 	status.LockSlackListenRoutine()
 	defer status.UnlockSlackListenRoutine()
 
+	logFields := log.Fields{
+		"type":   "slack",
+		"action": "error",
+	}
+
 	slackListener = slackAPI.Listen()
-	err := slackListener.Start(visionAPI, languageAPI, twitterAPI)
-	if err != nil {
-		logger.Println(err)
+	if err := slackListener.Start(visionAPI, languageAPI, twitterAPI); err != nil {
+		log.WithFields(logFields).Error(err)
 		return
 	}
-	logger.Println("Failed to keep slack listener")
+	log.WithFields(logFields).Error("Failed to keep connection")
 }
 
 func reloadListeners() {
@@ -514,7 +537,7 @@ func runTwitterWithoutStream() error {
 	return nil
 }
 
-func validate(c *cli.Context) error {
+func validate(c *cli.Context) {
 	err := config.Validate()
 	if err != nil {
 		panic(err)
@@ -525,5 +548,4 @@ func validate(c *cli.Context) error {
 			panic(err)
 		}
 	}
-	return nil
 }

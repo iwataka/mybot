@@ -3,6 +3,7 @@ package mybot
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
@@ -140,7 +141,10 @@ func (l *SlackListener) Start(
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.MessageEvent:
-				l.processMsgEvent(ev, vis, lang, twitterAPI)
+				err := l.processMsgEvent(ev, vis, lang, twitterAPI)
+				if err != nil {
+					return err
+				}
 			case *slack.RTMError:
 				return ev
 			case *slack.InvalidAuthEvent:
@@ -189,24 +193,32 @@ func (l *SlackListener) processMsgEventWithAction(
 	action *Action,
 	twitterAPI *TwitterAPI,
 ) error {
+	logFields := log.Fields{
+		"type":   "slack",
+		"action": "process",
+	}
+
 	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
 	if action.Slack.Pin {
 		err := l.api.api.AddPin(ev.Channel, item)
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Pin the message")
 	}
 	if action.Slack.Star {
 		err := l.api.api.AddStar(ev.Channel, item)
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Star the message")
 	}
 	for _, r := range action.Slack.Reactions {
 		err := l.api.api.AddReaction(r, item)
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("React to the message")
 	}
 	for _, c := range action.Slack.Channels {
 		if ev.Channel == c {
@@ -219,6 +231,7 @@ func (l *SlackListener) processMsgEventWithAction(
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infof("Send the message to %s", c)
 	}
 
 	if action.Twitter.Tweet {
@@ -226,6 +239,7 @@ func (l *SlackListener) processMsgEventWithAction(
 		if err != nil {
 			return err
 		}
+		log.WithFields(logFields).Infoln("Tweet the message")
 	}
 	return nil
 }

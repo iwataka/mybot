@@ -350,7 +350,6 @@
         </div>
 
         <input form="overwrite" type="hidden" name="twitter.duration" value="{{.Config.Twitter.Duration}}">
-        <input form="overwrite" type="hidden" name="twitter.debug" value="{{.Config.Twitter.Debug}}">
 
         <h3>Slack Messages</h3>
         <div class="table-responsive">
@@ -413,32 +412,6 @@
                 </div>
             </div>
         {{end}}
-
-        <h3>Log</h3>
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <td>allow self</td>
-                        <td>users</td>
-                        <td>linenum</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            {{checkbox .Config.Log.AllowSelf "log.allow_self"}}
-                        </td>
-                        <td>
-                            {{listTextbox .Config.Log.Users "log.users"}}
-                        </td>
-                        <td>
-                            <input form="overwrite" type="number" name="log.linenum" value="{{.Config.Log.Linenum}}">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
     </div>
 </body>
 </html>

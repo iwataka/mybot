@@ -31,12 +31,10 @@ type Config interface {
 	SetTwitterNotification(notification *Notification) error
 	GetTwitterInteraction() (*InteractionConfig, error)
 	SetTwitterInteraction(interaction *InteractionConfig) error
-	GetSlackMessages() ([]MessageConfig, error)
-	SetSlackMessages(msgs []MessageConfig) error
-	GetLog() (*LogConfig, error)
-	SetLog(log *LogConfig) error
 	GetTwitterDuration() (string, error)
 	SetTwitterDuration(dur string) error
+	GetSlackMessages() ([]MessageConfig, error)
+	SetSlackMessages(msgs []MessageConfig) error
 	Load() error
 	Save() error
 }
@@ -47,8 +45,6 @@ type FileConfig struct {
 	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
 	// Slack is a configuration related to Slack
 	Slack *SlackConfig `json:"slack" toml:"slack"`
-	// Log is a configuration related to logging.
-	Log *LogConfig `json:"log" toml:"log"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
 	File string `json:"-" toml:"-"`
@@ -145,15 +141,6 @@ func (c *FileConfig) SetSlackMessages(msgs []MessageConfig) error {
 	return nil
 }
 
-func (c *FileConfig) GetLog() (*LogConfig, error) {
-	return c.Log, nil
-}
-
-func (c *FileConfig) SetLog(log *LogConfig) error {
-	c.Log = log
-	return nil
-}
-
 func (c *FileConfig) GetTwitterDuration() (string, error) {
 	return c.Twitter.Duration, nil
 }
@@ -169,7 +156,6 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{
 		Twitter: NewTwitterConfig(),
 		Slack:   NewSlackConfig(),
-		Log:     NewLogConfig(),
 	}
 
 	c.File = path
@@ -630,22 +616,6 @@ func NewMessageConfig() *MessageConfig {
 // InteractionConfig is a configuration for interaction through Twitter direct
 // message
 type InteractionConfig struct {
-	UsersConfigProperties
-}
-
-// LogConfig is a configuration for logging
-type LogConfig struct {
-	UsersConfigProperties
-	Linenum int `json:"linenum,omitempty" toml:"linenum,omitempty"`
-}
-
-type UsersConfigProperties struct {
 	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
 	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
-}
-
-func NewLogConfig() *LogConfig {
-	return &LogConfig{
-		Linenum: 10,
-	}
 }

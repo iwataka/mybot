@@ -42,10 +42,6 @@ func TestGetLog(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getLog))
 	defer s.Close()
 
-	tmpLogger := logger
-	logger = &LoggerMock{}
-	defer func() { logger = tmpLogger }()
-
 	testGet(t, s.URL, "Get /log")
 }
 

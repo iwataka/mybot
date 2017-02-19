@@ -86,8 +86,3 @@ pin = true
 star = false
 channels = ["bar"]
 reactions = []
-
-[log]
-allow_self = true
-users = ["foo", "bar"]
-linenum = 8
