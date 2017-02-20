@@ -466,7 +466,7 @@ func (l *TwitterUserListener) Listen(
 		case anaconda.Tweet:
 			log.WithFields(
 				logFields,
-			).Infof("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAtTime)
+			).Infof("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
 
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}

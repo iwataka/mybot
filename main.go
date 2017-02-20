@@ -252,8 +252,7 @@ func beforeValidate(c *cli.Context) error {
 
 func run(c *cli.Context) {
 	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "error",
+		"type": "twitter",
 	}
 
 	if err := runTwitterWithoutStream(); err != nil {
@@ -275,8 +274,7 @@ func twitterListenDM() {
 	defer status.UnlockListenDMRoutine()
 
 	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "error",
+		"type": "twitter",
 	}
 
 	r := twitterAPI.DefaultDirectMessageReceiver
@@ -302,8 +300,7 @@ func twitterListenUsers() {
 	defer status.UnlockListenUsersRoutine()
 
 	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "error",
+		"type": "twitter",
 	}
 
 	listener, err := twitterAPI.ListenUsers(nil)
@@ -331,8 +328,7 @@ func twitterPeriodically() {
 	defer func() { status.TwitterStatus = false }()
 
 	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "error",
+		"type": "twitter",
 	}
 
 	for {
@@ -362,8 +358,7 @@ func slackListens() {
 	defer status.UnlockSlackListenRoutine()
 
 	logFields := log.Fields{
-		"type":   "slack",
-		"action": "error",
+		"type": "slack",
 	}
 
 	slackListener = slackAPI.Listen()
