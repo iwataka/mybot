@@ -281,5 +281,9 @@ func CheckSlackError(err error) bool {
 		log.WithFields(logFields).Warn(err)
 		return false
 	}
+	if err.Error() == "already_reacted" {
+		log.WithFields(logFields).Warn(err)
+		return false
+	}
 	return true
 }
