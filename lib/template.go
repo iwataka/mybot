@@ -146,11 +146,12 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	return &result, nil
 }
 
-func GetString(vals []string, index int, def string) string {
-	if len(vals) <= index {
+func GetString(val map[string][]string, name string, index int, def string) string {
+	vs, exists := val[name]
+	if !exists || len(vs) <= index {
 		return def
 	}
-	return vals[index]
+	return vs[index]
 }
 
 func NewMap(objs ...interface{}) map[string]interface{} {

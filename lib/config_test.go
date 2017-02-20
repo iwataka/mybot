@@ -304,32 +304,6 @@ func testConfigTwitterSearches(t *testing.T, c Config) {
 	}
 }
 
-func TestFileConfigAPIWebhook(t *testing.T) {
-	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testConfigAPIWebhook(t, c)
-}
-
-func testConfigAPIWebhook(t *testing.T, c Config) {
-	api := APIConfig{}
-	api.Endpoint = "foo"
-	api.Template = "bar"
-	apis := []APIConfig{api}
-	err := c.SetAPIWebhooks(apis)
-	if err != nil {
-		t.Fatal(err)
-	}
-	as, err := c.GetAPIWebhooks()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(apis, as) {
-		t.Fatalf("%v is not set properly", apis)
-	}
-}
-
 func TestFileConfigTwitterNotification(t *testing.T) {
 	c, err := NewFileConfig("")
 	if err != nil {

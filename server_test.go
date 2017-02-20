@@ -184,11 +184,8 @@ func testPostConfigDelete(
 	if len(config.Slack.Messages) != 0 {
 		t.Fatalf("%d expected but %d found", 0, len(config.Slack.Messages))
 	}
-	if len(config.Webhook.Incomings) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Webhook.Incomings))
-	}
-	if len(config.Webhook.APIs) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Webhook.APIs))
+	if len(config.IncomingWebhooks) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.IncomingWebhooks))
 	}
 
 	*config = *c
@@ -258,7 +255,7 @@ func TestPostIncoming(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
 	defer s.Close()
 
-	dest := config.Webhook.Incomings[0].Endpoint
+	dest := config.IncomingWebhooks[0].Endpoint
 	buf := new(bytes.Buffer)
 	buf.WriteString(`{"text": "foo"}`)
 	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))

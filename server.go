@@ -107,10 +107,6 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configSearchAddHandler),
 	)
 	http.HandleFunc(
-		"/config/apis/add",
-		wrapHandler(configAPIAddHandler),
-	)
-	http.HandleFunc(
 		"/config/messages/add",
 		wrapHandler(configMessageAddHandler),
 	)
@@ -397,9 +393,9 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	config.Slack.Messages = msgs
 
-	prefix = "webhook.incomings"
+	prefix = "incoming_webhooks"
 	deletedFlags = val[prefix+".deleted"]
-	incomings := []mybot.IncomingConfig{}
+	incomings := []mybot.IncomingWebhook{}
 	actions, err = postConfigForActions(val, prefix, deletedFlags)
 	if err != nil {
 		return
@@ -408,32 +404,13 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		if deletedFlags[i] == "true" {
 			continue
 		}
-		in := *mybot.NewIncomingConfig()
-		in.Endpoint = mybot.GetString(val[prefix+".endpoint"], i, "")
-		in.Template = mybot.GetString(val[prefix+".template"], i, "")
+		in := *mybot.NewIncomingWebhook()
+		in.Endpoint = mybot.GetString(val, prefix+".endpoint", i, "")
+		in.Template = mybot.GetString(val, prefix+".template", i, "")
 		in.Action = actions[i]
 		incomings = append(incomings, in)
 	}
-	config.Webhook.Incomings = incomings
-
-	prefix = "webhook.apis"
-	deletedFlags = val[prefix+".deleted"]
-	apis := []mybot.APIConfig{}
-	actions, err = postConfigForActions(val, prefix, deletedFlags)
-	if err != nil {
-		return
-	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		api := *mybot.NewAPIConfig()
-		api.Endpoint = val[prefix+".endpoint"][i]
-		api.Template = val[prefix+".template"][i]
-		api.Action = actions[i]
-		apis = append(apis, api)
-	}
-	config.Webhook.APIs = apis
+	config.IncomingWebhooks = incomings
 
 	prefix = "twitter.notification"
 	config.Twitter.Notification.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
@@ -470,12 +447,12 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.
 		return nil, err
 	}
 	filter.RetweetedThreshold = rThreshold
-	filter.Lang = mybot.GetString(val[prefix+"lang"], i, "")
+	filter.Lang = mybot.GetString(val, prefix+"lang", i, "")
 	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+"vision.label")
-	filter.Vision.Face.AngerLikelihood = mybot.GetString(val[prefix+"vision.face.anger_likelihood"], i, "")
-	filter.Vision.Face.BlurredLikelihood = mybot.GetString(val[prefix+"vision.face.blurred_likelihood"], i, "")
-	filter.Vision.Face.HeadwearLikelihood = mybot.GetString(val[prefix+"vision.face.headwear_likelihood"], i, "")
-	filter.Vision.Face.JoyLikelihood = mybot.GetString(val[prefix+"vision.face.joy_likelihood"], i, "")
+	filter.Vision.Face.AngerLikelihood = mybot.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
+	filter.Vision.Face.BlurredLikelihood = mybot.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
+	filter.Vision.Face.HeadwearLikelihood = mybot.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
+	filter.Vision.Face.JoyLikelihood = mybot.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
 	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+"vision.text")
 	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+"vision.landmark")
 	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
@@ -532,6 +509,10 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.
 	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
 	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
 	action.Slack.Reactions = mybot.GetListTextboxValue(val, i, prefix+"slack.reactions")
+	action.OutgoingWebhook.Endpoint = mybot.GetString(val, prefix+"outgoing_webhook.endpoint", i, "")
+	action.OutgoingWebhook.Method = mybot.GetString(val, prefix+"outgoing_webhook.method", i, "")
+	action.OutgoingWebhook.Body = mybot.GetString(val, prefix+"outgoing_webhook.body", i, "")
+	action.OutgoingWebhook.Template = mybot.GetString(val, prefix+"outgoing_webhook.template", i, "")
 	return action, nil
 }
 
@@ -608,20 +589,6 @@ func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusSeeOther)
 }
 
-func configAPIAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == methodPost {
-		postConfigAPIAdd(w, r)
-	}
-}
-
-func postConfigAPIAdd(w http.ResponseWriter, r *http.Request) {
-	apis := config.Webhook.APIs
-	apis = append(apis, *mybot.NewAPIConfig())
-	config.Webhook.APIs = apis
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
-}
-
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == methodPost {
 		postConfigMessageAdd(w, r)
@@ -643,9 +610,9 @@ func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
-	hooks := config.Webhook.Incomings
-	hooks = append(hooks, *mybot.NewIncomingConfig())
-	config.Webhook.Incomings = hooks
+	hooks := config.IncomingWebhooks
+	hooks = append(hooks, *mybot.NewIncomingWebhook())
+	config.IncomingWebhooks = hooks
 	w.Header().Add("Location", "/config/")
 	w.WriteHeader(http.StatusSeeOther)
 }
@@ -910,8 +877,8 @@ func hooksHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postHooks(w http.ResponseWriter, r *http.Request) {
-	cs := []mybot.IncomingConfig{}
-	for _, c := range config.Webhook.Incomings {
+	cs := []mybot.IncomingWebhook{}
+	for _, c := range config.IncomingWebhooks {
 		if r.URL.Path == c.Endpoint {
 			cs = append(cs, c)
 		}

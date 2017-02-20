@@ -12,9 +12,9 @@ patterns = ["is released!", "#golang"]
 url_patterns = []
 [twitter.timelines.filter.vision]
 label = ["cartoon|clip art|artwork"]
-text = []
-landmark = []
-logo = []
+text = ["foo"]
+landmark = ["statue of liberty"]
+logo = ["google"]
 [twitter.timelines.filter.vision.face]
 anger_likelihood = "LIKELY"
 blurred_likelihood = "LIKELY"
@@ -31,6 +31,7 @@ pin = false
 star = false
 channels = ["foo"]
 reactions = []
+[twitter.timelines.action.outgoing_webhook]
 
 [[twitter.searches]]
 queries = ["foo", "bar"]
@@ -56,6 +57,7 @@ pin = false
 star = false
 channels = ["foo"]
 reactions = []
+[twitter.searches.action.outgoing_webhook]
 [twitter.notification]
 [twitter.notification.Place]
 allow_self = true
@@ -82,26 +84,23 @@ tweet = true
 collections = []
 [slack.messages.action.slack]
 pin = true
-star = false
+star = true
 channels = ["bar"]
-reactions = []
+reactions = ["smile"]
+[slack.messages.action.outgoing_webhook]
+endpoint = "http://example.com/api"
+method = "POST"
+body = "{\"text\": \"foo\"}"
+template = "{{.text}}"
 
-[webhook]
-[[webhook.incomings]]
+[[incoming_webhooks]]
 endpoint = "/hooks/aaaaaaaaaa/bbbbbbbbbb/cccccccccccccccccccc"
 template = "{{.text}}"
-[webhook.incomings.action.twitter]
+[incoming_webhooks.action.twitter]
 tweet = false
 collections = []
-[webhook.incomings.action.slack]
+
+[incoming_webhooks.action.slack]
 channels = ["webhook"]
 reactions = []
-[[webhook.apis]]
-endpoint = "https://example.com/api"
-template = "{{.text}}"
-[webhook.apis.action.twitter]
-tweet = true
-collections = []
-[webhook.apis.action.slack]
-channels = ["webhook"]
-reactions = []
+[incoming_webhooks.action.outgoing_webhook]

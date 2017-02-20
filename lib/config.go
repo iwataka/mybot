@@ -33,10 +33,8 @@ type Config interface {
 	SetTwitterDuration(dur string) error
 	GetSlackMessages() ([]MessageConfig, error)
 	SetSlackMessages(msgs []MessageConfig) error
-	GetIncomingWebhooks() ([]IncomingConfig, error)
-	SetIncomingWebhooks([]IncomingConfig) error
-	GetAPIWebhooks() ([]APIConfig, error)
-	SetAPIWebhooks(apis []APIConfig) error
+	GetIncomingWebhooks() ([]IncomingWebhook, error)
+	SetIncomingWebhooks([]IncomingWebhook) error
 	Load() error
 	Save() error
 }
@@ -48,7 +46,7 @@ type FileConfig struct {
 	// Slack is a configuration related to Slack
 	Slack *SlackConfig `json:"slack" toml:"slack"`
 	// Webhook is a configuration related to incoming/outcoming webhooks
-	Webhook *WebhookConfig `json:"webhook" toml:"webhook"`
+	IncomingWebhooks []IncomingWebhook `json:"incoming_webhooks" toml:"incoming_webhooks"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
 	File string `json:"-" toml:"-"`
@@ -136,21 +134,12 @@ func (c *FileConfig) SetSlackMessages(msgs []MessageConfig) error {
 	return nil
 }
 
-func (c *FileConfig) GetIncomingWebhooks() ([]IncomingConfig, error) {
-	return c.Webhook.Incomings, nil
+func (c *FileConfig) GetIncomingWebhooks() ([]IncomingWebhook, error) {
+	return c.IncomingWebhooks, nil
 }
 
-func (c *FileConfig) SetIncomingWebhooks(hooks []IncomingConfig) error {
-	c.Webhook.Incomings = hooks
-	return nil
-}
-
-func (c *FileConfig) GetAPIWebhooks() ([]APIConfig, error) {
-	return c.Webhook.APIs, nil
-}
-
-func (c *FileConfig) SetAPIWebhooks(apis []APIConfig) error {
-	c.Webhook.APIs = apis
+func (c *FileConfig) SetIncomingWebhooks(hooks []IncomingWebhook) error {
+	c.IncomingWebhooks = hooks
 	return nil
 }
 
@@ -167,9 +156,9 @@ func (c *FileConfig) SetTwitterDuration(dur string) error {
 // instance.
 func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{
-		Twitter: NewTwitterConfig(),
-		Slack:   NewSlackConfig(),
-		Webhook: NewWebhookConfig(),
+		Twitter:          NewTwitterConfig(),
+		Slack:            NewSlackConfig(),
+		IncomingWebhooks: []IncomingWebhook{},
 	}
 
 	c.File = path
@@ -192,7 +181,7 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	for _, m := range c.Slack.Messages {
 		m.Init()
 	}
-	for _, i := range c.Webhook.Incomings {
+	for _, i := range c.IncomingWebhooks {
 		i.Init()
 	}
 
@@ -234,14 +223,8 @@ func (c *FileConfig) Validate() error {
 		}
 	}
 
-	for _, in := range c.Webhook.Incomings {
+	for _, in := range c.IncomingWebhooks {
 		if err := in.Validate(); err != nil {
-			return err
-		}
-	}
-
-	for _, api := range c.Webhook.APIs {
-		if err := api.Validate(); err != nil {
 			return err
 		}
 	}
@@ -388,14 +371,16 @@ func (c *Source) Validate() error {
 }
 
 type Action struct {
-	Twitter *TwitterAction `json:"twitter" toml:"twitter"`
-	Slack   *SlackAction   `json:"slack" toml:"slack"`
+	Twitter         *TwitterAction   `json:"twitter" toml:"twitter"`
+	Slack           *SlackAction     `json:"slack" toml:"slack"`
+	OutgoingWebhook *OutgoingWebhook `json:"outgoing_webhook" toml:"outgoing_webhook"`
 }
 
 func NewAction() *Action {
 	return &Action{
-		Twitter: NewTwitterAction(),
-		Slack:   NewSlackAction(),
+		Twitter:         NewTwitterAction(),
+		Slack:           NewSlackAction(),
+		OutgoingWebhook: NewOutgoingWebhook(),
 	}
 }
 
@@ -604,61 +589,37 @@ func NewMessageConfig() *MessageConfig {
 	}
 }
 
-type WebhookConfig struct {
-	Incomings []IncomingConfig `json:"incomings" toml:"incomings"`
-	APIs      []APIConfig      `json:"apis" toml:"apis"`
-}
-
-func NewWebhookConfig() *WebhookConfig {
-	return &WebhookConfig{
-		Incomings: []IncomingConfig{},
-	}
-}
-
 type Webhook struct {
-	Action   *Action `json:"action" toml:"action"`
-	Endpoint string  `json:"endpoint" toml:"endpoint"`
-	Template string  `json:"template" toml:"template"`
+	Endpoint string `json:"endpoint" toml:"endpoint"`
+	Template string `json:"template" toml:"template"`
 }
 
-func NewWebhook() Webhook {
-	return Webhook{
-		Action: NewAction(),
-	}
-}
-
-func (h *Webhook) Init() {
-	if h.Action.Twitter == nil {
-		h.Action.Twitter = NewTwitterAction()
-	}
-	if h.Action.Slack == nil {
-		h.Action.Slack = NewSlackAction()
-	}
-}
-
-func (h Webhook) Validate() error {
-	if h.Action.IsEmpty() {
-		return fmt.Errorf("Action must not be empty")
-	}
-	return nil
-}
-
-type IncomingConfig struct {
+type IncomingWebhook struct {
 	Webhook
+	Action *Action `json:"action" toml:"action"`
 }
 
-func NewIncomingConfig() *IncomingConfig {
+func NewIncomingWebhook() *IncomingWebhook {
 	endpoint := fmt.Sprintf("/hooks/%s/%s/%s", RandString(10), RandString(10), RandString(20))
-	hook := NewWebhook()
+	hook := Webhook{}
 	hook.Endpoint = endpoint
-	return &IncomingConfig{
+	return &IncomingWebhook{
 		Webhook: hook,
 	}
 }
 
-func (i *IncomingConfig) Validate() error {
-	if err := i.Webhook.Validate(); err != nil {
-		return err
+func (c *IncomingWebhook) Init() {
+	if c.Action.Twitter == nil {
+		c.Action.Twitter = NewTwitterAction()
+	}
+	if c.Action.Slack == nil {
+		c.Action.Slack = NewSlackAction()
+	}
+}
+
+func (i *IncomingWebhook) Validate() error {
+	if i.Action.IsEmpty() {
+		return fmt.Errorf("Action must not be empty")
 	}
 	if i.Endpoint == "" {
 		return fmt.Errorf("Endpoint must not be empty")
@@ -669,17 +630,17 @@ func (i *IncomingConfig) Validate() error {
 	return nil
 }
 
-type APIConfig struct {
+type OutgoingWebhook struct {
 	Webhook
+	Body   string `json:"body" toml:"body"`
+	Method string `json:"method" toml:"method"`
 }
 
-func NewAPIConfig() *APIConfig {
-	return &APIConfig{
-		Webhook: NewWebhook(),
-	}
+func NewOutgoingWebhook() *OutgoingWebhook {
+	return &OutgoingWebhook{}
 }
 
-func (c *APIConfig) Validate() error {
+func (c *OutgoingWebhook) Validate() error {
 	if len(c.Endpoint) == 0 {
 		return fmt.Errorf("%v has no source URL", c)
 	}
@@ -689,7 +650,7 @@ func (c *APIConfig) Validate() error {
 	return nil
 }
 
-func (c *APIConfig) Message() (string, error) {
+func (c *OutgoingWebhook) Message() (string, error) {
 	// Send GET request to retrieve JSON data
 	client := &http.Client{}
 	res, err := client.Get(c.Endpoint)

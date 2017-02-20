@@ -477,25 +477,6 @@ func runTwitterWithStream() error {
 		}
 	}
 
-	for _, a := range config.Webhook.APIs {
-		msg, err := a.Message()
-		if err != nil {
-			return err
-		}
-		if a.Action.Twitter.Tweet {
-			if _, err := twitterAPI.PostTweet(msg, nil); mybot.CheckTwitterError(err) {
-				return err
-			}
-		}
-		if slackAPI.Enabled() {
-			for _, ch := range a.Action.Slack.Channels {
-				if err := slackAPI.PostMesage(ch, msg, nil); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
 	return nil
 }
 
