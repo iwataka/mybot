@@ -261,6 +261,74 @@ func TestPostIncoming(t *testing.T) {
 	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))
 }
 
+func TestPostConfigTimelineAdd(t *testing.T) {
+	testPostConfigAdd(
+		t,
+		func() int { return len(config.Twitter.Timelines) },
+		addTimelineConfig,
+		"message",
+	)
+}
+
+func TestPostConfigFavoriteAdd(t *testing.T) {
+	testPostConfigAdd(
+		t,
+		func() int { return len(config.Twitter.Favorites) },
+		addFavoriteConfig,
+		"message",
+	)
+}
+
+func TestPostConfigSearchAdd(t *testing.T) {
+	testPostConfigAdd(
+		t,
+		func() int { return len(config.Twitter.Searches) },
+		addSearchConfig,
+		"message",
+	)
+}
+
+func TestPostConfigMessageAdd(t *testing.T) {
+	testPostConfigAdd(
+		t,
+		func() int { return len(config.Slack.Messages) },
+		addMessageConfig,
+		"message",
+	)
+}
+
+func TestPostConfigIncomingAdd(t *testing.T) {
+	testPostConfigAdd(
+		t,
+		func() int { return len(config.IncomingWebhooks) },
+		addIncomingConfig,
+		"incoming",
+	)
+}
+
+func testPostConfigAdd(
+	t *testing.T,
+	length func() int,
+	add func(),
+	name string,
+) {
+	tmpCfg := config
+	config = newFileConfig("lib/testdata/config.template.toml", t)
+	defer func() { config = tmpCfg }()
+
+	prev := length()
+	add()
+	cur := length()
+	if cur != (prev + 1) {
+		t.Fatalf("Failed to add %s", name)
+	}
+
+	_, err := configPage("")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func newFileConfig(path string, t *testing.T) *mybot.FileConfig {
 	c, err := mybot.NewFileConfig(path)
 	if err != nil {

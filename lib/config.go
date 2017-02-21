@@ -605,6 +605,7 @@ func NewIncomingWebhook() *IncomingWebhook {
 	hook.Endpoint = endpoint
 	return &IncomingWebhook{
 		Webhook: hook,
+		Action:  NewAction(),
 	}
 }
 

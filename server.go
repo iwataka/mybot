@@ -523,6 +523,21 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		msg = msgCookie.Value
 	}
 
+	if msgCookie != nil {
+		msgCookie.Value = ""
+		msgCookie.Path = "/config/"
+		http.SetCookie(w, msgCookie)
+	}
+
+	bs, err := configPage(msg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func configPage(msg string) ([]byte, error) {
 	data := &struct {
 		NavbarName string
 		Message    string
@@ -533,33 +548,30 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		*config,
 	}
 
-	if msgCookie != nil {
-		msgCookie.Value = ""
-		msgCookie.Path = "/config/"
-		http.SetCookie(w, msgCookie)
-	}
-
 	buf := new(bytes.Buffer)
-	err = htmlTemplate.ExecuteTemplate(buf, "config", data)
+	err := htmlTemplate.ExecuteTemplate(buf, "config", data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
-	w.Write(buf.Bytes())
+	return buf.Bytes(), nil
 }
 
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == methodPost {
-		postConfnigTimelineAdd(w, r)
+		postConfigTimelineAdd(w, r)
 	}
 }
 
-func postConfnigTimelineAdd(w http.ResponseWriter, r *http.Request) {
+func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request) {
+	addTimelineConfig()
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func addTimelineConfig() {
 	timelines := config.Twitter.Timelines
 	timelines = append(timelines, *mybot.NewTimelineConfig())
 	config.Twitter.Timelines = timelines
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -568,11 +580,15 @@ func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
+	addFavoriteConfig()
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func addFavoriteConfig() {
 	favorites := config.Twitter.Favorites
 	favorites = append(favorites, *mybot.NewFavoriteConfig())
 	config.Twitter.Favorites = favorites
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -582,11 +598,15 @@ func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
+	addSearchConfig()
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func addSearchConfig() {
 	searches := config.Twitter.Searches
 	searches = append(searches, *mybot.NewSearchConfig())
 	config.Twitter.Searches = searches
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -596,11 +616,15 @@ func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigMessageAdd(w http.ResponseWriter, r *http.Request) {
+	addMessageConfig()
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func addMessageConfig() {
 	msgs := config.Slack.Messages
 	msgs = append(msgs, *mybot.NewMessageConfig())
 	config.Slack.Messages = msgs
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -610,11 +634,15 @@ func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
+	addIncomingConfig()
+	w.Header().Add("Location", "/config/")
+	w.WriteHeader(http.StatusSeeOther)
+}
+
+func addIncomingConfig() {
 	hooks := config.IncomingWebhooks
 	hooks = append(hooks, *mybot.NewIncomingWebhook())
 	config.IncomingWebhooks = hooks
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
