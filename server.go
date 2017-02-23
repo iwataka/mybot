@@ -276,6 +276,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if valid {
 			err = config.Save()
+			reloadListeners()
 		} else {
 			err = config.Load()
 		}

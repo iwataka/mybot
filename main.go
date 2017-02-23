@@ -422,25 +422,6 @@ func reloadListeners() {
 		userListenerStream.Stop()
 	}
 	go twitterListenUsers()
-
-	if dmListenerStream != nil {
-		dmListenerStream.Stop()
-	}
-	go twitterListenDM()
-
-	if dmListenerStream != nil {
-		dmListenerStream.Stop()
-	}
-	go twitterListenDM()
-
-	if !status.TwitterStatus {
-		go twitterPeriodically()
-	}
-
-	if slackListener != nil {
-		slackListener.Stop()
-	}
-	go slackListens()
 }
 
 func httpServer(c *cli.Context) {
