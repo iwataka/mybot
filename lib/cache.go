@@ -326,15 +326,15 @@ func (c *DBCache) SetTweetAction(tweetID int64, action *Action) error {
 	c.client.Save(record)
 	for _, col := range record.TwitterAction.Collections {
 		col.TwitterActionID = record.TwitterAction.ID
-		c.client.Save(col)
+		c.client.Save(&col)
 	}
 	for _, ch := range record.SlackAction.Channels {
 		ch.SlackActionID = record.SlackAction.ID
-		c.client.Save(ch)
+		c.client.Save(&ch)
 	}
 	for _, r := range record.SlackAction.Reactions {
 		r.SlackActionID = record.SlackAction.ID
-		c.client.Save(r)
+		c.client.Save(&r)
 	}
 	return c.client.Error
 }
@@ -370,6 +370,5 @@ func (c *DBCache) SetImage(data ImageCacheData) error {
 }
 
 func (c *DBCache) Save() error {
-	c.client.Commit()
-	return c.client.Error
+	return nil
 }

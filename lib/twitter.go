@@ -362,7 +362,7 @@ func (a *TwitterAPI) processTweet(
 		if err != nil {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Collect the tweet to %s", col)
+		log.WithFields(logFields).Infof("Collect the tweet to %s", col)
 	}
 
 	if slack.Enabled() && action.Slack != nil {
@@ -371,7 +371,7 @@ func (a *TwitterAPI) processTweet(
 			if err != nil {
 				return err
 			}
-			log.WithFields(logFields).Infoln("Send the tweet to #%s", ch)
+			log.WithFields(logFields).Infof("Send the tweet to #%s", ch)
 		}
 	}
 

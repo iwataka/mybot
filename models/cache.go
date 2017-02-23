@@ -22,7 +22,7 @@ type VisionCache struct {
 type VisionCacheProperties struct {
 	URL            string `json:"url" toml:"url"`
 	Src            string `json:"src" toml:"src"`
-	AnalysisResult string `json:"analysis_result" toml:"analysis_result"`
+	AnalysisResult string `json:"analysis_result" toml:"analysis_result" gorm:"type:varchar(8000)"`
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date"`
 }
 

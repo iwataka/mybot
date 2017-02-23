@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/mitchellh/go-homedir"
@@ -27,7 +28,6 @@ var (
 	config             *mybot.FileConfig
 	cache              mybot.Cache
 	status             *mybot.Status
-	ctxt               *cli.Context
 )
 
 func main() {
@@ -36,84 +36,126 @@ func main() {
 		panic(err)
 	}
 
-	log.SetFormatter(&log.TextFormatter{})
-	log.SetOutput(os.Stdout)
-	if os.Getenv("MYBOT_ENV") == "production" {
-		log.SetLevel(log.WarnLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
 
+	envFlag := cli.StringFlag{
+		Name:   "env",
+		Value:  "",
+		Usage:  `Assign "production" for production environment`,
+		EnvVar: "MYBOT_ENV",
+	}
+
 	logFlag := cli.StringFlag{
-		Name:  "log",
-		Value: filepath.Join(cacheDir, "mybot.log"),
-		Usage: "Log file's location",
+		Name:   "log",
+		Value:  filepath.Join(cacheDir, "mybot.log"),
+		Usage:  "Log file's location",
+		EnvVar: "MYBOT_LOG_PATH",
 	}
 
 	configFlag := cli.StringFlag{
-		Name:  "config",
-		Value: filepath.Join(configDir, "config.toml"),
-		Usage: "Config file's location",
+		Name:   "config",
+		Value:  filepath.Join(configDir, "config.toml"),
+		Usage:  "Config file's location",
+		EnvVar: "MYBOT_CONFIG_PATH",
 	}
 
 	cacheFlag := cli.StringFlag{
-		Name:  "cache",
-		Value: filepath.Join(cacheDir, "cache.json"),
-		Usage: "Cache file's location",
+		Name:   "cache",
+		Value:  filepath.Join(cacheDir, "cache.json"),
+		Usage:  "Cache file's location",
+		EnvVar: "MYBOT_CACHE_PATH",
 	}
 
 	gcloudFlag := cli.StringFlag{
-		Name:  "gcloud",
-		Value: filepath.Join(configDir, "google_application_credentials.json"),
-		Usage: "Credential file for Google Cloud Platform",
-	}
-
-	twitterAppFlag := cli.StringFlag{
-		Name:  "twitter-app",
-		Value: filepath.Join(configDir, "twitter_application_settings.toml"),
-		Usage: "Application Setting file for Twitter API",
+		Name:   "gcloud",
+		Value:  filepath.Join(configDir, "google_application_credentials.json"),
+		Usage:  "Credential file for Google Cloud Platform",
+		EnvVar: "MYBOT_GCLOUD_CREDENTIAL",
 	}
 
 	twitterFlag := cli.StringFlag{
-		Name:  "twitter",
-		Value: filepath.Join(configDir, "twitter_authentication.toml"),
-		Usage: "Credential file for Twitter API",
+		Name:   "twitter",
+		Value:  filepath.Join(configDir, "twitter_authentication.toml"),
+		Usage:  "Credential file for Twitter API",
+		EnvVar: "MYBOT_TWITTER_CREDENTIAL",
 	}
 
 	certFlag := cli.StringFlag{
-		Name:  "cert",
-		Value: filepath.Join(configDir, "mybot.crt"),
-		Usage: "Certification file for server",
+		Name:   "cert",
+		Value:  filepath.Join(configDir, "mybot.crt"),
+		Usage:  "Certification file for server",
+		EnvVar: "MYBOT_SSL_CERT",
 	}
 
 	keyFlag := cli.StringFlag{
-		Name:  "key",
-		Value: filepath.Join(configDir, "mybot.key"),
-		Usage: "Key file for server",
+		Name:   "key",
+		Value:  filepath.Join(configDir, "mybot.key"),
+		Usage:  "Key file for server",
+		EnvVar: "MYBOT_SSL_KEY",
 	}
 
 	hostFlag := cli.StringFlag{
-		Name:  "host,H",
-		Value: "",
-		Usage: "Host this server listen on",
+		Name:   "host,H",
+		Value:  "",
+		Usage:  "Host this server listen on",
+		EnvVar: "MYBOT_HOST",
 	}
 
 	portFlag := cli.StringFlag{
-		Name:  "port,P",
-		Value: "",
-		Usage: "Port this server listen on",
+		Name:   "port,P",
+		Value:  "",
+		Usage:  "Port this server listen on",
+		EnvVar: "MYBOT_PORT",
+	}
+
+	driverNameFlag := cli.StringFlag{
+		Name:   "driver-name",
+		Value:  "",
+		Usage:  "Driver name for DB",
+		EnvVar: "MYBOT_DRIVER_NAME",
+	}
+
+	dataSourceFlag := cli.StringFlag{
+		Name:   "data-source",
+		Value:  "",
+		Usage:  "Data Source for DB",
+		EnvVar: "MYBOT_DATA_SOURCE",
+	}
+
+	slackTokenFlag := cli.StringFlag{
+		Name:   "slack-token",
+		Value:  "",
+		Usage:  "Slack bot Token",
+		EnvVar: "MYBOT_SLACK_TOKEN",
+	}
+
+	twitterConsumerKeyFlag := cli.StringFlag{
+		Name:   "twitter-consumer-key",
+		Value:  "",
+		Usage:  "Twitter consumer key",
+		EnvVar: "MYBOT_TWITTER_CONSUMER_KEY",
+	}
+
+	twitterConsumerSecretFlag := cli.StringFlag{
+		Name:   "twitter-consumer-secret",
+		Value:  "",
+		Usage:  "Twitter consumer secret",
+		EnvVar: "MYBOT_TWITTER_CONSUMER_SECRET",
 	}
 
 	runFlags := []cli.Flag{
+		envFlag,
 		logFlag,
 		configFlag,
 		cacheFlag,
 		gcloudFlag,
-		twitterAppFlag,
 		twitterFlag,
+		driverNameFlag,
+		dataSourceFlag,
+		slackTokenFlag,
+		twitterConsumerKeyFlag,
+		twitterConsumerSecretFlag,
 	}
 
 	serveFlags := []cli.Flag{
@@ -180,14 +222,12 @@ func main() {
 }
 
 func beforeRunning(c *cli.Context) error {
-	ctxt = c
-
 	err := beforeValidate(c)
 	if err != nil {
 		panic(err)
 	}
 
-	slackToken := os.Getenv("MYBOT_SLACK_TOKEN")
+	slackToken := c.String("slack-token")
 	slackAPI = mybot.NewSlackAPI(slackToken, config, cache)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
@@ -214,7 +254,22 @@ func beforeRunning(c *cli.Context) error {
 
 func beforeValidate(c *cli.Context) error {
 	var err error
-	cache, err = mybot.NewFileCache(c.String("cache"))
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetOutput(os.Stdout)
+	if c.String("env") == "production" {
+		log.SetLevel(log.WarnLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
+	driverName := c.String("driver-name")
+	dataSource := c.String("data-source")
+
+	if driverName == "" || dataSource == "" {
+		cache, err = mybot.NewFileCache(c.String("cache"))
+	} else {
+		cache, err = mybot.NewDBCache(driverName, dataSource)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -224,17 +279,10 @@ func beforeValidate(c *cli.Context) error {
 		panic(err)
 	}
 
-	twitterApp = &mybot.OAuthApp{}
-	ck := os.Getenv("MYBOT_TWITTER_CONSUMER_KEY")
-	cs := os.Getenv("MYBOT_TWITTER_CONSUMER_SECRET")
-	if ck != "" && cs != "" {
-		twitterApp.ConsumerKey = ck
-		twitterApp.ConsumerSecret = cs
-	} else {
-		err = twitterApp.Decode(c.String("twitter-app"))
-		if err != nil {
-			panic(err)
-		}
+	twitterApp = &mybot.OAuthApp{
+		c.String("twitter-consumer-key"),
+		c.String("twitter-consumer-secret"),
+		"",
 	}
 
 	twitterAuth = &mybot.OAuthCredentials{}
@@ -395,16 +443,16 @@ func reloadListeners() {
 	go slackListens()
 }
 
-func httpServer() {
+func httpServer(c *cli.Context) {
 	if status.ServerStatus {
 		return
 	}
 	status.ServerStatus = true
 	defer func() { status.ServerStatus = false }()
-	host := ctxt.String("host")
-	port := ctxt.String("port")
-	cert := ctxt.String("cert")
-	key := ctxt.String("key")
+	host := c.String("host")
+	port := c.String("port")
+	cert := c.String("cert")
+	key := c.String("key")
 	err := startServer(host, port, cert, key)
 	if err != nil {
 		panic(err)
@@ -412,7 +460,7 @@ func httpServer() {
 }
 
 func serve(c *cli.Context) error {
-	go httpServer()
+	go httpServer(c)
 	go twitterListenDM()
 	go twitterListenUsers()
 	go twitterPeriodically()

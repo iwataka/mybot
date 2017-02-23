@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/iwataka/mybot/lib"
 	"github.com/markbates/goth"
@@ -156,10 +157,10 @@ func startServer(host, port, cert, key string) error {
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
 	if certErr == nil && keyErr == nil {
-		fmt.Printf("Open %s://%s for more details\n", "https", addr)
+		log.Infof("Listen on %s://%s", "https", addr)
 		err = http.ListenAndServeTLS(addr, cert, key, nil)
 	} else {
-		fmt.Printf("Open %s://%s for more details\n", "http", addr)
+		log.Infof("Listen on %s://%s", "http", addr)
 		err = http.ListenAndServe(addr, nil)
 	}
 	if err != nil {
