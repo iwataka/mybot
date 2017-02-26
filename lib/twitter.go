@@ -62,7 +62,7 @@ func (a *TwitterAction) IsEmpty() bool {
 
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
-	api    *anaconda.TwitterApi
+	api    models.TwitterAPI
 	self   *anaconda.User
 	cache  Cache
 	config Config

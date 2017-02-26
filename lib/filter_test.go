@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
 )
 
@@ -29,7 +30,7 @@ type (
 	EmptyLanguageMatcher struct{}
 )
 
-func (m *EmptyVisionMatcher) MatchImages(urls []string, c *VisionCondition) ([]string, []bool, error) {
+func (m *EmptyVisionMatcher) MatchImages(urls []string, c *models.VisionCondition) ([]string, []bool, error) {
 	results := make([]string, len(urls), len(urls))
 	matches := make([]bool, len(urls), len(urls))
 	for i := range urls {
@@ -42,7 +43,7 @@ func (m *EmptyVisionMatcher) Enabled() bool {
 	return true
 }
 
-func (m *EmptyLanguageMatcher) MatchText(text string, c *LanguageCondition) (string, bool, error) {
+func (m *EmptyLanguageMatcher) MatchText(text string, c *models.LanguageCondition) (string, bool, error) {
 	return "", true, nil
 }
 
@@ -187,7 +188,7 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 		},
 	}
 	conf := &Filter{
-		Vision: &VisionCondition{
+		Vision: &models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
@@ -205,7 +206,7 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 		ImageURL: "url",
 	}
 	conf := &Filter{
-		Vision: &VisionCondition{
+		Vision: &models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
@@ -222,7 +223,7 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 
 func TestCheckTweetVisionUnmatched(t *testing.T) {
 	conf := &Filter{
-		Vision: &VisionCondition{
+		Vision: &models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}

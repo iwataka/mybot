@@ -56,13 +56,13 @@ func (a *SlackAction) IsEmpty() bool {
 }
 
 type SlackAPI struct {
-	api    *slack.Client
+	api    models.SlackAPI
 	config Config
 	cache  Cache
 }
 
 func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
-	var api *slack.Client
+	var api models.SlackAPI
 	if token != "" {
 		api = slack.New(token)
 	}

@@ -151,7 +151,7 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 			Collections: []string{"foo"},
 		},
 		Slack: &SlackAction{
-			Reactions: []string{":smile:"},
+			Reactions: []string{"smile"},
 			Channels:  []string{"bar"},
 		},
 	}

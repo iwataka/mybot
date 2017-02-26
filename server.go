@@ -19,8 +19,6 @@ import (
 	"github.com/markbates/goth/providers/twitter"
 )
 
-//go:generate go-bindata assets/...
-
 const (
 	// go1.5 or lower doesn't support http.MethodPost and else.
 	methodPost      = "POST"

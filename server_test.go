@@ -14,21 +14,6 @@ import (
 	"github.com/sclevine/agouti"
 )
 
-type LoggerMock struct {
-}
-
-func (l *LoggerMock) Println(v ...interface{}) error {
-	return nil
-}
-
-func (l *LoggerMock) HandleError(err error) {
-	return
-}
-
-func (l *LoggerMock) ReadString() string {
-	return "foo"
-}
-
 func TestGetConfig(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getConfig))
 	defer s.Close()
@@ -96,6 +81,10 @@ func TestPostConfig(t *testing.T) {
 	c := newFileConfig("lib/testdata/config.template.toml", t)
 	config = newFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
+
+	tmpStatus := status
+	status = mybot.NewStatus()
+	defer func() { status = tmpStatus }()
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {

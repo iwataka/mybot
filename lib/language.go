@@ -10,8 +10,7 @@ import (
 )
 
 type LanguageAPI struct {
-	api  *language.Service
-	File string
+	api *language.Service
 }
 
 func NewLanguageAPI(file string) (*LanguageAPI, error) {
@@ -29,27 +28,19 @@ func NewLanguageAPI(file string) (*LanguageAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &LanguageAPI{a, file}, nil
-}
-
-type LanguageCondition struct {
-	models.LanguageConditionProperties
-}
-
-func (c *LanguageCondition) isEmpty() bool {
-	return c.MinSentiment == nil && c.MaxSentiment == nil
+	return &LanguageAPI{a}, nil
 }
 
 type LanguageMatcher interface {
-	MatchText(string, *LanguageCondition) (string, bool, error)
+	MatchText(string, *models.LanguageCondition) (string, bool, error)
 	Enabled() bool
 }
 
 func (a *LanguageAPI) MatchText(
 	text string,
-	cond *LanguageCondition,
+	cond *models.LanguageCondition,
 ) (string, bool, error) {
-	f := LanguageFeatures(cond)
+	f := cond.LanguageFeatures()
 	// This means that nothing to do with language API.
 	if !f.ExtractDocumentSentiment && !f.ExtractEntities && !f.ExtractSyntax {
 		return "", true, nil
@@ -89,12 +80,4 @@ func (a *LanguageAPI) MatchText(
 
 func (a *LanguageAPI) Enabled() bool {
 	return a.api != nil
-}
-
-func LanguageFeatures(c *LanguageCondition) *language.Features {
-	f := &language.Features{}
-	if c.MinSentiment != nil || c.MaxSentiment != nil {
-		f.ExtractDocumentSentiment = true
-	}
-	return f
 }

@@ -346,13 +346,13 @@ func NewSource() Source {
 
 func (c *Source) Init() {
 	if c.Filter.Vision == nil {
-		c.Filter.Vision = new(VisionCondition)
+		c.Filter.Vision = new(models.VisionCondition)
 	}
 	if c.Filter.Vision.Face == nil {
-		c.Filter.Vision.Face = new(VisionFaceCondition)
+		c.Filter.Vision.Face = new(models.VisionFaceCondition)
 	}
 	if c.Filter.Language == nil {
-		c.Filter.Language = new(LanguageCondition)
+		c.Filter.Language = new(models.LanguageCondition)
 	}
 
 	if c.Action.Twitter == nil {

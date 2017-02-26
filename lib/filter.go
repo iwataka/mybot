@@ -14,23 +14,23 @@ import (
 // Filter is a configuration to filter out tweets
 type Filter struct {
 	models.FilterProperties
-	Patterns    []string           `json:"patterns,omitempty" toml:"patterns,omitempty"`
-	URLPatterns []string           `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
-	Vision      *VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
-	Language    *LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
+	Patterns    []string                  `json:"patterns,omitempty" toml:"patterns,omitempty"`
+	URLPatterns []string                  `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
+	Vision      *models.VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
+	Language    *models.LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
 }
 
 func NewFilter() *Filter {
 	return &Filter{
 		Patterns:    []string{},
 		URLPatterns: []string{},
-		Vision:      NewVisionCondition(),
-		Language:    &LanguageCondition{},
+		Vision:      models.NewVisionCondition(),
+		Language:    &models.LanguageCondition{},
 	}
 }
 
 func (f *Filter) Validate() error {
-	flag := (f.Vision != nil && !f.Vision.isEmpty()) &&
+	flag := (f.Vision != nil && !f.Vision.IsEmpty()) &&
 		(f.RetweetedThreshold != nil || f.FavoriteThreshold != nil)
 	if flag {
 		return fmt.Errorf("%v use both of Vision API and retweeted/favorite threshold", f)
@@ -95,7 +95,7 @@ func (c *Filter) CheckTweet(
 	// If the Vision condition is empty or Vision API is not available,
 	// skip this check. Otherwise if there is at least one media to satisfy
 	// condition, the tweet will pass this check.
-	if c.Vision != nil && !c.Vision.isEmpty() && v != nil && v.Enabled() {
+	if c.Vision != nil && !c.Vision.IsEmpty() && v != nil && v.Enabled() {
 		match, err := c.matchTweetImages(t, v, cache)
 		if err != nil {
 			return false, err
@@ -107,7 +107,7 @@ func (c *Filter) CheckTweet(
 
 	// If the Language condition is empty or Language API is not available,
 	// skip this check.
-	if c.Language != nil && !c.Language.isEmpty() && l != nil && l.Enabled() {
+	if c.Language != nil && !c.Language.IsEmpty() && l != nil && l.Enabled() {
 		_, match, err := l.MatchText(t.Text, c.Language)
 		if err != nil {
 			return false, err
@@ -158,7 +158,7 @@ func (c *Filter) CheckSlackMsg(
 	// If the Vision condition is empty or Vision API is not available,
 	// skip this check. Otherwise if there is at least one media to satisfy
 	// condition, the tweet will pass this check.
-	if c.Vision != nil && !c.Vision.isEmpty() && v != nil && v.Enabled() {
+	if c.Vision != nil && !c.Vision.IsEmpty() && v != nil && v.Enabled() {
 		match, err := c.matchSlackImages(ev.Attachments, v, cache)
 		if err != nil {
 			return false, err
@@ -170,7 +170,7 @@ func (c *Filter) CheckSlackMsg(
 
 	// If the Language condition is empty or Language API is not available,
 	// skip this check.
-	if c.Language != nil && !c.Language.isEmpty() && l != nil && l.Enabled() {
+	if c.Language != nil && !c.Language.IsEmpty() && l != nil && l.Enabled() {
 		_, match, err := l.MatchText(ev.Text, c.Language)
 		if err != nil {
 			return false, err

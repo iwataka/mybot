@@ -15,6 +15,12 @@ import (
 	"github.com/urfave/cli"
 )
 
+//go:generate go-bindata assets/...
+//go:generate mockgen -source=models/slack.go -destination=mocks/slack.go -package=mocks
+//go:generate mockgen -source=models/twitter.go -destination=mocks/twitter.go -package=mocks
+//go:generate mockgen -source=lib/vision.go -destination=mocks/vision.go -package=mocks
+//go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
+
 var (
 	twitterAPI         *mybot.TwitterAPI
 	userListenerStream *anaconda.Stream
@@ -241,9 +247,7 @@ func beforeRunning(c *cli.Context) error {
 		}
 	} else {
 		visionAPI = &mybot.VisionAPI{}
-		visionAPI.File = c.String("gcloud")
 		languageAPI = &mybot.LanguageAPI{}
-		languageAPI.File = c.String("gcloud")
 	}
 
 	status = mybot.NewStatus()

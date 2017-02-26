@@ -15,8 +15,7 @@ import (
 
 // VisionAPI is a wrapper of vision.Service.
 type VisionAPI struct {
-	api  *vision.Service
-	File string
+	api *vision.Service
 }
 
 // NewVisionAPI takes a path of a user's google-cloud credential file
@@ -36,46 +35,11 @@ func NewVisionAPI(file string) (*VisionAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &VisionAPI{a, file}, nil
-}
-
-// VisionCondition is a condition to check whether images match or not by using
-// Google Vision API.
-type VisionCondition struct {
-	Label    []string             `json:"label,omitempty" toml:"label,omitempty"`
-	Face     *VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty"`
-	Text     []string             `json:"text,omitempty" toml:"text,omitempty"`
-	Landmark []string             `json:"landmark,omitempty" toml:"landmark,omitempty"`
-	Logo     []string             `json:"logo,omitempty" toml:"logo,omitempty"`
-}
-
-func NewVisionCondition() *VisionCondition {
-	return &VisionCondition{
-		Face: &VisionFaceCondition{},
-	}
-}
-
-func (c *VisionCondition) isEmpty() bool {
-	return (c.Label == nil || len(c.Label) == 0) &&
-		(c.Face == nil || c.Face.isEmpty()) &&
-		(c.Text == nil || len(c.Text) == 0) &&
-		(c.Landmark == nil || len(c.Landmark) == 0) &&
-		(c.Logo == nil || len(c.Logo) == 0)
-}
-
-type VisionFaceCondition struct {
-	models.VisionFaceConditionProperties
-}
-
-func (c *VisionFaceCondition) isEmpty() bool {
-	return len(c.AngerLikelihood) == 0 &&
-		len(c.BlurredLikelihood) == 0 &&
-		len(c.HeadwearLikelihood) == 0 &&
-		len(c.JoyLikelihood) == 0
+	return &VisionAPI{a}, nil
 }
 
 type VisionMatcher interface {
-	MatchImages([]string, *VisionCondition) ([]string, []bool, error)
+	MatchImages([]string, *models.VisionCondition) ([]string, []bool, error)
 	Enabled() bool
 }
 
@@ -83,7 +47,7 @@ type VisionMatcher interface {
 // specified images match or not.
 func (a *VisionAPI) MatchImages(
 	urls []string,
-	cond *VisionCondition,
+	cond *models.VisionCondition,
 ) ([]string, []bool, error) {
 	// No image never match any conditions
 	if len(urls) == 0 {
@@ -194,46 +158,6 @@ func (a *VisionAPI) Enabled() bool {
 	return a.api != nil
 }
 
-func (cond *VisionCondition) VisionFeatures() []*vision.Feature {
-	features := []*vision.Feature{}
-	if cond.Label != nil && len(cond.Label) != 0 {
-		f := &vision.Feature{
-			Type:       "LABEL_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Face != nil && !cond.Face.isEmpty() {
-		f := &vision.Feature{
-			Type:       "FACE_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Text != nil && len(cond.Text) != 0 {
-		f := &vision.Feature{
-			Type:       "TEXT_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Landmark != nil && len(cond.Landmark) != 0 {
-		f := &vision.Feature{
-			Type:       "LANDMARK_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	if cond.Logo != nil && len(cond.Logo) != 0 {
-		f := &vision.Feature{
-			Type:       "LOGO_DETECTION",
-			MaxResults: 10,
-		}
-		features = append(features, f)
-	}
-	return features
-}
-
 func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 	for _, d := range ds {
 		match := false
@@ -254,7 +178,7 @@ func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 	return true, nil
 }
 
-func matchFace(as []*vision.FaceAnnotation, face *VisionFaceCondition) (bool, error) {
+func matchFace(as []*vision.FaceAnnotation, face *models.VisionFaceCondition) (bool, error) {
 	for _, a := range as {
 		match := false
 		var err error
