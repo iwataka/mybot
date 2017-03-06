@@ -3,53 +3,12 @@ package mybot
 import (
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
 )
-
-func init() {
-	visionMatcher = &EmptyVisionMatcher{}
-	languageMatcher = &EmptyLanguageMatcher{}
-
-	var err error
-	cache, err = NewFileCache("")
-	if err != nil {
-		panic(err)
-	}
-}
-
-var (
-	visionMatcher   *EmptyVisionMatcher
-	languageMatcher *EmptyLanguageMatcher
-	cache           Cache
-)
-
-type (
-	EmptyVisionMatcher   struct{}
-	EmptyLanguageMatcher struct{}
-)
-
-func (m *EmptyVisionMatcher) MatchImages(urls []string, c *models.VisionCondition) ([]string, []bool, error) {
-	results := make([]string, len(urls), len(urls))
-	matches := make([]bool, len(urls), len(urls))
-	for i := range urls {
-		matches[i] = true
-	}
-	return results, matches, nil
-}
-
-func (m *EmptyVisionMatcher) Enabled() bool {
-	return true
-}
-
-func (m *EmptyLanguageMatcher) MatchText(text string, c *models.LanguageCondition) (string, bool, error) {
-	return "", true, nil
-}
-
-func (m *EmptyLanguageMatcher) Enabled() bool {
-	return true
-}
 
 func TestCheckTweetPatternsMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
@@ -58,7 +17,8 @@ func TestCheckTweetPatternsMatched(t *testing.T) {
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +34,8 @@ func TestCheckSlackMsgPatternsMatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
 	ev.Text = "foo is bar"
-	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckSlackMsg(ev, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +51,8 @@ func TestCheckTweetPatternsUnmatched(t *testing.T) {
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +68,8 @@ func TestCheckSlackMsgPatternsUnmatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
 	ev.Text = "fizz buzz"
-	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckSlackMsg(ev, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +85,8 @@ func TestCheckTweetFavoriteThresholdExceeded(t *testing.T) {
 	threshold := 80
 	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +102,8 @@ func TestCheckTweetFavoriteThresholdNotExceeded(t *testing.T) {
 	threshold := 120
 	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +119,8 @@ func TestCheckTweetRetweetedThresholdExceeded(t *testing.T) {
 	threshold := 80
 	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +136,8 @@ func TestCheckTweetRetweetedThresholdNotExceeded(t *testing.T) {
 	threshold := 120
 	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,6 +147,11 @@ func TestCheckTweetRetweetedThresholdNotExceeded(t *testing.T) {
 }
 
 func TestCheckTweetVisionMatched(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := mocks.NewMockVisionMatcher(ctrl)
+	v.EXPECT().Enabled().Return(true)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
+
 	tweet := anaconda.Tweet{
 		Entities: anaconda.Entities{
 			Media: []anaconda.EntityMedia{
@@ -192,7 +164,9 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 			Label: []string{"foo"},
 		},
 	}
-	match, err := conf.CheckTweet(tweet, visionMatcher, languageMatcher, cache)
+
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckTweet(tweet, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,6 +176,11 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 }
 
 func TestCheckSlackMsgVisionMatched(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := mocks.NewMockVisionMatcher(ctrl)
+	v.EXPECT().Enabled().Return(true)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
+
 	att := slack.Attachment{
 		ImageURL: "url",
 	}
@@ -212,7 +191,9 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 	}
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{att}
-	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
+
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckSlackMsg(ev, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,6 +203,11 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 }
 
 func TestCheckTweetVisionUnmatched(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := mocks.NewMockVisionMatcher(ctrl)
+	v.EXPECT().Enabled().Return(true)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{false}, nil)
+
 	conf := &Filter{
 		Vision: &models.VisionCondition{
 			Label: []string{"foo"},
@@ -229,7 +215,9 @@ func TestCheckTweetVisionUnmatched(t *testing.T) {
 	}
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
-	match, err := conf.CheckSlackMsg(ev, visionMatcher, languageMatcher, cache)
+
+	cache := NewTestFileCache("", t)
+	match, err := conf.CheckSlackMsg(ev, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)
 	}

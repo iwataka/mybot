@@ -19,7 +19,7 @@ func TestGetConfig(t *testing.T) {
 	defer s.Close()
 
 	tmpCfg := config
-	config = newFileConfig("lib/testdata/config.template.toml", t)
+	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
 
 	testGet(t, s.URL, "Get /config")
@@ -78,8 +78,8 @@ func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 
 func TestPostConfig(t *testing.T) {
 	tmpCfg := config
-	c := newFileConfig("lib/testdata/config.template.toml", t)
-	config = newFileConfig("lib/testdata/config.template.toml", t)
+	c := mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
+	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
 
 	tmpStatus := status
@@ -89,7 +89,7 @@ func TestPostConfig(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == methodPost {
-			*config = *newFileConfig("", t)
+			*config = *mybot.NewTestFileConfig("", t)
 			postConfig(w, r)
 			wg.Done()
 		} else if r.Method == methodGet {
@@ -238,7 +238,7 @@ func TestPostIncoming(t *testing.T) {
 	slackAPI = mybot.NewSlackAPI("", nil, nil)
 
 	tmpCfg := config
-	config = newFileConfig("lib/testdata/config.template.toml", t)
+	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
 
 	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
@@ -302,7 +302,7 @@ func testPostConfigAdd(
 	name string,
 ) {
 	tmpCfg := config
-	config = newFileConfig("lib/testdata/config.template.toml", t)
+	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
 
 	prev := length()
@@ -316,12 +316,4 @@ func testPostConfigAdd(
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func newFileConfig(path string, t *testing.T) *mybot.FileConfig {
-	c, err := mybot.NewFileConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c
 }
