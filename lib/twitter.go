@@ -62,24 +62,24 @@ func (a *TwitterAction) IsEmpty() bool {
 
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
-	api    models.TwitterAPI
+	API    models.TwitterAPI
+	Cache  Cache
+	Config Config
 	self   *anaconda.User
-	cache  Cache
-	config Config
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
 func NewTwitterAPI(auth *OAuthCredentials, c Cache, cfg Config) *TwitterAPI {
 	api := anaconda.NewTwitterApi(auth.AccessToken, auth.AccessTokenSecret)
-	return &TwitterAPI{api, nil, c, cfg}
+	return &TwitterAPI{api, c, cfg, nil}
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
-	if a.api == nil {
+	if a.API == nil {
 		return false, nil
 	} else {
-		return a.api.VerifyCredentials()
+		return a.API.VerifyCredentials()
 	}
 }
 
@@ -87,17 +87,17 @@ func (a *TwitterAPI) VerifyCredentials() (bool, error) {
 // almost same function as the wrapped one, but posts messages with the
 // specified prefix.
 func (a *TwitterAPI) PostDMToScreenName(msg, name string) (anaconda.DirectMessage, error) {
-	return a.api.PostDMToScreenName(msgPrefix+msg, name)
+	return a.API.PostDMToScreenName(msgPrefix+msg, name)
 }
 
 // GetCollectionListByUserId is just a wrapper of anaconda.TwitterApi#GetCollectionListByUserId
 func (a *TwitterAPI) GetCollectionListByUserId(userId int64, v url.Values) (anaconda.CollectionListResult, error) {
-	return a.api.GetCollectionListByUserId(userId, v)
+	return a.API.GetCollectionListByUserId(userId, v)
 }
 
 // PostTweet is just a wrapper of anaconda.TwitterApi#PostTweet
 func (a *TwitterAPI) PostTweet(msg string, v url.Values) (anaconda.Tweet, error) {
-	return a.api.PostTweet(msg, v)
+	return a.API.PostTweet(msg, v)
 }
 
 func (a *TwitterAPI) PostSlackMsg(text string, atts []slack.Attachment) (anaconda.Tweet, error) {
@@ -106,14 +106,14 @@ func (a *TwitterAPI) PostSlackMsg(text string, atts []slack.Attachment) (anacond
 
 // GetFriendsList is just a wrapper of anaconda.TwitterApi#GetFriendsList
 func (a *TwitterAPI) GetFriendsList(v url.Values) (anaconda.UserCursor, error) {
-	return a.api.GetFriendsList(v)
+	return a.API.GetFriendsList(v)
 }
 
 // GetSelf gets the authenticated user's information and stores it as a cache,
 // then returns it.
 func (a *TwitterAPI) GetSelf() (anaconda.User, error) {
 	if a.self == nil {
-		self, err := a.api.GetSelf(nil)
+		self, err := a.API.GetSelf(nil)
 		if err != nil {
 			return anaconda.User{}, err
 		}
@@ -153,7 +153,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	slack *SlackAPI,
 	action *Action,
 ) ([]anaconda.Tweet, error) {
-	latestID, err := a.cache.GetLatestTweetID(name)
+	latestID, err := a.Cache.GetLatestTweetID(name)
 	if err != nil {
 		return nil, err
 	}
@@ -165,15 +165,15 @@ func (a *TwitterAPI) ProcessTimeline(
 		// latest tweet and store that ID.
 		v.Set("count", "1")
 	}
-	tweets, err := a.api.GetUserTimeline(v)
+	tweets, err := a.API.GetUserTimeline(v)
 	if err != nil {
 		return nil, err
 	}
 	var pp TwitterPostProcessor
 	if c.ShouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache}
+		pp = &TwitterPostProcessorEach{action, a.Cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache}
+		pp = &TwitterPostProcessorTop{name, a.Cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -193,7 +193,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	slack *SlackAPI,
 	action *Action,
 ) ([]anaconda.Tweet, error) {
-	latestID, err := a.cache.GetLatestFavoriteID(name)
+	latestID, err := a.Cache.GetLatestFavoriteID(name)
 	if err != nil {
 		return nil, err
 	}
@@ -205,15 +205,15 @@ func (a *TwitterAPI) ProcessFavorites(
 		// the latest tweet and store that ID.
 		v.Set("count", "1")
 	}
-	tweets, err := a.api.GetFavorites(v)
+	tweets, err := a.API.GetFavorites(v)
 	if err != nil {
 		return nil, err
 	}
 	var pp TwitterPostProcessor
 	if c.ShouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache}
+		pp = &TwitterPostProcessorEach{action, a.Cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.cache}
+		pp = &TwitterPostProcessorTop{name, a.Cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -233,11 +233,11 @@ func (a *TwitterAPI) ProcessSearch(
 	slack *SlackAPI,
 	action *Action,
 ) ([]anaconda.Tweet, error) {
-	res, err := a.api.GetSearch(query, v)
+	res, err := a.API.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
-	pp := &TwitterPostProcessorEach{action, a.cache}
+	pp := &TwitterPostProcessorEach{action, a.Cache}
 	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
 	if err != nil {
 		return nil, err
@@ -304,12 +304,12 @@ func (a *TwitterAPI) processTweets(
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
-		match, err := c.CheckTweet(t, v, l, a.cache)
+		match, err := c.CheckTweet(t, v, l, a.Cache)
 		if err != nil {
 			return nil, err
 		}
 		if match {
-			done, err := a.cache.GetTweetAction(t.Id)
+			done, err := a.Cache.GetTweetAction(t.Id)
 			if err != nil {
 				return nil, err
 			}
@@ -344,14 +344,14 @@ func (a *TwitterAPI) processTweet(
 		} else {
 			id = t.RetweetedStatus.Id
 		}
-		_, err := a.api.Retweet(id, false)
+		_, err := a.API.Retweet(id, false)
 		if CheckTwitterError(err) {
 			return err
 		}
 		log.WithFields(logFields).Infoln("Retweet the tweet")
 	}
 	if action.Twitter.Favorite && !t.Favorited {
-		_, err := a.api.Favorite(t.Id)
+		_, err := a.API.Favorite(t.Id)
 		if err != nil {
 			return err
 		}
@@ -394,13 +394,13 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 		}
 	}
 	if !exists {
-		col, err := a.api.CreateCollection(collection, nil)
+		col, err := a.API.CreateCollection(collection, nil)
 		if err != nil {
 			return err
 		}
 		id = col.Response.TimelineId
 	}
-	_, err = a.api.AddEntryToCollection(id, tweet.Id, nil)
+	_, err = a.API.AddEntryToCollection(id, tweet.Id, nil)
 	if err != nil {
 		return err
 	}
@@ -410,7 +410,7 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 // NotifyToAll sends metadata about the specified tweet, such as place, to the
 // all users specified in the configuration.
 func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
-	n, err := a.config.GetTwitterNotification()
+	n, err := a.Config.GetTwitterNotification()
 	if err != nil {
 		return err
 	}
@@ -470,7 +470,7 @@ func (l *TwitterUserListener) Listen(
 
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
-			ts, err := l.api.config.GetTwitterTimelines()
+			ts, err := l.api.Config.GetTwitterTimelines()
 			if err != nil {
 				return err
 			}
@@ -494,7 +494,7 @@ func (l *TwitterUserListener) Listen(
 					return err
 				}
 				if match {
-					done, err := l.api.cache.GetTweetAction(c.Id)
+					done, err := l.api.Cache.GetTweetAction(c.Id)
 					if err != nil {
 						return err
 					}
@@ -502,13 +502,13 @@ func (l *TwitterUserListener) Listen(
 					if err != nil {
 						return err
 					}
-					err = l.api.cache.SetLatestTweetID(name, c.Id)
+					err = l.api.Cache.SetLatestTweetID(name, c.Id)
 					if err != nil {
 						return err
 					}
 				}
 			}
-			err = l.api.cache.Save()
+			err = l.api.Cache.Save()
 			if err != nil {
 				return err
 			}
@@ -521,7 +521,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
-	names, err := a.config.GetTwitterScreenNames()
+	names, err := a.Config.GetTwitterScreenNames()
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +532,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 	if len(usernames) == 0 {
 		return nil, errors.New("No user specified")
 	} else {
-		users, err := a.api.GetUsersLookup(usernames, nil)
+		users, err := a.API.GetUsersLookup(usernames, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -541,7 +541,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 			userids = append(userids, u.IdStr)
 		}
 		v.Set("follow", strings.Join(userids, ","))
-		stream := a.api.PublicStreamFilter(v)
+		stream := a.API.PublicStreamFilter(v)
 		return &TwitterUserListener{stream, a}, nil
 	}
 }
@@ -565,7 +565,7 @@ func (l *TwitterDMListener) Listen() error {
 				logFields,
 			).Infof("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
 
-			conf, err := l.api.config.GetTwitterInteraction()
+			conf, err := l.api.Config.GetTwitterInteraction()
 			if err != nil {
 				return err
 			}
@@ -575,12 +575,12 @@ func (l *TwitterDMListener) Listen() error {
 					return err
 				}
 				if match {
-					id, err := l.api.cache.GetLatestDMID()
+					id, err := l.api.Cache.GetLatestDMID()
 					if err != nil {
 						return err
 					}
 					if id < c.Id {
-						err := l.api.cache.SetLatestDMID(c.Id)
+						err := l.api.Cache.SetLatestDMID(c.Id)
 						if err != nil {
 							return err
 						}
@@ -591,7 +591,7 @@ func (l *TwitterDMListener) Listen() error {
 					}
 				}
 			}
-			err = l.api.cache.Save()
+			err = l.api.Cache.Save()
 			if err != nil {
 				return err
 			}
@@ -608,12 +608,12 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) 
 	} else if !ok {
 		return nil, errors.New("Twitter Account Verification failed")
 	}
-	stream := a.api.UserStream(v)
+	stream := a.API.UserStream(v)
 	return &TwitterDMListener{stream, a, receiver}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
-	interaction, err := a.config.GetTwitterInteraction()
+	interaction, err := a.Config.GetTwitterInteraction()
 	if err != nil {
 		return err
 	}
@@ -694,11 +694,11 @@ var retweetCommand = &DirectMessageCommand{
 		timeline := NewTimelineConfig()
 		timeline.ScreenNames = args
 		timeline.Action.Twitter.Retweet = true
-		err := a.config.AddTwitterTimeline(timeline)
+		err := a.Config.AddTwitterTimeline(timeline)
 		if err != nil {
 			return "", err
 		}
-		err = a.config.Save()
+		err = a.Config.Save()
 		if err != nil {
 			return "", err
 		}
@@ -713,11 +713,11 @@ var favoriteCommand = &DirectMessageCommand{
 		favorite := NewFavoriteConfig()
 		favorite.ScreenNames = args
 		favorite.Action.Twitter.Favorite = true
-		err := a.config.AddTwitterFavorite(favorite)
+		err := a.Config.AddTwitterFavorite(favorite)
 		if err != nil {
 			return "", err
 		}
-		err = a.config.Save()
+		err = a.Config.Save()
 		if err != nil {
 			return "", err
 		}

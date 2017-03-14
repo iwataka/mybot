@@ -10,7 +10,10 @@ import (
 	"sync"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
+	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/mocks"
 	"github.com/sclevine/agouti"
 )
 
@@ -315,5 +318,36 @@ func testPostConfigAdd(
 	_, err := configPage("")
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGetIndex(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	user := anaconda.User{}
+	user.Name = "foo"
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
+	listResult := anaconda.CollectionListResult{}
+	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
+	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
+	tmpCache := cache
+	defer func() { cache = tmpCache }()
+	cache = mybot.NewTestFileCache("", t)
+	img := mybot.ImageCacheData{}
+	err := cache.SetImage(img)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := httptest.NewServer(http.HandlerFunc(getIndex))
+	defer s.Close()
+
+	res, err := http.Get(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("Status code: %d", res.StatusCode)
 	}
 }

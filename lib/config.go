@@ -234,7 +234,7 @@ func (c *FileConfig) Validate() error {
 
 func (c *FileConfig) ValidateWithAPI(api *TwitterAPI) error {
 	for _, name := range c.Twitter.GetScreenNames() {
-		_, err := api.api.GetUsersShow(name, nil)
+		_, err := api.API.GetUsersShow(name, nil)
 		if err != nil {
 			return err
 		}
