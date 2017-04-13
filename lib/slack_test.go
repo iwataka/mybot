@@ -136,3 +136,24 @@ func testSlackAPIPostMessage(t *testing.T, queue bool) {
 		t.Fatalf("%s expected but %s found", msg, m)
 	}
 }
+
+func TestSlackAPISendMsgQueues(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
+	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
+
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+
+	ch := "channel"
+	text := "text"
+	slackAPI.enqueueMsg(ch, text, nil)
+
+	err := slackAPI.sendMsgQueues(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = slackAPI.sendMsgQueues(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

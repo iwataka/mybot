@@ -152,6 +152,105 @@ func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	return err
 }
 
+func (a *SlackAPI) sendMsgQueues(ch string) error {
+	q := a.msgQueue[ch]
+	for e := q.Front(); e != nil; e = e.Next() {
+		m := e.Value.(*SlackMsg)
+		err := a.PostMessage(ch, m.text, m.params, false)
+		if err != nil {
+			return err
+		}
+	}
+	a.msgQueue[ch] = list.New()
+	return nil
+}
+
+func (a *SlackAPI) processMsgEvent(
+	ch string,
+	ev *slack.MessageEvent,
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	twitterAPI *TwitterAPI,
+) error {
+	msgs, err := a.config.GetSlackMessages()
+	if err != nil {
+		return err
+	}
+	for _, msg := range msgs {
+		if !StringsContains(msg.Channels, ch) {
+			continue
+		}
+		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, a.cache)
+		if err != nil {
+			return err
+		}
+		if match {
+			err := a.processMsgEventWithAction(ch, ev, msg.Action, twitterAPI)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (a *SlackAPI) processMsgEventWithAction(
+	ch string,
+	ev *slack.MessageEvent,
+	action *Action,
+	twitterAPI *TwitterAPI,
+) error {
+	logFields := log.Fields{
+		"type":   "slack",
+		"action": "process",
+	}
+
+	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
+	if action.Slack.Pin {
+		err := a.api.AddPin(ev.Channel, item)
+		if CheckSlackError(err) {
+			return err
+		}
+		log.WithFields(logFields).Infoln("Pin the message")
+	}
+	if action.Slack.Star {
+		err := a.api.AddStar(ev.Channel, item)
+		if CheckSlackError(err) {
+			return err
+		}
+		log.WithFields(logFields).Infoln("Star the message")
+	}
+	for _, r := range action.Slack.Reactions {
+		err := a.api.AddReaction(r, item)
+		if CheckSlackError(err) {
+			return err
+		}
+		log.WithFields(logFields).Infoln("React to the message")
+	}
+	for _, c := range action.Slack.Channels {
+		if ch == c {
+			continue
+		}
+		params := slack.PostMessageParameters{
+			Attachments: ev.Attachments,
+		}
+		err := a.PostMessage(c, ev.Text, &params, true)
+		if CheckSlackError(err) {
+			return err
+		}
+		log.WithFields(logFields).Infof("Send the message to %s", c)
+	}
+
+	if action.Twitter.Tweet {
+		_, err := twitterAPI.PostSlackMsg(ev.Text, ev.Attachments)
+		if CheckTwitterError(err) {
+			return err
+		}
+		log.WithFields(logFields).Infoln("Tweet the message")
+	}
+	return nil
+}
+
 func (a *SlackAPI) Listen() *SlackListener {
 	return &SlackListener{true, a}
 }
@@ -181,14 +280,10 @@ func (l *SlackListener) Start(
 			case *slack.ChannelJoinedEvent:
 				log.WithFields(
 					logFields,
-				).Infof("Joined to %s", ev.Channel)
-				q := l.api.msgQueue[ev.Channel.Name]
-				for e := q.Front(); e != nil; e = e.Next() {
-					m := e.Value.(*SlackMsg)
-					err := l.api.PostMessage(ev.Channel.Name, m.text, m.params, false)
-					if err != nil {
-						return err
-					}
+				).Infof("Joined to %s", ev.Channel.Name)
+				err := l.api.sendMsgQueues(ev.Channel.Name)
+				if err != nil {
+					return err
 				}
 			case *slack.MessageEvent:
 				log.WithFields(
@@ -203,7 +298,7 @@ func (l *SlackListener) Start(
 					}
 				}
 				if ch != "" {
-					err = l.processMsgEvent(ch, ev, vis, lang, twitterAPI)
+					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
 						return err
 					}
@@ -222,92 +317,6 @@ func (l *SlackListener) Start(
 
 func (l *SlackListener) Stop() {
 	l.enabled = false
-}
-
-func (l *SlackListener) processMsgEvent(
-	ch string,
-	ev *slack.MessageEvent,
-	vis VisionMatcher,
-	lang LanguageMatcher,
-	twitterAPI *TwitterAPI,
-) error {
-	msgs, err := l.api.config.GetSlackMessages()
-	if err != nil {
-		return err
-	}
-	for _, msg := range msgs {
-		if !StringsContains(msg.Channels, ch) {
-			continue
-		}
-		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, l.api.cache)
-		if err != nil {
-			return err
-		}
-		if match {
-			err := l.processMsgEventWithAction(ch, ev, msg.Action, twitterAPI)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (l *SlackListener) processMsgEventWithAction(
-	ch string,
-	ev *slack.MessageEvent,
-	action *Action,
-	twitterAPI *TwitterAPI,
-) error {
-	logFields := log.Fields{
-		"type":   "slack",
-		"action": "process",
-	}
-
-	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
-	if action.Slack.Pin {
-		err := l.api.api.AddPin(ev.Channel, item)
-		if CheckSlackError(err) {
-			return err
-		}
-		log.WithFields(logFields).Infoln("Pin the message")
-	}
-	if action.Slack.Star {
-		err := l.api.api.AddStar(ev.Channel, item)
-		if CheckSlackError(err) {
-			return err
-		}
-		log.WithFields(logFields).Infoln("Star the message")
-	}
-	for _, r := range action.Slack.Reactions {
-		err := l.api.api.AddReaction(r, item)
-		if CheckSlackError(err) {
-			return err
-		}
-		log.WithFields(logFields).Infoln("React to the message")
-	}
-	for _, c := range action.Slack.Channels {
-		if ch == c {
-			continue
-		}
-		params := slack.PostMessageParameters{
-			Attachments: ev.Attachments,
-		}
-		err := l.api.PostMessage(c, ev.Text, &params, true)
-		if CheckSlackError(err) {
-			return err
-		}
-		log.WithFields(logFields).Infof("Send the message to %s", c)
-	}
-
-	if action.Twitter.Tweet {
-		_, err := twitterAPI.PostSlackMsg(ev.Text, ev.Attachments)
-		if CheckTwitterError(err) {
-			return err
-		}
-		log.WithFields(logFields).Infoln("Tweet the message")
-	}
-	return nil
 }
 
 func CheckSlackError(err error) bool {
