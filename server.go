@@ -946,7 +946,7 @@ func postHooks(w http.ResponseWriter, r *http.Request) {
 		msg := buf.String()
 		if slackAPI.Enabled() {
 			for _, ch := range c.Action.Slack.Channels {
-				if err := slackAPI.PostMesage(ch, msg, nil); err != nil {
+				if err := slackAPI.PostMessage(ch, msg, nil, true); err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}

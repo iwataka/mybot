@@ -1,6 +1,7 @@
 package mybot
 
 import (
+	"container/list"
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
@@ -56,9 +57,10 @@ func (a *SlackAction) IsEmpty() bool {
 }
 
 type SlackAPI struct {
-	api    models.SlackAPI
-	config Config
-	cache  Cache
+	api      models.SlackAPI
+	config   Config
+	cache    Cache
+	msgQueue map[string]*list.List
 }
 
 func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
@@ -66,7 +68,7 @@ func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
 	if token != "" {
 		api = slack.New(token)
 	}
-	return &SlackAPI{api, config, cache}
+	return &SlackAPI{api, config, cache, make(map[string]*list.List)}
 }
 
 func (a *SlackAPI) Enabled() bool {
@@ -75,10 +77,33 @@ func (a *SlackAPI) Enabled() bool {
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.PostMesage(channel, text, &params)
+	return a.PostMessage(channel, text, &params, true)
 }
 
-func (a *SlackAPI) PostMesage(channel, text string, params *slack.PostMessageParameters) error {
+type SlackMsg struct {
+	text   string
+	params *slack.PostMessageParameters
+}
+
+func (a *SlackAPI) enqueueMsg(ch, text string, params *slack.PostMessageParameters) {
+	if a.msgQueue[ch] == nil {
+		a.msgQueue[ch] = list.New()
+	}
+	a.msgQueue[ch].PushBack(&SlackMsg{text, params})
+}
+
+func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
+	q := a.msgQueue[ch]
+	if q != nil {
+		front := q.Front()
+		if front != nil {
+			return q.Remove(front).(*SlackMsg)
+		}
+	}
+	return nil
+}
+
+func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, queue bool) error {
 	var ps slack.PostMessageParameters
 	if params != nil {
 		ps = *params
@@ -89,7 +114,11 @@ func (a *SlackAPI) PostMesage(channel, text string, params *slack.PostMessagePar
 			_, err := a.api.CreateChannel(channel)
 			if err != nil {
 				if err.Error() == "user_is_bot" {
-					return a.notifyCreateChannel(channel)
+					err := a.notifyCreateChannel(channel)
+					if queue && err == nil {
+						a.enqueueMsg(channel, text, params)
+					}
+					return err
 				} else {
 					return err
 				}
@@ -149,6 +178,18 @@ func (l *SlackListener) Start(
 		select {
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
+			case *slack.ChannelJoinedEvent:
+				log.WithFields(
+					logFields,
+				).Infof("Joined to %s", ev.Channel)
+				q := l.api.msgQueue[ev.Channel.Name]
+				for e := q.Front(); e != nil; e = e.Next() {
+					m := e.Value.(*SlackMsg)
+					err := l.api.PostMessage(ev.Channel.Name, m.text, m.params, false)
+					if err != nil {
+						return err
+					}
+				}
 			case *slack.MessageEvent:
 				log.WithFields(
 					logFields,
@@ -252,7 +293,7 @@ func (l *SlackListener) processMsgEventWithAction(
 		params := slack.PostMessageParameters{
 			Attachments: ev.Attachments,
 		}
-		err := l.api.PostMesage(c, ev.Text, &params)
+		err := l.api.PostMessage(c, ev.Text, &params, true)
 		if CheckSlackError(err) {
 			return err
 		}
