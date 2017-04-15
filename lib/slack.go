@@ -285,10 +285,15 @@ func (l *SlackListener) Start(
 				if err != nil {
 					return err
 				}
-			case *slack.MessageEvent:
+			case *slack.GroupJoinedEvent:
 				log.WithFields(
 					logFields,
-				).Infof("Message to %s by %s", ev.Channel, ev.Username)
+				).Infof("Joined to %s", ev.Channel.Name)
+				err := l.api.sendMsgQueues(ev.Channel.Name)
+				if err != nil {
+					return err
+				}
+			case *slack.MessageEvent:
 				chs, err := l.api.api.GetChannels(true)
 				ch := ""
 				for _, c := range chs {
@@ -297,6 +302,9 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
+				log.WithFields(
+					logFields,
+				).Infof("Message to %s by %s", ch, ev.User)
 				if ch != "" {
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
