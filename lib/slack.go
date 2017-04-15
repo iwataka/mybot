@@ -154,6 +154,9 @@ func (a *SlackAPI) notifyCreateChannel(ch string) error {
 
 func (a *SlackAPI) sendMsgQueues(ch string) error {
 	q := a.msgQueue[ch]
+	if q == nil {
+		return nil
+	}
 	for e := q.Front(); e != nil; e = e.Next() {
 		m := e.Value.(*SlackMsg)
 		err := a.PostMessage(ch, m.text, m.params, false)
