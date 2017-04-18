@@ -72,7 +72,7 @@ func ListTextbox(list []string, name string) template.HTML {
 	if list != nil {
 		str = strings.Join(list, ",")
 	}
-	format := `<input form="overwrite" type="text" name="%s" value="%s"/>`
+	format := `<input form="overwrite" type="text" name="%s" value="%s" data-role="tagsinput"/>`
 	result := fmt.Sprintf(format, name, str)
 	return template.HTML(result)
 }

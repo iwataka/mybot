@@ -118,6 +118,7 @@ func TestPostConfig(t *testing.T) {
 	testPostConfigDelete(t, s.URL, page, wg, c)
 	testPostConfigDoubleDelete(t, s.URL, page, wg, c)
 	testPostConfigError(t, s.URL, page, wg, c)
+	testPostConfigTagsInput(t, s.URL, page, wg, c)
 }
 
 func testPostConfig(
@@ -234,6 +235,24 @@ func testPostConfigError(
 	c.File = config.File
 	if !reflect.DeepEqual(c, config) {
 		t.Fatalf("%v expected but %v found", c, config)
+	}
+}
+
+func testPostConfigTagsInput(
+	t *testing.T,
+	url string,
+	page *agouti.Page,
+	wg *sync.WaitGroup,
+	c *mybot.FileConfig,
+) {
+	if err := page.Navigate(url); err != nil {
+		t.Fatal(err)
+	}
+
+	name := "twitter.timelines.screen_names"
+	keys := "foo,bar"
+	if err := page.AllByName(name).SendKeys(keys); err == nil {
+		t.Fatal("Tagsinput data-role elements must be uneditable currently")
 	}
 }
 
