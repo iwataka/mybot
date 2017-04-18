@@ -482,14 +482,6 @@ func postConfigForActions(
 	starCounter := checkboxCounter{prefix + "slack.star", 0}
 	results := []*mybot.Action{}
 	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			tweetCounter.returnValue(i, val, false)
-			retweetCounter.returnValue(i, val, false)
-			favoriteCounter.returnValue(i, val, false)
-			pinCounter.returnValue(i, val, false)
-			starCounter.returnValue(i, val, false)
-			continue
-		}
 		a, err := postConfigForAction(val, i, prefix)
 		if err != nil {
 			return nil, err

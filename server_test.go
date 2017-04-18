@@ -116,6 +116,7 @@ func TestPostConfig(t *testing.T) {
 
 	testPostConfig(t, s.URL, page, wg, c)
 	testPostConfigDelete(t, s.URL, page, wg, c)
+	testPostConfigSingleDelete(t, s.URL, page, wg, c)
 	testPostConfigDoubleDelete(t, s.URL, page, wg, c)
 	testPostConfigError(t, s.URL, page, wg, c)
 	testPostConfigTagsInput(t, s.URL, page, wg, c)
@@ -179,6 +180,34 @@ func testPostConfigDelete(
 	}
 	if len(config.IncomingWebhooks) != 0 {
 		t.Fatalf("%d expected but %d found", 0, len(config.IncomingWebhooks))
+	}
+
+	*config = *c
+}
+
+func testPostConfigSingleDelete(
+	t *testing.T,
+	url string,
+	page *agouti.Page,
+	wg *sync.WaitGroup,
+	c *mybot.FileConfig,
+) {
+	if err := page.Navigate(url); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := page.AllByButton("Delete").At(0).Click(); err != nil {
+		t.Fatal(err)
+	}
+
+	wg.Add(1)
+	if err := page.FindByID("overwrite").Submit(); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+
+	if len(config.Twitter.Timelines) != len(c.Twitter.Timelines)-1 {
+		t.Fatalf("%s's length is not %d", config.Twitter.Timelines, len(c.Twitter.Timelines)-1)
 	}
 
 	*config = *c
