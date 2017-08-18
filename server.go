@@ -799,7 +799,11 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	if ck != "" && cs != "" {
 		twitterApp.ConsumerKey = ck
 		twitterApp.ConsumerSecret = cs
-		twitterApp.Encode()
+		err = twitterApp.Encode()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		msg = "Both of Consumer Key and Consumer Secret can't be empty"
 	}
