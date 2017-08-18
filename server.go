@@ -147,7 +147,7 @@ func startServer(host, port, cert, key string) error {
 	}
 
 	if len(port) == 0 {
-		port = "3256"
+		port = "8080"
 	}
 
 	var err error

@@ -9,4 +9,4 @@ RUN go get github.com/iwataka/mybot
 
 CMD mybot serve -H 0.0.0.0
 
-EXPOSE 3256
+EXPOSE 8080

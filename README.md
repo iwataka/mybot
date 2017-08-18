@@ -69,7 +69,7 @@ Run `mybot serve` and access `localhost:8080`.
 Run the following commands and that's all.
 
 ```
-docker run -d -v ~/.config/gcloud:/root/.config/gcloud -v ~/.config/mybot:/root/.config/mybot -v ~/.cache/mybot:/root/.cache/mybot --name mybot -p 3256:3256 iwataka/mybot
+docker run -d -v ~/.config/gcloud:/root/.config/gcloud -v ~/.config/mybot:/root/.config/mybot -v ~/.cache/mybot:/root/.cache/mybot --name mybot -p 8080:8080 iwataka/mybot
 ```
 
 ### MySQL on Docker cotainer
