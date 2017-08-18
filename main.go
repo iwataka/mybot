@@ -150,6 +150,13 @@ func main() {
 		EnvVar: "MYBOT_TWITTER_CONSUMER_SECRET",
 	}
 
+	twitterConsumerFileFlag := cli.StringFlag{
+		Name:   "twitter-consumer-file",
+		Value:  filepath.Join(configDir, "twitter_consumer_credentials.toml"),
+		Usage:  "Twitter consumer file",
+		EnvVar: "MYBOT_TWITTER_CONSUMER_FILE",
+	}
+
 	runFlags := []cli.Flag{
 		envFlag,
 		logFlag,
@@ -162,6 +169,7 @@ func main() {
 		slackTokenFlag,
 		twitterConsumerKeyFlag,
 		twitterConsumerSecretFlag,
+		twitterConsumerFileFlag,
 	}
 
 	serveFlags := []cli.Flag{
@@ -283,10 +291,20 @@ func beforeValidate(c *cli.Context) error {
 		panic(err)
 	}
 
-	twitterApp = &mybot.OAuthApp{
-		c.String("twitter-consumer-key"),
-		c.String("twitter-consumer-secret"),
-		"",
+	ck := c.String("twitter-consumer-key")
+	cs := c.String("twitter-consumer-secret")
+	cFile := c.String("twitter-consumer-file")
+	twitterApp = &mybot.OAuthApp{}
+	if ck != "" && cs != "" {
+		twitterApp.ConsumerKey = ck
+		twitterApp.ConsumerSecret = cs
+		twitterApp.File = cFile
+		err := twitterApp.Encode()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		twitterApp.Decode(cFile)
 	}
 
 	twitterAuth = &mybot.OAuthCredentials{}
