@@ -38,7 +38,7 @@ var (
 
 func main() {
 	home, err := homedir.Dir()
-	panicIfError(err)
+	fatalIfError(err)
 
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
@@ -244,21 +244,21 @@ func main() {
 
 	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd}
 	err = app.Run(os.Args)
-	panicIfError(err)
+	fatalIfError(err)
 }
 
 func beforeRunning(c *cli.Context) error {
 	err := beforeValidate(c)
-	panicIfError(err)
+	fatalIfError(err)
 
 	slackToken := c.String("slack-token")
 	slackAPI = mybot.NewSlackAPI(slackToken, config, cache)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
 		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
-		panicIfError(err)
+		fatalIfError(err)
 		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
-		panicIfError(err)
+		fatalIfError(err)
 	} else {
 		visionAPI = &mybot.VisionAPI{}
 		languageAPI = &mybot.LanguageAPI{}
@@ -293,7 +293,7 @@ func beforeValidate(c *cli.Context) error {
 		info.Password = dbPasswd
 		info.Database = dbName
 		session, err = mgo.DialWithInfo(info)
-		panicIfError(err)
+		fatalIfError(err)
 	}
 
 	if session == nil {
@@ -302,7 +302,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("cache")
 		cache, err = mybot.NewDBCache(col)
 	}
-	panicIfError(err)
+	fatalIfError(err)
 
 	if session == nil {
 		config, err = mybot.NewFileConfig(c.String("config"))
@@ -310,7 +310,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("config")
 		config, err = mybot.NewDBConfig(col)
 	}
-	panicIfError(err)
+	fatalIfError(err)
 
 	ck := c.String("twitter-consumer-key")
 	cs := c.String("twitter-consumer-secret")
@@ -321,11 +321,11 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
-	panicIfError(err)
+	fatalIfError(err)
 	if ck != "" && cs != "" {
 		twitterApp.SetCreds(ck, cs)
 		err := twitterApp.Save()
-		panicIfError(err)
+		fatalIfError(err)
 	}
 
 	if session == nil {
@@ -334,7 +334,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("twitter-user-auth")
 		twitterAuth, err = mybot.NewDBOAuthCreds(col)
 	}
-	panicIfError(err)
+	fatalIfError(err)
 
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
@@ -441,7 +441,7 @@ func twitterPeriodically() {
 }
 
 func slackListens() {
-	if !slackAPI.Enabled() {
+	if slackAPI == nil || !slackAPI.Enabled() {
 		return
 	}
 
@@ -490,7 +490,7 @@ func httpServer(c *cli.Context) {
 	cert := c.String("cert")
 	key := c.String("key")
 	err := startServer(host, port, cert, key)
-	panicIfError(err)
+	fatalIfError(err)
 }
 
 func serve(c *cli.Context) error {
@@ -606,16 +606,15 @@ func runTwitterWithoutStream() error {
 
 func validate(c *cli.Context) {
 	err := config.Validate()
-	panicIfError(err)
+	fatalIfError(err)
 	if c.Bool("api") {
 		err := config.ValidateWithAPI(twitterAPI)
-		panicIfError(err)
+		fatalIfError(err)
 	}
 }
 
-func panicIfError(err error) {
+func fatalIfError(err error) {
 	if err != nil {
-		panic(err)
-		log.Error(err)
+		log.Fatal(err)
 	}
 }
