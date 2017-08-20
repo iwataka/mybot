@@ -725,8 +725,9 @@ func CheckTwitterError(err error) bool {
 
 	switch twitterErr := err.(type) {
 	case anaconda.TwitterError:
-		// 327 means that duplicated message exists
-		if twitterErr.Code == 327 {
+		// 187 means that duplicated message exists
+		switch twitterErr.Code {
+		case 187:
 			return false
 		}
 	case *anaconda.ApiError:
