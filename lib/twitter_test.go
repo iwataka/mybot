@@ -84,3 +84,35 @@ func TestPostProcessorEach(t *testing.T) {
 		t.Fatalf("%v is not cached properly", action2)
 	}
 }
+
+func TestCheckTwitterError(t *testing.T) {
+	err187 := anaconda.TwitterError{}
+	err187.Code = 187
+	if CheckTwitterError(err187) {
+		t.Fatalf("Error code %d should be ignored", err187.Code)
+	}
+	if CheckTwitterError(&err187) {
+		t.Fatalf("Error code %d should be ignored", err187.Code)
+	}
+
+	err327 := anaconda.TwitterError{}
+	err327.Code = 327
+	if CheckTwitterError(err327) {
+		t.Fatalf("Error code %d should be ignored", err327.Code)
+	}
+	if CheckTwitterError(&err327) {
+		t.Fatalf("Error code %d should be ignored", err327.Code)
+	}
+
+	apiErr := anaconda.ApiError{}
+	apiErr.StatusCode = 400
+	res := anaconda.TwitterErrorResponse{}
+	res.Errors = []anaconda.TwitterError{err187, err327}
+	apiErr.Decoded = res
+	if CheckTwitterError(apiErr) {
+		t.Fatalf("API Error %d [%d, %d] should be ignored", apiErr.StatusCode, err187.Code, err327.Code)
+	}
+	if CheckTwitterError(&apiErr) {
+		t.Fatalf("API Error %d [%d, %d] should be ignored", apiErr.StatusCode, err187.Code, err327.Code)
+	}
+}

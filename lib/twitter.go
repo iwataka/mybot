@@ -724,13 +724,15 @@ func CheckTwitterError(err error) bool {
 	}
 
 	switch twitterErr := err.(type) {
-	case anaconda.TwitterError:
+	case *anaconda.TwitterError:
 		// 187: The status text has already been Tweeted by the authenticated account.
 		// 327: You have already retweeted this tweet.
 		switch twitterErr.Code {
-		case 187 | 327:
+		case 187, 327:
 			return false
 		}
+	case anaconda.TwitterError:
+		return CheckTwitterError(&twitterErr)
 	case *anaconda.ApiError:
 		code := twitterErr.StatusCode
 		// Status code 5?? means server error
@@ -743,7 +745,10 @@ func CheckTwitterError(err error) bool {
 			}
 		}
 		return false
+	case anaconda.ApiError:
+		return CheckTwitterError(&twitterErr)
 	}
+
 	return true
 }
 
