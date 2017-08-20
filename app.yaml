@@ -1,2 +1,8 @@
 runtime: custom
 env: flex
+
+env_variables:
+        # MYBOT_DB_ADDRESS:
+        # MYBOT_DB_USER:
+        # MYBOT_DB_PASSWD:
+        # MYBOT_DB_NAME:

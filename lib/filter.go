@@ -14,10 +14,10 @@ import (
 // Filter is a configuration to filter out tweets
 type Filter struct {
 	models.FilterProperties
-	Patterns    []string                  `json:"patterns,omitempty" toml:"patterns,omitempty"`
-	URLPatterns []string                  `json:"url_patterns,omitempty" toml:"url_patterns,omitempty"`
-	Vision      *models.VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty"`
-	Language    *models.LanguageCondition `json:"language,omitempty" toml:"language,omitempty"`
+	Patterns    []string                  `json:"patterns,omitempty" toml:"patterns,omitempty" bson:"patterns,omitempty"`
+	URLPatterns []string                  `json:"url_patterns,omitempty" toml:"url_patterns,omitempty" bson:"url_patterns,omitempty"`
+	Vision      *models.VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty" bson:"vision,omitempty"`
+	Language    *models.LanguageCondition `json:"language,omitempty" toml:"language,omitempty" bson:"language,omitempty"`
 }
 
 func NewFilter() *Filter {
@@ -221,10 +221,7 @@ func (c *Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cach
 		imgCache.Src = tweetSrc
 		imgCache.AnalysisResult = result
 		imgCache.AnalysisDate = time.Now().Format(time.RubyDate)
-		err := cache.SetImage(imgCache)
-		if err != nil {
-			return false, err
-		}
+		cache.SetImage(imgCache)
 	}
 
 	match := false

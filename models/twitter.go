@@ -53,7 +53,7 @@ func (a *TwitterAction) SetCollections(cols []string) {
 }
 
 type TwitterActionProperties struct {
-	Tweet    bool `json:"tweet" toml:"tweet"`
-	Retweet  bool `json:"retweet" toml:"retweet"`
-	Favorite bool `json:"favorite" toml:"favorite"`
+	Tweet    bool `json:"tweet" toml:"tweet" bson:"tweet"`
+	Retweet  bool `json:"retweet" toml:"retweet" bson:"retweet"`
+	Favorite bool `json:"favorite" toml:"favorite" bson:"favorite"`
 }

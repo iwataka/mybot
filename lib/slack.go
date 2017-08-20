@@ -12,8 +12,8 @@ import (
 
 type SlackAction struct {
 	models.SlackActionProperties
-	Reactions []string `json:"reactions" toml:"reactions"`
-	Channels  []string `json:"channels" toml:"channels"`
+	Reactions []string `json:"reactions" toml:"reactions" bson:"reactions"`
+	Channels  []string `json:"channels" toml:"channels" bson:"channels"`
 }
 
 func NewSlackAction() *SlackAction {
@@ -175,10 +175,7 @@ func (a *SlackAPI) processMsgEvent(
 	lang LanguageMatcher,
 	twitterAPI *TwitterAPI,
 ) error {
-	msgs, err := a.config.GetSlackMessages()
-	if err != nil {
-		return err
-	}
+	msgs := a.config.GetSlackMessages()
 	for _, msg := range msgs {
 		if !StringsContains(msg.Channels, ch) {
 			continue

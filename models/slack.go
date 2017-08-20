@@ -73,6 +73,6 @@ func (a *SlackAction) SetReactions(rs []string) {
 }
 
 type SlackActionProperties struct {
-	Pin  bool `json:"pin" toml:"pin"`
-	Star bool `json:"star" toml:"star"`
+	Pin  bool `json:"pin" toml:"pin" bson:"pin"`
+	Star bool `json:"star" toml:"star" bson:"star"`
 }

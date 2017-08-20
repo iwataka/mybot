@@ -12,156 +12,169 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/iwataka/mybot/models"
+	"gopkg.in/mgo.v2"
 )
 
 type Config interface {
-	GetTwitterScreenNames() ([]string, error)
-	GetTwitterTimelines() ([]TimelineConfig, error)
-	SetTwitterTimelines(timelines []TimelineConfig) error
-	AddTwitterTimeline(timeline *TimelineConfig) error
-	GetTwitterFavorites() ([]FavoriteConfig, error)
-	SetTwitterFavorites(favorites []FavoriteConfig) error
-	AddTwitterFavorite(favorite *FavoriteConfig) error
-	GetTwitterSearches() ([]SearchConfig, error)
-	SetTwitterSearches(searches []SearchConfig) error
-	AddTwitterSearch(search *SearchConfig) error
-	GetTwitterNotification() (*Notification, error)
-	SetTwitterNotification(notification *Notification) error
-	GetTwitterInteraction() (*InteractionConfig, error)
-	SetTwitterInteraction(interaction *InteractionConfig) error
-	GetTwitterDuration() (string, error)
-	SetTwitterDuration(dur string) error
-	GetSlackMessages() ([]MessageConfig, error)
-	SetSlackMessages(msgs []MessageConfig) error
-	GetIncomingWebhooks() ([]IncomingWebhook, error)
-	SetIncomingWebhooks([]IncomingWebhook) error
+	GetProperties() *ConfigProperties
+	GetTwitterScreenNames() []string
+	GetTwitterTimelines() []TimelineConfig
+	SetTwitterTimelines(timelines []TimelineConfig)
+	AddTwitterTimeline(timeline *TimelineConfig)
+	GetTwitterFavorites() []FavoriteConfig
+	SetTwitterFavorites(favorites []FavoriteConfig)
+	AddTwitterFavorite(favorite *FavoriteConfig)
+	GetTwitterSearches() []SearchConfig
+	SetTwitterSearches(searches []SearchConfig)
+	AddTwitterSearch(search *SearchConfig)
+	GetTwitterNotification() *Notification
+	SetTwitterNotification(notification *Notification)
+	GetTwitterInteraction() *InteractionConfig
+	SetTwitterInteraction(interaction *InteractionConfig)
+	GetTwitterDuration() string
+	SetTwitterDuration(dur string)
+	GetSlackMessages() []MessageConfig
+	SetSlackMessages(msgs []MessageConfig)
+	AddSlackMessage(msg *MessageConfig)
+	GetIncomingWebhooks() []IncomingWebhook
+	SetIncomingWebhooks([]IncomingWebhook)
 	Load() error
 	Save() error
+	Validate() error
+	ValidateWithAPI(api *TwitterAPI) error
+	FromText(bytes []byte) error
+	ToText(indent, ext string) ([]byte, error)
 }
 
 // FileConfig is a root of the all configurations of this applciation.
 type FileConfig struct {
-	// Twitter is a configuration related to Twitter.
-	Twitter *TwitterConfig `json:"twitter" toml:"twitter"`
-	// Slack is a configuration related to Slack
-	Slack *SlackConfig `json:"slack" toml:"slack"`
-	// Webhook is a configuration related to incoming/outcoming webhooks
-	IncomingWebhooks []IncomingWebhook `json:"incoming_webhooks" toml:"incoming_webhooks"`
+	*ConfigProperties
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
-	File string `json:"-" toml:"-"`
+	File string `json:"-" toml:"-" bson:"-"`
 }
 
-func (c *FileConfig) GetTwitterScreenNames() ([]string, error) {
-	return c.Twitter.GetScreenNames(), nil
+type ConfigProperties struct {
+	// Twitter is a configuration related to Twitter.
+	Twitter *TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter"`
+	// Slack is a configuration related to Slack
+	Slack *SlackConfig `json:"slack" toml:"slack" bson:"slack"`
+	// Webhook is a configuration related to incoming/outcoming webhooks
+	IncomingWebhooks []IncomingWebhook `json:"incoming_webhooks" toml:"incoming_webhooks" bson:"incoming_webhooks"`
 }
 
-func (c *FileConfig) GetTwitterTimelines() ([]TimelineConfig, error) {
-	return c.Twitter.Timelines, nil
+func newConfigProperties() *ConfigProperties {
+	return &ConfigProperties{
+		Twitter:          NewTwitterConfig(),
+		Slack:            NewSlackConfig(),
+		IncomingWebhooks: []IncomingWebhook{},
+	}
 }
 
-func (c *FileConfig) SetTwitterTimelines(timelines []TimelineConfig) error {
+func (c *ConfigProperties) GetProperties() *ConfigProperties {
+	return c
+}
+
+func (c *ConfigProperties) GetTwitterScreenNames() []string {
+	return c.Twitter.GetScreenNames()
+}
+
+func (c *ConfigProperties) GetTwitterTimelines() []TimelineConfig {
+	return c.Twitter.Timelines
+}
+
+func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {
 	c.Twitter.Timelines = timelines
-	return nil
 }
 
-func (c *FileConfig) AddTwitterTimeline(timeline *TimelineConfig) error {
+func (c *ConfigProperties) AddTwitterTimeline(timeline *TimelineConfig) {
 	if timeline == nil {
-		return nil
+		return
 	}
 	c.Twitter.Timelines = append(c.Twitter.Timelines, *timeline)
-	return nil
 }
 
-func (c *FileConfig) GetTwitterFavorites() ([]FavoriteConfig, error) {
-	return c.Twitter.Favorites, nil
+func (c *ConfigProperties) GetTwitterFavorites() []FavoriteConfig {
+	return c.Twitter.Favorites
 }
 
-func (c *FileConfig) SetTwitterFavorites(favorites []FavoriteConfig) error {
+func (c *ConfigProperties) SetTwitterFavorites(favorites []FavoriteConfig) {
 	c.Twitter.Favorites = favorites
-	return nil
 }
 
-func (c *FileConfig) AddTwitterFavorite(favorite *FavoriteConfig) error {
+func (c *ConfigProperties) AddTwitterFavorite(favorite *FavoriteConfig) {
 	if favorite == nil {
-		return nil
+		return
 	}
 	c.Twitter.Favorites = append(c.Twitter.Favorites, *favorite)
-	return nil
 }
 
-func (c *FileConfig) GetTwitterSearches() ([]SearchConfig, error) {
-	return c.Twitter.Searches, nil
+func (c *ConfigProperties) GetTwitterSearches() []SearchConfig {
+	return c.Twitter.Searches
 }
 
-func (c *FileConfig) SetTwitterSearches(searches []SearchConfig) error {
+func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
 	c.Twitter.Searches = searches
-	return nil
 }
 
-func (c *FileConfig) AddTwitterSearch(search *SearchConfig) error {
+func (c *ConfigProperties) AddTwitterSearch(search *SearchConfig) {
 	if search == nil {
-		return nil
+		return
 	}
 	c.Twitter.Searches = append(c.Twitter.Searches, *search)
-	return nil
 }
 
-func (c *FileConfig) GetTwitterNotification() (*Notification, error) {
-	return c.Twitter.Notification, nil
+func (c *ConfigProperties) GetTwitterNotification() *Notification {
+	return c.Twitter.Notification
 }
 
-func (c *FileConfig) SetTwitterNotification(notification *Notification) error {
+func (c *ConfigProperties) SetTwitterNotification(notification *Notification) {
 	c.Twitter.Notification = notification
-	return nil
 }
 
-func (c *FileConfig) GetTwitterInteraction() (*InteractionConfig, error) {
-	return c.Twitter.Interaction, nil
+func (c *ConfigProperties) GetTwitterInteraction() *InteractionConfig {
+	return c.Twitter.Interaction
 }
 
-func (c *FileConfig) SetTwitterInteraction(interaction *InteractionConfig) error {
+func (c *ConfigProperties) SetTwitterInteraction(interaction *InteractionConfig) {
 	c.Twitter.Interaction = interaction
-	return nil
 }
 
-func (c *FileConfig) GetSlackMessages() ([]MessageConfig, error) {
-	return c.Slack.Messages, nil
+func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
+	return c.Slack.Messages
 }
 
-func (c *FileConfig) SetSlackMessages(msgs []MessageConfig) error {
+func (c *ConfigProperties) SetSlackMessages(msgs []MessageConfig) {
 	c.Slack.Messages = msgs
-	return nil
 }
 
-func (c *FileConfig) GetIncomingWebhooks() ([]IncomingWebhook, error) {
-	return c.IncomingWebhooks, nil
+func (c *ConfigProperties) AddSlackMessage(msg *MessageConfig) {
+	if msg == nil {
+		return
+	}
+	c.Slack.Messages = append(c.Slack.Messages, *msg)
 }
 
-func (c *FileConfig) SetIncomingWebhooks(hooks []IncomingWebhook) error {
+func (c *ConfigProperties) GetIncomingWebhooks() []IncomingWebhook {
+	return c.IncomingWebhooks
+}
+
+func (c *ConfigProperties) SetIncomingWebhooks(hooks []IncomingWebhook) {
 	c.IncomingWebhooks = hooks
-	return nil
 }
 
-func (c *FileConfig) GetTwitterDuration() (string, error) {
-	return c.Twitter.Duration, nil
+func (c *ConfigProperties) GetTwitterDuration() string {
+	return c.Twitter.Duration
 }
 
-func (c *FileConfig) SetTwitterDuration(dur string) error {
+func (c *ConfigProperties) SetTwitterDuration(dur string) {
 	c.Twitter.Duration = dur
-	return nil
 }
 
 // NewFileConfig takes the configuration file path and returns a configuration
 // instance.
 func NewFileConfig(path string) (*FileConfig, error) {
-	c := &FileConfig{
-		Twitter:          NewTwitterConfig(),
-		Slack:            NewSlackConfig(),
-		IncomingWebhooks: []IncomingWebhook{},
-	}
-
-	c.File = path
+	c := &FileConfig{newConfigProperties(), path}
 	err := c.Load()
 	if err != nil {
 		return nil, err
@@ -195,7 +208,7 @@ func NewFileConfig(path string) (*FileConfig, error) {
 
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
-func (c *FileConfig) Validate() error {
+func (c *ConfigProperties) Validate() error {
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
 		if err := timeline.Validate(); err != nil {
@@ -232,7 +245,7 @@ func (c *FileConfig) Validate() error {
 	return nil
 }
 
-func (c *FileConfig) ValidateWithAPI(api *TwitterAPI) error {
+func (c *ConfigProperties) ValidateWithAPI(api *TwitterAPI) error {
 	for _, name := range c.Twitter.GetScreenNames() {
 		_, err := api.API.GetUsersShow(name, nil)
 		if err != nil {
@@ -245,8 +258,7 @@ func (c *FileConfig) ValidateWithAPI(api *TwitterAPI) error {
 // ToText returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *FileConfig) ToText(indent string) ([]byte, error) {
-	ext := filepath.Ext(c.File)
+func (c *ConfigProperties) ToText(indent, ext string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	switch ext {
 	case ".json":
@@ -272,24 +284,18 @@ func (c *FileConfig) ToText(indent string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *FileConfig) FromText(bytes []byte) error {
-	ext := filepath.Ext(c.File)
-	switch ext {
-	case ".json":
-		err := json.Unmarshal(bytes, c)
-		if err != nil {
-			return err
-		}
-	case ".toml":
-		md, err := toml.Decode(string(bytes), c)
-		if err != nil {
-			return err
-		}
-		if len(md.Undecoded()) != 0 {
-			return fmt.Errorf("%v undecoded in %s", md.Undecoded(), c.File)
-		}
+func (c *ConfigProperties) FromText(bytes []byte) error {
+	err := json.Unmarshal(bytes, c)
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	_, err = toml.Decode(string(bytes), c)
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("Configuration must be written in either json or toml format")
 }
 
 // Save saves the specified configuration to the source file.
@@ -300,7 +306,7 @@ func (c *FileConfig) Save() error {
 		return err
 	}
 	if c != nil {
-		bs, err := c.ToText("")
+		bs, err := c.ToText("", filepath.Ext(c.File))
 		if err != nil {
 			return err
 		}
@@ -332,9 +338,9 @@ func (c *FileConfig) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type Source struct {
 	// Filter filters out incoming data from sources.
-	Filter *Filter `json:"filter" toml:"filter"`
+	Filter *Filter `json:"filter" toml:"filter" bson:"filter"`
 	// Action defines actions for data passing through filters.
-	Action *Action `json:"action" toml:"action"`
+	Action *Action `json:"action" toml:"action" bson:"action"`
 }
 
 func NewSource() Source {
@@ -371,9 +377,9 @@ func (c *Source) Validate() error {
 }
 
 type Action struct {
-	Twitter         *TwitterAction   `json:"twitter" toml:"twitter"`
-	Slack           *SlackAction     `json:"slack" toml:"slack"`
-	OutgoingWebhook *OutgoingWebhook `json:"outgoing_webhook" toml:"outgoing_webhook"`
+	Twitter         *TwitterAction   `json:"twitter" toml:"twitter" bson:"twitter"`
+	Slack           *SlackAction     `json:"slack" toml:"slack" bson:"slack"`
+	OutgoingWebhook *OutgoingWebhook `json:"outgoing_webhook" toml:"outgoing_webhook" bson:"outgoing_webhook"`
 }
 
 func NewAction() *Action {
@@ -429,23 +435,23 @@ func (a *Action) IsEmpty() bool {
 
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
-	Timelines []TimelineConfig `json:"timelines" toml:"timelines"`
-	Favorites []FavoriteConfig `json:"favorites" toml:"favorites"`
-	Searches  []SearchConfig   `json:"searches" toml:"searches"`
+	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines"`
+	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites"`
+	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches"`
 	// Notification is a configuration related to notification for users.
 	// Currently only place notification is supported, which means that
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
-	Notification *Notification `json:"notification" toml:"notification"`
+	Notification *Notification `json:"notification" toml:"notification" bson:"notification"`
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
-	Interaction *InteractionConfig `json:"interaction" toml:"interaction"`
+	Interaction *InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
-	Duration string `json:"duration" toml:"duration"`
+	Duration string `json:"duration" toml:"duration" bson:"duration"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
-	Debug bool `json:"debug" toml:"debug"`
+	Debug bool `json:"debug" toml:"debug" bson:"debug"`
 }
 
 func NewTwitterConfig() *TwitterConfig {
@@ -554,11 +560,11 @@ func (c *SearchConfig) Validate() error {
 // InteractionConfig is a configuration for interaction through Twitter direct
 // message
 type InteractionConfig struct {
-	AllowSelf bool     `json:"allow_self" toml:"allow_self"`
-	Users     []string `json:"users,omitempty" toml:"users,omitempty"`
+	AllowSelf bool     `json:"allow_self" toml:"allow_self" bson:"allow_self"`
+	Users     []string `json:"users,omitempty" toml:"users,omitempty" bson:"users,omitempty"`
 }
 type SlackConfig struct {
-	Messages []MessageConfig `json:"messages" toml:"messages"`
+	Messages []MessageConfig `json:"messages" toml:"messages" bson:"messages"`
 }
 
 func NewSlackConfig() *SlackConfig {
@@ -569,7 +575,7 @@ func NewSlackConfig() *SlackConfig {
 
 type MessageConfig struct {
 	Source
-	Channels []string `json:"channels" toml:"channels"`
+	Channels []string `json:"channels" toml:"channels" bson:"channels"`
 }
 
 func (c *MessageConfig) Validate() error {
@@ -590,13 +596,13 @@ func NewMessageConfig() *MessageConfig {
 }
 
 type Webhook struct {
-	Endpoint string `json:"endpoint" toml:"endpoint"`
-	Template string `json:"template" toml:"template"`
+	Endpoint string `json:"endpoint" toml:"endpoint" bson:"endpoint"`
+	Template string `json:"template" toml:"template" bson:"template"`
 }
 
 type IncomingWebhook struct {
 	Webhook
-	Action *Action `json:"action" toml:"action"`
+	Action *Action `json:"action" toml:"action" bson:"action"`
 }
 
 func NewIncomingWebhook() *IncomingWebhook {
@@ -633,8 +639,8 @@ func (i *IncomingWebhook) Validate() error {
 
 type OutgoingWebhook struct {
 	Webhook
-	Body   string `json:"body" toml:"body"`
-	Method string `json:"method" toml:"method"`
+	Body   string `json:"body" toml:"body" bson:"body"`
+	Method string `json:"method" toml:"method" bson:"method"`
 }
 
 func NewOutgoingWebhook() *OutgoingWebhook {
@@ -682,4 +688,32 @@ func (c *OutgoingWebhook) Message() (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+type DBConfig struct {
+	*ConfigProperties
+	col *mgo.Collection
+}
+
+func NewDBConfig(col *mgo.Collection) (*DBConfig, error) {
+	c := &DBConfig{newConfigProperties(), col}
+	err := c.Load()
+	return c, err
+}
+
+func (c *DBConfig) Load() error {
+	query := c.col.Find(nil)
+	count, err := query.Count()
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return query.One(c.ConfigProperties)
+	}
+	return nil
+}
+
+func (c *DBConfig) Save() error {
+	_, err := c.col.Upsert(nil, c.ConfigProperties)
+	return err
 }

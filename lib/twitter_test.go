@@ -63,10 +63,7 @@ func TestPostProcessorEach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ac, err := cache.GetTweetAction(tweet.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ac := cache.GetTweetAction(tweet.Id)
 	if !reflect.DeepEqual(ac, action) {
 		t.Fatalf("%v is not cached properly", action)
 	}
@@ -82,10 +79,7 @@ func TestPostProcessorEach(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ac2, err := cache.GetTweetAction(tweet.Id)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ac2 := cache.GetTweetAction(tweet.Id)
 	if !ac2.Twitter.Favorite {
 		t.Fatalf("%v is not cached properly", action2)
 	}

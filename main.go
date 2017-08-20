@@ -8,11 +8,11 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
+	"gopkg.in/mgo.v2"
 )
 
 //go:generate go-bindata assets/...
@@ -25,15 +25,15 @@ var (
 	twitterAPI         *mybot.TwitterAPI
 	userListenerStream *anaconda.Stream
 	dmListenerStream   *anaconda.Stream
-	twitterApp         *mybot.OAuthApp
-	twitterAuth        *mybot.OAuthCredentials
 	visionAPI          *mybot.VisionAPI
 	languageAPI        *mybot.LanguageAPI
 	slackAPI           *mybot.SlackAPI
 	slackListener      *mybot.SlackListener
-	config             *mybot.FileConfig
-	cache              mybot.Cache
 	status             *mybot.Status
+	twitterApp         mybot.OAuthApp
+	twitterAuth        mybot.OAuthCreds
+	config             mybot.Config
+	cache              mybot.Cache
 )
 
 func main() {
@@ -103,30 +103,44 @@ func main() {
 
 	hostFlag := cli.StringFlag{
 		Name:   "host,H",
-		Value:  "",
+		Value:  "localhost",
 		Usage:  "Host this server listen on",
 		EnvVar: "MYBOT_HOST",
 	}
 
 	portFlag := cli.StringFlag{
 		Name:   "port,P",
-		Value:  "",
+		Value:  "8080",
 		Usage:  "Port this server listen on",
 		EnvVar: "MYBOT_PORT",
 	}
 
-	driverNameFlag := cli.StringFlag{
-		Name:   "driver-name",
+	dbAddrFlag := cli.StringFlag{
+		Name:   "db-addr",
 		Value:  "",
-		Usage:  "Driver name for DB",
-		EnvVar: "MYBOT_DRIVER_NAME",
+		Usage:  "DB address",
+		EnvVar: "MYBOT_DB_ADDRESS",
 	}
 
-	dataSourceFlag := cli.StringFlag{
-		Name:   "data-source",
+	dbUserFlag := cli.StringFlag{
+		Name:   "db-user",
 		Value:  "",
-		Usage:  "Data Source for DB",
-		EnvVar: "MYBOT_DATA_SOURCE",
+		Usage:  "DB user",
+		EnvVar: "MYBOT_DB_USER",
+	}
+
+	dbPassFlag := cli.StringFlag{
+		Name:   "db-passwd",
+		Value:  "",
+		Usage:  "DB password",
+		EnvVar: "MYBOT_DB_PASSWD",
+	}
+
+	dbNameFlag := cli.StringFlag{
+		Name:   "db-name",
+		Value:  "",
+		Usage:  "Target DB name",
+		EnvVar: "MYBOT_DB_NAME",
 	}
 
 	slackTokenFlag := cli.StringFlag{
@@ -164,8 +178,10 @@ func main() {
 		cacheFlag,
 		gcloudFlag,
 		twitterFlag,
-		driverNameFlag,
-		dataSourceFlag,
+		dbAddrFlag,
+		dbUserFlag,
+		dbPassFlag,
+		dbNameFlag,
 		slackTokenFlag,
 		twitterConsumerKeyFlag,
 		twitterConsumerSecretFlag,
@@ -274,19 +290,40 @@ func beforeValidate(c *cli.Context) error {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	driverName := c.String("driver-name")
-	dataSource := c.String("data-source")
+	dbAddress := c.String("db-addr")
+	dbUser := c.String("db-user")
+	dbPasswd := c.String("db-passwd")
+	dbName := c.String("db-name")
 
-	if driverName == "" || dataSource == "" {
+	var session *mgo.Session
+	if dbAddress != "" && dbUser != "" && dbPasswd != "" && dbName != "" {
+		info := &mgo.DialInfo{}
+		info.Addrs = []string{dbAddress}
+		info.Username = dbUser
+		info.Password = dbPasswd
+		info.Database = dbName
+		session, err = mgo.DialWithInfo(info)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if session == nil {
 		cache, err = mybot.NewFileCache(c.String("cache"))
 	} else {
-		cache, err = mybot.NewDBCache(driverName, dataSource)
+		col := session.DB(dbName).C("cache")
+		cache, err = mybot.NewDBCache(col)
 	}
 	if err != nil {
 		panic(err)
 	}
 
-	config, err = mybot.NewFileConfig(c.String("config"))
+	if session == nil {
+		config, err = mybot.NewFileConfig(c.String("config"))
+	} else {
+		col := session.DB(dbName).C("config")
+		config, err = mybot.NewDBConfig(col)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -294,27 +331,33 @@ func beforeValidate(c *cli.Context) error {
 	ck := c.String("twitter-consumer-key")
 	cs := c.String("twitter-consumer-secret")
 	cFile := c.String("twitter-consumer-file")
-	twitterApp = &mybot.OAuthApp{}
+	if session == nil {
+		twitterApp, err = mybot.NewFileTwitterOAuthApp(cFile)
+	} else {
+		col := session.DB(dbName).C("twitter-app-auth")
+		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
+	}
+	if err != nil {
+		panic(err)
+	}
 	if ck != "" && cs != "" {
-		twitterApp.ConsumerKey = ck
-		twitterApp.ConsumerSecret = cs
-		twitterApp.File = cFile
-		err := twitterApp.Encode()
+		twitterApp.SetCreds(ck, cs)
+		err := twitterApp.Save()
 		if err != nil {
 			panic(err)
 		}
-	} else {
-		twitterApp.Decode(cFile)
 	}
 
-	twitterAuth = &mybot.OAuthCredentials{}
-	err = twitterAuth.Decode(c.String("twitter"))
+	if session == nil {
+		twitterAuth, err = mybot.NewFileOAuthCreds(c.String("twitter"))
+	} else {
+		col := session.DB(dbName).C("twitter-user-auth")
+		twitterAuth, err = mybot.NewDBOAuthCreds(col)
+	}
 	if err != nil {
 		panic(err)
 	}
 
-	anaconda.SetConsumerKey(twitterApp.ConsumerKey)
-	anaconda.SetConsumerSecret(twitterApp.ConsumerSecret)
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
 	return nil
@@ -410,7 +453,7 @@ func twitterPeriodically() {
 			log.WithFields(logFields).Error(err)
 			return
 		}
-		d, err := time.ParseDuration(config.Twitter.Duration)
+		d, err := time.ParseDuration(config.GetTwitterDuration())
 		if err != nil {
 			log.WithFields(logFields).Error(err)
 			return
@@ -444,6 +487,18 @@ func reloadListeners() {
 		userListenerStream.Stop()
 	}
 	go twitterListenUsers()
+
+	if dmListenerStream != nil {
+		dmListenerStream.Stop()
+	}
+	go twitterListenDM()
+
+	go twitterPeriodically()
+
+	if slackListener != nil {
+		slackListener.Stop()
+	}
+	go slackListens()
 }
 
 func httpServer(c *cli.Context) {
@@ -476,7 +531,7 @@ func serve(c *cli.Context) error {
 
 func runTwitterWithStream() error {
 	tweets := []anaconda.Tweet{}
-	for _, a := range config.Twitter.Searches {
+	for _, a := range config.GetTwitterSearches() {
 		v := url.Values{}
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
@@ -500,7 +555,7 @@ func runTwitterWithStream() error {
 			tweets = append(tweets, ts...)
 		}
 	}
-	for _, a := range config.Twitter.Favorites {
+	for _, a := range config.GetTwitterFavorites() {
 		v := url.Values{}
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
@@ -537,7 +592,7 @@ func runTwitterWithoutStream() error {
 		return err
 	}
 	tweets := []anaconda.Tweet{}
-	for _, a := range config.Twitter.Timelines {
+	for _, a := range config.GetTwitterTimelines() {
 		v := url.Values{}
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))

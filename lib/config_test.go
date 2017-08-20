@@ -235,14 +235,8 @@ func testConfigTwitterTimelines(t *testing.T, c Config) {
 	timeline.Action = action
 	timeline.ScreenNames = []string{"foo"}
 	timelines := []TimelineConfig{timeline}
-	err := c.SetTwitterTimelines(timelines)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ts, err := c.GetTwitterTimelines()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterTimelines(timelines)
+	ts := c.GetTwitterTimelines()
 	if !reflect.DeepEqual(timelines, ts) {
 		t.Fatalf("%v is not set properly", timelines)
 	}
@@ -263,14 +257,8 @@ func testConfigTwitterFavorites(t *testing.T, c Config) {
 	favorite.Action = action
 	favorite.ScreenNames = []string{"foo"}
 	favorites := []FavoriteConfig{favorite}
-	err := c.SetTwitterFavorites(favorites)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fs, err := c.GetTwitterFavorites()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterFavorites(favorites)
+	fs := c.GetTwitterFavorites()
 	if !reflect.DeepEqual(favorites, fs) {
 		t.Fatalf("%v is not set properly", favorites)
 	}
@@ -291,14 +279,8 @@ func testConfigTwitterSearches(t *testing.T, c Config) {
 	search.Action = action
 	search.Queries = []string{"foo"}
 	searches := []SearchConfig{search}
-	err := c.SetTwitterSearches(searches)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ss, err := c.GetTwitterSearches()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterSearches(searches)
+	ss := c.GetTwitterSearches()
 	if !reflect.DeepEqual(searches, ss) {
 		t.Fatalf("%v is not set properly", searches)
 	}
@@ -318,14 +300,8 @@ func testConfigTwitterNotification(t *testing.T, c Config) {
 			Users: []string{"foo"},
 		},
 	}
-	err := c.SetTwitterNotification(notification)
-	if err != nil {
-		t.Fatal(err)
-	}
-	n, err := c.GetTwitterNotification()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterNotification(notification)
+	n := c.GetTwitterNotification()
 	if !reflect.DeepEqual(notification, n) {
 		t.Fatalf("%v is not set properly", notification)
 	}
@@ -352,14 +328,8 @@ func testConfigSlackMessages(t *testing.T, c Config) {
 	msg.Action = action
 	msgs := []MessageConfig{msg}
 
-	err := c.SetSlackMessages(msgs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ms, err := c.GetSlackMessages()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetSlackMessages(msgs)
+	ms := c.GetSlackMessages()
 	if !reflect.DeepEqual(msgs, ms) {
 		t.Fatalf("%v expected but %v found", msgs, ms)
 	}
@@ -376,14 +346,8 @@ func TestFileConfigInteraction(t *testing.T) {
 func testConfigInteraction(t *testing.T, c Config) {
 	interaction := &InteractionConfig{}
 	interaction.Users = []string{"foo"}
-	err := c.SetTwitterInteraction(interaction)
-	if err != nil {
-		t.Fatal(err)
-	}
-	i, err := c.GetTwitterInteraction()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterInteraction(interaction)
+	i := c.GetTwitterInteraction()
 	if !reflect.DeepEqual(interaction, i) {
 		t.Fatalf("%v is not set properly", interaction)
 	}
@@ -399,14 +363,8 @@ func TestFileConfigTwitterDuration(t *testing.T) {
 
 func testConfigTwitterDuration(t *testing.T, c Config) {
 	duration := "20m"
-	err := c.SetTwitterDuration(duration)
-	if err != nil {
-		t.Fatal(err)
-	}
-	dur, err := c.GetTwitterDuration()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c.SetTwitterDuration(duration)
+	dur := c.GetTwitterDuration()
 	if duration != dur {
 		t.Fatalf("%v is not set properly", duration)
 	}

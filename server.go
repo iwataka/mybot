@@ -142,14 +142,6 @@ func startServer(host, port, cert, key string) error {
 		hooksHandler,
 	)
 
-	if len(host) == 0 {
-		host = "localhost"
-	}
-
-	if len(port) == 0 {
-		port = "8080"
-	}
-
 	var err error
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -188,8 +180,8 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	imageURL := ""
 	imageAnalysisResult := ""
 	imageAnalysisDate := ""
-	images, err := cache.GetLatestImages(1)
-	if err == nil && len(images) != 0 {
+	images := cache.GetLatestImages(1)
+	if len(images) != 0 {
 		imgCache := images[0]
 		imageSource = imgCache.Src
 		imageURL = imgCache.URL
@@ -321,7 +313,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		timeline.Action = actions[i]
 		timelines = append(timelines, timeline)
 	}
-	config.Twitter.Timelines = timelines
+	config.SetTwitterTimelines(timelines)
 
 	prefix = "twitter.favorites"
 	deletedFlags = val[prefix+".deleted"]
@@ -345,7 +337,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		favorite.Action = actions[i]
 		favorites = append(favorites, favorite)
 	}
-	config.Twitter.Favorites = favorites
+	config.SetTwitterFavorites(favorites)
 
 	prefix = "twitter.searches"
 	deletedFlags = val[prefix+".deleted"]
@@ -370,7 +362,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		search.Action = actions[i]
 		searches = append(searches, search)
 	}
-	config.Twitter.Searches = searches
+	config.SetTwitterSearches(searches)
 
 	prefix = "slack.messages"
 	deletedFlags = val[prefix+".deleted"]
@@ -391,7 +383,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		msg.Action = actions[i]
 		msgs = append(msgs, msg)
 	}
-	config.Slack.Messages = msgs
+	config.SetSlackMessages(msgs)
 
 	prefix = "incoming_webhooks"
 	deletedFlags = val[prefix+".deleted"]
@@ -410,17 +402,21 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 		in.Action = actions[i]
 		incomings = append(incomings, in)
 	}
-	config.IncomingWebhooks = incomings
+	config.SetIncomingWebhooks(incomings)
 
 	prefix = "twitter.notification"
-	config.Twitter.Notification.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
-	config.Twitter.Notification.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
+	notif := config.GetTwitterNotification()
+	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
+	notif.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
+	config.SetTwitterNotification(notif)
 
 	prefix = "twitter.interaction"
-	config.Twitter.Interaction.AllowSelf = len(val[prefix+".allow_self"]) > 1
-	config.Twitter.Interaction.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
+	intr := config.GetTwitterInteraction()
+	intr.AllowSelf = len(val[prefix+".allow_self"]) > 1
+	intr.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
+	config.SetTwitterInteraction(intr)
 
-	config.Twitter.Duration = val["twitter.duration"][0]
+	config.SetTwitterDuration(val["twitter.duration"][0])
 
 	err = config.Validate()
 	if err == nil {
@@ -533,11 +529,11 @@ func configPage(msg string) ([]byte, error) {
 	data := &struct {
 		NavbarName string
 		Message    string
-		Config     mybot.FileConfig
+		Config     mybot.ConfigProperties
 	}{
 		"Config",
 		msg,
-		*config,
+		*config.GetProperties(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -561,9 +557,7 @@ func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func addTimelineConfig() {
-	timelines := config.Twitter.Timelines
-	timelines = append(timelines, *mybot.NewTimelineConfig())
-	config.Twitter.Timelines = timelines
+	config.AddTwitterTimeline(mybot.NewTimelineConfig())
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -578,9 +572,7 @@ func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func addFavoriteConfig() {
-	favorites := config.Twitter.Favorites
-	favorites = append(favorites, *mybot.NewFavoriteConfig())
-	config.Twitter.Favorites = favorites
+	config.AddTwitterFavorite(mybot.NewFavoriteConfig())
 }
 
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -596,9 +588,7 @@ func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func addSearchConfig() {
-	searches := config.Twitter.Searches
-	searches = append(searches, *mybot.NewSearchConfig())
-	config.Twitter.Searches = searches
+	config.AddTwitterSearch(mybot.NewSearchConfig())
 }
 
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -614,9 +604,7 @@ func postConfigMessageAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func addMessageConfig() {
-	msgs := config.Slack.Messages
-	msgs = append(msgs, *mybot.NewMessageConfig())
-	config.Slack.Messages = msgs
+	config.AddSlackMessage(mybot.NewMessageConfig())
 }
 
 func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -632,9 +620,9 @@ func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
 }
 
 func addIncomingConfig() {
-	hooks := config.IncomingWebhooks
+	hooks := config.GetIncomingWebhooks()
 	hooks = append(hooks, *mybot.NewIncomingWebhook())
-	config.IncomingWebhooks = hooks
+	config.SetIncomingWebhooks(hooks)
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -694,7 +682,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request) {
 func getConfigFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config.toml"`)
-	bytes, err := ioutil.ReadFile(config.File)
+	bytes, err := config.ToText(strings.Repeat(" ", 4), ".json")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -797,9 +785,8 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	cs := val["twitter_setup.consumer_secret"][0]
 
 	if ck != "" && cs != "" {
-		twitterApp.ConsumerKey = ck
-		twitterApp.ConsumerSecret = cs
-		err = twitterApp.Encode()
+		twitterApp.SetCreds(ck, cs)
+		err = twitterApp.Save()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -816,6 +803,7 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 		msg = msgCookie.Value
 	}
 
+	ck, cs := twitterApp.GetCreds()
 	data := &struct {
 		NavbarName     string
 		Message        string
@@ -824,8 +812,8 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	}{
 		"",
 		msg,
-		twitterApp.ConsumerKey,
-		twitterApp.ConsumerSecret,
+		ck,
+		cs,
 	}
 
 	if msgCookie != nil {
@@ -852,9 +840,8 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	twitterAuth.AccessToken = user.AccessToken
-	twitterAuth.AccessTokenSecret = user.AccessTokenSecret
-	err = twitterAuth.Encode()
+	twitterAuth.SetCreds(user.AccessToken, user.AccessTokenSecret)
+	err = twitterAuth.Save()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -883,9 +870,10 @@ func initProvider(host, name string) {
 	var p goth.Provider
 	switch name {
 	case "twitter":
+		ck, cs := twitterApp.GetCreds()
 		p = twitter.New(
-			twitterApp.ConsumerKey,
-			twitterApp.ConsumerSecret,
+			ck,
+			cs,
 			callback,
 		)
 	}
@@ -902,7 +890,7 @@ func hooksHandler(w http.ResponseWriter, r *http.Request) {
 
 func postHooks(w http.ResponseWriter, r *http.Request) {
 	cs := []mybot.IncomingWebhook{}
-	for _, c := range config.IncomingWebhooks {
+	for _, c := range config.GetIncomingWebhooks() {
 		if r.URL.Path == c.Endpoint {
 			cs = append(cs, c)
 		}

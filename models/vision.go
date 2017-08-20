@@ -7,11 +7,11 @@ import (
 // VisionCondition is a condition to check whether images match or not by using
 // Google Vision API.
 type VisionCondition struct {
-	Label    []string             `json:"label,omitempty" toml:"label,omitempty"`
-	Face     *VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty"`
-	Text     []string             `json:"text,omitempty" toml:"text,omitempty"`
-	Landmark []string             `json:"landmark,omitempty" toml:"landmark,omitempty"`
-	Logo     []string             `json:"logo,omitempty" toml:"logo,omitempty"`
+	Label    []string             `json:"label,omitempty" toml:"label,omitempty" bson:"label,omitempty"`
+	Face     *VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty" bson:"face,omitempty"`
+	Text     []string             `json:"text,omitempty" toml:"text,omitempty" bson:"text,omitempty"`
+	Landmark []string             `json:"landmark,omitempty" toml:"landmark,omitempty" bson:"landmark,omitempty"`
+	Logo     []string             `json:"logo,omitempty" toml:"logo,omitempty" bson:"logo,omitempty"`
 }
 
 func NewVisionCondition() *VisionCondition {
@@ -69,10 +69,10 @@ func (cond *VisionCondition) VisionFeatures() []*vision.Feature {
 }
 
 type VisionFaceCondition struct {
-	AngerLikelihood    string `json:"anger_likelihood,omitempty" toml:"anger_likelihood,omitempty"`
-	BlurredLikelihood  string `json:"blurred_likelihood,omitempty" toml:"blurred_likelihood,omitempty"`
-	HeadwearLikelihood string `json:"headwear_likelihood,omitempty" toml:"headwear_likelihood,omitempty"`
-	JoyLikelihood      string `json:"joy_likelihood,omitempty" toml:"joy_likelihood,omitempty"`
+	AngerLikelihood    string `json:"anger_likelihood,omitempty" toml:"anger_likelihood,omitempty" bson:"anger_likelihood,omitempty"`
+	BlurredLikelihood  string `json:"blurred_likelihood,omitempty" toml:"blurred_likelihood,omitempty" bson:"blurred_likelihood,omitempty"`
+	HeadwearLikelihood string `json:"headwear_likelihood,omitempty" toml:"headwear_likelihood,omitempty" bson:"headwear_likelihood,omitempty"`
+	JoyLikelihood      string `json:"joy_likelihood,omitempty" toml:"joy_likelihood,omitempty" bson:"joy_likelihood,omitempty"`
 }
 
 func (c *VisionFaceCondition) IsEmpty() bool {

@@ -92,7 +92,7 @@ func assetsCssCustomCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/css/custom.css", size: 753, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -112,7 +112,7 @@ func assetsTmplConfigActionTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/action.tmpl", size: 3719, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/action.tmpl", size: 3719, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -132,7 +132,7 @@ func assetsTmplConfigFilterTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5020, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5020, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -152,7 +152,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 20817, mode: os.FileMode(420), modTime: time.Unix(1492009686, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 20817, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -172,7 +172,7 @@ func assetsTmplHeaderTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1188, mode: os.FileMode(420), modTime: time.Unix(1492531695, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1188, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -192,7 +192,7 @@ func assetsTmplIndexTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/index.tmpl", size: 4321, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -212,7 +212,7 @@ func assetsTmplLogTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/log.tmpl", size: 614, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -232,7 +232,7 @@ func assetsTmplNavbarTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 1476, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -252,7 +252,7 @@ func assetsTmplStatusTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 2876, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 2876, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -272,7 +272,7 @@ func assetsTmplTwitter_setupTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/twitter_setup.tmpl", size: 1567, mode: os.FileMode(420), modTime: time.Unix(1489334471, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/twitter_setup.tmpl", size: 1567, mode: os.FileMode(420), modTime: time.Unix(1503208015, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

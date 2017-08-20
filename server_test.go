@@ -51,7 +51,7 @@ func TestGetSetupTwitter(t *testing.T) {
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
-	twitterApp = &mybot.OAuthApp{}
+	twitterApp = &mybot.FileTwitterOAuthApp{}
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	testGet(t, s.URL, "Get /setup/twitter")
@@ -92,7 +92,7 @@ func TestPostConfig(t *testing.T) {
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == methodPost {
-			*config = *mybot.NewTestFileConfig("", t)
+			config = mybot.NewTestFileConfig("", t)
 			postConfig(w, r)
 			wg.Done()
 		} else if r.Method == methodGet {
@@ -139,8 +139,7 @@ func testPostConfig(
 	}
 	wg.Wait()
 
-	c.File = config.File
-	if !reflect.DeepEqual(c, config) {
+	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
 		t.Fatalf("%v expected but %v found", c, config)
 	}
 }
@@ -166,23 +165,23 @@ func testPostConfigDelete(
 	}
 	wg.Wait()
 
-	if len(config.Twitter.Timelines) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Twitter.Timelines))
+	if len(config.GetTwitterTimelines()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterTimelines()))
 	}
-	if len(config.Twitter.Favorites) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Twitter.Favorites))
+	if len(config.GetTwitterFavorites()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterFavorites()))
 	}
-	if len(config.Twitter.Searches) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Twitter.Searches))
+	if len(config.GetTwitterSearches()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterSearches()))
 	}
-	if len(config.Slack.Messages) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.Slack.Messages))
+	if len(config.GetSlackMessages()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.GetSlackMessages()))
 	}
-	if len(config.IncomingWebhooks) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.IncomingWebhooks))
+	if len(config.GetIncomingWebhooks()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(config.GetIncomingWebhooks()))
 	}
 
-	*config = *c
+	config = c
 }
 
 func testPostConfigSingleDelete(
@@ -206,11 +205,11 @@ func testPostConfigSingleDelete(
 	}
 	wg.Wait()
 
-	if len(config.Twitter.Timelines) != len(c.Twitter.Timelines)-1 {
-		t.Fatalf("%s's length is not %d", config.Twitter.Timelines, len(c.Twitter.Timelines)-1)
+	if len(config.GetTwitterTimelines()) != len(c.GetTwitterTimelines())-1 {
+		t.Fatalf("%s's length is not %d", config.GetTwitterTimelines(), len(c.GetTwitterTimelines())-1)
 	}
 
-	*config = *c
+	config = c
 }
 
 func testPostConfigDoubleDelete(
@@ -234,8 +233,7 @@ func testPostConfigDoubleDelete(
 	}
 	wg.Wait()
 
-	c.File = config.File
-	if !reflect.DeepEqual(c, config) {
+	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
 		t.Fatalf("%v expected but %v found", c, config)
 	}
 }
@@ -261,8 +259,7 @@ func testPostConfigError(
 	}
 	wg.Wait()
 
-	c.File = config.File
-	if !reflect.DeepEqual(c, config) {
+	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
 		t.Fatalf("%v expected but %v found", c, config)
 	}
 }
@@ -295,7 +292,7 @@ func TestPostIncoming(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
 	defer s.Close()
 
-	dest := config.IncomingWebhooks[0].Endpoint
+	dest := config.GetIncomingWebhooks()[0].Endpoint
 	buf := new(bytes.Buffer)
 	buf.WriteString(`{"text": "foo"}`)
 	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))
@@ -304,7 +301,7 @@ func TestPostIncoming(t *testing.T) {
 func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.Twitter.Timelines) },
+		func() int { return len(config.GetTwitterTimelines()) },
 		addTimelineConfig,
 		"message",
 	)
@@ -313,7 +310,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.Twitter.Favorites) },
+		func() int { return len(config.GetTwitterFavorites()) },
 		addFavoriteConfig,
 		"message",
 	)
@@ -322,7 +319,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.Twitter.Searches) },
+		func() int { return len(config.GetTwitterSearches()) },
 		addSearchConfig,
 		"message",
 	)
@@ -331,7 +328,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.Slack.Messages) },
+		func() int { return len(config.GetSlackMessages()) },
 		addMessageConfig,
 		"message",
 	)
@@ -340,7 +337,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 func TestPostConfigIncomingAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.IncomingWebhooks) },
+		func() int { return len(config.GetIncomingWebhooks()) },
 		addIncomingConfig,
 		"incoming",
 	)
@@ -383,10 +380,7 @@ func TestGetIndex(t *testing.T) {
 	defer func() { cache = tmpCache }()
 	cache = mybot.NewTestFileCache("", t)
 	img := mybot.ImageCacheData{}
-	err := cache.SetImage(img)
-	if err != nil {
-		t.Fatal(err)
-	}
+	cache.SetImage(img)
 
 	s := httptest.NewServer(http.HandlerFunc(getIndex))
 	defer s.Close()
