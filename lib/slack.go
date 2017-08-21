@@ -4,10 +4,10 @@ import (
 	"container/list"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
+	"log"
 )
 
 type SlackAction struct {
@@ -200,32 +200,27 @@ func (a *SlackAPI) processMsgEventWithAction(
 	action *Action,
 	twitterAPI *TwitterAPI,
 ) error {
-	logFields := log.Fields{
-		"type":   "slack",
-		"action": "process",
-	}
-
 	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
 	if action.Slack.Pin {
 		err := a.api.AddPin(ev.Channel, item)
 		if CheckSlackError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Pin the message")
+		log.Println("Pin the message")
 	}
 	if action.Slack.Star {
 		err := a.api.AddStar(ev.Channel, item)
 		if CheckSlackError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Star the message")
+		log.Println("Star the message")
 	}
 	for _, r := range action.Slack.Reactions {
 		err := a.api.AddReaction(r, item)
 		if CheckSlackError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infoln("React to the message")
+		log.Println("React to the message")
 	}
 	for _, c := range action.Slack.Channels {
 		if ch == c {
@@ -238,7 +233,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infof("Send the message to %s", c)
+		log.Printf("Send the message to %s", c)
 	}
 
 	if action.Twitter.Tweet {
@@ -246,7 +241,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckTwitterError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Tweet the message")
+		log.Println("Tweet the message")
 	}
 	return nil
 }
@@ -268,27 +263,18 @@ func (l *SlackListener) Start(
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
 
-	logFields := log.Fields{
-		"type":   "slack",
-		"action": "fetch",
-	}
-
 	for l.enabled {
 		select {
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.ChannelJoinedEvent:
-				log.WithFields(
-					logFields,
-				).Infof("Joined to %s", ev.Channel.Name)
+				log.Printf("Joined to %s", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
 				}
 			case *slack.GroupJoinedEvent:
-				log.WithFields(
-					logFields,
-				).Infof("Joined to %s", ev.Channel.Name)
+				log.Printf("Joined to %s", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
@@ -302,9 +288,7 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
-				log.WithFields(
-					logFields,
-				).Infof("Message to %s by %s", ch, ev.User)
+				log.Printf("Message to %s by %s", ch, ev.User)
 				if ch != "" {
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
@@ -312,10 +296,10 @@ func (l *SlackListener) Start(
 					}
 				}
 			case *slack.RTMError:
-				log.WithFields(logFields).Infof("%T", ev)
+				log.Printf("%T", ev)
 				return ev
 			case *slack.InvalidAuthEvent:
-				log.WithFields(logFields).Infof("%T", ev)
+				log.Printf("%T", ev)
 				return fmt.Errorf("Invalid authentication")
 			}
 		}
@@ -332,15 +316,12 @@ func CheckSlackError(err error) bool {
 		return false
 	}
 
-	logFields := log.Fields{
-		"type": "slack",
-	}
 	if err.Error() == "invalid_name" {
-		log.WithFields(logFields).Warn(err)
+		log.Print(err)
 		return false
 	}
 	if err.Error() == "already_reacted" {
-		log.WithFields(logFields).Warn(err)
+		log.Print(err)
 		return false
 	}
 	return true

@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 	"gopkg.in/mgo.v2"
+	"log"
 )
 
 //go:generate go-bindata assets/...
@@ -38,7 +38,7 @@ var (
 
 func main() {
 	home, err := homedir.Dir()
-	fatalIfError(err)
+	exitIfError(err)
 
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
@@ -244,21 +244,21 @@ func main() {
 
 	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd}
 	err = app.Run(os.Args)
-	fatalIfError(err)
+	exitIfError(err)
 }
 
 func beforeRunning(c *cli.Context) error {
 	err := beforeValidate(c)
-	fatalIfError(err)
+	exitIfError(err)
 
 	slackToken := c.String("slack-token")
 	slackAPI = mybot.NewSlackAPI(slackToken, config, cache)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
 		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
-		fatalIfError(err)
+		exitIfError(err)
 		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
-		fatalIfError(err)
+		exitIfError(err)
 	} else {
 		visionAPI = &mybot.VisionAPI{}
 		languageAPI = &mybot.LanguageAPI{}
@@ -272,14 +272,6 @@ func beforeRunning(c *cli.Context) error {
 
 func beforeValidate(c *cli.Context) error {
 	var err error
-	log.SetFormatter(&log.TextFormatter{})
-	log.SetOutput(os.Stdout)
-	if c.String("env") == "production" {
-		log.SetLevel(log.WarnLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
 	dbAddress := c.String("db-addr")
 	dbUser := c.String("db-user")
 	dbPasswd := c.String("db-passwd")
@@ -293,7 +285,7 @@ func beforeValidate(c *cli.Context) error {
 		info.Password = dbPasswd
 		info.Database = dbName
 		session, err = mgo.DialWithInfo(info)
-		fatalIfError(err)
+		exitIfError(err)
 	}
 
 	if session == nil {
@@ -302,7 +294,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("cache")
 		cache, err = mybot.NewDBCache(col)
 	}
-	fatalIfError(err)
+	exitIfError(err)
 
 	if session == nil {
 		config, err = mybot.NewFileConfig(c.String("config"))
@@ -310,7 +302,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("config")
 		config, err = mybot.NewDBConfig(col)
 	}
-	fatalIfError(err)
+	exitIfError(err)
 
 	ck := c.String("twitter-consumer-key")
 	cs := c.String("twitter-consumer-secret")
@@ -321,11 +313,11 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
-	fatalIfError(err)
+	exitIfError(err)
 	if ck != "" && cs != "" {
 		twitterApp.SetCreds(ck, cs)
 		err := twitterApp.Save()
-		fatalIfError(err)
+		exitIfError(err)
 	}
 
 	if session == nil {
@@ -334,7 +326,7 @@ func beforeValidate(c *cli.Context) error {
 		col := session.DB(dbName).C("twitter-user-auth")
 		twitterAuth, err = mybot.NewDBOAuthCreds(col)
 	}
-	fatalIfError(err)
+	exitIfError(err)
 
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
@@ -342,16 +334,12 @@ func beforeValidate(c *cli.Context) error {
 }
 
 func run(c *cli.Context) {
-	logFields := log.Fields{
-		"type": "twitter",
-	}
-
 	if err := runTwitterWithoutStream(); err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
 	if err := cache.Save(); err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
 }
@@ -364,22 +352,18 @@ func twitterListenDM() {
 	status.LockListenDMRoutine()
 	defer status.UnlockListenDMRoutine()
 
-	logFields := log.Fields{
-		"type": "twitter",
-	}
-
 	r := twitterAPI.DefaultDirectMessageReceiver
 	listener, err := twitterAPI.ListenMyself(nil, r)
 	if err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
 	dmListenerStream = listener.Stream
 	if err := listener.Listen(); err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
-	log.WithFields(logFields).Error("Failed to keep connection")
+	log.Print("Failed to keep connection")
 }
 
 func twitterListenUsers() {
@@ -390,21 +374,17 @@ func twitterListenUsers() {
 	status.LockListenUsersRoutine()
 	defer status.UnlockListenUsersRoutine()
 
-	logFields := log.Fields{
-		"type": "twitter",
-	}
-
 	listener, err := twitterAPI.ListenUsers(nil)
 	if err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
 	userListenerStream = listener.Stream
 	if err := listener.Listen(visionAPI, languageAPI, slackAPI, cache); err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
-	log.WithFields(logFields).Error("Failed to keep connection")
+	log.Print("Failed to keep connection")
 }
 
 func twitterPeriodically() {
@@ -418,22 +398,18 @@ func twitterPeriodically() {
 	status.TwitterStatus = true
 	defer func() { status.TwitterStatus = false }()
 
-	logFields := log.Fields{
-		"type": "twitter",
-	}
-
 	for {
 		if err := runTwitterWithStream(); err != nil {
-			log.WithFields(logFields).Error(err)
+			log.Print(err)
 			return
 		}
 		if err := cache.Save(); err != nil {
-			log.WithFields(logFields).Error(err)
+			log.Print(err)
 			return
 		}
 		d, err := time.ParseDuration(config.GetTwitterDuration())
 		if err != nil {
-			log.WithFields(logFields).Error(err)
+			log.Print(err)
 			return
 		}
 		time.Sleep(d)
@@ -448,16 +424,12 @@ func slackListens() {
 	status.LockSlackListenRoutine()
 	defer status.UnlockSlackListenRoutine()
 
-	logFields := log.Fields{
-		"type": "slack",
-	}
-
 	slackListener = slackAPI.Listen()
 	if err := slackListener.Start(visionAPI, languageAPI, twitterAPI); err != nil {
-		log.WithFields(logFields).Error(err)
+		log.Print(err)
 		return
 	}
-	log.WithFields(logFields).Error("Failed to keep connection")
+	log.Print("Failed to keep connection")
 }
 
 func reloadListeners() {
@@ -490,7 +462,7 @@ func httpServer(c *cli.Context) {
 	cert := c.String("cert")
 	key := c.String("key")
 	err := startServer(host, port, cert, key)
-	fatalIfError(err)
+	exitIfError(err)
 }
 
 func serve(c *cli.Context) error {
@@ -606,15 +578,16 @@ func runTwitterWithoutStream() error {
 
 func validate(c *cli.Context) {
 	err := config.Validate()
-	fatalIfError(err)
+	exitIfError(err)
 	if c.Bool("api") {
 		err := config.ValidateWithAPI(twitterAPI)
-		fatalIfError(err)
+		exitIfError(err)
 	}
 }
 
-func fatalIfError(err error) {
+func exitIfError(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		os.Exit(1)
 	}
 }

@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
+	"log"
 )
 
 // Filter is a configuration to filter out tweets
@@ -44,12 +44,6 @@ func (c *Filter) CheckTweet(
 	l LanguageMatcher,
 	cache Cache,
 ) (bool, error) {
-	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "filter",
-	}
-	log.WithFields(logFields).Infof("Tweet created by %s at %s", t.User.ScreenName, t.CreatedAt)
-
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -126,11 +120,7 @@ func (c *Filter) CheckSlackMsg(
 	l LanguageMatcher,
 	cache Cache,
 ) (bool, error) {
-	logFields := log.Fields{
-		"type":   "slack",
-		"action": "filter",
-	}
-	log.WithFields(logFields).Infof("Slack Message created by %s at %s", ev.Username, ev.Timestamp)
+	log.Printf("Slack Message created by %s at %s", ev.Username, ev.Timestamp)
 
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, ev.Text)

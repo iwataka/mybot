@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
+	"log"
 )
 
 // NOTE: This must be fixed because multiple applications having different
@@ -312,11 +312,6 @@ func (a *TwitterAPI) processTweet(
 	action *Action,
 	slack *SlackAPI,
 ) error {
-	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "process",
-	}
-
 	if action.Twitter.Retweet && !t.Retweeted {
 		var id int64
 		if t.RetweetedStatus == nil {
@@ -328,21 +323,21 @@ func (a *TwitterAPI) processTweet(
 		if CheckTwitterError(err) {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Retweet the tweet")
+		log.Println("Retweet the tweet")
 	}
 	if action.Twitter.Favorite && !t.Favorited {
 		_, err := a.API.Favorite(t.Id)
 		if err != nil {
 			return err
 		}
-		log.WithFields(logFields).Infoln("Favorite the tweet")
+		log.Println("Favorite the tweet")
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
 		if err != nil {
 			return err
 		}
-		log.WithFields(logFields).Infof("Collect the tweet to %s", col)
+		log.Printf("Collect the tweet to %s", col)
 	}
 
 	if slack.Enabled() && action.Slack != nil {
@@ -351,7 +346,7 @@ func (a *TwitterAPI) processTweet(
 			if err != nil {
 				return err
 			}
-			log.WithFields(logFields).Infof("Send the tweet to #%s", ch)
+			log.Printf("Send the tweet to #%s", ch)
 		}
 	}
 
@@ -433,17 +428,10 @@ func (l *TwitterUserListener) Listen(
 	slack *SlackAPI,
 	cache Cache,
 ) error {
-	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "fetch",
-	}
-
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.Tweet:
-			log.WithFields(
-				logFields,
-			).Infof("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
+			log.Printf("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
 
 			name := c.User.ScreenName
 			timelines := []TimelineConfig{}
@@ -515,17 +503,10 @@ type TwitterDMListener struct {
 }
 
 func (l *TwitterDMListener) Listen() error {
-	logFields := log.Fields{
-		"type":   "twitter",
-		"action": "fetch",
-	}
-
 	for {
 		switch c := (<-l.Stream.C).(type) {
 		case anaconda.DirectMessage:
-			log.WithFields(
-				logFields,
-			).Infof("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
+			log.Printf("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
 
 			conf := l.api.Config.GetTwitterInteraction()
 			if conf != nil {
