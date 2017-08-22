@@ -278,7 +278,7 @@ func beforeValidate(c *cli.Context) error {
 	dbName := c.String("db-name")
 
 	var session *mgo.Session
-	if dbAddress != "" && dbUser != "" && dbPasswd != "" && dbName != "" {
+	if dbAddress != "" && dbName != "" {
 		info := &mgo.DialInfo{}
 		info.Addrs = []string{dbAddress}
 		info.Username = dbUser
