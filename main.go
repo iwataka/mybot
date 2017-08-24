@@ -265,7 +265,6 @@ func beforeRunning(c *cli.Context) error {
 	}
 
 	status = mybot.NewStatus()
-	status.UpdateTwitterAuth(twitterAPI)
 
 	return nil
 }
@@ -345,7 +344,7 @@ func run(c *cli.Context) {
 }
 
 func twitterListenDM() {
-	if !status.PassTwitterAuth {
+	if !twitterAPIIsAvailable() {
 		return
 	}
 
@@ -367,7 +366,7 @@ func twitterListenDM() {
 }
 
 func twitterListenUsers() {
-	if !status.PassTwitterAuth {
+	if !twitterAPIIsAvailable() {
 		return
 	}
 
@@ -388,7 +387,7 @@ func twitterListenUsers() {
 }
 
 func twitterPeriodically() {
-	if !status.PassTwitterAuth {
+	if !twitterAPIIsAvailable() {
 		return
 	}
 
@@ -414,6 +413,15 @@ func twitterPeriodically() {
 		}
 		time.Sleep(d)
 	}
+}
+
+func twitterAPIIsAvailable() bool {
+	if twitterAPI == nil {
+		return false
+	} else if success, err := twitterAPI.VerifyCredentials(); !success || err != nil {
+		return false
+	}
+	return true
 }
 
 func slackListens() {

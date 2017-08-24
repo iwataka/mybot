@@ -12,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/contrib/sessions"
+	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/models"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/twitter"
@@ -28,7 +30,43 @@ const (
 
 var (
 	htmlTemplate *template.Template
+	auth         models.Authenticator = &Authenticator{}
 )
+
+type Authenticator struct{}
+
+func (a *Authenticator) SetProvider(req *http.Request, name string) {
+	q := req.URL.Query()
+	q.Add("provider", name)
+	req.URL.RawQuery = q.Encode()
+}
+
+func (a *Authenticator) InitProvider(host, name string) {
+	callback := fmt.Sprintf("http://%s/auth/%s/callback", host, name)
+	var p goth.Provider
+	switch name {
+	case "twitter":
+		ck, cs := twitterApp.GetCreds()
+		p = twitter.New(
+			ck,
+			cs,
+			callback,
+		)
+	}
+	if p != nil {
+		goth.UseProviders(p)
+	}
+}
+
+func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
+	a.SetProvider(r, provider)
+	return gothic.CompleteUserAuth(w, r)
+}
+
+func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
+	a.SetProvider(r, provider)
+	return gothic.Logout(w, r)
+}
 
 func init() {
 	gothic.Store = sessions.NewCookieStore([]byte("mybot_session_key"))
@@ -62,21 +100,13 @@ func init() {
 
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		status.UpdateTwitterAuth(twitterAPI)
-
-		if !status.PassTwitterApp {
-			w.Header().Add("Location", "/setup/twitter/")
-			w.WriteHeader(http.StatusSeeOther)
-			return
+		if anaconda.GetConsumerKey() == "" || anaconda.GetConsumerSecret() == "" {
+			redirect(w, "/setup/twitter/")
+		} else if _, err := auth.CompleteUserAuth("twitter", w, r); err != nil {
+			redirect(w, "/auth/twitter/")
+		} else {
+			f(w, r)
 		}
-
-		if !status.PassTwitterAuth {
-			w.Header().Add("Location", "/auth/twitter/")
-			w.WriteHeader(http.StatusSeeOther)
-			return
-		}
-
-		f(w, r)
 	}
 }
 
@@ -141,6 +171,10 @@ func startServer(host, port, cert, key string) error {
 		"/hooks/",
 		hooksHandler,
 	)
+	http.HandleFunc(
+		"/logout/twitter/",
+		twitterLogoutHandler,
+	)
 
 	var err error
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -168,12 +202,10 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getIndex(w http.ResponseWriter, r *http.Request) {
-	var botName string
-	self, err := twitterAPI.GetSelf()
-	if err == nil {
-		botName = self.ScreenName
-	} else {
-		botName = ""
+	twitterUser, err := auth.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		redirect(w, "/setup/twitter")
+		return
 	}
 
 	imageSource := ""
@@ -199,7 +231,12 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	colMap := make(map[string]string)
-	colList, err := twitterAPI.GetCollectionListByUserId(self.Id, nil)
+	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	colList, err := twitterAPI.GetCollectionListByUserId(id, nil)
 	if err == nil {
 		for _, c := range colList.Objects.Timelines {
 			name := strings.Replace(c.Name, " ", "-", -1)
@@ -219,7 +256,7 @@ func getIndex(w http.ResponseWriter, r *http.Request) {
 	}{
 		"",
 		"Currently you cannot see the log here",
-		botName,
+		twitterUser.NickName,
 		imageURL,
 		imageSource,
 		imageAnalysisResult,
@@ -279,8 +316,7 @@ func postConfig(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		w.Header().Add("Location", "/config/")
-		w.WriteHeader(http.StatusSeeOther)
+		redirect(w, "/config/")
 	}()
 
 	err = r.ParseMultipartForm(32 << 20)
@@ -505,6 +541,12 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.
 }
 
 func getConfig(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := auth.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		redirect(w, "/setup/twitter")
+		return
+	}
+
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -517,7 +559,7 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	bs, err := configPage(msg)
+	bs, err := configPage(twitterUser.Name, msg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -525,13 +567,15 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 	w.Write(bs)
 }
 
-func configPage(msg string) ([]byte, error) {
+func configPage(botName, msg string) ([]byte, error) {
 	data := &struct {
 		NavbarName string
+		BotName    string
 		Message    string
 		Config     mybot.ConfigProperties
 	}{
 		"Config",
+		botName,
 		msg,
 		*config.GetProperties(),
 	}
@@ -552,8 +596,7 @@ func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request) {
 	addTimelineConfig()
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/config/")
 }
 
 func addTimelineConfig() {
@@ -567,8 +610,7 @@ func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request) {
 	addFavoriteConfig()
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/config/")
 }
 
 func addFavoriteConfig() {
@@ -583,8 +625,7 @@ func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigSearchAdd(w http.ResponseWriter, r *http.Request) {
 	addSearchConfig()
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/config/")
 }
 
 func addSearchConfig() {
@@ -599,8 +640,7 @@ func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigMessageAdd(w http.ResponseWriter, r *http.Request) {
 	addMessageConfig()
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/config/")
 }
 
 func addMessageConfig() {
@@ -615,8 +655,7 @@ func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request) {
 	addIncomingConfig()
-	w.Header().Add("Location", "/config/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/config/")
 }
 
 func addIncomingConfig() {
@@ -644,8 +683,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		w.Header().Add("Location", "/config/")
-		w.WriteHeader(http.StatusSeeOther)
+		redirect(w, "/config/")
 	}()
 
 	file, _, err := r.FormFile("mybot.config")
@@ -711,11 +749,19 @@ func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
 }
 
 func getLog(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := auth.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		redirect(w, "/setup/twitter")
+		return
+	}
+
 	data := &struct {
 		NavbarName string
+		BotName    string
 		Log        string
 	}{
 		"Log",
+		twitterUser.Name,
 		"Currently you cannot see the log here",
 	}
 
@@ -728,14 +774,22 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func getStatus(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := auth.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		redirect(w, "/setup/twitter")
+		return
+	}
+
 	data := &struct {
 		NavbarName               string
+		BotName                  string
 		Status                   mybot.Status
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
 		SlackListenerStatus      bool
 	}{
 		"Status",
+		twitterUser.Name,
 		*status,
 		status.CheckTwitterListenDMStatus(),
 		status.CheckTwitterListenUsersStatus(),
@@ -743,7 +797,7 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buf := new(bytes.Buffer)
-	err := htmlTemplate.ExecuteTemplate(buf, "status", data)
+	err = htmlTemplate.ExecuteTemplate(buf, "status", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -770,8 +824,7 @@ func postSetupTwitter(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		w.Header().Add("Location", "/")
-		w.WriteHeader(http.StatusSeeOther)
+		redirect(w, "/")
 	}()
 
 	err := r.ParseMultipartForm(32 << 20)
@@ -806,10 +859,12 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 	ck, cs := twitterApp.GetCreds()
 	data := &struct {
 		NavbarName     string
+		BotName        string
 		Message        string
 		ConsumerKey    string
 		ConsumerSecret string
 	}{
+		"",
 		"",
 		msg,
 		ck,
@@ -832,9 +887,7 @@ func getSetupTwitter(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
-	setProvider(r, "twitter")
-
-	user, err := gothic.CompleteUserAuth(w, r)
+	user, err := auth.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -848,38 +901,27 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	*twitterAPI = *mybot.NewTwitterAPI(twitterAuth, cache, config)
 
-	w.Header().Add("Location", "/")
-	w.WriteHeader(http.StatusSeeOther)
+	redirect(w, "/")
 }
 
 func getAuthTwitter(w http.ResponseWriter, r *http.Request) {
-	setProvider(r, "twitter")
-	initProvider(r.Host, "twitter")
+	auth.SetProvider(r, "twitter")
+	auth.InitProvider(r.Host, "twitter")
 
 	gothic.BeginAuthHandler(w, r)
 }
 
-func setProvider(req *http.Request, name string) {
-	q := req.URL.Query()
-	q.Add("provider", name)
-	req.URL.RawQuery = q.Encode()
+func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == methodGet {
+		getTwitterLogout(w, r)
+	} else {
+		redirect(w, "/")
+	}
 }
 
-func initProvider(host, name string) {
-	callback := fmt.Sprintf("http://%s/auth/%s/callback", host, name)
-	var p goth.Provider
-	switch name {
-	case "twitter":
-		ck, cs := twitterApp.GetCreds()
-		p = twitter.New(
-			ck,
-			cs,
-			callback,
-		)
-	}
-	if p != nil {
-		goth.UseProviders(p)
-	}
+func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
+	auth.Logout("twitter", w, r)
+	redirect(w, "/")
 }
 
 func hooksHandler(w http.ResponseWriter, r *http.Request) {
@@ -958,4 +1000,9 @@ func readFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+func redirect(w http.ResponseWriter, path string) {
+	w.Header().Add("Location", path)
+	w.WriteHeader(http.StatusSeeOther)
 }

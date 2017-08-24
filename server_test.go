@@ -14,10 +14,31 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
 )
 
+type TestAuthenticator struct{}
+
+func (a *TestAuthenticator) SetProvider(req *http.Request, name string) {
+}
+
+func (a *TestAuthenticator) InitProvider(host, name string) {
+}
+
+func (a *TestAuthenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
+	return goth.User{Name: "foo", NickName: "bar", UserID: "1234"}, nil
+}
+
+func (a *TestAuthenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
 func TestGetConfig(t *testing.T) {
+	tmpAuth := auth
+	defer func() { auth = tmpAuth }()
+	auth = &TestAuthenticator{}
+
 	s := httptest.NewServer(http.HandlerFunc(getConfig))
 	defer s.Close()
 
@@ -29,6 +50,10 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestGetLog(t *testing.T) {
+	tmpAuth := auth
+	defer func() { auth = tmpAuth }()
+	auth = &TestAuthenticator{}
+
 	s := httptest.NewServer(http.HandlerFunc(getLog))
 	defer s.Close()
 
@@ -36,6 +61,10 @@ func TestGetLog(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
+	tmpAuth := auth
+	defer func() { auth = tmpAuth }()
+	auth = &TestAuthenticator{}
+
 	s := httptest.NewServer(http.HandlerFunc(getStatus))
 	defer s.Close()
 
@@ -80,6 +109,10 @@ func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 }
 
 func TestPostConfig(t *testing.T) {
+	tmpAuth := auth
+	defer func() { auth = tmpAuth }()
+	auth = &TestAuthenticator{}
+
 	tmpCfg := config
 	c := mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
@@ -360,13 +393,17 @@ func testPostConfigAdd(
 		t.Fatalf("Failed to add %s", name)
 	}
 
-	_, err := configPage("")
+	_, err := configPage("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGetIndex(t *testing.T) {
+	tmpAuth := auth
+	defer func() { auth = tmpAuth }()
+	auth = &TestAuthenticator{}
+
 	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	user := anaconda.User{}
@@ -390,6 +427,6 @@ func TestGetIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("Status code: %d", res.StatusCode)
+		t.Fatalf("Status code: %s (%d)", res.Status, res.StatusCode)
 	}
 }

@@ -1,6 +1,6 @@
 {{define "navbar"}}
 <nav class="navbar navbar-default navbar-inverse navbar-fixed-top">
-    <div class="container-fluid">
+    <div class="container">
         <div class="navbar-header">
             <button class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbarMenus" aria-expanded="false">
                 <span class="icon-bar"></span>
@@ -35,6 +35,38 @@
                     <a class="nav-link" href="/status/">Status</a>
                 </li>
             </ul>
+
+            <ul class="nav navbar-nav navbar-right">
+                {{if .BotName}}
+                <li class="nav-item">
+                    <a href="https://twitter.com/{{.BotName}}" class="btn btn-lg btn-social-icon btn-twitter">
+                        <span class="fa fa-lg fa-twitter fa-active"></span>
+                    </a>
+                </li>
+                {{else}}
+                <li class="nav-item">
+                    <a href="https://apps.twitter.com" class="btn btn-lg btn-social-icon btn-twitter">
+                        <span class="fa fa-lg fa-twitter fa-passive"></span>
+                    </a>
+                </li>
+                {{end}}
+                <li class="nav-item">
+                    <a href="https://console.developers.google.com/apis/api/vision.googleapis.com/quotas" class="btn btn-lg btn-social-icon btn-google">
+                        <span class="fa fa-lg fa-google fa-active"></span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="https://github.com/iwataka/mybot" class="btn btn-lg btn-social-icon btn-github">
+                        <span class="fa fa-lg fa-github fa-active"></span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/logout/twitter" class="nav-link">
+                        <span class="fa fa-lg fa-sign-out"></span> Logout
+                    </a>
+                </li>
+            </ul>
+
         </div>
     </div>
 </nav>

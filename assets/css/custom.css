@@ -20,25 +20,12 @@ pre {
         background-color: transparent;
 }
 
-.fa {
-        background-color: whitesmoke;
-}
-
-.fa-twitter.fa-active {
-        color: #3333ff;
-}
-
-.fa-google.fa-active {
-        color: #ff3333;
+.fa-active {
+        color: dodgerblue;
 }
 
 .fa-passive {
         color: grey;
-}
-
-.fa-tweetdeck {
-        color: black;
-        background-color: dodgerblue;
 }
 
 table > thead {

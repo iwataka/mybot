@@ -1,7 +1,6 @@
 package mybot
 
 import (
-	"github.com/iwataka/anaconda"
 	"sync"
 )
 
@@ -15,8 +14,6 @@ type Status struct {
 	slackListenMutex              *sync.Mutex
 	TwitterStatus                 bool
 	ServerStatus                  bool
-	PassTwitterApp                bool
-	PassTwitterAuth               bool
 }
 
 func NewStatus() *Status {
@@ -27,8 +24,6 @@ func NewStatus() *Status {
 		new(sync.Mutex),
 		false,
 		new(sync.Mutex),
-		false,
-		false,
 		false,
 		false,
 	}
@@ -74,15 +69,4 @@ func (s *Status) UnlockSlackListenRoutine() {
 
 func (s *Status) CheckTwitterListenUsersStatus() bool {
 	return s.twitterListenUsersStatus
-}
-
-func (s *Status) UpdateTwitterAuth(api *TwitterAPI) {
-	s.PassTwitterApp = anaconda.GetConsumerKey() != "" &&
-		anaconda.GetConsumerSecret() != ""
-	if s.PassTwitterApp {
-		ok, err := api.VerifyCredentials()
-		s.PassTwitterAuth = ok && err == nil
-	} else {
-		s.PassTwitterAuth = false
-	}
 }
