@@ -41,7 +41,7 @@
                     <tr>
                         <td>Twitter Periodic Job</td>
                         <td>
-                            {{if .Status.TwitterStatus}}
+                            {{if .TwitterPeriodicStatus}}
                             <span style="color:blue">Active</span>
                             {{else}}
                             <span style="color:red">Stop</span>
@@ -61,7 +61,7 @@
                     <tr>
                         <td>HTTP Listener</td>
                         <td>
-                            {{if .Status.ServerStatus}}
+                            {{if .HttpStatus}}
                             <span style="color:blue">Active</span>
                             {{else}}
                             <span style="color:red">Stop</span>

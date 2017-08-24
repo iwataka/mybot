@@ -68,10 +68,6 @@ func TestGetStatus(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getStatus))
 	defer s.Close()
 
-	tmpStatus := status
-	status = mybot.NewStatus()
-	defer func() { status = tmpStatus }()
-
 	testGet(t, s.URL, "Get /status")
 }
 
@@ -117,10 +113,6 @@ func TestPostConfig(t *testing.T) {
 	c := mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
 	defer func() { config = tmpCfg }()
-
-	tmpStatus := status
-	status = mybot.NewStatus()
-	defer func() { status = tmpStatus }()
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {

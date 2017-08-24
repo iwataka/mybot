@@ -559,7 +559,7 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, msgCookie)
 	}
 
-	bs, err := configPage(twitterUser.Name, msg)
+	bs, err := configPage(twitterUser.NickName, msg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -761,7 +761,7 @@ func getLog(w http.ResponseWriter, r *http.Request) {
 		Log        string
 	}{
 		"Log",
-		twitterUser.Name,
+		twitterUser.NickName,
 		"Currently you cannot see the log here",
 	}
 
@@ -783,17 +783,19 @@ func getStatus(w http.ResponseWriter, r *http.Request) {
 	data := &struct {
 		NavbarName               string
 		BotName                  string
-		Status                   mybot.Status
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
+		TwitterPeriodicStatus    bool
 		SlackListenerStatus      bool
+		HttpStatus               bool
 	}{
 		"Status",
-		twitterUser.Name,
-		*status,
-		status.CheckTwitterListenDMStatus(),
-		status.CheckTwitterListenUsersStatus(),
-		status.CheckSlackListen(),
+		twitterUser.NickName,
+		statuses[twitterDMRoutineKey],
+		statuses[twitterUserRoutineKey],
+		statuses[twitterPeriodicRoutineKey],
+		statuses[slackRoutineKey],
+		statuses[httpRoutineKey],
 	}
 
 	buf := new(bytes.Buffer)
