@@ -76,7 +76,11 @@ func TestGetSetupTwitter(t *testing.T) {
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
-	twitterApp = &mybot.FileTwitterOAuthApp{}
+	var err error
+	twitterApp, err = mybot.NewFileTwitterOAuthApp("")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	testGet(t, s.URL, "Get /setup/twitter")

@@ -93,13 +93,27 @@ func newTwitterOAuthAppProps() *TwitterOAuthAppProps {
 	return &TwitterOAuthAppProps{}
 }
 
-type OAuthAppProps struct {
+type OAuthAppProps interface {
+	SetCreds(ck, cs string)
+	GetCreds() (string, string)
+}
+
+type DefaultOAuthAppProps struct {
 	ConsumerKey    string `json:"consumer_key" toml:"consumer_key" bson:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret" toml:"consumer_secret" bson:"consumer_secret"`
 }
 
-func newOAuthAppProps() *OAuthAppProps {
-	return &OAuthAppProps{"", ""}
+func (a *DefaultOAuthAppProps) SetCreds(ck, cs string) {
+	a.ConsumerKey = ck
+	a.ConsumerSecret = cs
+}
+
+func (a *DefaultOAuthAppProps) GetCreds() (string, string) {
+	return a.ConsumerKey, a.ConsumerSecret
+}
+
+func newOAuthAppProps() *DefaultOAuthAppProps {
+	return &DefaultOAuthAppProps{"", ""}
 }
 
 func (a *TwitterOAuthAppProps) SetCreds(ck, cs string) {
@@ -111,44 +125,56 @@ func (a *TwitterOAuthAppProps) GetCreds() (string, string) {
 	return anaconda.GetConsumerKey(), anaconda.GetConsumerSecret()
 }
 
-type FileTwitterOAuthApp struct {
-	*TwitterOAuthAppProps
+type FileOAuthApp struct {
+	OAuthAppProps
 	File string `json:"-" toml:"-" bson:"-"`
 }
 
-func NewFileTwitterOAuthApp(file string) (*FileTwitterOAuthApp, error) {
-	a := &FileTwitterOAuthApp{newTwitterOAuthAppProps(), file}
+func NewFileOAuthApp(file string) (*FileOAuthApp, error) {
+	a := &FileOAuthApp{&DefaultOAuthAppProps{}, file}
+	err := a.Load()
+	return a, err
+}
+
+func NewFileTwitterOAuthApp(file string) (*FileOAuthApp, error) {
+	a := &FileOAuthApp{newTwitterOAuthAppProps(), file}
 	err := a.Load()
 	return a, err
 }
 
 // Decode does nothing and returns nil if the specified file doesn't exist.
-func (a *FileTwitterOAuthApp) Load() error {
-	tmp := &OAuthAppProps{}
+func (a *FileOAuthApp) Load() error {
+	tmp := &DefaultOAuthAppProps{}
 	err := DecodeFile(a.File, tmp)
 	a.SetCreds(tmp.ConsumerKey, tmp.ConsumerSecret)
 	return err
 }
 
-func (a *FileTwitterOAuthApp) Save() error {
+func (a *FileOAuthApp) Save() error {
 	ck, cs := a.GetCreds()
-	tmp := &OAuthAppProps{ck, cs}
+	tmp := &DefaultOAuthAppProps{ck, cs}
 	return EncodeFile(a.File, tmp)
 }
 
-type DBTwitterOAuthApp struct {
-	*TwitterOAuthAppProps
+type DBOAuthApp struct {
+	OAuthAppProps
 	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
 }
 
-func NewDBTwitterOAuthApp(col *mgo.Collection) (*DBTwitterOAuthApp, error) {
-	a := &DBTwitterOAuthApp{newTwitterOAuthAppProps(), col}
+func NewDBOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
+	a := &DBOAuthApp{&DefaultOAuthAppProps{}, col}
 	err := a.Load()
 	return a, err
 }
 
-func (a *DBTwitterOAuthApp) Load() error {
-	tmp := &OAuthAppProps{}
+func NewDBTwitterOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
+	a := &DBOAuthApp{newTwitterOAuthAppProps(), col}
+	err := a.Load()
+	return a, err
+}
+
+func (a *DBOAuthApp) Load() error {
+	tmp := &DefaultOAuthAppProps{}
 	query := a.col.Find(nil)
 	count, err := query.Count()
 	if err != nil {
@@ -161,9 +187,9 @@ func (a *DBTwitterOAuthApp) Load() error {
 	return err
 }
 
-func (a *DBTwitterOAuthApp) Save() error {
+func (a *DBOAuthApp) Save() error {
 	ck, cs := a.GetCreds()
-	tmp := &OAuthAppProps{ck, cs}
+	tmp := &DefaultOAuthAppProps{ck, cs}
 	_, err := a.col.Upsert(nil, tmp)
 	return err
 }

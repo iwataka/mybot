@@ -24,16 +24,21 @@ import (
 
 var (
 	twitterAPI         *mybot.TwitterAPI
-	userListenerStream *anaconda.Stream
-	dmListenerStream   *anaconda.Stream
-	visionAPI          *mybot.VisionAPI
-	languageAPI        *mybot.LanguageAPI
-	slackAPI           *mybot.SlackAPI
-	slackListener      *mybot.SlackListener
 	twitterApp         mybot.OAuthApp
 	twitterAuth        mybot.OAuthCreds
-	config             mybot.Config
-	cache              mybot.Cache
+	userListenerStream *anaconda.Stream
+	dmListenerStream   *anaconda.Stream
+
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+
+	slackAPI      *mybot.SlackAPI
+	slackApp      mybot.OAuthApp
+	slackAuth     mybot.OAuthCreds
+	slackListener *mybot.SlackListener
+
+	config mybot.Config
+	cache  mybot.Cache
 
 	executers map[int]*sync.Once = make(map[int]*sync.Once)
 	statuses  map[int]bool       = make(map[int]bool)
@@ -108,6 +113,13 @@ func main() {
 		Value:  filepath.Join(configDir, "twitter_authentication.toml"),
 		Usage:  "Credential file for Twitter API",
 		EnvVar: "MYBOT_TWITTER_CREDENTIAL",
+	}
+
+	slackFlag := cli.StringFlag{
+		Name:   "slack",
+		Value:  filepath.Join(configDir, "slack_authentication.toml"),
+		Usage:  "Credential file for slack API",
+		EnvVar: "MYBOT_SLACK_CREDENTIAL",
 	}
 
 	certFlag := cli.StringFlag{
@@ -194,6 +206,27 @@ func main() {
 		EnvVar: "MYBOT_TWITTER_CONSUMER_FILE",
 	}
 
+	slackClientIDFlag := cli.StringFlag{
+		Name:   "slack-client-id",
+		Value:  "",
+		Usage:  "Slack client ID",
+		EnvVar: "MYBOT_SLACK_CLIENT_ID",
+	}
+
+	slackClientSecretFlag := cli.StringFlag{
+		Name:   "slack-client-secret",
+		Value:  "",
+		Usage:  "Slack client secret",
+		EnvVar: "MYBOT_SLACK_CLIENT_SECRET",
+	}
+
+	slackClientFileFlag := cli.StringFlag{
+		Name:   "slack-client-file",
+		Value:  filepath.Join(configDir, "slack_client_credentials.toml"),
+		Usage:  "slack client file",
+		EnvVar: "MYBOT_SLACK_CLIENT_FILE",
+	}
+
 	runFlags := []cli.Flag{
 		envFlag,
 		logFlag,
@@ -201,6 +234,7 @@ func main() {
 		cacheFlag,
 		gcloudFlag,
 		twitterFlag,
+		slackFlag,
 		dbAddrFlag,
 		dbUserFlag,
 		dbPassFlag,
@@ -209,6 +243,9 @@ func main() {
 		twitterConsumerKeyFlag,
 		twitterConsumerSecretFlag,
 		twitterConsumerFileFlag,
+		slackClientIDFlag,
+		slackClientSecretFlag,
+		slackClientFileFlag,
 	}
 
 	serveFlags := []cli.Flag{
@@ -326,19 +363,33 @@ func beforeValidate(c *cli.Context) error {
 	}
 	exitIfError(err)
 
-	ck := c.String("twitter-consumer-key")
-	cs := c.String("twitter-consumer-secret")
-	cFile := c.String("twitter-consumer-file")
+	twitterCk := c.String("twitter-consumer-key")
+	twitterCs := c.String("twitter-consumer-secret")
 	if session == nil {
-		twitterApp, err = mybot.NewFileTwitterOAuthApp(cFile)
+		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-consumer-file"))
 	} else {
 		col := session.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
 	exitIfError(err)
-	if ck != "" && cs != "" {
-		twitterApp.SetCreds(ck, cs)
+	if twitterCk != "" && twitterCs != "" {
+		twitterApp.SetCreds(twitterCk, twitterCs)
 		err := twitterApp.Save()
+		exitIfError(err)
+	}
+
+	slackCk := c.String("slack-client-id")
+	slackCs := c.String("slack-client-secret")
+	if session == nil {
+		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-client-file"))
+	} else {
+		col := session.DB(dbName).C("slack-app-auth")
+		slackApp, err = mybot.NewDBOAuthApp(col)
+	}
+	exitIfError(err)
+	if slackCk != "" && slackCs != "" {
+		slackApp.SetCreds(slackCk, slackCs)
+		err := slackApp.Save()
 		exitIfError(err)
 	}
 
@@ -347,6 +398,14 @@ func beforeValidate(c *cli.Context) error {
 	} else {
 		col := session.DB(dbName).C("twitter-user-auth")
 		twitterAuth, err = mybot.NewDBOAuthCreds(col)
+	}
+	exitIfError(err)
+
+	if session == nil {
+		slackAuth, err = mybot.NewFileOAuthCreds(c.String("slack"))
+	} else {
+		col := session.DB(dbName).C("slack-user-auth")
+		slackAuth, err = mybot.NewDBOAuthCreds(col)
 	}
 	exitIfError(err)
 
