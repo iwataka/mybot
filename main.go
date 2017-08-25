@@ -22,20 +22,22 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 
 var (
+	// User-specific data
 	config      mybot.Config
 	cache       mybot.Cache
 	twitterAPI  *mybot.TwitterAPI
 	twitterAuth mybot.OAuthCreds
 	slackAPI    *mybot.SlackAPI
 	slackAuth   mybot.OAuthCreds
+	workerChans map[int]chan int = make(map[int]chan int)
+	statuses    map[int]*bool    = make(map[int]*bool)
 
 	// Global-scope data
 	twitterApp  mybot.OAuthApp
 	slackApp    mybot.OAuthApp
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
-	workerChans map[int]chan int = make(map[int]chan int)
-	statuses    map[int]*bool    = make(map[int]*bool)
+	cliContext  *cli.Context
 )
 
 const defaultUserID = "mybot-myself"
@@ -283,7 +285,7 @@ func main() {
 		Aliases: []string{"v"},
 		Usage:   "Validates the user configuration",
 		Flags:   validateFlags,
-		Before:  beforeValidate,
+		Before:  beforeAll,
 		Action:  validate,
 	}
 
@@ -292,24 +294,8 @@ func main() {
 	exitIfError(err)
 }
 
-func beforeRunning(c *cli.Context) error {
-	err := beforeValidate(c)
-	exitIfError(err)
-
-	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
-		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
-		exitIfError(err)
-		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
-		exitIfError(err)
-	} else {
-		visionAPI = &mybot.VisionAPI{}
-		languageAPI = &mybot.LanguageAPI{}
-	}
-
-	return nil
-}
-
-func beforeValidate(c *cli.Context) error {
+func beforeAll(c *cli.Context) error {
+	cliContext = c
 	dbAddress := c.String("db-addr")
 	dbUser := c.String("db-user")
 	dbPasswd := c.String("db-passwd")
@@ -342,6 +328,23 @@ func beforeValidate(c *cli.Context) error {
 	// }
 	// return nil
 	return initForUser(c, session, dbName, defaultUserID)
+}
+
+func beforeRunning(c *cli.Context) error {
+	err := beforeAll(c)
+	exitIfError(err)
+
+	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
+		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
+		exitIfError(err)
+		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
+		exitIfError(err)
+	} else {
+		visionAPI = &mybot.VisionAPI{}
+		languageAPI = &mybot.LanguageAPI{}
+	}
+
+	return nil
 }
 
 func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, error) {
