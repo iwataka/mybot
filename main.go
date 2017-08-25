@@ -23,26 +23,26 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 
 var (
+	config             mybot.Config
+	cache              mybot.Cache
 	twitterAPI         *mybot.TwitterAPI
-	twitterApp         mybot.OAuthApp
 	twitterAuth        mybot.OAuthCreds
+	slackAPI           *mybot.SlackAPI
+	slackAuth          mybot.OAuthCreds
+	slackListener      *mybot.SlackListener
 	userListenerStream *anaconda.Stream
 	dmListenerStream   *anaconda.Stream
 
+	// Global-scope data
+	twitterApp  mybot.OAuthApp
+	slackApp    mybot.OAuthApp
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
-
-	slackAPI      *mybot.SlackAPI
-	slackApp      mybot.OAuthApp
-	slackAuth     mybot.OAuthCreds
-	slackListener *mybot.SlackListener
-
-	config mybot.Config
-	cache  mybot.Cache
-
-	executers map[int]*sync.Once = make(map[int]*sync.Once)
-	statuses  map[int]bool       = make(map[int]bool)
+	executers   map[int]*sync.Once = make(map[int]*sync.Once)
+	statuses    map[int]bool       = make(map[int]bool)
 )
+
+const defaultUserID = "mybot-myself"
 
 const (
 	twitterDMRoutineKey = iota
@@ -80,24 +80,17 @@ func main() {
 		EnvVar: "MYBOT_ENV",
 	}
 
-	logFlag := cli.StringFlag{
-		Name:   "log",
-		Value:  filepath.Join(cacheDir, "mybot.log"),
-		Usage:  "Log file's location",
-		EnvVar: "MYBOT_LOG_PATH",
-	}
-
 	configFlag := cli.StringFlag{
 		Name:   "config",
-		Value:  filepath.Join(configDir, "config.toml"),
-		Usage:  "Config file's location",
+		Value:  filepath.Join(configDir, "config"),
+		Usage:  "Config directory location",
 		EnvVar: "MYBOT_CONFIG_PATH",
 	}
 
 	cacheFlag := cli.StringFlag{
 		Name:   "cache",
-		Value:  filepath.Join(cacheDir, "cache.json"),
-		Usage:  "Cache file's location",
+		Value:  filepath.Join(cacheDir, "cache"),
+		Usage:  "Cache directory location",
 		EnvVar: "MYBOT_CACHE_PATH",
 	}
 
@@ -109,16 +102,16 @@ func main() {
 	}
 
 	twitterFlag := cli.StringFlag{
-		Name:   "twitter",
-		Value:  filepath.Join(configDir, "twitter_authentication.toml"),
-		Usage:  "Credential file for Twitter API",
+		Name:   "twitter-auth",
+		Value:  filepath.Join(configDir, "twitter_auth"),
+		Usage:  "Twitter credential directory",
 		EnvVar: "MYBOT_TWITTER_CREDENTIAL",
 	}
 
 	slackFlag := cli.StringFlag{
-		Name:   "slack",
-		Value:  filepath.Join(configDir, "slack_authentication.toml"),
-		Usage:  "Credential file for slack API",
+		Name:   "slack-auth",
+		Value:  filepath.Join(configDir, "slack_auth"),
+		Usage:  "Slack credential directory",
 		EnvVar: "MYBOT_SLACK_CREDENTIAL",
 	}
 
@@ -193,17 +186,17 @@ func main() {
 	}
 
 	twitterConsumerFileFlag := cli.StringFlag{
-		Name:   "twitter-consumer-file",
-		Value:  filepath.Join(configDir, "twitter_consumer_credentials.toml"),
-		Usage:  "Twitter consumer file",
-		EnvVar: "MYBOT_TWITTER_CONSUMER_FILE",
+		Name:   "twitter-app",
+		Value:  filepath.Join(configDir, "twitter_app.toml"),
+		Usage:  "Twitter application directory",
+		EnvVar: "MYBOT_TWITTER_APP",
 	}
 
 	slackClientIDFlag := cli.StringFlag{
 		Name:   "slack-client-id",
 		Value:  "",
 		Usage:  "Slack client ID",
-		EnvVar: "MYBOT_SLACK_CLIENT_ID",
+		EnvVar: "MYBOT_SLACK_APP",
 	}
 
 	slackClientSecretFlag := cli.StringFlag{
@@ -214,15 +207,14 @@ func main() {
 	}
 
 	slackClientFileFlag := cli.StringFlag{
-		Name:   "slack-client-file",
-		Value:  filepath.Join(configDir, "slack_client_credentials.toml"),
-		Usage:  "slack client file",
-		EnvVar: "MYBOT_SLACK_CLIENT_FILE",
+		Name:   "slack-app",
+		Value:  filepath.Join(configDir, "slack_app.toml"),
+		Usage:  "slack application directory",
+		EnvVar: "MYBOT_SLACK_APP",
 	}
 
 	runFlags := []cli.Flag{
 		envFlag,
-		logFlag,
 		configFlag,
 		cacheFlag,
 		gcloudFlag,
@@ -319,7 +311,6 @@ func beforeRunning(c *cli.Context) error {
 }
 
 func beforeValidate(c *cli.Context) error {
-	var err error
 	dbAddress := c.String("db-addr")
 	dbUser := c.String("db-user")
 	dbPasswd := c.String("db-passwd")
@@ -332,71 +323,160 @@ func beforeValidate(c *cli.Context) error {
 		info.Username = dbUser
 		info.Password = dbPasswd
 		info.Database = dbName
+		var err error
 		session, err = mgo.DialWithInfo(info)
-		exitIfError(err)
+		if err != nil {
+			return err
+		}
 	}
 
+	// userIDs, err := getUserIDs(c, session, dbName)
+	// if err != nil {
+	// 	return err
+	// }
+	// for _, userID := range userIDs {
+	// 	err := initForUser(c, session, dbName, userID)
+	// 	log.Printf("Initialize for user %s", userID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	// return nil
+	return initForUser(c, session, dbName, defaultUserID)
+}
+
+func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, error) {
 	if session == nil {
-		cache, err = mybot.NewFileCache(c.String("cache"))
+		dir, err := getArgDir(c, "twitter-auth")
+		if err != nil {
+			return nil, err
+		}
+		files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
+		userIDs := []string{}
+		for _, file := range files {
+			base := filepath.Base(file)
+			ext := filepath.Ext(file)
+			userIDs = append(userIDs, base[0:len(base)-len(ext)])
+		}
+		return userIDs, nil
+	} else {
+		col := session.DB(dbName).C("twitter-user-auth")
+		auths := []map[string]interface{}{}
+		err := col.Find(nil).All(&auths)
+		if err != nil {
+			return nil, err
+		}
+		userIDs := []string{}
+		for _, auth := range auths {
+			id, ok := auth["id"].(string)
+			if ok && id != "" {
+				userIDs = append(userIDs, id)
+			}
+		}
+		return userIDs, nil
+	}
+}
+
+func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) error {
+	var err error
+
+	if session == nil {
+		dir, err := getArgDir(c, "cache")
+		if err != nil {
+			return err
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		cache, err = mybot.NewFileCache(file)
 	} else {
 		col := session.DB(dbName).C("cache")
-		cache, err = mybot.NewDBCache(col)
+		cache, err = mybot.NewDBCache(col, userID)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 
 	if session == nil {
-		config, err = mybot.NewFileConfig(c.String("config"))
+		dir, err := getArgDir(c, "config")
+		if err != nil {
+			return err
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		config, err = mybot.NewFileConfig(file)
 	} else {
 		col := session.DB(dbName).C("config")
-		config, err = mybot.NewDBConfig(col)
+		config, err = mybot.NewDBConfig(col, userID)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 
 	twitterCk := c.String("twitter-consumer-key")
 	twitterCs := c.String("twitter-consumer-secret")
 	if session == nil {
-		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-consumer-file"))
+		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-app"))
 	} else {
 		col := session.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 	if twitterCk != "" && twitterCs != "" {
 		twitterApp.SetCreds(twitterCk, twitterCs)
 		err := twitterApp.Save()
-		exitIfError(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	slackCk := c.String("slack-client-id")
 	slackCs := c.String("slack-client-secret")
 	if session == nil {
-		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-client-file"))
+		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-app"))
 	} else {
 		col := session.DB(dbName).C("slack-app-auth")
 		slackApp, err = mybot.NewDBOAuthApp(col)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 	if slackCk != "" && slackCs != "" {
 		slackApp.SetCreds(slackCk, slackCs)
 		err := slackApp.Save()
-		exitIfError(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	if session == nil {
-		twitterAuth, err = mybot.NewFileOAuthCreds(c.String("twitter"))
+		dir, err := getArgDir(c, "twitter-auth")
+		if err != nil {
+			return err
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		twitterAuth, err = mybot.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("twitter-user-auth")
-		twitterAuth, err = mybot.NewDBOAuthCreds(col)
+		twitterAuth, err = mybot.NewDBOAuthCreds(col, userID)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 
 	if session == nil {
-		slackAuth, err = mybot.NewFileOAuthCreds(c.String("slack"))
+		dir, err := getArgDir(c, "slack-auth")
+		if err != nil {
+			return err
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		slackAuth, err = mybot.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("slack-user-auth")
-		slackAuth, err = mybot.NewDBOAuthCreds(col)
+		slackAuth, err = mybot.NewDBOAuthCreds(col, userID)
 	}
-	exitIfError(err)
+	if err != nil {
+		return err
+	}
 
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
 
@@ -407,7 +487,7 @@ func beforeValidate(c *cli.Context) error {
 }
 
 func run(c *cli.Context) {
-	if err := runTwitterWithoutStream(); err != nil {
+	if err := runTwitterWithoutStream(twitterAPI, slackAPI, config); err != nil {
 		log.Print(err)
 		return
 	}
@@ -421,7 +501,7 @@ func twitterListenDM() {
 	key := twitterDMRoutineKey
 	defer func() { executers[key] = new(sync.Once) }()
 	f := func() {
-		if !twitterAPIIsAvailable() {
+		if !twitterAPIIsAvailable(twitterAPI) {
 			return
 		}
 
@@ -448,7 +528,7 @@ func twitterListenUsers() {
 	key := twitterUserRoutineKey
 	defer func() { executers[key] = new(sync.Once) }()
 	f := func() {
-		if !twitterAPIIsAvailable() {
+		if !twitterAPIIsAvailable(twitterAPI) {
 			return
 		}
 
@@ -474,7 +554,7 @@ func twitterPeriodically() {
 	key := twitterPeriodicRoutineKey
 	defer func() { executers[key] = new(sync.Once) }()
 	f := func() {
-		if !twitterAPIIsAvailable() {
+		if !twitterAPIIsAvailable(twitterAPI) {
 			return
 		}
 
@@ -482,7 +562,7 @@ func twitterPeriodically() {
 		defer func() { statuses[key] = false }()
 
 		for {
-			if err := runTwitterWithStream(); err != nil {
+			if err := runTwitterWithStream(twitterAPI, slackAPI, config); err != nil {
 				log.Print(err)
 				return
 			}
@@ -501,7 +581,7 @@ func twitterPeriodically() {
 	executers[key].Do(f)
 }
 
-func twitterAPIIsAvailable() bool {
+func twitterAPIIsAvailable(twitterAPI *mybot.TwitterAPI) bool {
 	if twitterAPI == nil {
 		return false
 	} else if success, err := twitterAPI.VerifyCredentials(); !success || err != nil {
@@ -559,7 +639,7 @@ func serve(c *cli.Context) error {
 	return nil
 }
 
-func runTwitterWithStream() error {
+func runTwitterWithStream(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, config mybot.Config) error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.GetTwitterSearches() {
 		v := url.Values{}
@@ -616,8 +696,8 @@ func runTwitterWithStream() error {
 	return nil
 }
 
-func runTwitterWithoutStream() error {
-	err := runTwitterWithStream()
+func runTwitterWithoutStream(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, config mybot.Config) error {
+	err := runTwitterWithStream(twitterAPI, slackAPI, config)
 	if err != nil {
 		return err
 	}
@@ -672,4 +752,13 @@ func exitIfError(err error) {
 		log.Print(err)
 		os.Exit(1)
 	}
+}
+
+func getArgDir(c *cli.Context, key string) (string, error) {
+	dir := c.String(key)
+	err := os.MkdirAll(dir, 0750)
+	if err != nil {
+		return "", err
+	}
+	return dir, nil
 }

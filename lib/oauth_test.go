@@ -15,7 +15,7 @@ func TestFileOAuthSetGetCreds(t *testing.T) {
 
 func TestDBOAuthSetGetCreds(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	a, err := NewDBOAuthCreds(nil)
+	a, err := NewDBOAuthCreds(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,6 +3,7 @@ package mybot
 import (
 	"github.com/iwataka/anaconda"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type OAuthCreds interface {
@@ -36,28 +37,32 @@ func NewFileOAuthCreds(file string) (*FileOAuthCreds, error) {
 type DBOAuthCreds struct {
 	*OAuthCredsProps
 	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
+	ID  string          `json:"id" toml:"id" bson:"id"`
 }
 
-func NewDBOAuthCreds(col *mgo.Collection) (*DBOAuthCreds, error) {
-	a := &DBOAuthCreds{newOAuthCredsProps(), col}
+func NewDBOAuthCreds(col *mgo.Collection, id string) (*DBOAuthCreds, error) {
+	a := &DBOAuthCreds{newOAuthCredsProps(), col, id}
 	err := a.Load()
 	return a, err
 }
 
 func (a *DBOAuthCreds) Load() error {
-	query := a.col.Find(nil)
+	query := a.col.Find(bson.M{"id": a.ID})
 	count, err := query.Count()
 	if err != nil {
 		return err
 	}
 	if count > 0 {
-		return query.One(a.OAuthCredsProps)
+		tmpCol := a.col
+		err := query.One(a)
+		a.col = tmpCol
+		return err
 	}
 	return nil
 }
 
 func (a *DBOAuthCreds) Save() error {
-	_, err := a.col.Upsert(nil, a.OAuthCredsProps)
+	_, err := a.col.Upsert(bson.M{"id": a.ID}, a)
 	return err
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/iwataka/mybot/models"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type Config interface {
@@ -692,28 +693,32 @@ func (c *OutgoingWebhook) Message() (string, error) {
 
 type DBConfig struct {
 	*ConfigProperties
-	col *mgo.Collection
+	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
+	ID  string          `json:"id" toml:"id" bson:"id"`
 }
 
-func NewDBConfig(col *mgo.Collection) (*DBConfig, error) {
-	c := &DBConfig{newConfigProperties(), col}
+func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
+	c := &DBConfig{newConfigProperties(), col, id}
 	err := c.Load()
 	return c, err
 }
 
 func (c *DBConfig) Load() error {
-	query := c.col.Find(nil)
+	query := c.col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
 	if err != nil {
 		return err
 	}
 	if count > 0 {
-		return query.One(c.ConfigProperties)
+		tmpCol := c.col
+		err := query.One(c)
+		c.col = tmpCol
+		return err
 	}
 	return nil
 }
 
 func (c *DBConfig) Save() error {
-	_, err := c.col.Upsert(nil, c.ConfigProperties)
+	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return err
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/iwataka/mybot/models"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type Cache interface {
@@ -148,22 +149,27 @@ func (c *FileCache) Save() error {
 type DBCache struct {
 	CacheProperties
 	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
+	ID  string          `json:"id" toml:"id" bson:"id"`
 }
 
-func NewDBCache(col *mgo.Collection) (*DBCache, error) {
-	c := &DBCache{newCacheProperties(), col}
-	query := col.Find(nil)
+func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {
+	c := &DBCache{newCacheProperties(), col, id}
+	query := col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
 	if err != nil {
 		return nil, err
 	}
 	if count > 0 {
-		query.One(c.CacheProperties)
+		err := query.One(c)
+		if err != nil {
+			return nil, err
+		}
+		c.col = col
 	}
 	return c, err
 }
 
 func (c *DBCache) Save() error {
-	_, err := c.col.Upsert(nil, c.CacheProperties)
+	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return err
 }

@@ -36,7 +36,7 @@ func TestFileCacheLatestTweetID(t *testing.T) {
 
 func TestDBCacheLatestTweetID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil)
+	c, err := NewDBCache(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestFileCacheLatestFavoriteID(t *testing.T) {
 
 func TestDBCacheLatestFavoriteID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil)
+	c, err := NewDBCache(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestFileCacheLatestDMID(t *testing.T) {
 
 func TestDBCacheLatestDMID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil)
+	c, err := NewDBCache(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestFileCacheTweetAction(t *testing.T) {
 
 func TestDBCacheTweetAction(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil)
+	c, err := NewDBCache(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestFileCacheImage(t *testing.T) {
 
 func TestDBCacheImage(t *testing.T) {
 	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil)
+	c, err := NewDBCache(nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

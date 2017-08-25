@@ -39,7 +39,7 @@ func TestGetConfig(t *testing.T) {
 	defer func() { auth = tmpAuth }()
 	auth = &TestAuthenticator{}
 
-	s := httptest.NewServer(http.HandlerFunc(getConfig))
+	s := httptest.NewServer(http.HandlerFunc(configHandler))
 	defer s.Close()
 
 	tmpCfg := config
@@ -54,7 +54,7 @@ func TestGetLog(t *testing.T) {
 	defer func() { auth = tmpAuth }()
 	auth = &TestAuthenticator{}
 
-	s := httptest.NewServer(http.HandlerFunc(getLog))
+	s := httptest.NewServer(http.HandlerFunc(logHandler))
 	defer s.Close()
 
 	testGet(t, s.URL, "Get /log")
@@ -65,7 +65,7 @@ func TestGetStatus(t *testing.T) {
 	defer func() { auth = tmpAuth }()
 	auth = &TestAuthenticator{}
 
-	s := httptest.NewServer(http.HandlerFunc(getStatus))
+	s := httptest.NewServer(http.HandlerFunc(statusHandler))
 	defer s.Close()
 
 	testGet(t, s.URL, "Get /status")
@@ -129,10 +129,10 @@ func TestPostConfig(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == methodPost {
 			config = mybot.NewTestFileConfig("", t)
-			postConfig(w, r)
+			postConfig(w, r, config, goth.User{})
 			wg.Done()
 		} else if r.Method == methodGet {
-			getConfig(w, r)
+			getConfig(w, r, config, slackAPI, goth.User{})
 		}
 	}
 
@@ -338,7 +338,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(config.GetTwitterTimelines()) },
-		addTimelineConfig,
+		func() { addTimelineConfig(config) },
 		"message",
 	)
 }
@@ -347,7 +347,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(config.GetTwitterFavorites()) },
-		addFavoriteConfig,
+		func() { addFavoriteConfig(config) },
 		"message",
 	)
 }
@@ -356,7 +356,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(config.GetTwitterSearches()) },
-		addSearchConfig,
+		func() { addSearchConfig(config) },
 		"message",
 	)
 }
@@ -365,7 +365,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(config.GetSlackMessages()) },
-		addMessageConfig,
+		func() { addMessageConfig(config) },
 		"message",
 	)
 }
@@ -374,7 +374,7 @@ func TestPostConfigIncomingAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(config.GetIncomingWebhooks()) },
-		addIncomingConfig,
+		func() { addIncomingConfig(config) },
 		"incoming",
 	)
 }
@@ -396,7 +396,7 @@ func testPostConfigAdd(
 		t.Fatalf("Failed to add %s", name)
 	}
 
-	_, err := configPage("", "", "", "")
+	_, err := configPage("", "", "", "", config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,7 +422,7 @@ func TestGetIndex(t *testing.T) {
 	img := mybot.ImageCacheData{}
 	cache.SetImage(img)
 
-	s := httptest.NewServer(http.HandlerFunc(getIndex))
+	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
