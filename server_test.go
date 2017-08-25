@@ -18,6 +18,15 @@ import (
 	"github.com/sclevine/agouti"
 )
 
+const (
+	serverTestTwitterUserID = "123456"
+)
+
+var (
+	serverTestUserSpecificData *userSpecificData
+	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
+)
+
 type TestAuthenticator struct{}
 
 func (a *TestAuthenticator) SetProvider(req *http.Request, name string) {
@@ -27,32 +36,42 @@ func (a *TestAuthenticator) InitProvider(host, name string) {
 }
 
 func (a *TestAuthenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
-	return goth.User{Name: "foo", NickName: "bar", UserID: "1234"}, nil
+	return serverTestTwitterUser, nil
 }
 
 func (a *TestAuthenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func init() {
+	serverTestUserSpecificData = &userSpecificData{}
+	var err error
+	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
+	serverTestUserSpecificData.statuses = map[int]*bool{}
+	serverTestUserSpecificData.workerChans = map[int]chan int{}
+	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPI("", serverTestUserSpecificData.config, nil)
+	initStatuses(serverTestUserSpecificData.statuses)
+	if err != nil {
+		panic(err)
+	}
+	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
+}
+
 func TestGetConfig(t *testing.T) {
-	tmpAuth := auth
-	defer func() { auth = tmpAuth }()
-	auth = &TestAuthenticator{}
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	s := httptest.NewServer(http.HandlerFunc(configHandler))
 	defer s.Close()
-
-	tmpCfg := config
-	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
-	defer func() { config = tmpCfg }()
 
 	testGet(t, s.URL, "Get /config")
 }
 
 func TestGetLog(t *testing.T) {
-	tmpAuth := auth
-	defer func() { auth = tmpAuth }()
-	auth = &TestAuthenticator{}
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	s := httptest.NewServer(http.HandlerFunc(logHandler))
 	defer s.Close()
@@ -61,9 +80,9 @@ func TestGetLog(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
-	tmpAuth := auth
-	defer func() { auth = tmpAuth }()
-	auth = &TestAuthenticator{}
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	s := httptest.NewServer(http.HandlerFunc(statusHandler))
 	defer s.Close()
@@ -116,23 +135,18 @@ func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 }
 
 func TestPostConfig(t *testing.T) {
-	tmpAuth := auth
-	defer func() { auth = tmpAuth }()
-	auth = &TestAuthenticator{}
-
-	tmpCfg := config
-	c := mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
-	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
-	defer func() { config = tmpCfg }()
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == methodPost {
-			config = mybot.NewTestFileConfig("", t)
-			postConfig(w, r, config, goth.User{})
+			serverTestUserSpecificData.config = mybot.NewTestFileConfig("", t)
+			postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
 			wg.Done()
 		} else if r.Method == methodGet {
-			getConfig(w, r, config, slackAPI, goth.User{})
+			getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestTwitterUser)
 		}
 	}
 
@@ -150,12 +164,12 @@ func TestPostConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testPostConfig(t, s.URL, page, wg, c)
-	testPostConfigDelete(t, s.URL, page, wg, c)
-	testPostConfigSingleDelete(t, s.URL, page, wg, c)
-	testPostConfigDoubleDelete(t, s.URL, page, wg, c)
-	testPostConfigError(t, s.URL, page, wg, c)
-	testPostConfigTagsInput(t, s.URL, page, wg, c)
+	testPostConfig(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	testPostConfigDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	testPostConfigSingleDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	testPostConfigDoubleDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	testPostConfigError(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	testPostConfigTagsInput(t, s.URL, page, wg, serverTestUserSpecificData.config)
 }
 
 func testPostConfig(
@@ -163,7 +177,7 @@ func testPostConfig(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -175,8 +189,8 @@ func testPostConfig(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, config)
+	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
+		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
 	}
 }
 
@@ -185,7 +199,7 @@ func testPostConfigDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -201,23 +215,23 @@ func testPostConfigDelete(
 	}
 	wg.Wait()
 
-	if len(config.GetTwitterTimelines()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterTimelines()))
+	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterTimelines()))
 	}
-	if len(config.GetTwitterFavorites()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterFavorites()))
+	if len(serverTestUserSpecificData.config.GetTwitterFavorites()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterFavorites()))
 	}
-	if len(config.GetTwitterSearches()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.GetTwitterSearches()))
+	if len(serverTestUserSpecificData.config.GetTwitterSearches()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterSearches()))
 	}
-	if len(config.GetSlackMessages()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.GetSlackMessages()))
+	if len(serverTestUserSpecificData.config.GetSlackMessages()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetSlackMessages()))
 	}
-	if len(config.GetIncomingWebhooks()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(config.GetIncomingWebhooks()))
+	if len(serverTestUserSpecificData.config.GetIncomingWebhooks()) != 0 {
+		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetIncomingWebhooks()))
 	}
 
-	config = c
+	serverTestUserSpecificData.config = c
 }
 
 func testPostConfigSingleDelete(
@@ -225,7 +239,7 @@ func testPostConfigSingleDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -241,11 +255,11 @@ func testPostConfigSingleDelete(
 	}
 	wg.Wait()
 
-	if len(config.GetTwitterTimelines()) != len(c.GetTwitterTimelines())-1 {
-		t.Fatalf("%s's length is not %d", config.GetTwitterTimelines(), len(c.GetTwitterTimelines())-1)
+	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != len(c.GetTwitterTimelines())-1 {
+		t.Fatalf("%s's length is not %d", serverTestUserSpecificData.config.GetTwitterTimelines(), len(c.GetTwitterTimelines())-1)
 	}
 
-	config = c
+	serverTestUserSpecificData.config = c
 }
 
 func testPostConfigDoubleDelete(
@@ -253,7 +267,7 @@ func testPostConfigDoubleDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -269,8 +283,8 @@ func testPostConfigDoubleDelete(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, config)
+	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
+		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
 	}
 }
 
@@ -279,7 +293,7 @@ func testPostConfigError(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -295,8 +309,8 @@ func testPostConfigError(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, config)
+	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
+		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
 	}
 }
 
@@ -305,7 +319,7 @@ func testPostConfigTagsInput(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c *mybot.FileConfig,
+	c mybot.Config,
 ) {
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
@@ -319,16 +333,14 @@ func testPostConfigTagsInput(
 }
 
 func TestPostIncoming(t *testing.T) {
-	slackAPI = mybot.NewSlackAPI("", nil, nil)
-
-	tmpCfg := config
-	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
-	defer func() { config = tmpCfg }()
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
 	defer s.Close()
 
-	dest := config.GetIncomingWebhooks()[0].Endpoint
+	dest := serverTestUserSpecificData.config.GetIncomingWebhooks()[0].Endpoint
 	buf := new(bytes.Buffer)
 	buf.WriteString(`{"text": "foo"}`)
 	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))
@@ -337,8 +349,8 @@ func TestPostIncoming(t *testing.T) {
 func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.GetTwitterTimelines()) },
-		func() { addTimelineConfig(config) },
+		func() int { return len(serverTestUserSpecificData.config.GetTwitterTimelines()) },
+		func() { addTimelineConfig(serverTestUserSpecificData.config) },
 		"message",
 	)
 }
@@ -346,8 +358,8 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.GetTwitterFavorites()) },
-		func() { addFavoriteConfig(config) },
+		func() int { return len(serverTestUserSpecificData.config.GetTwitterFavorites()) },
+		func() { addFavoriteConfig(serverTestUserSpecificData.config) },
 		"message",
 	)
 }
@@ -355,8 +367,8 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.GetTwitterSearches()) },
-		func() { addSearchConfig(config) },
+		func() int { return len(serverTestUserSpecificData.config.GetTwitterSearches()) },
+		func() { addSearchConfig(serverTestUserSpecificData.config) },
 		"message",
 	)
 }
@@ -364,8 +376,8 @@ func TestPostConfigSearchAdd(t *testing.T) {
 func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.GetSlackMessages()) },
-		func() { addMessageConfig(config) },
+		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
+		func() { addMessageConfig(serverTestUserSpecificData.config) },
 		"message",
 	)
 }
@@ -373,8 +385,8 @@ func TestPostConfigMessageAdd(t *testing.T) {
 func TestPostConfigIncomingAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
-		func() int { return len(config.GetIncomingWebhooks()) },
-		func() { addIncomingConfig(config) },
+		func() int { return len(serverTestUserSpecificData.config.GetIncomingWebhooks()) },
+		func() { addIncomingConfig(serverTestUserSpecificData.config) },
 		"incoming",
 	)
 }
@@ -385,10 +397,6 @@ func testPostConfigAdd(
 	add func(),
 	name string,
 ) {
-	tmpCfg := config
-	config = mybot.NewTestFileConfig("lib/testdata/config.template.toml", t)
-	defer func() { config = tmpCfg }()
-
 	prev := length()
 	add()
 	cur := length()
@@ -396,16 +404,16 @@ func testPostConfigAdd(
 		t.Fatalf("Failed to add %s", name)
 	}
 
-	_, err := configPage("", "", "", "", config)
+	_, err := configPage("", "", "", "", serverTestUserSpecificData.config)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGetIndex(t *testing.T) {
-	tmpAuth := auth
-	defer func() { auth = tmpAuth }()
-	auth = &TestAuthenticator{}
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
 
 	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
@@ -414,13 +422,13 @@ func TestGetIndex(t *testing.T) {
 	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
 	listResult := anaconda.CollectionListResult{}
 	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
-	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
 
-	tmpCache := cache
-	defer func() { cache = tmpCache }()
-	cache = mybot.NewTestFileCache("", t)
+	tmpCache := serverTestUserSpecificData.cache
+	defer func() { serverTestUserSpecificData.cache = tmpCache }()
+	serverTestUserSpecificData.cache = mybot.NewTestFileCache("", t)
 	img := mybot.ImageCacheData{}
-	cache.SetImage(img)
+	serverTestUserSpecificData.cache.SetImage(img)
 
 	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
