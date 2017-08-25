@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/iwataka/anaconda"
@@ -23,23 +22,20 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 
 var (
-	config             mybot.Config
-	cache              mybot.Cache
-	twitterAPI         *mybot.TwitterAPI
-	twitterAuth        mybot.OAuthCreds
-	slackAPI           *mybot.SlackAPI
-	slackAuth          mybot.OAuthCreds
-	slackListener      *mybot.SlackListener
-	userListenerStream *anaconda.Stream
-	dmListenerStream   *anaconda.Stream
+	config      mybot.Config
+	cache       mybot.Cache
+	twitterAPI  *mybot.TwitterAPI
+	twitterAuth mybot.OAuthCreds
+	slackAPI    *mybot.SlackAPI
+	slackAuth   mybot.OAuthCreds
 
 	// Global-scope data
 	twitterApp  mybot.OAuthApp
 	slackApp    mybot.OAuthApp
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
-	executers   map[int]*sync.Once = make(map[int]*sync.Once)
-	statuses    map[int]bool       = make(map[int]bool)
+	workerChans map[int]chan int = make(map[int]chan int)
+	statuses    map[int]*bool    = make(map[int]*bool)
 )
 
 const defaultUserID = "mybot-myself"
@@ -49,21 +45,24 @@ const (
 	twitterUserRoutineKey
 	slackRoutineKey
 	twitterPeriodicRoutineKey
-	httpRoutineKey
+)
+
+const (
+	startSignal = iota
+	restartSignal
+	stopSignal
+	killSignal
 )
 
 func init() {
-	executers[twitterDMRoutineKey] = new(sync.Once)
-	executers[twitterUserRoutineKey] = new(sync.Once)
-	executers[slackRoutineKey] = new(sync.Once)
-	executers[twitterPeriodicRoutineKey] = new(sync.Once)
-	executers[httpRoutineKey] = new(sync.Once)
-
-	statuses[twitterDMRoutineKey] = false
-	statuses[twitterUserRoutineKey] = false
-	statuses[slackRoutineKey] = false
-	statuses[twitterPeriodicRoutineKey] = false
-	statuses[httpRoutineKey] = false
+	twitterDMRoutineInitValue := false
+	statuses[twitterDMRoutineKey] = &twitterDMRoutineInitValue
+	twitterUserRoutineInitValue := false
+	statuses[twitterUserRoutineKey] = &twitterUserRoutineInitValue
+	slackRoutineInitValue := false
+	statuses[slackRoutineKey] = &slackRoutineInitValue
+	twitterPeriodicRoutineInitValue := false
+	statuses[twitterPeriodicRoutineKey] = &twitterPeriodicRoutineInitValue
 }
 
 func main() {
@@ -497,149 +496,268 @@ func run(c *cli.Context) {
 	}
 }
 
-func twitterListenDM() {
-	key := twitterDMRoutineKey
-	defer func() { executers[key] = new(sync.Once) }()
-	f := func() {
-		if !twitterAPIIsAvailable(twitterAPI) {
+type routineWorker interface {
+	start()
+	stop()
+}
+
+func manageWorkerWithStart(key int, worker routineWorker) {
+	ch, exists := workerChans[key]
+	if !exists {
+		ch = make(chan int)
+		workerChans[key] = ch
+	}
+	go manageWorker(ch, statuses[key], worker)
+	ch <- startSignal
+}
+
+func manageWorker(ch chan int, status *bool, worker routineWorker) {
+	for {
+		select {
+		case signal := <-ch:
+			switch signal {
+			case startSignal:
+				if !*status {
+					go worker.start()
+				}
+			case restartSignal:
+				if !*status {
+					worker.stop()
+				}
+				go worker.start()
+			case stopSignal:
+				worker.stop()
+			case killSignal:
+				worker.stop()
+				return
+			}
+		}
+	}
+}
+
+func reloadWorkers() {
+	for _, ch := range workerChans {
+		ch <- restartSignal
+	}
+}
+
+type twitterDMWorker struct {
+	twitterAPI *mybot.TwitterAPI
+	stream     *anaconda.Stream
+	status     *bool
+}
+
+func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, status *bool) *twitterDMWorker {
+	return &twitterDMWorker{twitterAPI, nil, status}
+}
+
+func (w *twitterDMWorker) start() {
+	if !twitterAPIIsAvailable(w.twitterAPI) {
+		return
+	}
+
+	*w.status = true
+	defer func() { *w.status = false }()
+
+	r := w.twitterAPI.DefaultDirectMessageReceiver
+	listener, err := w.twitterAPI.ListenMyself(nil, r)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	w.stream = listener.Stream
+	if err := listener.Listen(); err != nil {
+		log.Print(err)
+		return
+	}
+	log.Print("Failed to keep connection")
+}
+
+func (w *twitterDMWorker) stop() {
+	if w.stream != nil {
+		w.stream.Stop()
+	}
+}
+
+type twitterUserWorker struct {
+	twitterAPI  *mybot.TwitterAPI
+	slackAPI    *mybot.SlackAPI
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+	cache       mybot.Cache
+	stream      *anaconda.Stream
+	status      *bool
+}
+
+func newTwitterUserWorker(
+	twitterAPI *mybot.TwitterAPI,
+	slackAPI *mybot.SlackAPI,
+	visionAPI *mybot.VisionAPI,
+	languageAPI *mybot.LanguageAPI,
+	cache mybot.Cache,
+	status *bool,
+) *twitterUserWorker {
+	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, nil, status}
+}
+
+func (w *twitterUserWorker) start() {
+	if !twitterAPIIsAvailable(w.twitterAPI) {
+		return
+	}
+
+	*w.status = true
+	defer func() { *w.status = false }()
+
+	listener, err := w.twitterAPI.ListenUsers(nil)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	w.stream = listener.Stream
+	if err := listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
+		log.Print(err)
+		return
+	}
+	log.Print("Failed to keep connection")
+}
+
+func (w *twitterUserWorker) stop() {
+	if w.stream != nil {
+		w.stream.Stop()
+	}
+}
+
+type twitterPeriodicWorker struct {
+	twitterAPI  *mybot.TwitterAPI
+	slackAPI    *mybot.SlackAPI
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+	cache       mybot.Cache
+	config      mybot.Config
+	stream      *anaconda.Stream
+	status      *bool
+}
+
+func newTwitterPeriodicWorker(
+	twitterAPI *mybot.TwitterAPI,
+	slackAPI *mybot.SlackAPI,
+	visionAPI *mybot.VisionAPI,
+	languageAPI *mybot.LanguageAPI,
+	cache mybot.Cache,
+	config mybot.Config,
+	status *bool,
+) *twitterPeriodicWorker {
+	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, nil, status}
+}
+
+func (w *twitterPeriodicWorker) start() {
+	if !twitterAPIIsAvailable(w.twitterAPI) {
+		return
+	}
+
+	*w.status = true
+	defer func() { *w.status = false }()
+
+	for *w.status {
+		if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
+			log.Print(err)
 			return
 		}
-
-		statuses[key] = true
-		defer func() { statuses[key] = false }()
-
-		r := twitterAPI.DefaultDirectMessageReceiver
-		listener, err := twitterAPI.ListenMyself(nil, r)
+		if err := w.cache.Save(); err != nil {
+			log.Print(err)
+			return
+		}
+		d, err := time.ParseDuration(w.config.GetTwitterDuration())
 		if err != nil {
 			log.Print(err)
 			return
 		}
-		dmListenerStream = listener.Stream
-		if err := listener.Listen(); err != nil {
-			log.Print(err)
-			return
-		}
-		log.Print("Failed to keep connection")
+		time.Sleep(d)
 	}
-	executers[key].Do(f)
 }
 
-func twitterListenUsers() {
-	key := twitterUserRoutineKey
-	defer func() { executers[key] = new(sync.Once) }()
-	f := func() {
-		if !twitterAPIIsAvailable(twitterAPI) {
-			return
-		}
-
-		statuses[key] = true
-		defer func() { statuses[key] = false }()
-
-		listener, err := twitterAPI.ListenUsers(nil)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-		userListenerStream = listener.Stream
-		if err := listener.Listen(visionAPI, languageAPI, slackAPI, cache); err != nil {
-			log.Print(err)
-			return
-		}
-		log.Print("Failed to keep connection")
-	}
-	executers[key].Do(f)
+func (w *twitterPeriodicWorker) stop() {
+	*w.status = false
 }
 
-func twitterPeriodically() {
-	key := twitterPeriodicRoutineKey
-	defer func() { executers[key] = new(sync.Once) }()
-	f := func() {
-		if !twitterAPIIsAvailable(twitterAPI) {
-			return
-		}
-
-		statuses[key] = true
-		defer func() { statuses[key] = false }()
-
-		for {
-			if err := runTwitterWithStream(twitterAPI, slackAPI, config); err != nil {
-				log.Print(err)
-				return
-			}
-			if err := cache.Save(); err != nil {
-				log.Print(err)
-				return
-			}
-			d, err := time.ParseDuration(config.GetTwitterDuration())
-			if err != nil {
-				log.Print(err)
-				return
-			}
-			time.Sleep(d)
-		}
-	}
-	executers[key].Do(f)
+type slackWorker struct {
+	slackAPI    *mybot.SlackAPI
+	twitterAPI  *mybot.TwitterAPI
+	visionAPI   *mybot.VisionAPI
+	languageAPI *mybot.LanguageAPI
+	listener    *mybot.SlackListener
+	status      *bool
 }
 
-func twitterAPIIsAvailable(twitterAPI *mybot.TwitterAPI) bool {
-	if twitterAPI == nil {
-		return false
-	} else if success, err := twitterAPI.VerifyCredentials(); !success || err != nil {
-		return false
-	}
-	return true
+func newSlackWorker(
+	slackAPI *mybot.SlackAPI,
+	twitterAPI *mybot.TwitterAPI,
+	visionAPI *mybot.VisionAPI,
+	languageAPI *mybot.LanguageAPI,
+	status *bool,
+) *slackWorker {
+	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, nil, status}
 }
 
-func slackListens() {
-	key := slackRoutineKey
-	defer func() { executers[key] = new(sync.Once) }()
-	f := func() {
-		if slackAPI == nil || !slackAPI.Enabled() {
-			return
-		}
-
-		statuses[key] = true
-		defer func() { statuses[key] = false }()
-
-		slackListener = slackAPI.Listen()
-		if err := slackListener.Start(visionAPI, languageAPI, twitterAPI); err != nil {
-			log.Print(err)
-			return
-		}
-		log.Print("Failed to keep connection")
+func (w *slackWorker) start() {
+	if w.slackAPI == nil || !w.slackAPI.Enabled() {
+		return
 	}
-	executers[key].Do(f)
+
+	*w.status = true
+	defer func() { *w.status = false }()
+
+	w.listener = w.slackAPI.Listen()
+	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
+		log.Print(err)
+		return
+	}
+	log.Print("Failed to keep connection")
 }
 
-func reloadListeners() {
-	go twitterListenUsers()
-	go twitterListenDM()
-	go twitterPeriodically()
-	go slackListens()
-}
-
-func httpServer(c *cli.Context) {
-	key := httpRoutineKey
-	defer func() { executers[key] = new(sync.Once) }()
-	f := func() {
-		statuses[key] = true
-		defer func() { statuses[key] = false }()
-		err := startServer(c.String("host"), c.String("port"), c.String("cert"), c.String("key"))
-		exitIfError(err)
+func (w *slackWorker) stop() {
+	if w.listener != nil {
+		w.listener.Stop()
 	}
-	executers[httpRoutineKey].Do(f)
 }
 
 func serve(c *cli.Context) error {
 	go httpServer(c)
-	reloadListeners()
+
+	go manageWorkerWithStart(
+		twitterDMRoutineKey,
+		newTwitterDMWorker(twitterAPI, statuses[twitterDMRoutineKey]),
+	)
+	go manageWorkerWithStart(
+		twitterUserRoutineKey,
+		newTwitterUserWorker(twitterAPI, slackAPI, visionAPI, languageAPI, cache, statuses[twitterUserRoutineKey]),
+	)
+	go manageWorkerWithStart(
+		twitterPeriodicRoutineKey,
+		newTwitterPeriodicWorker(twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, statuses[twitterPeriodicRoutineKey]),
+	)
+	go manageWorkerWithStart(
+		slackRoutineKey,
+		newSlackWorker(slackAPI, twitterAPI, visionAPI, languageAPI, statuses[slackRoutineKey]),
+	)
 
 	ch := make(chan bool)
 	<-ch
 	return nil
 }
 
-func runTwitterWithStream(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, config mybot.Config) error {
+func httpServer(c *cli.Context) {
+	err := startServer(c.String("host"), c.String("port"), c.String("cert"), c.String("key"))
+	exitIfError(err)
+}
+
+func runTwitterWithStream(
+	twitterAPI *mybot.TwitterAPI,
+	slackAPI *mybot.SlackAPI,
+	visionAPI *mybot.VisionAPI,
+	languageAPI *mybot.LanguageAPI,
+	config mybot.Config,
+) error {
 	tweets := []anaconda.Tweet{}
 	for _, a := range config.GetTwitterSearches() {
 		v := url.Values{}
@@ -697,7 +815,7 @@ func runTwitterWithStream(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI
 }
 
 func runTwitterWithoutStream(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, config mybot.Config) error {
-	err := runTwitterWithStream(twitterAPI, slackAPI, config)
+	err := runTwitterWithStream(twitterAPI, slackAPI, visionAPI, languageAPI, config)
 	if err != nil {
 		return err
 	}
@@ -761,4 +879,13 @@ func getArgDir(c *cli.Context, key string) (string, error) {
 		return "", err
 	}
 	return dir, nil
+}
+
+func twitterAPIIsAvailable(twitterAPI *mybot.TwitterAPI) bool {
+	if twitterAPI == nil {
+		return false
+	} else if success, err := twitterAPI.VerifyCredentials(); !success || err != nil {
+		return false
+	}
+	return true
 }

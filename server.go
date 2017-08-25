@@ -335,7 +335,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	defer func() {
 		if valid {
 			err = config.Save()
-			reloadListeners()
+			reloadWorkers()
 		} else {
 			err = config.Load()
 		}
@@ -842,17 +842,15 @@ func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI)
 		TwitterListenUsersStatus bool
 		TwitterPeriodicStatus    bool
 		SlackListenerStatus      bool
-		HttpStatus               bool
 	}{
 		"Status",
 		twitterUser.NickName,
 		slackTeam,
 		slackURL,
-		statuses[twitterDMRoutineKey],
-		statuses[twitterUserRoutineKey],
-		statuses[twitterPeriodicRoutineKey],
-		statuses[slackRoutineKey],
-		statuses[httpRoutineKey],
+		*statuses[twitterDMRoutineKey],
+		*statuses[twitterUserRoutineKey],
+		*statuses[twitterPeriodicRoutineKey],
+		*statuses[slackRoutineKey],
 	}
 
 	buf := new(bytes.Buffer)

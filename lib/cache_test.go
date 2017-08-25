@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestFileCacheSave(t *testing.T) {
