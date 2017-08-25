@@ -2,6 +2,7 @@ package mybot
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 
 	"github.com/iwataka/anaconda"
@@ -61,6 +62,7 @@ type SlackAPI struct {
 	config   Config
 	cache    Cache
 	msgQueue map[string]*list.List
+	user     *slack.AuthTestResponse
 }
 
 func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
@@ -68,7 +70,7 @@ func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
 	if token != "" {
 		api = slack.New(token)
 	}
-	return &SlackAPI{api, config, cache, make(map[string]*list.List)}
+	return &SlackAPI{api, config, cache, make(map[string]*list.List), nil}
 }
 
 func (a *SlackAPI) Enabled() bool {
@@ -246,6 +248,20 @@ func (a *SlackAPI) processMsgEventWithAction(
 	return nil
 }
 
+func (a *SlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
+	if a.user != nil {
+		return a.user, nil
+	}
+	if a.Enabled() {
+		user, err := a.api.AuthTest()
+		if err == nil {
+			a.user = user
+		}
+		return user, err
+	}
+	return nil, errors.New("Slack API is not available")
+}
+
 func (a *SlackAPI) Listen() *SlackListener {
 	return &SlackListener{true, a}
 }
@@ -296,6 +312,9 @@ func (l *SlackListener) Start(
 					}
 				}
 			case *slack.RTMError:
+				log.Printf("%T", ev)
+				return ev
+			case *slack.ConnectionErrorEvent:
 				log.Printf("%T", ev)
 				return ev
 			case *slack.InvalidAuthEvent:

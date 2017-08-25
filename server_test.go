@@ -72,7 +72,7 @@ func TestGetStatus(t *testing.T) {
 }
 
 func TestGetSetupTwitter(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(getSetupTwitter))
+	s := httptest.NewServer(http.HandlerFunc(getSetup))
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
@@ -83,7 +83,14 @@ func TestGetSetupTwitter(t *testing.T) {
 	}
 	defer func() { twitterApp = tmpTwitterApp }()
 
-	testGet(t, s.URL, "Get /setup/twitter")
+	tmpSlackApp := slackApp
+	slackApp, err = mybot.NewFileOAuthApp("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { slackApp = tmpSlackApp }()
+
+	testGet(t, s.URL, "Get /setup/")
 }
 
 func testGet(t *testing.T, url string, msg string) {
@@ -389,7 +396,7 @@ func testPostConfigAdd(
 		t.Fatalf("Failed to add %s", name)
 	}
 
-	_, err := configPage("", "")
+	_, err := configPage("", "", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -178,13 +178,6 @@ func main() {
 		EnvVar: "MYBOT_DB_NAME",
 	}
 
-	slackTokenFlag := cli.StringFlag{
-		Name:   "slack-token",
-		Value:  "",
-		Usage:  "Slack bot Token",
-		EnvVar: "MYBOT_SLACK_TOKEN",
-	}
-
 	twitterConsumerKeyFlag := cli.StringFlag{
 		Name:   "twitter-consumer-key",
 		Value:  "",
@@ -239,7 +232,6 @@ func main() {
 		dbUserFlag,
 		dbPassFlag,
 		dbNameFlag,
-		slackTokenFlag,
 		twitterConsumerKeyFlag,
 		twitterConsumerSecretFlag,
 		twitterConsumerFileFlag,
@@ -312,9 +304,6 @@ func main() {
 func beforeRunning(c *cli.Context) error {
 	err := beforeValidate(c)
 	exitIfError(err)
-
-	slackToken := c.String("slack-token")
-	slackAPI = mybot.NewSlackAPI(slackToken, config, cache)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
 		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
@@ -410,6 +399,9 @@ func beforeValidate(c *cli.Context) error {
 	exitIfError(err)
 
 	twitterAPI = mybot.NewTwitterAPI(twitterAuth, cache, config)
+
+	slackId, _ := slackAuth.GetCreds()
+	slackAPI = mybot.NewSlackAPI(slackId, config, cache)
 
 	return nil
 }

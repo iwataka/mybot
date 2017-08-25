@@ -102,3 +102,14 @@ func (_m *MockSlackAPI) AddReaction(name string, item slack.ItemRef) error {
 func (_mr *_MockSlackAPIRecorder) AddReaction(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddReaction", arg0, arg1)
 }
+
+func (_m *MockSlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
+	ret := _m.ctrl.Call(_m, "AuthTest")
+	ret0, _ := ret[0].(*slack.AuthTestResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockSlackAPIRecorder) AuthTest() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "AuthTest")
+}

@@ -13,6 +13,7 @@ type SlackAPI interface {
 	AddPin(ch string, item slack.ItemRef) error
 	AddStar(ch string, item slack.ItemRef) error
 	AddReaction(name string, item slack.ItemRef) error
+	AuthTest() (*slack.AuthTestResponse, error)
 }
 
 type SlackAction struct {
