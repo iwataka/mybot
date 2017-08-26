@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
@@ -134,7 +136,7 @@ func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 	}
 }
 
-func TestPostConfig(t *testing.T) {
+func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup, mybot.Config)) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = &TestAuthenticator{}
@@ -164,15 +166,14 @@ func TestPostConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testPostConfig(t, s.URL, page, wg, serverTestUserSpecificData.config)
-	testPostConfigDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
-	testPostConfigSingleDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
-	testPostConfigDoubleDelete(t, s.URL, page, wg, serverTestUserSpecificData.config)
-	testPostConfigError(t, s.URL, page, wg, serverTestUserSpecificData.config)
-	testPostConfigTagsInput(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	f(t, s.URL, page, wg, serverTestUserSpecificData.config)
 }
 
-func testPostConfig(
+func TestPostConfigWithoutModification(t *testing.T) {
+	testPostConfig(t, testPostConfigWithoutModification)
+}
+
+func testPostConfigWithoutModification(
 	t *testing.T,
 	url string,
 	page *agouti.Page,
@@ -192,6 +193,10 @@ func testPostConfig(
 	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
 		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
 	}
+}
+
+func TestPostConfigDelete(t *testing.T) {
+	testPostConfig(t, testPostConfigDelete)
 }
 
 func testPostConfigDelete(
@@ -234,6 +239,10 @@ func testPostConfigDelete(
 	serverTestUserSpecificData.config = c
 }
 
+func TestPostConfigSingleDelete(t *testing.T) {
+	testPostConfig(t, testPostConfigSingleDelete)
+}
+
 func testPostConfigSingleDelete(
 	t *testing.T,
 	url string,
@@ -262,6 +271,10 @@ func testPostConfigSingleDelete(
 	serverTestUserSpecificData.config = c
 }
 
+func TestPostConfigDoubleDelete(t *testing.T) {
+	testPostConfig(t, testPostConfigDoubleDelete)
+}
+
 func testPostConfigDoubleDelete(
 	t *testing.T,
 	url string,
@@ -286,6 +299,10 @@ func testPostConfigDoubleDelete(
 	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
 		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
 	}
+}
+
+func TestPostConfigError(t *testing.T) {
+	testPostConfig(t, testPostConfigError)
 }
 
 func testPostConfigError(
@@ -314,6 +331,10 @@ func testPostConfigError(
 	}
 }
 
+func TestPostConfigTagsInput(t *testing.T) {
+	testPostConfig(t, testPostConfigTagsInput)
+}
+
 func testPostConfigTagsInput(
 	t *testing.T,
 	url string,
@@ -321,6 +342,11 @@ func testPostConfigTagsInput(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
+	_, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com", 30*time.Second)
+	if err != nil {
+		t.Skip("Skip because network is unavailable: ", err)
+	}
+
 	if err := page.Navigate(url); err != nil {
 		t.Fatal(err)
 	}
