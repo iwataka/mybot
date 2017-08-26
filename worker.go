@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -9,14 +10,35 @@ import (
 	worker "github.com/iwataka/mybot/worker"
 )
 
-func manageWorkerWithStart(key int, userID string, w worker.RoutineWorker) {
-	data := userSpecificDataMap[userID]
-	ch, exists := data.workerChans[key]
+func manageWorkerWithStart(key int, workerChans map[int]chan int, statuses map[int]*bool, w worker.RoutineWorker) {
+	ch, exists := workerChans[key]
 	if !exists {
 		ch = make(chan int)
-		data.workerChans[key] = ch
+		workerChans[key] = ch
 	}
-	go worker.ManageWorker(ch, data.statuses[key], w)
+	outChan := make(chan interface{})
+	go worker.ManageWorker(ch, outChan, w)
+	go func() {
+		for {
+			select {
+			case msg := <-outChan:
+				switch m := msg.(type) {
+				case bool:
+					if m {
+						log.Printf("Start process: %s", w.Name())
+						*statuses[key] = true
+					} else {
+						log.Printf("Stop process: %s", w.Name())
+						*statuses[key] = false
+					}
+				case error:
+					log.Printf("Error: %s (%s)", m.Error(), w.Name())
+				case string:
+					log.Printf("Message: %s (%s)", m, w.Name())
+				}
+			}
+		}
+	}()
 	ch <- worker.StartSignal
 }
 
@@ -29,30 +51,29 @@ func reloadWorkers(userID string) {
 
 type twitterDMWorker struct {
 	twitterAPI *mybot.TwitterAPI
+	id         string
 	stream     *anaconda.Stream
 }
 
-func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI) *twitterDMWorker {
-	return &twitterDMWorker{twitterAPI, nil}
+func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string) *twitterDMWorker {
+	return &twitterDMWorker{twitterAPI, id, nil}
 }
 
-func (w *twitterDMWorker) Start() {
+func (w *twitterDMWorker) Start() error {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return
+		return nil
 	}
 
 	r := w.twitterAPI.DefaultDirectMessageReceiver
 	listener, err := w.twitterAPI.ListenMyself(nil, r)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	w.stream = listener.Stream
 	if err := listener.Listen(); err != nil {
-		log.Print(err)
-		return
+		return err
 	}
-	log.Print("Failed to keep connection")
+	return nil
 }
 
 func (w *twitterDMWorker) Stop() {
@@ -61,12 +82,17 @@ func (w *twitterDMWorker) Stop() {
 	}
 }
 
+func (w *twitterDMWorker) Name() string {
+	return fmt.Sprintf("%s Twitter DM Worker", w.id)
+}
+
 type twitterUserWorker struct {
 	twitterAPI  *mybot.TwitterAPI
 	slackAPI    *mybot.SlackAPI
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
 	cache       mybot.Cache
+	id          string
 	stream      *anaconda.Stream
 }
 
@@ -76,32 +102,35 @@ func newTwitterUserWorker(
 	visionAPI *mybot.VisionAPI,
 	languageAPI *mybot.LanguageAPI,
 	cache mybot.Cache,
+	id string,
 ) *twitterUserWorker {
-	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, nil}
+	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil}
 }
 
-func (w *twitterUserWorker) Start() {
+func (w *twitterUserWorker) Start() error {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return
+		return nil
 	}
 
 	listener, err := w.twitterAPI.ListenUsers(nil)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	w.stream = listener.Stream
 	if err := listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
-		log.Print(err)
-		return
+		return err
 	}
-	log.Print("Failed to keep connection")
+	return nil
 }
 
 func (w *twitterUserWorker) Stop() {
 	if w.stream != nil {
 		w.stream.Stop()
 	}
+}
+
+func (w *twitterUserWorker) Name() string {
+	return fmt.Sprintf("%s Twitter User Worker", w.id)
 }
 
 type twitterPeriodicWorker struct {
@@ -111,6 +140,7 @@ type twitterPeriodicWorker struct {
 	languageAPI *mybot.LanguageAPI
 	cache       mybot.Cache
 	config      mybot.Config
+	id          string
 	stream      *anaconda.Stream
 	status      *bool
 }
@@ -122,37 +152,40 @@ func newTwitterPeriodicWorker(
 	languageAPI *mybot.LanguageAPI,
 	cache mybot.Cache,
 	config mybot.Config,
+	id string,
 ) *twitterPeriodicWorker {
 	statusInitValue := false
-	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, nil, &statusInitValue}
+	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, &statusInitValue}
 }
 
-func (w *twitterPeriodicWorker) Start() {
+func (w *twitterPeriodicWorker) Start() error {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return
+		return nil
 	}
 
 	*w.status = true
 	for *w.status {
 		if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
-			log.Print(err)
-			return
+			return err
 		}
 		if err := w.cache.Save(); err != nil {
-			log.Print(err)
-			return
+			return err
 		}
 		d, err := time.ParseDuration(w.config.GetTwitterDuration())
 		if err != nil {
-			log.Print(err)
-			return
+			return err
 		}
 		time.Sleep(d)
 	}
+	return nil
 }
 
 func (w *twitterPeriodicWorker) Stop() {
 	*w.status = false
+}
+
+func (w *twitterPeriodicWorker) Name() string {
+	return fmt.Sprintf("%s Twitter Periodic Worker", w.id)
 }
 
 type slackWorker struct {
@@ -160,6 +193,7 @@ type slackWorker struct {
 	twitterAPI  *mybot.TwitterAPI
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
+	id          string
 	listener    *mybot.SlackListener
 }
 
@@ -168,25 +202,29 @@ func newSlackWorker(
 	twitterAPI *mybot.TwitterAPI,
 	visionAPI *mybot.VisionAPI,
 	languageAPI *mybot.LanguageAPI,
+	id string,
 ) *slackWorker {
-	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, nil}
+	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}
 }
 
-func (w *slackWorker) Start() {
+func (w *slackWorker) Start() error {
 	if w.slackAPI == nil || !w.slackAPI.Enabled() {
-		return
+		return nil
 	}
 
 	w.listener = w.slackAPI.Listen()
 	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
-		log.Print(err)
-		return
+		return err
 	}
-	log.Print("Failed to keep connection")
+	return nil
 }
 
 func (w *slackWorker) Stop() {
 	if w.listener != nil {
 		w.listener.Stop()
 	}
+}
+
+func (w *slackWorker) Name() string {
+	return fmt.Sprintf("%s Slack Worker", w.id)
 }

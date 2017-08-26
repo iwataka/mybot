@@ -5,16 +5,16 @@ const (
 	RestartSignal
 	StopSignal
 	KillSignal
-	FlushSignal
 )
 
 type RoutineWorker interface {
-	Start()
+	Start() error
 	Stop()
+	Name() string
 }
 
-func ManageWorker(inChan chan int, status *bool, worker RoutineWorker) {
-	outChan := make(chan bool)
+func ManageWorker(inChan chan int, outChan chan interface{}, worker RoutineWorker) {
+	innerChan := make(chan bool)
 	innerStatus := false
 	for {
 		select {
@@ -22,42 +22,51 @@ func ManageWorker(inChan chan int, status *bool, worker RoutineWorker) {
 			switch signal {
 			case StartSignal:
 				if !innerStatus {
-					go wrapWithStatusManagement(worker.Start, status, outChan)
+					go wrapWithStatusManagement(worker.Start, outChan, innerChan)
 					innerStatus = true
 				}
 			case RestartSignal:
 				if innerStatus {
 					worker.Stop()
-					<-outChan
+					<-innerChan
 				}
-				go wrapWithStatusManagement(worker.Start, status, outChan)
+				go wrapWithStatusManagement(worker.Start, outChan, innerChan)
 				innerStatus = true
 			case StopSignal:
 				if innerStatus {
 					worker.Stop()
-					<-outChan
+					<-innerChan
 					innerStatus = false
 				}
 			case KillSignal:
 				if innerStatus {
 					worker.Stop()
-					<-outChan
+					<-innerChan
 					innerStatus = false
 				}
-				close(outChan)
+				close(innerChan)
 				close(inChan)
+				if outChan != nil {
+					close(outChan)
+				}
 				return
-			case FlushSignal:
 			}
 		}
 	}
 }
 
-func wrapWithStatusManagement(f func(), status *bool, ch chan bool) {
-	*status = true
+func wrapWithStatusManagement(f func() error, outChan chan interface{}, ch chan bool) {
+	if outChan != nil {
+		outChan <- true
+	}
 	defer func() {
+		if outChan != nil {
+			outChan <- false
+		}
 		ch <- true
-		*status = false
 	}()
-	f()
+	err := f()
+	if err != nil {
+		outChan <- err
+	}
 }

@@ -124,25 +124,29 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 	slackId, _ := data.slackAuth.GetCreds()
 	data.slackAPI = mybot.NewSlackAPI(slackId, data.config, data.cache)
 
-	go manageWorkerWithStart(
+	manageWorkerWithStart(
 		twitterDMRoutineKey,
-		userID,
-		newTwitterDMWorker(data.twitterAPI),
+		data.workerChans,
+		data.statuses,
+		newTwitterDMWorker(data.twitterAPI, userID),
 	)
-	go manageWorkerWithStart(
+	manageWorkerWithStart(
 		twitterUserRoutineKey,
-		userID,
-		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache),
+		data.workerChans,
+		data.statuses,
+		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID),
 	)
-	go manageWorkerWithStart(
+	manageWorkerWithStart(
 		twitterPeriodicRoutineKey,
-		userID,
-		newTwitterPeriodicWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, data.config),
+		data.workerChans,
+		data.statuses,
+		newTwitterPeriodicWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, data.config, userID),
 	)
-	go manageWorkerWithStart(
+	manageWorkerWithStart(
 		slackRoutineKey,
-		userID,
-		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI),
+		data.workerChans,
+		data.statuses,
+		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID),
 	)
 
 	return data, nil

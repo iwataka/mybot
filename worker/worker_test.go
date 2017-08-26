@@ -3,157 +3,172 @@ package worker
 import (
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 type testWorker struct {
-	status     bool
 	count      *int32
 	totalCount *int32
 	outChan    chan bool
+	innerChan  chan bool
 }
 
 func newTestWorker() *testWorker {
 	var count int32 = 0
 	var totalCount int32 = 0
-	outChan := make(chan bool)
-	return &testWorker{false, &count, &totalCount, outChan}
+	return &testWorker{&count, &totalCount, make(chan bool), make(chan bool)}
 }
 
-func (w *testWorker) Start() {
+func (w *testWorker) Start() error {
 	atomic.AddInt32(w.count, 1)
 	atomic.AddInt32(w.totalCount, 1)
 	defer func() { atomic.AddInt32(w.count, -1) }()
-	w.status = true
+
 	w.outChan <- true
 
-	for w.status {
-		time.Sleep(1 * time.Second)
+	for {
+		select {
+		case <-w.innerChan:
+			return nil
+		}
 	}
+	return nil
 }
 
 func (w *testWorker) Stop() {
-	w.status = false
+	w.innerChan <- true
+}
+
+func (w *testWorker) Name() string {
+	return ""
 }
 
 func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan int)
-	status := false
-	go ManageWorker(inChan, &status, w)
+	outChan := make(chan interface{})
+	go ManageWorker(inChan, outChan, w)
 	defer func() { inChan <- KillSignal; close(w.outChan) }()
 	for i := 0; i < 5; i++ {
 		inChan <- StartSignal
 		if i == 0 {
+			assertMessage(t, outChan, true)
 			<-w.outChan
 		}
 	}
-	inChan <- FlushSignal
-	if *w.count != 1 {
-		t.Fatal("Invalid worker process count: ", *w.count)
-	}
-	if *w.totalCount != 1 {
-		t.Fatal("Invalid worker process total count: ", *w.totalCount)
-	}
-	if !status {
-		t.Fatal("Invalid worker process status: ", status)
-	}
+	assertCount(t, *w.count, 1)
+	assertTotalCount(t, *w.totalCount, 1)
 }
 
 func TestStopAndStartSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan int)
-	status := false
-	go ManageWorker(inChan, &status, w)
-	defer func() { inChan <- KillSignal; close(w.outChan) }()
-	for i := 0; i < 10; i++ {
+	outChan := make(chan interface{})
+	go ManageWorker(inChan, outChan, w)
+	defer func() { close(w.outChan) }()
+	var totalCount int32 = 5
+	var i int32 = 0
+	for ; i < totalCount*2; i++ {
 		if i%2 == 0 {
 			inChan <- StartSignal
+			assertMessage(t, outChan, true)
 			<-w.outChan
 		} else {
 			inChan <- StopSignal
+			assertMessage(t, outChan, false)
 		}
 	}
-	inChan <- FlushSignal
-	if *w.count != 0 {
-		t.Fatal("Invalid worker process count: ", *w.count)
-	}
-	if *w.totalCount != 5 {
-		t.Fatal("Invalid worker process total count: ", *w.totalCount)
-	}
-	if status {
-		t.Fatal("Invalid worker process status: ", status)
-	}
+	inChan <- KillSignal
+	assertCount(t, *w.count, 0)
+	assertTotalCount(t, *w.totalCount, totalCount)
 }
 
 func TestStopSignalForWorker(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan int)
-	status := false
-	go ManageWorker(inChan, &status, w)
-	defer func() { inChan <- KillSignal; close(w.outChan) }()
+	outChan := make(chan interface{})
+	go ManageWorker(inChan, outChan, w)
+	defer func() { close(w.outChan) }()
 	inChan <- StartSignal
+	assertMessage(t, outChan, true)
 	<-w.outChan
 	inChan <- StopSignal
-	inChan <- FlushSignal
-	if *w.count != 0 {
-		t.Fatal("Invalid worker process count: ", *w.count)
-	}
-	if *w.totalCount != 1 {
-		t.Fatal("Invalid worker process total count: ", *w.totalCount)
-	}
-	if status {
-		t.Fatal("Invalid worker process status: ", status)
-	}
+	assertMessage(t, outChan, false)
+	inChan <- KillSignal
+	assertCount(t, *w.count, 0)
+	assertTotalCount(t, *w.totalCount, 1)
 }
 
 func TestRestartSignalForWorker(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan int)
-	status := false
-	go ManageWorker(inChan, &status, w)
+	outChan := make(chan interface{})
+	go ManageWorker(inChan, outChan, w)
 	defer func() { inChan <- KillSignal; close(w.outChan) }()
-	var totalCount int32 = 2
+	var totalCount int32 = 5
 	var i int32 = 0
+	inChan <- StartSignal
+	assertMessage(t, outChan, true)
+	<-w.outChan
 	for ; i < totalCount; i++ {
 		inChan <- RestartSignal
+		assertMessage(t, outChan, false)
+		assertMessage(t, outChan, true)
 		<-w.outChan
 	}
-	inChan <- FlushSignal
-	if *w.count != 1 {
-		t.Fatal("Invalid worker process count: ", *w.count)
-	}
-	if *w.totalCount != totalCount {
-		t.Fatal("Invalid worker process total count: ", *w.totalCount)
-	}
-	if !status {
-		t.Fatal("Invalid worker process status: ", status)
-	}
+	assertCount(t, *w.count, 1)
+	assertTotalCount(t, *w.totalCount, totalCount+1)
 }
 
 func TestKillSignalForWorker(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan int)
-	status := false
-	go ManageWorker(inChan, &status, w)
+	outChan := make(chan interface{})
+	go ManageWorker(inChan, outChan, w)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("Channel is still open because it receives signals successfully")
 		}
-		if *w.count != 0 {
-			t.Fatal("Invalid worker process count: ", *w.count)
-		}
-		if *w.totalCount != 1 {
-			t.Fatal("Invalid worker process total count: ", *w.totalCount)
-		}
-		if status {
-			t.Fatal("Invalid worker process status: ", status)
-		}
+		assertCount(t, *w.count, 0)
+		assertTotalCount(t, *w.totalCount, 1)
 		close(w.outChan)
 	}()
 	inChan <- StartSignal
+	assertMessage(t, outChan, true)
 	<-w.outChan
 	inChan <- KillSignal
+	assertMessage(t, outChan, false)
 	inChan <- KillSignal
-	inChan <- FlushSignal
+}
+
+func TestWorkerWithoutOutChannel(t *testing.T) {
+	w := newTestWorker()
+	inChan := make(chan int)
+	go ManageWorker(inChan, nil, w)
+	defer func() { close(w.outChan) }()
+	inChan <- StartSignal
+	<-w.outChan
+	inChan <- RestartSignal
+	<-w.outChan
+	inChan <- StopSignal
+	inChan <- KillSignal
+	assertCount(t, *w.count, 0)
+	assertTotalCount(t, *w.totalCount, 2)
+}
+
+func assertMessage(t *testing.T, outChan chan interface{}, expected bool) {
+	if msg := <-outChan; msg != expected {
+		t.Fatal("Invalid message: ", msg)
+	}
+}
+
+func assertCount(t *testing.T, count int32, expected int32) {
+	if count != expected {
+		t.Fatalf("Invalid worker process count: %d (%d expected)", count, expected)
+	}
+}
+
+func assertTotalCount(t *testing.T, count int32, expected int32) {
+	if count != expected {
+		t.Fatalf("Invalid worker process total count: %d (%d expected)", count, expected)
+	}
 }

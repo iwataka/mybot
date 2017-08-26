@@ -8,7 +8,6 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
-	"log"
 )
 
 // Filter is a configuration to filter out tweets
@@ -120,8 +119,6 @@ func (c *Filter) CheckSlackMsg(
 	l LanguageMatcher,
 	cache Cache,
 ) (bool, error) {
-	log.Printf("Slack Message created by %s at %s", ev.Username, ev.Timestamp)
-
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, ev.Text)
 		if err != nil {
