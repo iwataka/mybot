@@ -6,72 +6,40 @@ import (
 
 	"github.com/iwataka/anaconda"
 	mybot "github.com/iwataka/mybot/lib"
+	worker "github.com/iwataka/mybot/worker"
 )
 
-type routineWorker interface {
-	start()
-	stop()
-}
-
-func manageWorkerWithStart(key int, userID string, worker routineWorker) {
+func manageWorkerWithStart(key int, userID string, w worker.RoutineWorker) {
 	data := userSpecificDataMap[userID]
 	ch, exists := data.workerChans[key]
 	if !exists {
 		ch = make(chan int)
 		data.workerChans[key] = ch
 	}
-	go manageWorker(ch, data.statuses[key], worker)
-	ch <- startSignal
-}
-
-func manageWorker(ch chan int, status *bool, worker routineWorker) {
-	for {
-		select {
-		case signal := <-ch:
-			switch signal {
-			case startSignal:
-				if !*status {
-					go worker.start()
-				}
-			case restartSignal:
-				if !*status {
-					worker.stop()
-				}
-				go worker.start()
-			case stopSignal:
-				worker.stop()
-			case killSignal:
-				worker.stop()
-				return
-			}
-		}
-	}
+	go worker.ManageWorker(ch, data.statuses[key], w)
+	ch <- worker.StartSignal
 }
 
 func reloadWorkers(userID string) {
 	data := userSpecificDataMap[userID]
 	for _, ch := range data.workerChans {
-		ch <- restartSignal
+		ch <- worker.RestartSignal
 	}
 }
 
 type twitterDMWorker struct {
 	twitterAPI *mybot.TwitterAPI
 	stream     *anaconda.Stream
-	status     *bool
 }
 
-func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, status *bool) *twitterDMWorker {
-	return &twitterDMWorker{twitterAPI, nil, status}
+func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI) *twitterDMWorker {
+	return &twitterDMWorker{twitterAPI, nil}
 }
 
-func (w *twitterDMWorker) start() {
+func (w *twitterDMWorker) Start() {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
 		return
 	}
-
-	*w.status = true
-	defer func() { *w.status = false }()
 
 	r := w.twitterAPI.DefaultDirectMessageReceiver
 	listener, err := w.twitterAPI.ListenMyself(nil, r)
@@ -87,7 +55,7 @@ func (w *twitterDMWorker) start() {
 	log.Print("Failed to keep connection")
 }
 
-func (w *twitterDMWorker) stop() {
+func (w *twitterDMWorker) Stop() {
 	if w.stream != nil {
 		w.stream.Stop()
 	}
@@ -100,7 +68,6 @@ type twitterUserWorker struct {
 	languageAPI *mybot.LanguageAPI
 	cache       mybot.Cache
 	stream      *anaconda.Stream
-	status      *bool
 }
 
 func newTwitterUserWorker(
@@ -109,18 +76,14 @@ func newTwitterUserWorker(
 	visionAPI *mybot.VisionAPI,
 	languageAPI *mybot.LanguageAPI,
 	cache mybot.Cache,
-	status *bool,
 ) *twitterUserWorker {
-	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, nil, status}
+	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, nil}
 }
 
-func (w *twitterUserWorker) start() {
+func (w *twitterUserWorker) Start() {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
 		return
 	}
-
-	*w.status = true
-	defer func() { *w.status = false }()
 
 	listener, err := w.twitterAPI.ListenUsers(nil)
 	if err != nil {
@@ -135,7 +98,7 @@ func (w *twitterUserWorker) start() {
 	log.Print("Failed to keep connection")
 }
 
-func (w *twitterUserWorker) stop() {
+func (w *twitterUserWorker) Stop() {
 	if w.stream != nil {
 		w.stream.Stop()
 	}
@@ -159,19 +122,17 @@ func newTwitterPeriodicWorker(
 	languageAPI *mybot.LanguageAPI,
 	cache mybot.Cache,
 	config mybot.Config,
-	status *bool,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, nil, status}
+	statusInitValue := false
+	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, nil, &statusInitValue}
 }
 
-func (w *twitterPeriodicWorker) start() {
+func (w *twitterPeriodicWorker) Start() {
 	if !twitterAPIIsAvailable(w.twitterAPI) {
 		return
 	}
 
 	*w.status = true
-	defer func() { *w.status = false }()
-
 	for *w.status {
 		if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
 			log.Print(err)
@@ -190,7 +151,7 @@ func (w *twitterPeriodicWorker) start() {
 	}
 }
 
-func (w *twitterPeriodicWorker) stop() {
+func (w *twitterPeriodicWorker) Stop() {
 	*w.status = false
 }
 
@@ -200,7 +161,6 @@ type slackWorker struct {
 	visionAPI   *mybot.VisionAPI
 	languageAPI *mybot.LanguageAPI
 	listener    *mybot.SlackListener
-	status      *bool
 }
 
 func newSlackWorker(
@@ -208,18 +168,14 @@ func newSlackWorker(
 	twitterAPI *mybot.TwitterAPI,
 	visionAPI *mybot.VisionAPI,
 	languageAPI *mybot.LanguageAPI,
-	status *bool,
 ) *slackWorker {
-	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, nil, status}
+	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, nil}
 }
 
-func (w *slackWorker) start() {
+func (w *slackWorker) Start() {
 	if w.slackAPI == nil || !w.slackAPI.Enabled() {
 		return
 	}
-
-	*w.status = true
-	defer func() { *w.status = false }()
 
 	w.listener = w.slackAPI.Listen()
 	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
@@ -229,7 +185,7 @@ func (w *slackWorker) start() {
 	log.Print("Failed to keep connection")
 }
 
-func (w *slackWorker) stop() {
+func (w *slackWorker) Stop() {
 	if w.listener != nil {
 		w.listener.Stop()
 	}

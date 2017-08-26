@@ -40,13 +40,6 @@ const (
 	twitterPeriodicRoutineKey
 )
 
-const (
-	startSignal = iota
-	restartSignal
-	stopSignal
-	killSignal
-)
-
 type userSpecificData struct {
 	config      mybot.Config
 	cache       mybot.Cache
@@ -134,22 +127,22 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 	go manageWorkerWithStart(
 		twitterDMRoutineKey,
 		userID,
-		newTwitterDMWorker(data.twitterAPI, data.statuses[twitterDMRoutineKey]),
+		newTwitterDMWorker(data.twitterAPI),
 	)
 	go manageWorkerWithStart(
 		twitterUserRoutineKey,
 		userID,
-		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, data.statuses[twitterUserRoutineKey]),
+		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache),
 	)
 	go manageWorkerWithStart(
 		twitterPeriodicRoutineKey,
 		userID,
-		newTwitterPeriodicWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, data.config, data.statuses[twitterPeriodicRoutineKey]),
+		newTwitterPeriodicWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, data.config),
 	)
 	go manageWorkerWithStart(
 		slackRoutineKey,
 		userID,
-		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, data.statuses[slackRoutineKey]),
+		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI),
 	)
 
 	return data, nil
