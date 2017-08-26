@@ -90,44 +90,6 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		return nil, err
 	}
 
-	twitterCk := c.String("twitter-consumer-key")
-	twitterCs := c.String("twitter-consumer-secret")
-	if session == nil {
-		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-app"))
-	} else {
-		col := session.DB(dbName).C("twitter-app-auth")
-		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if twitterCk != "" && twitterCs != "" {
-		twitterApp.SetCreds(twitterCk, twitterCs)
-		err := twitterApp.Save()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	slackCk := c.String("slack-client-id")
-	slackCs := c.String("slack-client-secret")
-	if session == nil {
-		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-app"))
-	} else {
-		col := session.DB(dbName).C("slack-app-auth")
-		slackApp, err = mybot.NewDBOAuthApp(col)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if slackCk != "" && slackCs != "" {
-		slackApp.SetCreds(slackCk, slackCs)
-		err := slackApp.Save()
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	if session == nil {
 		dir, err := getArgDir(c, "twitter-auth")
 		if err != nil {
@@ -413,6 +375,7 @@ func beforeAll(c *cli.Context) error {
 	dbUser := c.String("db-user")
 	dbPasswd := c.String("db-passwd")
 	dbName := c.String("db-name")
+	var err error
 
 	if dbAddress != "" && dbName != "" {
 		info := &mgo.DialInfo{}
@@ -422,6 +385,44 @@ func beforeAll(c *cli.Context) error {
 		info.Database = dbName
 		var err error
 		session, err = mgo.DialWithInfo(info)
+		if err != nil {
+			return err
+		}
+	}
+
+	twitterCk := c.String("twitter-consumer-key")
+	twitterCs := c.String("twitter-consumer-secret")
+	if session == nil {
+		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-app"))
+	} else {
+		col := session.DB(dbName).C("twitter-app-auth")
+		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
+	}
+	if err != nil {
+		return err
+	}
+	if twitterCk != "" && twitterCs != "" {
+		twitterApp.SetCreds(twitterCk, twitterCs)
+		err := twitterApp.Save()
+		if err != nil {
+			return err
+		}
+	}
+
+	slackCk := c.String("slack-client-id")
+	slackCs := c.String("slack-client-secret")
+	if session == nil {
+		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-app"))
+	} else {
+		col := session.DB(dbName).C("slack-app-auth")
+		slackApp, err = mybot.NewDBOAuthApp(col)
+	}
+	if err != nil {
+		return err
+	}
+	if slackCk != "" && slackCs != "" {
+		slackApp.SetCreds(slackCk, slackCs)
+		err := slackApp.Save()
 		if err != nil {
 			return err
 		}
