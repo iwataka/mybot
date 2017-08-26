@@ -263,12 +263,12 @@ func (a *SlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
 }
 
 func (a *SlackAPI) Listen() *SlackListener {
-	return &SlackListener{true, a}
+	return &SlackListener{a, make(chan bool)}
 }
 
 type SlackListener struct {
-	enabled bool
-	api     *SlackAPI
+	api       *SlackAPI
+	innerChan chan bool
 }
 
 func (l *SlackListener) Start(
@@ -278,8 +278,9 @@ func (l *SlackListener) Start(
 ) error {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
+	defer func() { rtm.Disconnect() }()
 
-	for l.enabled {
+	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
@@ -321,13 +322,16 @@ func (l *SlackListener) Start(
 				log.Printf("%T", ev)
 				return fmt.Errorf("Invalid authentication")
 			}
+		case <-l.innerChan:
+			return nil
 		}
 	}
 	return nil
 }
 
 func (l *SlackListener) Stop() {
-	l.enabled = false
+	l.innerChan <- true
+	close(l.innerChan)
 }
 
 func CheckSlackError(err error) bool {

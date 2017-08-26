@@ -142,7 +142,7 @@ type twitterPeriodicWorker struct {
 	config      mybot.Config
 	id          string
 	stream      *anaconda.Stream
-	ticker      *time.Ticker
+	innerChan   chan bool
 }
 
 func newTwitterPeriodicWorker(
@@ -154,7 +154,7 @@ func newTwitterPeriodicWorker(
 	config mybot.Config,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, nil}
+	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, make(chan bool)}
 }
 
 func (w *twitterPeriodicWorker) Start() error {
@@ -166,22 +166,27 @@ func (w *twitterPeriodicWorker) Start() error {
 	if err != nil {
 		return err
 	}
-	w.ticker = time.NewTicker(d)
-	for range w.ticker.C {
-		if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
-			return err
-		}
-		if err := w.cache.Save(); err != nil {
-			return err
+	ticker := time.NewTicker(d)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
+				return err
+			}
+			if err := w.cache.Save(); err != nil {
+				return err
+			}
+		case <-w.innerChan:
+			return nil
 		}
 	}
 	return nil
 }
 
 func (w *twitterPeriodicWorker) Stop() {
-	if w.ticker != nil {
-		w.ticker.Stop()
-	}
+	w.innerChan <- true
 }
 
 func (w *twitterPeriodicWorker) Name() string {
