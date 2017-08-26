@@ -52,7 +52,7 @@ func reloadWorkers(userID string) {
 type twitterDMWorker struct {
 	twitterAPI *mybot.TwitterAPI
 	id         string
-	stream     *anaconda.Stream
+	listener   *mybot.TwitterDMListener
 }
 
 func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string) *twitterDMWorker {
@@ -64,21 +64,21 @@ func (w *twitterDMWorker) Start() error {
 		return nil
 	}
 
+	var err error
 	r := w.twitterAPI.DefaultDirectMessageReceiver
-	listener, err := w.twitterAPI.ListenMyself(nil, r)
+	w.listener, err = w.twitterAPI.ListenMyself(nil, r)
 	if err != nil {
 		return err
 	}
-	w.stream = listener.Stream
-	if err := listener.Listen(); err != nil {
+	if err := w.listener.Listen(); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (w *twitterDMWorker) Stop() {
-	if w.stream != nil {
-		w.stream.Stop()
+	if w.listener != nil {
+		w.listener.Stop()
 	}
 }
 
@@ -93,7 +93,7 @@ type twitterUserWorker struct {
 	languageAPI *mybot.LanguageAPI
 	cache       mybot.Cache
 	id          string
-	stream      *anaconda.Stream
+	listener    *mybot.TwitterUserListener
 }
 
 func newTwitterUserWorker(
@@ -112,20 +112,20 @@ func (w *twitterUserWorker) Start() error {
 		return nil
 	}
 
-	listener, err := w.twitterAPI.ListenUsers(nil)
+	var err error
+	w.listener, err = w.twitterAPI.ListenUsers(nil)
 	if err != nil {
 		return err
 	}
-	w.stream = listener.Stream
-	if err := listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
+	if err := w.listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (w *twitterUserWorker) Stop() {
-	if w.stream != nil {
-		w.stream.Stop()
+	if w.listener != nil {
+		w.listener.Stop()
 	}
 }
 
@@ -142,7 +142,7 @@ type twitterPeriodicWorker struct {
 	config      mybot.Config
 	id          string
 	stream      *anaconda.Stream
-	status      *bool
+	ticker      *time.Ticker
 }
 
 func newTwitterPeriodicWorker(
@@ -154,8 +154,7 @@ func newTwitterPeriodicWorker(
 	config mybot.Config,
 	id string,
 ) *twitterPeriodicWorker {
-	statusInitValue := false
-	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, &statusInitValue}
+	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, nil}
 }
 
 func (w *twitterPeriodicWorker) Start() error {
@@ -163,25 +162,26 @@ func (w *twitterPeriodicWorker) Start() error {
 		return nil
 	}
 
-	*w.status = true
-	for *w.status {
+	d, err := time.ParseDuration(w.config.GetTwitterDuration())
+	if err != nil {
+		return err
+	}
+	w.ticker = time.NewTicker(d)
+	for range w.ticker.C {
 		if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
 			return err
 		}
 		if err := w.cache.Save(); err != nil {
 			return err
 		}
-		d, err := time.ParseDuration(w.config.GetTwitterDuration())
-		if err != nil {
-			return err
-		}
-		time.Sleep(d)
 	}
 	return nil
 }
 
 func (w *twitterPeriodicWorker) Stop() {
-	*w.status = false
+	if w.ticker != nil {
+		w.ticker.Stop()
+	}
 }
 
 func (w *twitterPeriodicWorker) Name() string {

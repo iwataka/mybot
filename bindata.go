@@ -272,7 +272,7 @@ func assetsTmplStatusTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 2460, mode: os.FileMode(420), modTime: time.Unix(1503684278, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/status.tmpl", size: 2460, mode: os.FileMode(420), modTime: time.Unix(1503724190, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

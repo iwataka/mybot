@@ -418,8 +418,9 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 }
 
 type TwitterUserListener struct {
-	Stream *anaconda.Stream
-	api    *TwitterAPI
+	stream    *anaconda.Stream
+	api       *TwitterAPI
+	innerChan chan bool
 }
 
 func (l *TwitterUserListener) Listen(
@@ -429,47 +430,58 @@ func (l *TwitterUserListener) Listen(
 	cache Cache,
 ) error {
 	for {
-		switch c := (<-l.Stream.C).(type) {
-		case anaconda.Tweet:
-			log.Printf("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
+		select {
+		case msg := <-l.stream.C:
+			switch c := msg.(type) {
+			case anaconda.Tweet:
+				log.Printf("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
 
-			name := c.User.ScreenName
-			timelines := []TimelineConfig{}
-			ts := l.api.Config.GetTwitterTimelines()
-			for _, t := range ts {
-				for _, n := range t.ScreenNames {
-					if n == name {
-						timelines = append(timelines, t)
-						break
+				name := c.User.ScreenName
+				timelines := []TimelineConfig{}
+				ts := l.api.Config.GetTwitterTimelines()
+				for _, t := range ts {
+					for _, n := range t.ScreenNames {
+						if n == name {
+							timelines = append(timelines, t)
+							break
+						}
 					}
 				}
-			}
-			for _, timeline := range timelines {
-				if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
-					continue
-				}
-				if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
-					continue
-				}
-				match, err := timeline.Filter.CheckTweet(c, vis, lang, cache)
-				if err != nil {
-					return err
-				}
-				if match {
-					done := l.api.Cache.GetTweetAction(c.Id)
-					err = l.api.processTweet(c, timeline.Action.Sub(done), slack)
+				for _, timeline := range timelines {
+					if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
+						continue
+					}
+					if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
+						continue
+					}
+					match, err := timeline.Filter.CheckTweet(c, vis, lang, cache)
 					if err != nil {
 						return err
 					}
-					l.api.Cache.SetLatestTweetID(name, c.Id)
+					if match {
+						done := l.api.Cache.GetTweetAction(c.Id)
+						err = l.api.processTweet(c, timeline.Action.Sub(done), slack)
+						if err != nil {
+							return err
+						}
+						l.api.Cache.SetLatestTweetID(name, c.Id)
+					}
+				}
+				err := l.api.Cache.Save()
+				if err != nil {
+					return err
 				}
 			}
-			err := l.api.Cache.Save()
-			if err != nil {
-				return err
-			}
+		case <-l.innerChan:
+			return nil
 		}
 	}
+}
+
+func (l *TwitterUserListener) Stop() {
+	l.stream.Stop()
+	l.innerChan <- true
+	close(l.innerChan)
 }
 
 // ListenUsers listens timelines of the friends
@@ -492,45 +504,57 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.API.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a}, nil
+		return &TwitterUserListener{stream, a, make(chan bool)}, nil
 	}
 }
 
 type TwitterDMListener struct {
-	Stream   *anaconda.Stream
-	api      *TwitterAPI
-	receiver DirectMessageReceiver
+	stream    *anaconda.Stream
+	api       *TwitterAPI
+	receiver  DirectMessageReceiver
+	innerChan chan bool
 }
 
 func (l *TwitterDMListener) Listen() error {
 	for {
-		switch c := (<-l.Stream.C).(type) {
-		case anaconda.DirectMessage:
-			log.Printf("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
+		select {
+		case msg := <-l.stream.C:
+			switch c := msg.(type) {
+			case anaconda.DirectMessage:
+				log.Printf("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
 
-			conf := l.api.Config.GetTwitterInteraction()
-			if conf != nil {
-				match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
-				if err != nil {
-					return err
-				}
-				if match {
-					id := l.api.Cache.GetLatestDMID()
-					if id < c.Id {
-						l.api.Cache.SetLatestDMID(c.Id)
-					}
-					err = l.api.responseForDirectMessage(c, l.receiver)
+				conf := l.api.Config.GetTwitterInteraction()
+				if conf != nil {
+					match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
 					if err != nil {
 						return err
 					}
+					if match {
+						id := l.api.Cache.GetLatestDMID()
+						if id < c.Id {
+							l.api.Cache.SetLatestDMID(c.Id)
+						}
+						err = l.api.responseForDirectMessage(c, l.receiver)
+						if err != nil {
+							return err
+						}
+					}
+				}
+				err := l.api.Cache.Save()
+				if err != nil {
+					return err
 				}
 			}
-			err := l.api.Cache.Save()
-			if err != nil {
-				return err
-			}
+		case <-l.innerChan:
+			return nil
 		}
 	}
+}
+
+func (l *TwitterDMListener) Stop() {
+	l.stream.Stop()
+	l.innerChan <- true
+	close(l.innerChan)
 }
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
@@ -543,7 +567,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.API.UserStream(v)
-	return &TwitterDMListener{stream, a, receiver}, nil
+	return &TwitterDMListener{stream, a, receiver, make(chan bool)}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
