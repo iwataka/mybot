@@ -16,6 +16,7 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
 )
@@ -46,11 +47,15 @@ func (a *TestAuthenticator) Logout(provider string, w http.ResponseWriter, r *ht
 }
 
 func init() {
+	err := initServer()
+	if err != nil {
+		panic(err)
+	}
+
 	serverTestUserSpecificData = &userSpecificData{}
-	var err error
 	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
 	serverTestUserSpecificData.statuses = map[int]*bool{}
-	serverTestUserSpecificData.workerChans = map[int]chan int{}
+	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
 	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPI("", serverTestUserSpecificData.config, nil)
 	initStatuses(serverTestUserSpecificData.statuses)
 	if err != nil {

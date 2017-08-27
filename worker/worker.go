@@ -1,5 +1,9 @@
 package worker
 
+import (
+	"time"
+)
+
 const (
 	StartSignal = iota
 	RestartSignal
@@ -7,48 +11,66 @@ const (
 	KillSignal
 )
 
+type WorkerSignal struct {
+	signal    int
+	timestamp time.Time
+}
+
+func NewWorkerSignal(signal int) *WorkerSignal {
+	return &WorkerSignal{signal, time.Now()}
+}
+
 type RoutineWorker interface {
 	Start() error
 	Stop()
 	Name() string
 }
 
-func ManageWorker(inChan chan int, outChan chan interface{}, worker RoutineWorker) {
+func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker RoutineWorker) {
 	innerChan := make(chan bool)
 	innerStatus := false
+	timestamp := time.Now()
+
+	start := func(t time.Time) {
+		if !innerStatus {
+			go wrapWithStatusManagement(worker.Start, outChan, innerChan)
+			innerStatus = true
+			timestamp = t
+		}
+	}
+
+	stop := func(t time.Time, force bool) {
+		if innerStatus && (force || timestamp.Before(t)) {
+			worker.Stop()
+			<-innerChan
+			innerStatus = false
+		}
+	}
+
+	clean := func() {
+		close(innerChan)
+		close(inChan)
+		if outChan != nil {
+			close(outChan)
+		}
+	}
+
 	for {
 		select {
-		case signal := <-inChan:
+		case workerSignal := <-inChan:
+			signal := workerSignal.signal
+			t := workerSignal.timestamp
 			switch signal {
 			case StartSignal:
-				if !innerStatus {
-					go wrapWithStatusManagement(worker.Start, outChan, innerChan)
-					innerStatus = true
-				}
+				start(t)
 			case RestartSignal:
-				if innerStatus {
-					worker.Stop()
-					<-innerChan
-				}
-				go wrapWithStatusManagement(worker.Start, outChan, innerChan)
-				innerStatus = true
+				stop(t, false)
+				start(t)
 			case StopSignal:
-				if innerStatus {
-					worker.Stop()
-					<-innerChan
-					innerStatus = false
-				}
+				stop(t, true)
 			case KillSignal:
-				if innerStatus {
-					worker.Stop()
-					<-innerChan
-					innerStatus = false
-				}
-				close(innerChan)
-				close(inChan)
-				if outChan != nil {
-					close(outChan)
-				}
+				stop(t, true)
+				clean()
 				return
 			}
 		}

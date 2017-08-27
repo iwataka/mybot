@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
 
-	"log"
-
+	"github.com/gorilla/sessions"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/worker"
+	"github.com/kidstuff/mongostore"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 	"gopkg.in/mgo.v2"
@@ -25,12 +27,13 @@ var (
 	userSpecificDataMap map[string]*userSpecificData = make(map[string]*userSpecificData)
 
 	// Global-scope data
-	twitterApp  mybot.OAuthApp
-	slackApp    mybot.OAuthApp
-	visionAPI   *mybot.VisionAPI
-	languageAPI *mybot.LanguageAPI
-	cliContext  *cli.Context
-	session     *mgo.Session
+	twitterApp    mybot.OAuthApp
+	slackApp      mybot.OAuthApp
+	visionAPI     *mybot.VisionAPI
+	languageAPI   *mybot.LanguageAPI
+	cliContext    *cli.Context
+	dbSession     *mgo.Session
+	serverSession sessions.Store
 )
 
 const (
@@ -47,14 +50,14 @@ type userSpecificData struct {
 	twitterAuth mybot.OAuthCreds
 	slackAPI    *mybot.SlackAPI
 	slackAuth   mybot.OAuthCreds
-	workerChans map[int]chan int
+	workerChans map[int]chan *worker.WorkerSignal
 	statuses    map[int]*bool
 }
 
 func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
 	data := &userSpecificData{}
-	data.workerChans = map[int]chan int{}
+	data.workerChans = map[int]chan *worker.WorkerSignal{}
 	data.statuses = map[int]*bool{}
 	initStatuses(data.statuses)
 	dbName := c.String("db-name")
@@ -402,18 +405,31 @@ func beforeAll(c *cli.Context) error {
 		info.Password = dbPasswd
 		info.Database = dbName
 		var err error
-		session, err = mgo.DialWithInfo(info)
+		dbSession, err = mgo.DialWithInfo(info)
 		if err != nil {
 			return err
 		}
 	}
 
+	if dbSession == nil {
+		serverSession = sessions.NewCookieStore(
+			[]byte("mybot_session_key"),
+		)
+	} else {
+		serverSession = mongostore.NewMongoStore(
+			dbSession.DB(dbName).C("user-session"),
+			86400*30,
+			true,
+			[]byte("mybot_session_key"),
+		)
+	}
+
 	twitterCk := c.String("twitter-consumer-key")
 	twitterCs := c.String("twitter-consumer-secret")
-	if session == nil {
+	if dbSession == nil {
 		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-app"))
 	} else {
-		col := session.DB(dbName).C("twitter-app-auth")
+		col := dbSession.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
 	if err != nil {
@@ -429,10 +445,10 @@ func beforeAll(c *cli.Context) error {
 
 	slackCk := c.String("slack-client-id")
 	slackCs := c.String("slack-client-secret")
-	if session == nil {
+	if dbSession == nil {
 		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-app"))
 	} else {
-		col := session.DB(dbName).C("slack-app-auth")
+		col := dbSession.DB(dbName).C("slack-app-auth")
 		slackApp, err = mybot.NewDBOAuthApp(col)
 	}
 	if err != nil {
@@ -446,12 +462,12 @@ func beforeAll(c *cli.Context) error {
 		}
 	}
 
-	userIDs, err := getUserIDs(c, session, dbName)
+	userIDs, err := getUserIDs(c, dbSession, dbName)
 	if err != nil {
 		return err
 	}
 	for _, userID := range userIDs {
-		err := initForUser(c, session, dbName, userID)
+		err := initForUser(c, dbSession, dbName, userID)
 		log.Printf("Initialize for user %s", userID)
 		if err != nil {
 			return err

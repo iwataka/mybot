@@ -10,10 +10,10 @@ import (
 	worker "github.com/iwataka/mybot/worker"
 )
 
-func manageWorkerWithStart(key int, workerChans map[int]chan int, statuses map[int]*bool, w worker.RoutineWorker) {
+func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.RoutineWorker) {
 	ch, exists := workerChans[key]
 	if !exists {
-		ch = make(chan int)
+		ch = make(chan *worker.WorkerSignal)
 		workerChans[key] = ch
 	}
 	outChan := make(chan interface{})
@@ -39,13 +39,13 @@ func manageWorkerWithStart(key int, workerChans map[int]chan int, statuses map[i
 			}
 		}
 	}()
-	ch <- worker.StartSignal
+	ch <- worker.NewWorkerSignal(worker.StartSignal)
 }
 
 func reloadWorkers(userID string) {
 	data := userSpecificDataMap[userID]
 	for _, ch := range data.workerChans {
-		ch <- worker.RestartSignal
+		ch <- worker.NewWorkerSignal(worker.RestartSignal)
 	}
 }
 

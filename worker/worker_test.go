@@ -3,6 +3,7 @@ package worker
 import (
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type testWorker struct {
@@ -44,12 +45,12 @@ func (w *testWorker) Name() string {
 
 func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { inChan <- KillSignal; close(w.outChan) }()
+	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	for i := 0; i < 5; i++ {
-		inChan <- StartSignal
+		inChan <- NewWorkerSignal(StartSignal)
 		if i == 0 {
 			assertMessage(t, outChan, true)
 			<-w.outChan
@@ -61,7 +62,7 @@ func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 
 func TestStopAndStartSignal(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
 	defer func() { close(w.outChan) }()
@@ -69,48 +70,48 @@ func TestStopAndStartSignal(t *testing.T) {
 	var i int32 = 0
 	for ; i < totalCount*2; i++ {
 		if i%2 == 0 {
-			inChan <- StartSignal
+			inChan <- NewWorkerSignal(StartSignal)
 			assertMessage(t, outChan, true)
 			<-w.outChan
 		} else {
-			inChan <- StopSignal
+			inChan <- NewWorkerSignal(StopSignal)
 			assertMessage(t, outChan, false)
 		}
 	}
-	inChan <- KillSignal
+	inChan <- NewWorkerSignal(KillSignal)
 	assertCount(t, *w.count, 0)
 	assertTotalCount(t, *w.totalCount, totalCount)
 }
 
 func TestStopSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
 	defer func() { close(w.outChan) }()
-	inChan <- StartSignal
+	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
-	inChan <- StopSignal
+	inChan <- NewWorkerSignal(StopSignal)
 	assertMessage(t, outChan, false)
-	inChan <- KillSignal
+	inChan <- NewWorkerSignal(KillSignal)
 	assertCount(t, *w.count, 0)
 	assertTotalCount(t, *w.totalCount, 1)
 }
 
 func TestRestartSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { inChan <- KillSignal; close(w.outChan) }()
+	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	var totalCount int32 = 5
 	var i int32 = 0
-	inChan <- StartSignal
+	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
 	for ; i < totalCount; i++ {
-		inChan <- RestartSignal
+		inChan <- NewWorkerSignal(RestartSignal)
 		assertMessage(t, outChan, false)
 		assertMessage(t, outChan, true)
 		<-w.outChan
@@ -121,7 +122,7 @@ func TestRestartSignalForWorker(t *testing.T) {
 
 func TestKillSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
 	defer func() {
@@ -132,27 +133,42 @@ func TestKillSignalForWorker(t *testing.T) {
 		assertTotalCount(t, *w.totalCount, 1)
 		close(w.outChan)
 	}()
-	inChan <- StartSignal
+	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
-	inChan <- KillSignal
+	inChan <- NewWorkerSignal(KillSignal)
 	assertMessage(t, outChan, false)
-	inChan <- KillSignal
+	inChan <- NewWorkerSignal(KillSignal)
 }
 
 func TestWorkerWithoutOutChannel(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan int)
+	inChan := make(chan *WorkerSignal)
 	go ManageWorker(inChan, nil, w)
 	defer func() { close(w.outChan) }()
-	inChan <- StartSignal
+	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
-	inChan <- RestartSignal
+	inChan <- NewWorkerSignal(RestartSignal)
 	<-w.outChan
-	inChan <- StopSignal
-	inChan <- KillSignal
+	inChan <- NewWorkerSignal(StopSignal)
+	inChan <- NewWorkerSignal(KillSignal)
 	assertCount(t, *w.count, 0)
 	assertTotalCount(t, *w.totalCount, 2)
+}
+
+func TestWorkerSignalWithOldTimestamp(t *testing.T) {
+	w := newTestWorker()
+	inChan := make(chan *WorkerSignal)
+	go ManageWorker(inChan, nil, w)
+	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
+	inChan <- NewWorkerSignal(StartSignal)
+	<-w.outChan
+	oldRestartSignal := &WorkerSignal{RestartSignal, time.Now().Add(-1 * time.Hour)}
+	for i := 0; i < 10; i++ {
+		inChan <- oldRestartSignal
+	}
+	assertCount(t, *w.count, 1)
+	assertTotalCount(t, *w.totalCount, 1)
 }
 
 func assertMessage(t *testing.T, outChan chan interface{}, expected bool) {

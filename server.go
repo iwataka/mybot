@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/contrib/sessions"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/markbates/goth"
@@ -68,46 +67,46 @@ func (a *Authenticator) InitProvider(host, name string) {
 }
 
 func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
+	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
+	if err != nil {
+		return goth.User{}, err
+	}
+	val, exists := sess.Values["mybot-user"]
+	if exists {
+		if user, ok := val.(goth.User); ok {
+			return user, nil
+		}
+	}
+
 	a.SetProvider(r, provider)
 	q := r.URL.Query()
 	q.Add("state", "state")
 	r.URL.RawQuery = q.Encode()
-	return gothic.CompleteUserAuth(w, r)
+	user, err := gothic.CompleteUserAuth(w, r)
+	if err == nil {
+		user.RawData = nil // RawData cannot be converted into session data cerrently
+		sess.Values["mybot-user"] = user
+		err := sess.Save(r, w)
+		if err != nil {
+			return goth.User{}, err
+		}
+	}
+	return user, err
 }
 
 func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
+	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
+	if err != nil {
+		return err
+	}
+	sess.Options.MaxAge = -1
+	err = sess.Save(r, w)
+	if err != nil {
+		return err
+	}
+
 	a.SetProvider(r, provider)
 	return gothic.Logout(w, r)
-}
-
-func init() {
-	gothic.Store = sessions.NewCookieStore([]byte("mybot_session_key"))
-
-	tmplTexts := []string{}
-	for _, name := range AssetNames() {
-		tmplBytes := MustAsset(name)
-		tmplTexts = append(tmplTexts, string(tmplBytes))
-	}
-
-	funcMap := template.FuncMap{
-		"checkbox":            mybot.Checkbox,
-		"boolSelectbox":       mybot.BoolSelectbox,
-		"selectbox":           mybot.Selectbox,
-		"listTextbox":         mybot.ListTextbox,
-		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
-		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
-		"newMap":              mybot.NewMap,
-	}
-
-	tmpl, err := template.
-		New("mybot_template_root").
-		Funcs(funcMap).
-		Parse(strings.Join(tmplTexts, "\n"))
-	htmlTemplate = tmpl
-
-	if err != nil {
-		panic(err)
-	}
 }
 
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
@@ -125,6 +124,11 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func startServer(host, port, cert, key string) error {
+	err := initServer()
+	if err != nil {
+		return err
+	}
+
 	http.HandleFunc(
 		"/",
 		wrapHandler(indexHandler),
@@ -198,7 +202,6 @@ func startServer(host, port, cert, key string) error {
 		twitterLogoutHandler,
 	)
 
-	var err error
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
@@ -209,6 +212,37 @@ func startServer(host, port, cert, key string) error {
 		log.Printf("Listen on %s://%s", "http", addr)
 		err = http.ListenAndServe(addr, nil)
 	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func initServer() error {
+	gothic.Store = serverSession
+
+	tmplTexts := []string{}
+	for _, name := range AssetNames() {
+		tmplBytes := MustAsset(name)
+		tmplTexts = append(tmplTexts, string(tmplBytes))
+	}
+
+	funcMap := template.FuncMap{
+		"checkbox":            mybot.Checkbox,
+		"boolSelectbox":       mybot.BoolSelectbox,
+		"selectbox":           mybot.Selectbox,
+		"listTextbox":         mybot.ListTextbox,
+		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
+		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
+		"newMap":              mybot.NewMap,
+	}
+
+	tmpl, err := template.
+		New("mybot_template_root").
+		Funcs(funcMap).
+		Parse(strings.Join(tmplTexts, "\n"))
+	htmlTemplate = tmpl
+
 	if err != nil {
 		return err
 	}
@@ -338,7 +372,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	defer func() {
 		if valid {
 			err = config.Save()
-			reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
+			go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
 		} else {
 			err = config.Load()
 		}
@@ -1028,7 +1062,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	id := twitterUserIDPrefix + user.UserID
 	data, exists := userSpecificDataMap[id]
 	if !exists {
-		data, err = newUserSpecificData(cliContext, session, id)
+		data, err = newUserSpecificData(cliContext, dbSession, id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
