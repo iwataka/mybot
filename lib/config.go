@@ -43,8 +43,8 @@ type Config interface {
 	Save() error
 	Validate() error
 	ValidateWithAPI(api *TwitterAPI) error
-	FromText(bytes []byte) error
-	ToText(indent, ext string) ([]byte, error)
+	Unmarshal(bytes []byte) error
+	Marshal(indent, ext string) ([]byte, error)
 }
 
 // FileConfig is a root of the all configurations of this applciation.
@@ -256,10 +256,10 @@ func (c *ConfigProperties) ValidateWithAPI(api *TwitterAPI) error {
 	return nil
 }
 
-// ToText returns a configuration content as a toml text. If error occurs while
+// Marshal returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *ConfigProperties) ToText(indent, ext string) ([]byte, error) {
+func (c *ConfigProperties) Marshal(indent, ext string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	switch ext {
 	case ".json":
@@ -285,7 +285,7 @@ func (c *ConfigProperties) ToText(indent, ext string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *ConfigProperties) FromText(bytes []byte) error {
+func (c *ConfigProperties) Unmarshal(bytes []byte) error {
 	err := json.Unmarshal(bytes, c)
 	if err == nil {
 		return nil
@@ -307,7 +307,7 @@ func (c *FileConfig) Save() error {
 		return err
 	}
 	if c != nil {
-		bs, err := c.ToText("", filepath.Ext(c.File))
+		bs, err := c.Marshal("", filepath.Ext(c.File))
 		if err != nil {
 			return err
 		}
@@ -327,7 +327,7 @@ func (c *FileConfig) Load() error {
 		if err != nil {
 			return err
 		}
-		err = c.FromText(bytes)
+		err = c.Unmarshal(bytes)
 		if err != nil {
 			return err
 		}
