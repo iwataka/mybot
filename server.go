@@ -21,9 +21,6 @@ import (
 )
 
 const (
-	// go1.5 or lower doesn't support http.MethodPost and else.
-	methodPost          = "POST"
-	methodGet           = "GET"
 	htmlTemplateDir     = "assets/tmpl"
 	twitterUserIDPrefix = "twitter-"
 )
@@ -41,8 +38,10 @@ func (a *Authenticator) SetProvider(req *http.Request, name string) {
 	}
 }
 
-func (a *Authenticator) InitProvider(host, name string) {
-	callback := fmt.Sprintf("http://%s/auth/%s/callback", host, name)
+func (a *Authenticator) InitProvider(host, name, callback string) {
+	if callback == "" {
+		callback = fmt.Sprintf("http://%s/auth/%s/callback", host, name)
+	}
 	var p goth.Provider
 	switch name {
 	case "twitter":
@@ -112,11 +111,11 @@ func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.R
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if ck, cs := twitterApp.GetCreds(); ck == "" || cs == "" {
-			redirect(w, "/setup/")
+			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		} else if ck, cs := slackApp.GetCreds(); ck == "" || cs == "" {
-			redirect(w, "/setup/")
+			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		} else if _, err := authenticator.CompleteUserAuth("twitter", w, r); err != nil {
-			redirect(w, "/auth/twitter/")
+			http.Redirect(w, r, "/auth/twitter/", http.StatusSeeOther)
 		} else {
 			f(w, r)
 		}
@@ -252,7 +251,7 @@ func initServer() error {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -353,14 +352,14 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bo
 func configHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfig(w, r, data.config, twitterUser)
-	} else if r.Method == methodGet {
+	} else if r.Method == http.MethodGet {
 		getConfig(w, r, data.config, data.slackAPI, twitterUser)
 	}
 }
@@ -385,7 +384,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		redirect(w, "/config/")
+		http.Redirect(w, r, "/config/", http.StatusSeeOther)
 	}()
 
 	err = r.ParseMultipartForm(32 << 20)
@@ -659,19 +658,19 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfigTimelineAdd(w, r, data.config)
 	}
 }
 
 func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	addTimelineConfig(config)
-	redirect(w, "/config/")
+	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
 func addTimelineConfig(config mybot.Config) {
@@ -679,13 +678,13 @@ func addTimelineConfig(config mybot.Config) {
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 	}
 }
 
 func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	addFavoriteConfig(config)
-	redirect(w, "/config/")
+	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
 func addFavoriteConfig(config mybot.Config) {
@@ -695,12 +694,12 @@ func addFavoriteConfig(config mybot.Config) {
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfigSearchAdd(w, r, data.config)
 	} else {
 		http.NotFound(w, r)
@@ -709,7 +708,7 @@ func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfigSearchAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	addSearchConfig(config)
-	redirect(w, "/config/")
+	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
 func addSearchConfig(config mybot.Config) {
@@ -719,19 +718,19 @@ func addSearchConfig(config mybot.Config) {
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfigMessageAdd(w, r, data.config)
 	}
 }
 
 func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c mybot.Config) {
 	addMessageConfig(c)
-	redirect(w, "/config/")
+	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
 func addMessageConfig(config mybot.Config) {
@@ -741,19 +740,19 @@ func addMessageConfig(config mybot.Config) {
 func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfigIncomingAdd(w, r, data.config)
 	}
 }
 
 func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request, c mybot.Config) {
 	addIncomingConfig(c)
-	redirect(w, "/config/")
+	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
 func addIncomingConfig(config mybot.Config) {
@@ -765,14 +764,14 @@ func addIncomingConfig(config mybot.Config) {
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postConfigFile(w, r, data.config)
-	} else if r.Method == methodGet {
+	} else if r.Method == http.MethodGet {
 		getConfigFile(w, r, data.config)
 	}
 }
@@ -788,7 +787,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config)
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		redirect(w, "/config/")
+		http.Redirect(w, r, "/config/", http.StatusSeeOther)
 	}()
 
 	file, _, err := r.FormFile("mybot.config")
@@ -856,12 +855,12 @@ func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
 func logHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodGet {
+	if r.Method == http.MethodGet {
 		getLog(w, r, data.slackAPI)
 	} else {
 		http.NotFound(w, r)
@@ -871,7 +870,7 @@ func logHandler(w http.ResponseWriter, r *http.Request) {
 func getLog(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 
@@ -901,12 +900,12 @@ func getLog(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) {
 func statusHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodGet {
+	if r.Method == http.MethodGet {
 		getStatus(w, r, data.slackAPI, data.statuses)
 	} else {
 		http.NotFound(w, r)
@@ -916,7 +915,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		redirect(w, "/setup/")
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
 		return
 	}
 
@@ -951,9 +950,9 @@ func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI,
 }
 
 func setupHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postSetup(w, r)
-	} else if r.Method == methodGet {
+	} else if r.Method == http.MethodGet {
 		getSetup(w, r)
 	}
 }
@@ -969,7 +968,7 @@ func postSetup(w http.ResponseWriter, r *http.Request) {
 			}
 			http.SetCookie(w, msgCookie)
 		}
-		redirect(w, "/")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}()
 
 	err := r.ParseMultipartForm(32 << 20)
@@ -1078,7 +1077,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	*data.twitterAPI = *mybot.NewTwitterAPI(data.twitterAuth, data.cache, data.config)
 
-	redirect(w, "/")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
@@ -1103,7 +1102,7 @@ func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	*data.slackAPI = *mybot.NewSlackAPI(user.AccessToken, data.config, data.cache)
 
-	redirect(w, "/")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func getAuthTwitter(w http.ResponseWriter, r *http.Request) {
@@ -1115,22 +1114,23 @@ func getAuthSlack(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
+	callback := r.URL.Query().Get("callback")
 	authenticator.SetProvider(r, provider)
-	authenticator.InitProvider(r.Host, provider)
+	authenticator.InitProvider(r.Host, provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }
 
 func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == methodGet {
+	if r.Method == http.MethodGet {
 		getTwitterLogout(w, r)
 	} else {
-		redirect(w, "/")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
 func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
 	authenticator.Logout("twitter", w, r)
-	redirect(w, "/")
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func hooksHandler(w http.ResponseWriter, r *http.Request) {
@@ -1141,7 +1141,7 @@ func hooksHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == methodPost {
+	if r.Method == http.MethodPost {
 		postHooks(w, r, data.config, data.twitterAPI, data.slackAPI)
 	}
 }
@@ -1216,11 +1216,6 @@ func readFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
-}
-
-func redirect(w http.ResponseWriter, path string) {
-	w.Header().Add("Location", path)
-	w.WriteHeader(http.StatusSeeOther)
 }
 
 func getSlackInfo(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) (string, string) {

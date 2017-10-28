@@ -35,7 +35,7 @@ type TestAuthenticator struct{}
 func (a *TestAuthenticator) SetProvider(req *http.Request, name string) {
 }
 
-func (a *TestAuthenticator) InitProvider(host, name string) {
+func (a *TestAuthenticator) InitProvider(host, name, callback string) {
 }
 
 func (a *TestAuthenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
@@ -148,11 +148,11 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == methodPost {
+		if r.Method == http.MethodPost {
 			serverTestUserSpecificData.config = mybot.NewTestFileConfig("", t)
 			postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
 			wg.Done()
-		} else if r.Method == methodGet {
+		} else if r.Method == http.MethodGet {
 			getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestTwitterUser)
 		}
 	}
