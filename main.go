@@ -470,7 +470,7 @@ func beforeAll(c *cli.Context) error {
 	}
 	for _, userID := range userIDs {
 		err := initForUser(c, dbSession, dbName, userID)
-		fmt.Printf("Initialize for user %s", userID)
+		fmt.Printf("Initialize for user %s\n", userID)
 		if err != nil {
 			return err
 		}

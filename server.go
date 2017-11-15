@@ -205,10 +205,10 @@ func startServer(host, port, cert, key string) error {
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
 	if certErr == nil && keyErr == nil {
-		fmt.Printf("Listen on %s://%s", "https", addr)
+		fmt.Printf("Listen on %s://%s\n", "https", addr)
 		err = http.ListenAndServeTLS(addr, cert, key, nil)
 	} else {
-		fmt.Printf("Listen on %s://%s", "http", addr)
+		fmt.Printf("Listen on %s://%s\n", "http", addr)
 		err = http.ListenAndServe(addr, nil)
 	}
 	if err != nil {

@@ -235,7 +235,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return err
 		}
-		fmt.Printf("Send the message to %s", c)
+		fmt.Printf("Send the message to %s\n", c)
 	}
 
 	if action.Twitter.Tweet {
@@ -285,13 +285,13 @@ func (l *SlackListener) Start(
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.ChannelJoinedEvent:
-				fmt.Printf("Joined to %s", ev.Channel.Name)
+				fmt.Printf("Joined to %s\n", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
 				}
 			case *slack.GroupJoinedEvent:
-				fmt.Printf("Joined to %s", ev.Channel.Name)
+				fmt.Printf("Joined to %s\n", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
@@ -305,7 +305,7 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
-				fmt.Printf("Message to %s by %s", ch, ev.User)
+				fmt.Printf("Message[%s] to %s by %s\n", ch, ev.User)
 				if ch != "" {
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {

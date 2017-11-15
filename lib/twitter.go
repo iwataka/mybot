@@ -10,7 +10,6 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
-	"log"
 )
 
 // NOTE: This must be fixed because multiple applications having different
@@ -323,21 +322,22 @@ func (a *TwitterAPI) processTweet(
 		if CheckTwitterError(err) {
 			return err
 		}
-		fmt.Println("Retweet the tweet")
+		fmt.Printf("Retweet the tweet[%s]\n", id)
 	}
 	if action.Twitter.Favorite && !t.Favorited {
-		_, err := a.API.Favorite(t.Id)
+		id := t.Id
+		_, err := a.API.Favorite(id)
 		if err != nil {
 			return err
 		}
-		fmt.Println("Favorite the tweet")
+		fmt.Println("Favorite the tweet[%s]", id)
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Collect the tweet to %s", col)
+		fmt.Printf("Collect the tweet[%s] to %s\n", t.IdStr, col)
 	}
 
 	if slack.Enabled() && action.Slack != nil {
@@ -346,7 +346,7 @@ func (a *TwitterAPI) processTweet(
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Send the tweet to #%s", ch)
+			fmt.Printf("Send the tweet[%s] to #%s\n", t.IdStr, ch)
 		}
 	}
 
@@ -434,8 +434,6 @@ func (l *TwitterUserListener) Listen(
 		case msg := <-l.stream.C:
 			switch c := msg.(type) {
 			case anaconda.Tweet:
-				fmt.Printf("Tweet created by %s at %s", c.User.ScreenName, c.CreatedAt)
-
 				name := c.User.ScreenName
 				timelines := []TimelineConfig{}
 				ts := l.api.Config.GetTwitterTimelines()
@@ -447,6 +445,11 @@ func (l *TwitterUserListener) Listen(
 						}
 					}
 				}
+
+				if len(timelines) != 0 {
+					fmt.Printf("Tweet[%s] created by %s at %s\n", c.IdStr, name, c.CreatedAt)
+				}
+
 				for _, timeline := range timelines {
 					if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
 						continue
@@ -521,7 +524,7 @@ func (l *TwitterDMListener) Listen() error {
 		case msg := <-l.stream.C:
 			switch c := msg.(type) {
 			case anaconda.DirectMessage:
-				fmt.Printf("DM created by %s at %s", c.Sender.ScreenName, c.CreatedAt)
+				fmt.Printf("DM[%s] created by %s at %s\n", c.IdStr, c.Sender.ScreenName, c.CreatedAt)
 
 				conf := l.api.Config.GetTwitterInteraction()
 				if conf != nil {
