@@ -7,10 +7,10 @@ import (
 )
 
 type OAuthCreds interface {
+	Savable
+	Loadable
 	SetCreds(at, ats string)
 	GetCreds() (string, string)
-	Load() error
-	Save() error
 }
 
 // FileOAuthCreds contains values required for authenticated user
@@ -85,10 +85,10 @@ func (a *OAuthCredsProps) GetCreds() (string, string) {
 }
 
 type OAuthApp interface {
+	Savable
+	Loadable
 	SetCreds(ck, cs string)
 	GetCreds() (string, string)
-	Load() error
-	Save() error
 }
 
 type TwitterOAuthAppProps struct {

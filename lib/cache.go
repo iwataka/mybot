@@ -11,6 +11,7 @@ import (
 )
 
 type Cache interface {
+	Savable
 	GetLatestTweetID(screenName string) int64
 	SetLatestTweetID(screenName string, id int64)
 	GetLatestFavoriteID(screenName string) int64
@@ -21,7 +22,6 @@ type Cache interface {
 	SetTweetAction(tweetID int64, action *Action)
 	GetLatestImages(num int) []ImageCacheData
 	SetImage(data ImageCacheData)
-	Save() error
 }
 
 type CacheProperties struct {

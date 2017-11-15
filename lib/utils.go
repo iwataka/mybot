@@ -12,6 +12,14 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+type Savable interface {
+	Save() error
+}
+
+type Loadable interface {
+	Load() error
+}
+
 type TomlUndecodedKeysError struct {
 	Undecoded []toml.Key
 	File      string

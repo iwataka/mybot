@@ -78,7 +78,7 @@ func NewTwitterAPI(auth OAuthCreds, c Cache, cfg Config) *TwitterAPI {
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
 	if a.API == nil {
-		return false, nil
+		return false, fmt.Errorf("Twitter API is not available")
 	} else {
 		return a.API.VerifyCredentials()
 	}

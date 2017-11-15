@@ -60,8 +60,8 @@ func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string) *twitterDMWorke
 }
 
 func (w *twitterDMWorker) Start() error {
-	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return nil
+	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
+		return err
 	}
 
 	var err error
@@ -108,8 +108,8 @@ func newTwitterUserWorker(
 }
 
 func (w *twitterUserWorker) Start() error {
-	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return nil
+	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
+		return err
 	}
 
 	var err error
@@ -134,35 +134,29 @@ func (w *twitterUserWorker) Name() string {
 }
 
 type twitterPeriodicWorker struct {
-	twitterAPI  *mybot.TwitterAPI
-	slackAPI    *mybot.SlackAPI
-	visionAPI   *mybot.VisionAPI
-	languageAPI *mybot.LanguageAPI
-	cache       mybot.Cache
-	config      mybot.Config
-	id          string
-	stream      *anaconda.Stream
-	innerChan   chan bool
+	runner    mybot.BatchRunner
+	cache     mybot.Savable
+	duration  string
+	id        string
+	stream    *anaconda.Stream
+	innerChan chan bool
 }
 
 func newTwitterPeriodicWorker(
-	twitterAPI *mybot.TwitterAPI,
-	slackAPI *mybot.SlackAPI,
-	visionAPI *mybot.VisionAPI,
-	languageAPI *mybot.LanguageAPI,
-	cache mybot.Cache,
-	config mybot.Config,
+	runner mybot.BatchRunner,
+	cache mybot.Savable,
+	duration string,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, config, id, nil, make(chan bool)}
+	return &twitterPeriodicWorker{runner, cache, duration, id, nil, make(chan bool)}
 }
 
 func (w *twitterPeriodicWorker) Start() error {
-	if !twitterAPIIsAvailable(w.twitterAPI) {
-		return nil
+	if err := w.runner.Verify(); err != nil {
+		return err
 	}
 
-	d, err := time.ParseDuration(w.config.GetTwitterDuration())
+	d, err := time.ParseDuration(w.duration)
 	if err != nil {
 		return err
 	}
@@ -172,7 +166,7 @@ func (w *twitterPeriodicWorker) Start() error {
 	for {
 		select {
 		case <-ticker.C:
-			if err := runTwitterWithStream(w.twitterAPI, w.slackAPI, w.visionAPI, w.languageAPI, w.config); err != nil {
+			if err := w.runner.Run(); err != nil {
 				return err
 			}
 			if err := w.cache.Save(); err != nil {
@@ -213,8 +207,11 @@ func newSlackWorker(
 }
 
 func (w *slackWorker) Start() error {
-	if w.slackAPI == nil || !w.slackAPI.Enabled() {
-		return nil
+	if w.slackAPI == nil {
+		return fmt.Errorf("Slack API is nil")
+	}
+	if !w.slackAPI.Enabled() {
+		return fmt.Errorf("Slack API is disabled")
 	}
 
 	w.listener = w.slackAPI.Listen()

@@ -17,6 +17,8 @@ import (
 )
 
 type Config interface {
+	Savable
+	Loadable
 	GetProperties() *ConfigProperties
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
@@ -39,8 +41,6 @@ type Config interface {
 	AddSlackMessage(msg *MessageConfig)
 	GetIncomingWebhooks() []IncomingWebhook
 	SetIncomingWebhooks([]IncomingWebhook)
-	Load() error
-	Save() error
 	Validate() error
 	ValidateWithAPI(api *TwitterAPI) error
 	Unmarshal(bytes []byte) error
