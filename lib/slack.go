@@ -1,13 +1,13 @@
 package mybot
 
 import (
-	"container/list"
-	"errors"
-	"fmt"
-
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
 	"github.com/nlopes/slack"
+
+	"container/list"
+	"errors"
+	"fmt"
 	"log"
 )
 
@@ -208,21 +208,21 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return err
 		}
-		log.Println("Pin the message")
+		fmt.Println("Pin the message")
 	}
 	if action.Slack.Star {
 		err := a.api.AddStar(ev.Channel, item)
 		if CheckSlackError(err) {
 			return err
 		}
-		log.Println("Star the message")
+		fmt.Println("Star the message")
 	}
 	for _, r := range action.Slack.Reactions {
 		err := a.api.AddReaction(r, item)
 		if CheckSlackError(err) {
 			return err
 		}
-		log.Println("React to the message")
+		fmt.Println("React to the message")
 	}
 	for _, c := range action.Slack.Channels {
 		if ch == c {
@@ -235,7 +235,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return err
 		}
-		log.Printf("Send the message to %s", c)
+		fmt.Printf("Send the message to %s", c)
 	}
 
 	if action.Twitter.Tweet {
@@ -243,7 +243,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckTwitterError(err) {
 			return err
 		}
-		log.Println("Tweet the message")
+		fmt.Println("Tweet the message")
 	}
 	return nil
 }
@@ -285,13 +285,13 @@ func (l *SlackListener) Start(
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.ChannelJoinedEvent:
-				log.Printf("Joined to %s", ev.Channel.Name)
+				fmt.Printf("Joined to %s", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
 				}
 			case *slack.GroupJoinedEvent:
-				log.Printf("Joined to %s", ev.Channel.Name)
+				fmt.Printf("Joined to %s", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return err
@@ -305,7 +305,7 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
-				log.Printf("Message to %s by %s", ch, ev.User)
+				fmt.Printf("Message to %s by %s", ch, ev.User)
 				if ch != "" {
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
