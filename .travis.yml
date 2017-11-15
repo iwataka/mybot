@@ -5,8 +5,6 @@ branches:
 language: go
 go:
   - 1.7
-  - 1.6
-  - 1.5
 os:
   - linux
 
