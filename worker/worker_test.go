@@ -24,17 +24,15 @@ func (w *testWorker) Start() error {
 	atomic.AddInt32(w.count, 1)
 	atomic.AddInt32(w.totalCount, 1)
 	defer func() { atomic.AddInt32(w.count, -1) }()
-
 	w.outChan <- true
-
-	for range w.innerChan {
-		return nil
-	}
+	<-w.innerChan
 	return nil
 }
 
 func (w *testWorker) Stop() {
-	w.innerChan <- true
+	if *w.count == 1 {
+		w.innerChan <- true
+	}
 }
 
 func (w *testWorker) Name() string {
@@ -123,20 +121,19 @@ func TestKillSignalForWorker(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Channel is still open because it receives signals successfully")
-		}
-		assertCount(t, *w.count, 0)
-		assertTotalCount(t, *w.totalCount, 1)
-		close(w.outChan)
-	}()
+	defer func() { close(w.outChan) }()
 	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
 	inChan <- NewWorkerSignal(KillSignal)
 	assertMessage(t, outChan, false)
-	inChan <- NewWorkerSignal(KillSignal)
+	select {
+	case inChan <- NewWorkerSignal(KillSignal):
+		t.Fatal("Sent kill signal but worker manager process still wait for signals")
+	case <-time.After(time.Second):
+	}
+	assertCount(t, *w.count, 0)
+	assertTotalCount(t, *w.totalCount, 1)
 }
 
 func TestWorkerWithoutOutChannel(t *testing.T) {
