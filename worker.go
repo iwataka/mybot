@@ -156,6 +156,7 @@ type twitterPeriodicWorker struct {
 	runner    mybot.BatchRunner
 	cache     mybot.Savable
 	duration  string
+	timeout   time.Duration
 	id        string
 	stream    *anaconda.Stream
 	innerChan chan bool
@@ -165,9 +166,10 @@ func newTwitterPeriodicWorker(
 	runner mybot.BatchRunner,
 	cache mybot.Savable,
 	duration string,
+	timeout time.Duration,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{runner, cache, duration, id, nil, make(chan bool)}
+	return &twitterPeriodicWorker{runner, cache, duration, timeout, id, nil, make(chan bool)}
 }
 
 func (w *twitterPeriodicWorker) Start() error {
@@ -197,7 +199,11 @@ func (w *twitterPeriodicWorker) Start() error {
 }
 
 func (w *twitterPeriodicWorker) Stop() {
-	w.innerChan <- true
+	select {
+	case w.innerChan <- true:
+	case <-time.After(w.timeout):
+		log.Printf("Faield to stop worker %s\n", w.Name())
+	}
 }
 
 func (w *twitterPeriodicWorker) Name() string {

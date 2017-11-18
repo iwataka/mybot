@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/iwataka/mybot/lib"
@@ -145,7 +146,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		twitterPeriodicRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterPeriodicWorker(runner, data.cache, data.config.GetTwitterDuration(), userID),
+		newTwitterPeriodicWorker(runner, data.cache, data.config.GetTwitterDuration(), time.Minute, userID),
 	)
 	manageWorkerWithStart(
 		slackRoutineKey,
