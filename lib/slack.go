@@ -9,6 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type SlackAction struct {
@@ -297,7 +300,17 @@ func (l *SlackListener) Start(
 					return err
 				}
 			case *slack.MessageEvent:
+				t, err := parseSlackTimestamp(ev.Timestamp)
+				if err != nil {
+					return err
+				}
+				if time.Now().Sub(*t)-time.Minute > 0 {
+					continue
+				}
 				chs, err := l.api.api.GetChannels(true)
+				if err != nil {
+					return err
+				}
 				ch := ""
 				for _, c := range chs {
 					if c.ID == ev.Channel {
@@ -305,7 +318,7 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
-				fmt.Printf("Message to %s by %s\n", ch, ev.User)
+				fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
 				if ch != "" {
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
@@ -317,7 +330,7 @@ func (l *SlackListener) Start(
 			case *slack.ConnectionErrorEvent:
 				return ev
 			case *slack.InvalidAuthEvent:
-				return fmt.Errorf("Invalid authentication")
+				return fmt.Errorf("Invalid slack authentication")
 			}
 		case <-l.innerChan:
 			return nil
@@ -345,4 +358,18 @@ func CheckSlackError(err error) bool {
 		return false
 	}
 	return true
+}
+
+func parseSlackTimestamp(ts string) (*time.Time, error) {
+	splittedTimestamp := strings.Split(ts, ".")
+	sec, err := strconv.ParseInt(splittedTimestamp[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	nsec, err := strconv.ParseInt(splittedTimestamp[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	t := time.Unix(sec, nsec)
+	return &t, nil
 }
