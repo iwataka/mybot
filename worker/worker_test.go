@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -169,6 +170,23 @@ func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	}
 	assertCount(t, *w.count, 1)
 	assertTotalCount(t, *w.totalCount, 1)
+}
+
+func TestMultipleRandomWorkerSignals(t *testing.T) {
+	w := newTestWorker()
+	inChan := make(chan *WorkerSignal)
+	go ManageWorker(inChan, nil, w)
+	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
+	prevSignal := StopSignal
+	for i := 0; i < 100; i++ {
+		signalSign := rand.Intn(3)
+		signal := NewWorkerSignal(signalSign)
+		inChan <- signal
+		if (signalSign == StartSignal && prevSignal == StopSignal) || signalSign == RestartSignal {
+			<-w.outChan
+		}
+		prevSignal = signalSign
+	}
 }
 
 func assertMessage(t *testing.T, outChan chan interface{}, expected bool) {

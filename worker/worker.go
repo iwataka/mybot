@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"log"
 	"time"
 )
 
@@ -18,6 +19,21 @@ type WorkerSignal struct {
 
 func NewWorkerSignal(signal int) *WorkerSignal {
 	return &WorkerSignal{signal, time.Now()}
+}
+
+func (s WorkerSignal) String() string {
+	switch s.signal {
+	case StartSignal:
+		return "Start"
+	case RestartSignal:
+		return "Restart"
+	case StopSignal:
+		return "Stop"
+	case KillSignal:
+		return "Kill"
+	default:
+		return ""
+	}
 }
 
 type RoutineWorker interface {
@@ -47,13 +63,13 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 		}
 	}
 
-	clean := func() {
+	defer func() {
 		close(innerChan)
 		close(inChan)
 		if outChan != nil {
 			close(outChan)
 		}
-	}
+	}()
 
 	for {
 		select {
@@ -70,25 +86,32 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 				stop(t, true)
 			case KillSignal:
 				stop(t, true)
-				clean()
 				return
 			}
 		}
 	}
 }
 
-func wrapWithStatusManagement(f func() error, outChan chan interface{}, ch chan bool) {
+func wrapWithStatusManagement(f func() error, outChan chan interface{}, innerChan chan bool) {
 	if outChan != nil {
-		outChan <- true
+		nonBlockingOutput(outChan, true)
 	}
 	defer func() {
 		if outChan != nil {
-			outChan <- false
+			nonBlockingOutput(outChan, false)
 		}
-		ch <- true
+		innerChan <- true
 	}()
 	err := f()
 	if err != nil {
-		outChan <- err
+		nonBlockingOutput(outChan, err)
+	}
+}
+
+func nonBlockingOutput(ch chan interface{}, data interface{}) {
+	select {
+	case ch <- data:
+	case <-time.After(time.Minute):
+		log.Println("Failed to send data to outside channel (timeout: 1m)")
 	}
 }

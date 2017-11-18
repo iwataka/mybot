@@ -45,7 +45,11 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 func reloadWorkers(userID string) {
 	data := userSpecificDataMap[userID]
 	for _, ch := range data.workerChans {
-		ch <- worker.NewWorkerSignal(worker.RestartSignal)
+		select {
+		case ch <- worker.NewWorkerSignal(worker.RestartSignal):
+		case <-time.After(time.Minute):
+			log.Println("Failed to reload worker (timeout: 1m)")
+		}
 	}
 }
 
