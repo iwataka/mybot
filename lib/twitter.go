@@ -484,7 +484,6 @@ func (l *TwitterUserListener) Listen(
 func (l *TwitterUserListener) Stop() {
 	l.stream.Stop()
 	l.innerChan <- true
-	close(l.innerChan)
 }
 
 // ListenUsers listens timelines of the friends
@@ -557,7 +556,6 @@ func (l *TwitterDMListener) Listen() error {
 func (l *TwitterDMListener) Stop() {
 	l.stream.Stop()
 	l.innerChan <- true
-	close(l.innerChan)
 }
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming

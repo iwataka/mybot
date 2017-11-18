@@ -44,7 +44,6 @@ func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	for i := 0; i < 5; i++ {
 		inChan <- NewWorkerSignal(StartSignal)
 		if i == 0 {
@@ -61,7 +60,6 @@ func TestStopAndStartSignal(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { close(w.outChan) }()
 	var totalCount int32 = 5
 	var i int32 = 0
 	for ; i < totalCount*2; i++ {
@@ -84,7 +82,6 @@ func TestStopSignalForWorker(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { close(w.outChan) }()
 	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
@@ -100,7 +97,6 @@ func TestRestartSignalForWorker(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	var totalCount int32 = 5
 	var i int32 = 0
 	inChan <- NewWorkerSignal(StartSignal)
@@ -121,7 +117,6 @@ func TestKillSignalForWorker(t *testing.T) {
 	inChan := make(chan *WorkerSignal)
 	outChan := make(chan interface{})
 	go ManageWorker(inChan, outChan, w)
-	defer func() { close(w.outChan) }()
 	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
@@ -140,7 +135,6 @@ func TestWorkerWithoutOutChannel(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan *WorkerSignal)
 	go ManageWorker(inChan, nil, w)
-	defer func() { close(w.outChan) }()
 	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
 	inChan <- NewWorkerSignal(RestartSignal)
@@ -155,7 +149,6 @@ func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan *WorkerSignal)
 	go ManageWorker(inChan, nil, w)
-	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
 	oldRestartSignal := &WorkerSignal{RestartSignal, time.Now().Add(-1 * time.Hour)}
@@ -170,7 +163,6 @@ func TestMultipleRandomWorkerSignals(t *testing.T) {
 	w := newTestWorker()
 	inChan := make(chan *WorkerSignal)
 	go ManageWorker(inChan, nil, w)
-	defer func() { inChan <- NewWorkerSignal(KillSignal); close(w.outChan) }()
 	prevSignal := StopSignal
 	for i := 0; i < 100; i++ {
 		signalSign := rand.Intn(3)

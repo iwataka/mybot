@@ -46,7 +46,6 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 	// Process sending ping to worker manager priodically
 	go func() {
 		ticker := time.NewTicker(time.Minute * 10)
-		defer ticker.Stop()
 		for range ticker.C {
 			select {
 			case ch <- worker.NewWorkerSignal(worker.PingSignal):
@@ -181,8 +180,6 @@ func (w *twitterPeriodicWorker) Start() error {
 		return err
 	}
 	ticker := time.NewTicker(d)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ticker.C:

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
@@ -54,46 +55,38 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 	innerStatus := false
 	timestamp := time.Now()
 
-	start := func(t time.Time) {
-		if !innerStatus {
-			go wrapWithStatusManagement(worker.Start, outChan, innerChan)
-			innerStatus = true
-			timestamp = t
-		}
-	}
-
-	stop := func(t time.Time, force bool) {
-		if innerStatus && (force || timestamp.Before(t)) {
-			worker.Stop()
-			<-innerChan
-			innerStatus = false
-		}
-	}
-
-	defer func() {
-		close(innerChan)
-	}()
-
 	for workerSignal := range inChan {
 		signal := workerSignal.signal
 		t := workerSignal.timestamp
-		switch signal {
-		case StartSignal:
-			start(t)
-		case RestartSignal:
-			stop(t, false)
-			start(t)
-		case StopSignal:
-			stop(t, true)
-		case KillSignal:
-			stop(t, true)
-			return
-		case PingSignal:
+		// Stop worker
+		if signal == RestartSignal || signal == StopSignal || signal == KillSignal {
+			force := signal != RestartSignal
+			if innerStatus && (force || timestamp.Before(t)) {
+				worker.Stop()
+				<-innerChan
+				innerStatus = false
+			}
+			if signal == KillSignal {
+				nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s killed", worker.Name()))
+				return
+			}
+		}
+		// Start worker
+		if signal == StartSignal || signal == RestartSignal {
+			if !innerStatus {
+				go wrapWithStatusManagement(worker.Start, outChan, innerChan)
+				innerStatus = true
+				timestamp = t
+			}
+		}
+		if signal == PingSignal {
 			if outChan != nil {
 				outChan <- StatusAlive
 			}
 		}
 	}
+
+	nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s finished successfully", worker.Name()))
 }
 
 func wrapWithStatusManagement(f func() error, outChan chan interface{}, innerChan chan bool) {

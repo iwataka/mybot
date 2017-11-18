@@ -341,7 +341,6 @@ func (l *SlackListener) Start(
 
 func (l *SlackListener) Stop() {
 	l.innerChan <- true
-	close(l.innerChan)
 }
 
 func CheckSlackError(err error) bool {
