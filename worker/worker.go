@@ -63,7 +63,11 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 			force := signal != RestartSignal
 			if innerStatus && (force || timestamp.Before(t)) {
 				worker.Stop()
-				<-innerChan
+				select {
+				case <-innerChan:
+				case <-time.After(time.Minute):
+					log.Printf("Faield to wait stopping worker (timeout: 1m)")
+				}
 				innerStatus = false
 			}
 			if signal == KillSignal {

@@ -72,10 +72,11 @@ type twitterDMWorker struct {
 	twitterAPI *mybot.TwitterAPI
 	id         string
 	listener   *mybot.TwitterDMListener
+	timeout    time.Duration
 }
 
-func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string) *twitterDMWorker {
-	return &twitterDMWorker{twitterAPI, id, nil}
+func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string, timeout time.Duration) *twitterDMWorker {
+	return &twitterDMWorker{twitterAPI, id, nil, timeout}
 }
 
 func (w *twitterDMWorker) Start() error {
@@ -85,7 +86,7 @@ func (w *twitterDMWorker) Start() error {
 
 	var err error
 	r := w.twitterAPI.DefaultDirectMessageReceiver
-	w.listener, err = w.twitterAPI.ListenMyself(nil, r)
+	w.listener, err = w.twitterAPI.ListenMyself(nil, r, w.timeout)
 	if err != nil {
 		return err
 	}
@@ -113,6 +114,7 @@ type twitterUserWorker struct {
 	cache       mybot.Cache
 	id          string
 	listener    *mybot.TwitterUserListener
+	timeout     time.Duration
 }
 
 func newTwitterUserWorker(
@@ -122,8 +124,9 @@ func newTwitterUserWorker(
 	languageAPI *mybot.LanguageAPI,
 	cache mybot.Cache,
 	id string,
+	timeout time.Duration,
 ) *twitterUserWorker {
-	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil}
+	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil, timeout}
 }
 
 func (w *twitterUserWorker) Start() error {
@@ -132,7 +135,7 @@ func (w *twitterUserWorker) Start() error {
 	}
 
 	var err error
-	w.listener, err = w.twitterAPI.ListenUsers(nil)
+	w.listener, err = w.twitterAPI.ListenUsers(nil, w.timeout)
 	if err != nil {
 		return err
 	}

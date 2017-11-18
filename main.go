@@ -132,13 +132,13 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		twitterDMRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterDMWorker(data.twitterAPI, userID),
+		newTwitterDMWorker(data.twitterAPI, userID, time.Minute),
 	)
 	manageWorkerWithStart(
 		twitterUserRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID),
+		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute),
 	)
 	baseRunner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
 	runner := mybot.NewBatchRunnerWithoutStream(baseRunner)

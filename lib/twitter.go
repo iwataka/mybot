@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
@@ -421,6 +423,7 @@ type TwitterUserListener struct {
 	stream    *anaconda.Stream
 	api       *TwitterAPI
 	innerChan chan bool
+	timeout   time.Duration
 }
 
 func (l *TwitterUserListener) Listen(
@@ -483,11 +486,15 @@ func (l *TwitterUserListener) Listen(
 
 func (l *TwitterUserListener) Stop() {
 	l.stream.Stop()
-	l.innerChan <- true
+	select {
+	case l.innerChan <- true:
+	case <-time.After(l.timeout):
+		log.Println("Failed to stop twitter DM listener")
+	}
 }
 
 // ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
+func (a *TwitterAPI) ListenUsers(v url.Values, timeout time.Duration) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
@@ -506,7 +513,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.API.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a, make(chan bool)}, nil
+		return &TwitterUserListener{stream, a, make(chan bool), timeout}, nil
 	}
 }
 
@@ -515,6 +522,7 @@ type TwitterDMListener struct {
 	api       *TwitterAPI
 	receiver  DirectMessageReceiver
 	innerChan chan bool
+	timeout   time.Duration
 }
 
 func (l *TwitterDMListener) Listen() error {
@@ -555,12 +563,16 @@ func (l *TwitterDMListener) Listen() error {
 
 func (l *TwitterDMListener) Stop() {
 	l.stream.Stop()
-	l.innerChan <- true
+	select {
+	case l.innerChan <- true:
+	case <-time.After(l.timeout):
+		log.Println("Failed to stop twitter DM listener")
+	}
 }
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) (*TwitterDMListener, error) {
+func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, timeout time.Duration) (*TwitterDMListener, error) {
 	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, err
@@ -568,7 +580,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver) 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.API.UserStream(v)
-	return &TwitterDMListener{stream, a, receiver, make(chan bool)}, nil
+	return &TwitterDMListener{stream, a, receiver, make(chan bool), timeout}, nil
 }
 
 func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
