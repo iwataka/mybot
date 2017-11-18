@@ -25,10 +25,10 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 				switch m := msg.(type) {
 				case bool:
 					if m {
-						fmt.Printf("Start process: %s\n", w.Name())
+						fmt.Printf("Start %s\n", w.Name())
 						*statuses[key] = true
 					} else {
-						fmt.Printf("Stop process: %s\n", w.Name())
+						fmt.Printf("Stop %s\n", w.Name())
 						*statuses[key] = false
 					}
 				case error:

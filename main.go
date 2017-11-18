@@ -169,6 +169,8 @@ func main() {
 	home, err := homedir.Dir()
 	exitIfError(err)
 
+	log.SetFlags(0)
+
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
 
