@@ -313,13 +313,10 @@ func (l *SlackListener) Start(
 					}
 				}
 			case *slack.RTMError:
-				log.Printf("%T", ev)
 				return ev
 			case *slack.ConnectionErrorEvent:
-				log.Printf("%T", ev)
 				return ev
 			case *slack.InvalidAuthEvent:
-				log.Printf("%T", ev)
 				return fmt.Errorf("Invalid authentication")
 			}
 		case <-l.innerChan:
