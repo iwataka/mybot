@@ -10,6 +10,11 @@ const (
 	RestartSignal
 	StopSignal
 	KillSignal
+	PingSignal
+)
+
+const (
+	StatusAlive = iota
 )
 
 type WorkerSignal struct {
@@ -31,6 +36,8 @@ func (s WorkerSignal) String() string {
 		return "Stop"
 	case KillSignal:
 		return "Kill"
+	case PingSignal:
+		return "Ping"
 	default:
 		return ""
 	}
@@ -66,9 +73,6 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 	defer func() {
 		close(innerChan)
 		close(inChan)
-		if outChan != nil {
-			close(outChan)
-		}
 	}()
 
 	for {
@@ -87,6 +91,10 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 			case KillSignal:
 				stop(t, true)
 				return
+			case PingSignal:
+				if outChan != nil {
+					outChan <- StatusAlive
+				}
 			}
 		}
 	}

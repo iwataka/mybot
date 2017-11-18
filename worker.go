@@ -17,8 +17,11 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 		workerChans[key] = ch
 	}
 	outChan := make(chan interface{})
+	// Worker manager process
 	go worker.ManageWorker(ch, outChan, w)
+	// Process handling logs from the above worker manager
 	go func() {
+		defer close(outChan)
 		for {
 			select {
 			case msg := <-outChan:
@@ -35,6 +38,26 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 					log.Printf("Error: %s (%s)", m.Error(), w.Name())
 				case string:
 					fmt.Printf("Message: %s (%s)\n", m, w.Name())
+				case int:
+					switch m {
+					case worker.StatusAlive:
+						fmt.Printf("Worker alive (%s)\n", w.Name())
+					}
+				}
+			}
+		}
+	}()
+	// Process sending ping to worker manager priodically
+	go func() {
+		ticker := time.NewTicker(time.Minute * 10)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				select {
+				case ch <- worker.NewWorkerSignal(worker.PingSignal):
+				case <-time.After(time.Minute):
+					log.Printf("Failed to ping worker manager process (timeout: 1m)")
 				}
 			}
 		}
