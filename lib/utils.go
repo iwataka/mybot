@@ -134,3 +134,15 @@ func RandString(n int) string {
 	}
 	return string(b)
 }
+
+type InterruptedError struct {
+	msg string
+}
+
+func NewInterruptedError() *InterruptedError {
+	return &InterruptedError{"Interrupted"}
+}
+
+func (e InterruptedError) Error() string {
+	return e.msg
+}

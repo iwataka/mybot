@@ -333,7 +333,7 @@ func (l *SlackListener) Start(
 				return fmt.Errorf("Invalid slack authentication")
 			}
 		case <-l.innerChan:
-			return nil
+			return NewInterruptedError()
 		}
 	}
 	return nil

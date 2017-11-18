@@ -177,7 +177,7 @@ func (w *twitterPeriodicWorker) Start() error {
 				return err
 			}
 		case <-w.innerChan:
-			return nil
+			return mybot.NewInterruptedError()
 		}
 	}
 	return nil

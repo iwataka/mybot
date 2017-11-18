@@ -476,7 +476,7 @@ func (l *TwitterUserListener) Listen(
 				}
 			}
 		case <-l.innerChan:
-			return nil
+			return NewInterruptedError()
 		}
 	}
 }
