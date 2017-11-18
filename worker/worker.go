@@ -72,29 +72,25 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 
 	defer func() {
 		close(innerChan)
-		close(inChan)
 	}()
 
-	for {
-		select {
-		case workerSignal := <-inChan:
-			signal := workerSignal.signal
-			t := workerSignal.timestamp
-			switch signal {
-			case StartSignal:
-				start(t)
-			case RestartSignal:
-				stop(t, false)
-				start(t)
-			case StopSignal:
-				stop(t, true)
-			case KillSignal:
-				stop(t, true)
-				return
-			case PingSignal:
-				if outChan != nil {
-					outChan <- StatusAlive
-				}
+	for workerSignal := range inChan {
+		signal := workerSignal.signal
+		t := workerSignal.timestamp
+		switch signal {
+		case StartSignal:
+			start(t)
+		case RestartSignal:
+			stop(t, false)
+			start(t)
+		case StopSignal:
+			stop(t, true)
+		case KillSignal:
+			stop(t, true)
+			return
+		case PingSignal:
+			if outChan != nil {
+				outChan <- StatusAlive
 			}
 		}
 	}

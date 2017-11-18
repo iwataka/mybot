@@ -549,7 +549,7 @@ func (l *TwitterDMListener) Listen() error {
 				}
 			}
 		case <-l.innerChan:
-			return nil
+			return NewInterruptedError()
 		}
 	}
 }

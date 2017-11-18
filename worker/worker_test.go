@@ -27,11 +27,8 @@ func (w *testWorker) Start() error {
 
 	w.outChan <- true
 
-	for {
-		select {
-		case <-w.innerChan:
-			return nil
-		}
+	for range w.innerChan {
+		return nil
 	}
 	return nil
 }
