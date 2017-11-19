@@ -57,7 +57,6 @@ func (a *SlackAction) IsEmpty() bool {
 		!a.Star &&
 		len(a.Channels) == 0 &&
 		len(a.Reactions) == 0
-
 }
 
 type SlackAPI struct {
