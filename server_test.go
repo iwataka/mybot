@@ -65,6 +65,26 @@ func init() {
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 }
 
+func TestGetTwitterCols(t *testing.T) {
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
+
+	ctrl := gomock.NewController(t)
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	user := anaconda.User{}
+	user.Name = "foo"
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
+	listResult := anaconda.CollectionListResult{}
+	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
+	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
+	defer s.Close()
+
+	testGet(t, s.URL, "Get /twitter-collections")
+}
+
 func TestGetConfig(t *testing.T) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
@@ -428,15 +448,6 @@ func TestGetIndex(t *testing.T) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = &TestAuthenticator{}
-
-	ctrl := gomock.NewController(t)
-	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
-	user := anaconda.User{}
-	user.Name = "foo"
-	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
-	listResult := anaconda.CollectionListResult{}
-	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
-	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
 
 	tmpCache := serverTestUserSpecificData.cache
 	defer func() { serverTestUserSpecificData.cache = tmpCache }()

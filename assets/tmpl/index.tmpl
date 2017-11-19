@@ -11,121 +11,104 @@
             <h2 class="lead">automatically collect and broadcast any kinds of information for you</h2>
         </div>
 
-        <ul class="nav nav-pills nav-justified">
-          <li role="presentation" class="active"><a data-toggle="tab" href="#home">Home</a></li>
-          {{range $key, $val := .CollectionMap}}
-          <li role="presentation"><a data-toggle="tab" href="#{{$key}}">{{$key}}</a></li>
-          {{end}}
-        </ul>
-
-        <div class="tab-content">
-            <div id="home" class="tab-pane fade in active">
-                <!-- Twitter Collection List -->
-                <div class="panel panel-info">
-                    <div class="panel-heading">
-                        <h3 class="panel-title"><a href="https://tweetdeck.twitter.com">Twitter Collections</a></h3>
-                    </div>
-                    <div class="panel-body">
-                        {{if .CollectionMap}}
-                        <ul>
-                            {{range $key, $val := .CollectionMap}}
-                            <li>
-                                <a href="{{$val}}">{{$key}}</a>
-                            </li>
-                            {{end}}
-                        </ul>
-                        {{else}}
-                        <em>Nothing to show</em>
-                        {{end}}
-                    </div>
-                </div>
-
-                <!-- Vision API result -->
-                <div class="panel panel-info">
-                    <div class="panel-heading">
-                        {{if .ImageAnalysisDate}}
-                        <h3 class="panel-title">Google Vision API Result ({{.ImageAnalysisDate}})</h3>
-                        {{else}}
-                        <h3 class="panel-title">Google Vision API Result</h3>
-                        {{end}}
-                    </div>
-                    <div class="panel-body">
-                        {{if .ImageURL}}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <a href="{{.ImageSource}}"><img src="{{.ImageURL}}" class="img-responsive", alt="Image analyzed by Google Vision API"></a>
-                            </div>
-                            <div class="col-md-6">
-                                <pre><code>{{.ImageAnalysisResult}}</code></pre>
-                            </div>
-                        </div>
-                    {{else}}
-                    <em>Nothing to show</em>
+        <!-- Twitter Collection List -->
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title"><a href="https://tweetdeck.twitter.com">Twitter Collections</a></h3>
+            </div>
+            <div class="panel-body">
+                {{if .CollectionMap}}
+                <ul>
+                    {{range $key, $val := .CollectionMap}}
+                    <li>
+                        <a href="{{$val}}">{{$key}}</a>
+                    </li>
                     {{end}}
-                    </div>
-                </div>
-
-                <!-- Healthcheck table -->
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead>
-                            <tr>
-                                <td>Process</td>
-                                <td>Healthcheck Result</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Twitter Direct Message Listener</td>
-                                <td>
-                                    {{if eq .TwitterListenDMStatus true}}
-                                    <span id="twitter-dm-listener-status" style="color:blue">Active</span>
-                                    {{else}}
-                                    <span id="twitter-dm-listener-status" style="color:red">Stop</span>
-                                    {{end}}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Twitter User Listener</td>
-                                <td>
-                                    {{if eq .TwitterListenUsersStatus true}}
-                                    <span id="twitter-user-listener-status" style="color:blue">Active</span>
-                                    {{else}}
-                                    <span id="twitter-user-listener-status" style="color:red">Stop</span>
-                                    {{end}}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Twitter Periodic Job</td>
-                                <td>
-                                    {{if eq .TwitterPeriodicStatus true}}
-                                    <span id="twitter-periodic-job-status" style="color:blue">Active</span>
-                                    {{else}}
-                                    <span id="twitter-periodic-job-status" style="color:red">Stop</span>
-                                    {{end}}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Slack Listener</td>
-                                <td>
-                                    {{if eq .SlackListenerStatus true}}
-                                    <span id="slack-listener-status" style="color:blue">Active</span>
-                                    {{else}}
-                                    <span id="slack-listener-status" style="color:red">Stop</span>
-                                    {{end}}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                </ul>
+                {{else}}
+                <em>Nothing to show</em>
+                {{end}}
             </div>
-            {{range $key, $val := .CollectionMap}}
-            <div id="{{$key}}" class="tab-pane fade">
-                <a class="twitter-grid" href="{{$val}}"></a>
-            </div>
-            {{end}}
         </div>
 
+        <!-- Vision API result -->
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                {{if .ImageAnalysisDate}}
+                <h3 class="panel-title">Google Vision API Result ({{.ImageAnalysisDate}})</h3>
+                {{else}}
+                <h3 class="panel-title">Google Vision API Result</h3>
+                {{end}}
+            </div>
+            <div class="panel-body">
+                {{if .ImageURL}}
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{.ImageSource}}"><img src="{{.ImageURL}}" class="img-responsive", alt="Image analyzed by Google Vision API"></a>
+                    </div>
+                    <div class="col-md-6">
+                        <pre><code>{{.ImageAnalysisResult}}</code></pre>
+                    </div>
+                </div>
+                {{else}}
+                <em>Nothing to show</em>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- Healthcheck table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <td>Process</td>
+                        <td>Healthcheck Result</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Twitter Direct Message Listener</td>
+                        <td>
+                            {{if eq .TwitterListenDMStatus true}}
+                            <span id="twitter-dm-listener-status" style="color:blue">Active</span>
+                            {{else}}
+                            <span id="twitter-dm-listener-status" style="color:red">Stop</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Twitter User Listener</td>
+                        <td>
+                            {{if eq .TwitterListenUsersStatus true}}
+                            <span id="twitter-user-listener-status" style="color:blue">Active</span>
+                            {{else}}
+                            <span id="twitter-user-listener-status" style="color:red">Stop</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Twitter Periodic Job</td>
+                        <td>
+                            {{if eq .TwitterPeriodicStatus true}}
+                            <span id="twitter-periodic-job-status" style="color:blue">Active</span>
+                            {{else}}
+                            <span id="twitter-periodic-job-status" style="color:red">Stop</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Slack Listener</td>
+                        <td>
+                            {{if eq .SlackListenerStatus true}}
+                            <span id="slack-listener-status" style="color:blue">Active</span>
+                            {{else}}
+                            <span id="slack-listener-status" style="color:red">Stop</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>

@@ -1,0 +1,31 @@
+{{define "twitterCols"}}
+<!DOCTYPE html>
+<html lang="en">
+{{template "header" .}}
+<body>
+    <div class="container">
+        {{template "navbar" .}}
+
+        <div class="jumbotron">
+            <h1>Twitter Collections</h1>
+            <h2 class="lead">Using Twitter collections to store your favorite tweets is deadly useful</h2>
+        </div>
+
+        <ul class="nav nav-pills nav-justified">
+          {{range $key, $val := .CollectionMap}}
+          <li role="presentation" class="{{if eq .ActiveCollection $key}}active{{end}}"><a data-toggle="tab" href="#{{$key}}">{{$key}}</a></li>
+          {{end}}
+        </ul>
+
+        <div class="tab-content">
+            {{range $key, $val := .CollectionMap}}
+            <div id="{{$key}}" class="tab-pane fade">
+                <a class="twitter-grid" href="{{$val}}"></a>
+            </div>
+            {{end}}
+        </div>
+
+    </div>
+</body>
+</html>
+{{end}}

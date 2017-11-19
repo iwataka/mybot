@@ -132,6 +132,10 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(indexHandler),
 	)
 	http.HandleFunc(
+		"/twitter-collections/",
+		wrapHandler(twitterColsHandler),
+	)
+	http.HandleFunc(
 		"/config/",
 		wrapHandler(configHandler),
 	)
@@ -240,13 +244,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.URL.Path == "/" {
-		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, data.statuses, twitterUser)
+		getIndex(w, r, data.cache, data.slackAPI, data.statuses, twitterUser)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool, twitterUser goth.User) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, slackAPI *mybot.SlackAPI, statuses map[int]*bool, twitterUser goth.User) {
 	imageSource := ""
 	imageURL := ""
 	imageAnalysisResult := ""
@@ -269,20 +273,6 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		imageAnalysisDate = imgCache.AnalysisDate
 	}
 
-	colMap := make(map[string]string)
-	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	colList, err := twitterAPI.GetCollectionListByUserId(id, nil)
-	if err == nil {
-		for _, c := range colList.Objects.Timelines {
-			name := strings.Replace(c.Name, " ", "-", -1)
-			colMap[name] = c.CollectionUrl
-		}
-	}
-
 	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
 	data := &struct {
 		NavbarName               string
@@ -294,7 +284,6 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		ImageSource              string
 		ImageAnalysisResult      string
 		ImageAnalysisDate        string
-		CollectionMap            map[string]string
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
 		TwitterPeriodicStatus    bool
@@ -309,14 +298,64 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		imageSource,
 		imageAnalysisResult,
 		imageAnalysisDate,
-		colMap,
 		*statuses[twitterDMRoutineKey],
 		*statuses[twitterUserRoutineKey],
 		*statuses[twitterPeriodicRoutineKey],
 		*statuses[slackRoutineKey],
 	}
 
-	err = htmlTemplate.ExecuteTemplate(w, "index", data)
+	err := htmlTemplate.ExecuteTemplate(w, "index", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	if r.Method == http.MethodGet {
+		getTwitterCols(w, r, data.twitterAPI, twitterUser)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterCols(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, twitterUser goth.User) {
+	colMap := make(map[string]string)
+	activeCol := ""
+	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	colList, err := twitterAPI.GetCollectionListByUserId(id, nil)
+	if err == nil {
+		for _, c := range colList.Objects.Timelines {
+			name := strings.Replace(c.Name, " ", "-", -1)
+			if activeCol == "" {
+				activeCol = name
+			}
+			colMap[name] = c.CollectionUrl
+		}
+	}
+
+	data := &struct {
+		NavbarName       string
+		CollectionMap    map[string]string
+		ActiveCollection string
+	}{
+		"TwitterCols",
+		colMap,
+		activeCol,
+	}
+
+	err = htmlTemplate.ExecuteTemplate(w, "twitterCols", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
