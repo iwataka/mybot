@@ -318,8 +318,8 @@ func (l *SlackListener) Start(
 						break
 					}
 				}
-				fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
 				if ch != "" {
+					fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
 						return err
