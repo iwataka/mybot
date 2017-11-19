@@ -61,37 +61,12 @@
             </tr>
             {{end}}
             <tr>
-                {{if or (eq .Type "twitter") (eq .Type "webhook")}}
+                {{if eq .Type "twitter" }}
                 <td rowspan="1">Slack</td>
                 {{end}}
                 <td>channels</td>
                 <td>
                     {{listTextbox .Action.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels")}}
-                </td>
-            </tr>
-            <tr>
-                <td rowspan="4">Outgoing Webhook</td>
-                <td>endpoint</td>
-                <td>
-                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.action.outgoing_webhook.endpoint`}}" value="{{.Action.OutgoingWebhook.Endpoint}}">
-                </td>
-            </tr>
-            <tr>
-                <td>method</td>
-                <td>
-                    <input form="overwrite" type="text" name="{{printf `%s%s` .Prefix `.action.outgoing_webhook.method`}}" value="{{.Action.OutgoingWebhook.Method}}">
-                </td>
-            </tr>
-            <tr>
-                <td>body</td>
-                <td>
-                    <textarea form="overwrite" name="{{printf `%s%s` .Prefix `.action.outgoing_webhook.body`}}" cols="30" rows="5">{{.Action.OutgoingWebhook.Body}}</textarea>
-                </td>
-            </tr>
-            <tr>
-                <td>template</td>
-                <td>
-                    <textarea form="overwrite" name="{{printf `%s%s` .Prefix `.action.outgoing_webhook.template`}}" cols="30" rows="5">{{.Action.OutgoingWebhook.Template}}</textarea>
                 </td>
             </tr>
         </tbody>

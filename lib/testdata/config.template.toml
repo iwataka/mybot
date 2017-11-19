@@ -31,7 +31,6 @@ pin = false
 star = false
 channels = ["foo"]
 reactions = []
-[twitter.timelines.action.outgoing_webhook]
 
 [[twitter.timelines]]
 screen_names = ["foo"]
@@ -52,7 +51,6 @@ collections = []
 [twitter.timelines.action.slack]
 channels = []
 reactions = []
-[twitter.timelines.action.outgoing_webhook]
 
 [[twitter.searches]]
 queries = ["foo", "bar"]
@@ -78,7 +76,6 @@ pin = false
 star = false
 channels = ["foo"]
 reactions = []
-[twitter.searches.action.outgoing_webhook]
 [twitter.notification]
 [twitter.notification.Place]
 allow_self = true
@@ -108,20 +105,3 @@ pin = true
 star = true
 channels = ["bar"]
 reactions = ["smile"]
-[slack.messages.action.outgoing_webhook]
-endpoint = "http://example.com/api"
-method = "POST"
-body = "{\"text\": \"foo\"}"
-template = "{{.text}}"
-
-[[incoming_webhooks]]
-endpoint = "/hooks/aaaaaaaaaa/bbbbbbbbbb/cccccccccccccccccccc"
-template = "{{.text}}"
-[incoming_webhooks.action.twitter]
-tweet = false
-collections = []
-
-[incoming_webhooks.action.slack]
-channels = ["webhook"]
-reactions = []
-[incoming_webhooks.action.outgoing_webhook]

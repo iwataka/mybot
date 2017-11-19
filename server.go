@@ -156,10 +156,6 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configMessageAddHandler),
 	)
 	http.HandleFunc(
-		"/config/incomings/add",
-		wrapHandler(configIncomingAddHandler),
-	)
-	http.HandleFunc(
 		"/assets/css/",
 		getAssetsCSS,
 	)
@@ -190,10 +186,6 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/setup/",
 		setupHandler,
-	)
-	http.HandleFunc(
-		"/hooks/",
-		hooksHandler,
 	)
 	http.HandleFunc(
 		"/logout/twitter/",
@@ -488,25 +480,6 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	}
 	config.SetSlackMessages(msgs)
 
-	prefix = "incoming_webhooks"
-	deletedFlags = val[prefix+".deleted"]
-	incomings := []mybot.IncomingWebhook{}
-	actions, err = postConfigForActions(val, prefix, deletedFlags)
-	if err != nil {
-		return
-	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		in := *mybot.NewIncomingWebhook()
-		in.Endpoint = mybot.GetString(val, prefix+".endpoint", i, "")
-		in.Template = mybot.GetString(val, prefix+".template", i, "")
-		in.Action = actions[i]
-		incomings = append(incomings, in)
-	}
-	config.SetIncomingWebhooks(incomings)
-
 	prefix = "twitter.notification"
 	notif := config.GetTwitterNotification()
 	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
@@ -600,10 +573,6 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.
 	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
 	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
 	action.Slack.Reactions = mybot.GetListTextboxValue(val, i, prefix+"slack.reactions")
-	action.OutgoingWebhook.Endpoint = mybot.GetString(val, prefix+"outgoing_webhook.endpoint", i, "")
-	action.OutgoingWebhook.Method = mybot.GetString(val, prefix+"outgoing_webhook.method", i, "")
-	action.OutgoingWebhook.Body = mybot.GetString(val, prefix+"outgoing_webhook.body", i, "")
-	action.OutgoingWebhook.Template = mybot.GetString(val, prefix+"outgoing_webhook.template", i, "")
 	return action, nil
 }
 
@@ -734,30 +703,6 @@ func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c mybot.Config
 
 func addMessageConfig(config mybot.Config) {
 	config.AddSlackMessage(mybot.NewMessageConfig())
-}
-
-func configIncomingAddHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	if r.Method == http.MethodPost {
-		postConfigIncomingAdd(w, r, data.config)
-	}
-}
-
-func postConfigIncomingAdd(w http.ResponseWriter, r *http.Request, c mybot.Config) {
-	addIncomingConfig(c)
-	http.Redirect(w, r, "/config/", http.StatusSeeOther)
-}
-
-func addIncomingConfig(config mybot.Config) {
-	hooks := config.GetIncomingWebhooks()
-	hooks = append(hooks, *mybot.NewIncomingWebhook())
-	config.SetIncomingWebhooks(hooks)
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -1131,76 +1076,6 @@ func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
 func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
 	authenticator.Logout("twitter", w, r)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func hooksHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	if r.Method == http.MethodPost {
-		postHooks(w, r, data.config, data.twitterAPI, data.slackAPI)
-	}
-}
-
-func postHooks(w http.ResponseWriter, r *http.Request, config mybot.Config, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI) {
-	cs := []mybot.IncomingWebhook{}
-	for _, c := range config.GetIncomingWebhooks() {
-		if r.URL.Path == c.Endpoint {
-			cs = append(cs, c)
-		}
-	}
-	if len(cs) == 0 {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-
-	bs, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := new(interface{})
-	if len(bs) != 0 {
-		err = json.Unmarshal(bs, data)
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	for _, c := range cs {
-		buf := new(bytes.Buffer)
-		tmpl, err := template.New("template").Parse(c.Template)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if err = tmpl.Execute(buf, data); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		msg := buf.String()
-		if slackAPI.Enabled() {
-			for _, ch := range c.Action.Slack.Channels {
-				if err := slackAPI.PostMessage(ch, msg, nil, true); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-			}
-		}
-		if c.Action.Twitter.Tweet {
-			if _, err := twitterAPI.PostTweet(msg, nil); mybot.CheckTwitterError(err) {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-	}
 }
 
 func readFile(path string) ([]byte, error) {

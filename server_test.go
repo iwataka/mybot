@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -270,9 +268,6 @@ func testPostConfigDelete(
 	if len(serverTestUserSpecificData.config.GetSlackMessages()) != 0 {
 		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetSlackMessages()))
 	}
-	if len(serverTestUserSpecificData.config.GetIncomingWebhooks()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetIncomingWebhooks()))
-	}
 
 	serverTestUserSpecificData.config = c
 }
@@ -396,20 +391,6 @@ func testPostConfigTagsInput(
 	}
 }
 
-func TestPostIncoming(t *testing.T) {
-	tmpAuth := authenticator
-	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
-
-	s := httptest.NewServer(http.HandlerFunc(hooksHandler))
-	defer s.Close()
-
-	dest := serverTestUserSpecificData.config.GetIncomingWebhooks()[0].Endpoint
-	buf := new(bytes.Buffer)
-	buf.WriteString(`{"text": "foo"}`)
-	testPost(t, s.URL+dest, "application/json", buf, fmt.Sprintf("%s %s", "POST", dest))
-}
-
 func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
@@ -443,15 +424,6 @@ func TestPostConfigMessageAdd(t *testing.T) {
 		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
 		func() { addMessageConfig(serverTestUserSpecificData.config) },
 		"message",
-	)
-}
-
-func TestPostConfigIncomingAdd(t *testing.T) {
-	testPostConfigAdd(
-		t,
-		func() int { return len(serverTestUserSpecificData.config.GetIncomingWebhooks()) },
-		func() { addIncomingConfig(serverTestUserSpecificData.config) },
-		"incoming",
 	)
 }
 
