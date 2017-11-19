@@ -13,7 +13,7 @@
 
         <ul class="nav nav-pills nav-justified">
           {{range $key, $val := .CollectionMap}}
-          <li role="presentation" class="{{if eq .ActiveCollection $key}}active{{end}}"><a data-toggle="tab" href="#{{$key}}">{{$key}}</a></li>
+          <li role="presentation" class="{{if eq $.ActiveCollection $key}}active{{end}}"><a data-toggle="tab" href="#{{$key}}">{{$key}}</a></li>
           {{end}}
         </ul>
 

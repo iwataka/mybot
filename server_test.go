@@ -75,7 +75,19 @@ func TestGetTwitterCols(t *testing.T) {
 	user := anaconda.User{}
 	user.Name = "foo"
 	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
+	fooCol := anaconda.Collection{
+		Name:          "foo",
+		CollectionUrl: "https://foo",
+	}
+	barCol := anaconda.Collection{
+		Name:          "bar",
+		CollectionUrl: "https://bar",
+	}
 	listResult := anaconda.CollectionListResult{}
+	listResult.Objects.Timelines = map[string]anaconda.Collection{
+		"fooID": fooCol,
+		"barID": barCol,
+	}
 	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
 	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
 
@@ -166,7 +178,8 @@ func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg str
 
 func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
 	if res.StatusCode != http.StatusOK {
-		t.Fatalf("Error code %d: %s", res.StatusCode, msg)
+		bs, _ := ioutil.ReadAll(res.Body)
+		t.Fatalf("Error code %d: %s", string(bs), msg)
 	}
 }
 
