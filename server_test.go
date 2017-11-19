@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -117,6 +120,36 @@ func TestGetSetupTwitter(t *testing.T) {
 	defer func() { slackApp = tmpSlackApp }()
 
 	testGet(t, s.URL, "Get /setup/")
+}
+
+func TestGetConfigFile(t *testing.T) {
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
+
+	s := httptest.NewServer(http.HandlerFunc(configFileHandler))
+	defer s.Close()
+
+	res, err := http.Get(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertHTTPResponse(t, res, "GET /config/file/")
+	strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
+	strings.Contains(res.Header.Get("Content-Disposition"), ".json")
+	defer res.Body.Close()
+	bs, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := mybot.NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = json.Unmarshal(bs, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testGet(t *testing.T, url string, msg string) {

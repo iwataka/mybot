@@ -821,9 +821,10 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config)
 }
 
 func getConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+	ext := ".json"
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
-	w.Header().Add("Content-Disposition", `attachment; filename="config.toml"`)
-	bytes, err := config.Marshal(strings.Repeat(" ", 4), ".json")
+	w.Header().Add("Content-Disposition", `attachment; filename="config`+ext+`"`)
+	bytes, err := config.Marshal(strings.Repeat(" ", 4), ext)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
