@@ -1,3 +1,0 @@
-CREATE DATABASE mybot;
-CONNECT mybot;
-CREATE TABLE vision (url VARCHAR(100), result VARCHAR(1000));
