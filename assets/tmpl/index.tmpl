@@ -11,26 +11,6 @@
             <h2 class="lead">automatically collect and broadcast any kinds of information for you</h2>
         </div>
 
-        <!-- Twitter Collection List -->
-        <div class="panel panel-info">
-            <div class="panel-heading">
-                <h3 class="panel-title"><a href="https://tweetdeck.twitter.com">Twitter Collections</a></h3>
-            </div>
-            <div class="panel-body">
-                {{if .CollectionMap}}
-                <ul>
-                    {{range $key, $val := .CollectionMap}}
-                    <li>
-                        <a href="{{$val}}">{{$key}}</a>
-                    </li>
-                    {{end}}
-                </ul>
-                {{else}}
-                <em>Nothing to show</em>
-                {{end}}
-            </div>
-        </div>
-
         <!-- Vision API result -->
         <div class="panel panel-info">
             <div class="panel-heading">

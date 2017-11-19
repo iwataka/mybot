@@ -304,11 +304,13 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, slackAP
 		*statuses[slackRoutineKey],
 	}
 
-	err := htmlTemplate.ExecuteTemplate(w, "index", data)
+	buf := new(bytes.Buffer)
+	err := htmlTemplate.ExecuteTemplate(buf, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	buf.WriteTo(w)
 }
 
 func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
@@ -320,13 +322,13 @@ func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.Method == http.MethodGet {
-		getTwitterCols(w, r, data.twitterAPI, twitterUser)
+		getTwitterCols(w, r, data.slackAPI, data.twitterAPI, twitterUser)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCols(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, twitterUser goth.User) {
+func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI, twitterAPI *mybot.TwitterAPI, twitterUser goth.User) {
 	colMap := make(map[string]string)
 	activeCol := ""
 	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
@@ -345,21 +347,32 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.Tw
 		}
 	}
 
+	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
 	data := &struct {
 		NavbarName       string
+		TwitterName      string
+		SlackTeam        string
+		SlackURL         string
+		GoogleEnabled    bool
 		CollectionMap    map[string]string
 		ActiveCollection string
 	}{
 		"TwitterCols",
+		twitterUser.NickName,
+		slackTeam,
+		slackURL,
+		googleEnabled(),
 		colMap,
 		activeCol,
 	}
 
-	err = htmlTemplate.ExecuteTemplate(w, "twitterCols", data)
+	buf := new(bytes.Buffer)
+	err = htmlTemplate.ExecuteTemplate(buf, "twitterCols", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	buf.WriteTo(w)
 }
 
 type checkboxCounter struct {
