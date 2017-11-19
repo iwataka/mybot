@@ -160,14 +160,6 @@ func startServer(host, port, cert, key string) error {
 		getAssetsCSS,
 	)
 	http.HandleFunc(
-		"/log/",
-		wrapHandler(logHandler),
-	)
-	http.HandleFunc(
-		"/status/",
-		wrapHandler(statusHandler),
-	)
-	http.HandleFunc(
 		"/auth/twitter/",
 		getAuthTwitter,
 	)
@@ -248,13 +240,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.URL.Path == "/" {
-		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, twitterUser)
+		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, data.statuses, twitterUser)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, twitterUser goth.User) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool, twitterUser goth.User) {
 	imageSource := ""
 	imageURL := ""
 	imageAnalysisResult := ""
@@ -293,20 +285,22 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 
 	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
 	data := &struct {
-		NavbarName          string
-		Log                 string
-		TwitterName         string
-		SlackTeam           string
-		SlackURL            string
-		GoogleEnabled       bool
-		ImageURL            string
-		ImageSource         string
-		ImageAnalysisResult string
-		ImageAnalysisDate   string
-		CollectionMap       map[string]string
+		NavbarName               string
+		TwitterName              string
+		SlackTeam                string
+		SlackURL                 string
+		GoogleEnabled            bool
+		ImageURL                 string
+		ImageSource              string
+		ImageAnalysisResult      string
+		ImageAnalysisDate        string
+		CollectionMap            map[string]string
+		TwitterListenDMStatus    bool
+		TwitterListenUsersStatus bool
+		TwitterPeriodicStatus    bool
+		SlackListenerStatus      bool
 	}{
 		"",
-		"Currently you cannot see the log here",
 		twitterUser.NickName,
 		slackTeam,
 		slackURL,
@@ -316,6 +310,10 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		imageAnalysisResult,
 		imageAnalysisDate,
 		colMap,
+		*statuses[twitterDMRoutineKey],
+		*statuses[twitterUserRoutineKey],
+		*statuses[twitterPeriodicRoutineKey],
+		*statuses[slackRoutineKey],
 	}
 
 	err = htmlTemplate.ExecuteTemplate(w, "index", data)
@@ -799,107 +797,6 @@ func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func logHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	if r.Method == http.MethodGet {
-		getLog(w, r, data.slackAPI)
-	} else {
-		http.NotFound(w, r)
-	}
-}
-
-func getLog(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-
-	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
-	data := &struct {
-		NavbarName    string
-		TwitterName   string
-		SlackTeam     string
-		SlackURL      string
-		GoogleEnabled bool
-		Log           string
-	}{
-		"Log",
-		twitterUser.NickName,
-		slackTeam,
-		slackURL,
-		googleEnabled(),
-		"Currently you cannot see the log here",
-	}
-
-	buf := new(bytes.Buffer)
-	if err := htmlTemplate.ExecuteTemplate(buf, "log", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(buf.Bytes())
-}
-
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	if r.Method == http.MethodGet {
-		getStatus(w, r, data.slackAPI, data.statuses)
-	} else {
-		http.NotFound(w, r)
-	}
-}
-
-func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-
-	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
-	data := &struct {
-		NavbarName               string
-		TwitterName              string
-		SlackTeam                string
-		SlackURL                 string
-		GoogleEnabled            bool
-		TwitterListenDMStatus    bool
-		TwitterListenUsersStatus bool
-		TwitterPeriodicStatus    bool
-		SlackListenerStatus      bool
-	}{
-		"Status",
-		twitterUser.NickName,
-		slackTeam,
-		slackURL,
-		googleEnabled(),
-		*statuses[twitterDMRoutineKey],
-		*statuses[twitterUserRoutineKey],
-		*statuses[twitterPeriodicRoutineKey],
-		*statuses[slackRoutineKey],
-	}
-
-	buf := new(bytes.Buffer)
-	err = htmlTemplate.ExecuteTemplate(buf, "status", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(buf.Bytes())
 }
 
 func setupHandler(w http.ResponseWriter, r *http.Request) {

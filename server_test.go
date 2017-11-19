@@ -76,28 +76,6 @@ func TestGetConfig(t *testing.T) {
 	testGet(t, s.URL, "Get /config")
 }
 
-func TestGetLog(t *testing.T) {
-	tmpAuth := authenticator
-	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
-
-	s := httptest.NewServer(http.HandlerFunc(logHandler))
-	defer s.Close()
-
-	testGet(t, s.URL, "Get /log")
-}
-
-func TestGetStatus(t *testing.T) {
-	tmpAuth := authenticator
-	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
-
-	s := httptest.NewServer(http.HandlerFunc(statusHandler))
-	defer s.Close()
-
-	testGet(t, s.URL, "Get /status")
-}
-
 func TestGetSetupTwitter(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getSetup))
 	defer s.Close()

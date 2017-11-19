@@ -20,18 +20,7 @@
 
         <div class="tab-content">
             <div id="home" class="tab-pane fade in active">
-                <div class="panel panel-danger">
-                    <div class="panel-heading">
-                        <h3 class="panel-title"><a href="/log/">Error Log</a></h3>
-                    </div>
-                    {{if .Log}}
-                        <div class="panel-body"><pre><code>{{.Log}}</code></pre></div>
-                    {{else}}
-                    <div class="panel-body">
-                        <em>Nothing to show</em>
-                    </div>
-                    {{end}}
-                </div>
+                <!-- Twitter Collection List -->
                 <div class="panel panel-info">
                     <div class="panel-heading">
                         <h3 class="panel-title"><a href="https://tweetdeck.twitter.com">Twitter Collections</a></h3>
@@ -50,6 +39,8 @@
                         {{end}}
                     </div>
                 </div>
+
+                <!-- Vision API result -->
                 <div class="panel panel-info">
                     <div class="panel-heading">
                         {{if .ImageAnalysisDate}}
@@ -72,6 +63,60 @@
                     <em>Nothing to show</em>
                     {{end}}
                     </div>
+                </div>
+
+                <!-- Healthcheck table -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <td>Process</td>
+                                <td>Healthcheck Result</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Twitter Direct Message Listener</td>
+                                <td>
+                                    {{if eq .TwitterListenDMStatus true}}
+                                    <span id="twitter-dm-listener-status" style="color:blue">Active</span>
+                                    {{else}}
+                                    <span id="twitter-dm-listener-status" style="color:red">Stop</span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Twitter User Listener</td>
+                                <td>
+                                    {{if eq .TwitterListenUsersStatus true}}
+                                    <span id="twitter-user-listener-status" style="color:blue">Active</span>
+                                    {{else}}
+                                    <span id="twitter-user-listener-status" style="color:red">Stop</span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Twitter Periodic Job</td>
+                                <td>
+                                    {{if eq .TwitterPeriodicStatus true}}
+                                    <span id="twitter-periodic-job-status" style="color:blue">Active</span>
+                                    {{else}}
+                                    <span id="twitter-periodic-job-status" style="color:red">Stop</span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Slack Listener</td>
+                                <td>
+                                    {{if eq .SlackListenerStatus true}}
+                                    <span id="slack-listener-status" style="color:blue">Active</span>
+                                    {{else}}
+                                    <span id="slack-listener-status" style="color:red">Stop</span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             {{range $key, $val := .CollectionMap}}
