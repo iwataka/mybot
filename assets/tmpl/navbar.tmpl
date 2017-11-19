@@ -11,27 +11,15 @@
         </div>
         <div class="navbar-collapse collapse" id="navbarMenus">
             <ul class="nav navbar-nav">
-                {{if eq .NavbarName "Config"}}
-                <li class="nav-item active">
-                {{else}}
-                <li class="nav-item">
-                {{end}}
+                <li class="nav-item{{if eq .NavbarName `Config`}}active{{end}}">
                     <a class="nav-link" href="/config/">Config</a>
                 </li>
 
-                {{if eq .NavbarName "Log"}}
-                <li class="nav-item active">
-                {{else}}
-                <li class="nav-item">
-                {{end}}
+                <li class="nav-item{{if eq .NavbarName `Log`}}active{{end}}">
                     <a class="nav-link" href="/log/">Log</a>
                 </li>
 
-                {{if eq .NavbarName "Status"}}
-                <li class="nav-item active">
-                {{else}}
-                <li class="nav-item">
-                {{end}}
+                <li class="nav-item{{if eq .NavbarName `Status`}}active{{end}}">
                     <a class="nav-link" href="/status/">Status</a>
                 </li>
             </ul>
@@ -67,7 +55,7 @@
 
                 <li class="nav-item">
                     <a href="https://console.developers.google.com/apis/api/vision.googleapis.com/quotas" class="btn btn-lg btn-social-icon btn-google">
-                        <span class="fa fa-lg fa-google fa-active"></span>
+                        <span class="fa fa-lg fa-google fa-{{if .GoogleEnabled}}active{{else}}passive{{end}}"></span>
                     </a>
                 </li>
                 <li class="nav-item">

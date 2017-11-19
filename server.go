@@ -298,6 +298,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		TwitterName         string
 		SlackTeam           string
 		SlackURL            string
+		GoogleEnabled       bool
 		ImageURL            string
 		ImageSource         string
 		ImageAnalysisResult string
@@ -309,6 +310,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 		twitterUser.NickName,
 		slackTeam,
 		slackURL,
+		googleEnabled(),
 		imageURL,
 		imageSource,
 		imageAnalysisResult,
@@ -600,17 +602,19 @@ func getConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, slac
 
 func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Config) ([]byte, error) {
 	data := &struct {
-		NavbarName  string
-		TwitterName string
-		SlackTeam   string
-		SlackURL    string
-		Message     string
-		Config      mybot.ConfigProperties
+		NavbarName    string
+		TwitterName   string
+		SlackTeam     string
+		SlackURL      string
+		GoogleEnabled bool
+		Message       string
+		Config        mybot.ConfigProperties
 	}{
 		"Config",
 		twitterName,
 		slackTeam,
 		slackURL,
+		googleEnabled(),
 		msg,
 		*config.GetProperties(),
 	}
@@ -821,16 +825,18 @@ func getLog(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) {
 
 	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
 	data := &struct {
-		NavbarName  string
-		TwitterName string
-		SlackTeam   string
-		SlackURL    string
-		Log         string
+		NavbarName    string
+		TwitterName   string
+		SlackTeam     string
+		SlackURL      string
+		GoogleEnabled bool
+		Log           string
 	}{
 		"Log",
 		twitterUser.NickName,
 		slackTeam,
 		slackURL,
+		googleEnabled(),
 		"Currently you cannot see the log here",
 	}
 
@@ -870,6 +876,7 @@ func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI,
 		TwitterName              string
 		SlackTeam                string
 		SlackURL                 string
+		GoogleEnabled            bool
 		TwitterListenDMStatus    bool
 		TwitterListenUsersStatus bool
 		TwitterPeriodicStatus    bool
@@ -879,6 +886,7 @@ func getStatus(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI,
 		twitterUser.NickName,
 		slackTeam,
 		slackURL,
+		googleEnabled(),
 		*statuses[twitterDMRoutineKey],
 		*statuses[twitterUserRoutineKey],
 		*statuses[twitterPeriodicRoutineKey],
@@ -964,6 +972,7 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 		TwitterName           string
 		SlackTeam             string
 		SlackURL              string
+		GoogleEnabled         bool
 		TwitterConsumerKey    string
 		TwitterConsumerSecret string
 		SlackClientID         string
@@ -974,6 +983,7 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 		"",
 		"",
 		"",
+		googleEnabled(),
 		twitterCk,
 		twitterCs,
 		slackCk,
@@ -1101,4 +1111,12 @@ func getSlackInfo(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackA
 		}
 	}
 	return "", ""
+}
+
+func googleEnabled() bool {
+	if visionAPI == nil {
+		return false
+	} else {
+		return visionAPI.Enabled()
+	}
 }
