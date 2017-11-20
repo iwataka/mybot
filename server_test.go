@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -63,38 +65,80 @@ func init() {
 		panic(err)
 	}
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
+
+	if _, err := os.Stat("screenshots"); err != nil {
+		err := os.Mkdir("screenshots", os.FileMode(0755))
+		if err != nil {
+			fmt.Println("Failed to make `screenshots` directory")
+			os.Exit(1)
+		}
+	}
+}
+
+func TestTwitterColsPage(t *testing.T) {
+	testTwitterCols(t, testTwitterColsPage)
+}
+
+func testTwitterColsPage(url string) error {
+	driver := agouti.PhantomJS()
+	if err := driver.Start(); err != nil {
+		return err
+	}
+	defer driver.Stop()
+
+	page, err := driver.NewPage()
+	if err != nil {
+		return err
+	}
+
+	err = page.Navigate(url)
+	if err != nil {
+		return err
+	}
+
+	err = page.Screenshot("screenshots/twitter-collections.png")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestGetTwitterCols(t *testing.T) {
+	testTwitterCols(t, testGet)
+}
+
+func testTwitterCols(t *testing.T, f func(url string) error) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = &TestAuthenticator{}
 
 	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
-	user := anaconda.User{}
-	user.Name = "foo"
-	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
 	fooCol := anaconda.Collection{
 		Name:          "foo",
-		CollectionUrl: "https://foo",
+		CollectionUrl: "https://twitter.com/NYTNow/timelines/576828964162965504",
 	}
 	barCol := anaconda.Collection{
 		Name:          "bar",
-		CollectionUrl: "https://bar",
+		CollectionUrl: "https://twitter.com/NYTNow/timelines/576828964162965504",
 	}
 	listResult := anaconda.CollectionListResult{}
 	listResult.Objects.Timelines = map[string]anaconda.Collection{
 		"fooID": fooCol,
 		"barID": barCol,
 	}
-	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(listResult, nil)
+	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Times(2).Return(listResult, nil)
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
 
 	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
 	defer s.Close()
 
-	testGet(t, s.URL, "Get /twitter-collections")
+	err := f(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestGetConfig(t *testing.T) {
@@ -105,7 +149,10 @@ func TestGetConfig(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(configHandler))
 	defer s.Close()
 
-	testGet(t, s.URL, "Get /config")
+	err := testGet(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestGetSetupTwitter(t *testing.T) {
@@ -127,7 +174,10 @@ func TestGetSetupTwitter(t *testing.T) {
 	}
 	defer func() { slackApp = tmpSlackApp }()
 
-	testGet(t, s.URL, "Get /setup/")
+	err = testGet(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestGetConfigFile(t *testing.T) {
@@ -142,9 +192,18 @@ func TestGetConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertHTTPResponse(t, res, "GET /config/file/")
-	strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
-	strings.Contains(res.Header.Get("Content-Disposition"), ".json")
+	err = checkHTTPResponse(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hasForceDownload := strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
+	if !hasForceDownload {
+		t.Fatalf("It must have force-download but not")
+	}
+	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), ".json")
+	if !hasContentDisposition {
+		t.Fatalf("It must have Content-Disposition but not")
+	}
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -160,12 +219,12 @@ func TestGetConfigFile(t *testing.T) {
 	}
 }
 
-func testGet(t *testing.T, url string, msg string) {
+func testGet(url string) error {
 	res, err := http.Get(url)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-	assertHTTPResponse(t, res, msg)
+	return checkHTTPResponse(res)
 }
 
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
@@ -173,14 +232,15 @@ func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg str
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertHTTPResponse(t, res, msg)
+	checkHTTPResponse(res)
 }
 
-func assertHTTPResponse(t *testing.T, res *http.Response, msg string) {
+func checkHTTPResponse(res *http.Response) error {
 	if res.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(res.Body)
-		t.Fatalf("Error code %d: %s", string(bs), msg)
+		return fmt.Errorf("%s %d", string(bs), res.StatusCode)
 	}
+	return nil
 }
 
 func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup, mybot.Config)) {
@@ -457,7 +517,39 @@ func testPostConfigAdd(
 	}
 }
 
+func TestIndexPage(t *testing.T) {
+	testIndex(t, testIndexPage)
+}
+
+func testIndexPage(url string) error {
+	driver := agouti.PhantomJS()
+	if err := driver.Start(); err != nil {
+		return err
+	}
+	defer driver.Stop()
+
+	page, err := driver.NewPage()
+	if err != nil {
+		return err
+	}
+
+	err = page.Navigate(url)
+	if err != nil {
+		return err
+	}
+
+	err = page.Screenshot("screenshots/index.png")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestGetIndex(t *testing.T) {
+	testIndex(t, testGet)
+}
+
+func testIndex(t *testing.T, f func(url string) error) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = &TestAuthenticator{}
@@ -471,11 +563,8 @@ func TestGetIndex(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
 
-	res, err := http.Get(s.URL)
+	err := f(s.URL)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("Status code: %s (%d)", res.Status, res.StatusCode)
 	}
 }

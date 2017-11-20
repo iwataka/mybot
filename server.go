@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -337,14 +338,15 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 		return
 	}
 	colList, err := twitterAPI.GetCollectionListByUserId(id, nil)
-	if err == nil {
+	if err == nil && len(colList.Objects.Timelines) != 0 {
+		names := []string{}
 		for _, c := range colList.Objects.Timelines {
 			name := strings.Replace(c.Name, " ", "-", -1)
-			if activeCol == "" {
-				activeCol = name
-			}
 			colMap[name] = c.CollectionUrl
+			names = append(names, name)
 		}
+		sort.Strings(names)
+		activeCol = names[0]
 	}
 
 	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)

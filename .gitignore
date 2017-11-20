@@ -4,6 +4,8 @@ config.toml
 bin/
 google_application_credentials.json
 twitter_authentication.json
+.DS_Store
+/screenshots/
 
 *.log
 *.crt

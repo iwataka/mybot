@@ -19,7 +19,7 @@
 
         <div class="tab-content">
             {{range $key, $val := .CollectionMap}}
-            <div id="{{$key}}" class="tab-pane fade">
+            <div id="{{$key}}" class="tab-pane fade{{if eq $.ActiveCollection $key}}in active{{end}}">
                 <a class="twitter-grid" href="{{$val}}"></a>
             </div>
             {{end}}
