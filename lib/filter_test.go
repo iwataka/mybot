@@ -160,7 +160,7 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 		},
 	}
 	conf := &Filter{
-		Vision: &models.VisionCondition{
+		Vision: models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
@@ -185,7 +185,7 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 		ImageURL: "url",
 	}
 	conf := &Filter{
-		Vision: &models.VisionCondition{
+		Vision: models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
@@ -209,7 +209,7 @@ func TestCheckTweetVisionUnmatched(t *testing.T) {
 	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{false}, nil)
 
 	conf := &Filter{
-		Vision: &models.VisionCondition{
+		Vision: models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}

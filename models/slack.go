@@ -29,7 +29,7 @@ type SlackChannel struct {
 	Name          string
 }
 
-func (a *SlackAction) GetChannels() []string {
+func (a SlackAction) GetChannels() []string {
 	result := []string{}
 	for _, c := range a.Channels {
 		result = append(result, c.Name)
@@ -37,7 +37,7 @@ func (a *SlackAction) GetChannels() []string {
 	return result
 }
 
-func (a *SlackAction) SetChannels(chs []string) {
+func (a SlackAction) SetChannels(chs []string) {
 	a.Channels = []SlackChannel{}
 	for _, ch := range chs {
 		c := SlackChannel{
@@ -54,7 +54,7 @@ type SlackReaction struct {
 	Text          string
 }
 
-func (a *SlackAction) GetReactions() []string {
+func (a SlackAction) GetReactions() []string {
 	result := []string{}
 	for _, c := range a.Reactions {
 		result = append(result, c.Text)
@@ -62,7 +62,7 @@ func (a *SlackAction) GetReactions() []string {
 	return result
 }
 
-func (a *SlackAction) SetReactions(rs []string) {
+func (a SlackAction) SetReactions(rs []string) {
 	a.Reactions = []SlackReaction{}
 	for _, text := range rs {
 		r := SlackReaction{

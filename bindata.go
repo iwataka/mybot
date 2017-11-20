@@ -111,7 +111,7 @@ func assetsTmplConfigActionTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/action.tmpl", size: 2502, mode: os.FileMode(420), modTime: time.Unix(1511084443, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/action.tmpl", size: 2502, mode: os.FileMode(420), modTime: time.Unix(1511190881, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -131,7 +131,7 @@ func assetsTmplConfigFilterTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5020, mode: os.FileMode(420), modTime: time.Unix(1503125362, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5020, mode: os.FileMode(420), modTime: time.Unix(1511189378, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -151,7 +151,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 17565, mode: os.FileMode(420), modTime: time.Unix(1511093025, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 17565, mode: os.FileMode(420), modTime: time.Unix(1511190881, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

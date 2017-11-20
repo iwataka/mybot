@@ -33,7 +33,7 @@ type TwitterAction struct {
 	Collections []TwitterCollection
 }
 
-func (a *TwitterAction) GetCollections() []string {
+func (a TwitterAction) GetCollections() []string {
 	result := []string{}
 	for _, c := range a.Collections {
 		result = append(result, c.Name)
@@ -41,7 +41,7 @@ func (a *TwitterAction) GetCollections() []string {
 	return result
 }
 
-func (a *TwitterAction) SetCollections(cols []string) {
+func (a TwitterAction) SetCollections(cols []string) {
 	a.Collections = []TwitterCollection{}
 	for _, col := range cols {
 		c := TwitterCollection{

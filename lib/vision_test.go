@@ -36,7 +36,7 @@ func TestMatchFace(t *testing.T) {
 			BlurredLikelihood: "VERY_UNLIKELY",
 		},
 	}
-	face := &models.VisionFaceCondition{}
+	face := models.VisionFaceCondition{}
 	face.AngerLikelihood = "LIKELY|VERY_LIKELY"
 	flag, err := matchFace(as, face)
 	if err != nil {

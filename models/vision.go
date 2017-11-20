@@ -7,22 +7,22 @@ import (
 // VisionCondition is a condition to check whether images match or not by using
 // Google Vision API.
 type VisionCondition struct {
-	Label    []string             `json:"label,omitempty" toml:"label,omitempty" bson:"label,omitempty"`
-	Face     *VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty" bson:"face,omitempty"`
-	Text     []string             `json:"text,omitempty" toml:"text,omitempty" bson:"text,omitempty"`
-	Landmark []string             `json:"landmark,omitempty" toml:"landmark,omitempty" bson:"landmark,omitempty"`
-	Logo     []string             `json:"logo,omitempty" toml:"logo,omitempty" bson:"logo,omitempty"`
+	Label    []string            `json:"label,omitempty" toml:"label,omitempty" bson:"label,omitempty"`
+	Face     VisionFaceCondition `json:"face,omitempty" toml:"face,omitempty" bson:"face,omitempty"`
+	Text     []string            `json:"text,omitempty" toml:"text,omitempty" bson:"text,omitempty"`
+	Landmark []string            `json:"landmark,omitempty" toml:"landmark,omitempty" bson:"landmark,omitempty"`
+	Logo     []string            `json:"logo,omitempty" toml:"logo,omitempty" bson:"logo,omitempty"`
 }
 
-func NewVisionCondition() *VisionCondition {
-	return &VisionCondition{
-		Face: &VisionFaceCondition{},
+func NewVisionCondition() VisionCondition {
+	return VisionCondition{
+		Face: VisionFaceCondition{},
 	}
 }
 
 func (c *VisionCondition) IsEmpty() bool {
 	return (c.Label == nil || len(c.Label) == 0) &&
-		(c.Face == nil || c.Face.IsEmpty()) &&
+		c.Face.IsEmpty() &&
 		(c.Text == nil || len(c.Text) == 0) &&
 		(c.Landmark == nil || len(c.Landmark) == 0) &&
 		(c.Logo == nil || len(c.Logo) == 0)
@@ -37,7 +37,7 @@ func (cond *VisionCondition) VisionFeatures() []*vision.Feature {
 		}
 		features = append(features, f)
 	}
-	if cond.Face != nil && !cond.Face.IsEmpty() {
+	if !cond.Face.IsEmpty() {
 		f := &vision.Feature{
 			Type:       "FACE_DETECTION",
 			MaxResults: 10,

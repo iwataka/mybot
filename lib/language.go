@@ -32,13 +32,13 @@ func NewLanguageAPI(file string) (*LanguageAPI, error) {
 }
 
 type LanguageMatcher interface {
-	MatchText(string, *models.LanguageCondition) (string, bool, error)
+	MatchText(string, models.LanguageCondition) (string, bool, error)
 	Enabled() bool
 }
 
 func (a *LanguageAPI) MatchText(
 	text string,
-	cond *models.LanguageCondition,
+	cond models.LanguageCondition,
 ) (string, bool, error) {
 	f := cond.LanguageFeatures()
 	// This means that nothing to do with language API.

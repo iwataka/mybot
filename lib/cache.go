@@ -18,8 +18,8 @@ type Cache interface {
 	SetLatestFavoriteID(screenName string, id int64)
 	GetLatestDMID() int64
 	SetLatestDMID(id int64)
-	GetTweetAction(tweetID int64) *Action
-	SetTweetAction(tweetID int64, action *Action)
+	GetTweetAction(tweetID int64) Action
+	SetTweetAction(tweetID int64, action Action)
 	GetLatestImages(num int) []ImageCacheData
 	SetImage(data ImageCacheData)
 }
@@ -29,7 +29,7 @@ type CacheProperties struct {
 	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id"`
 	LatestDMID       int64            `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
 	// map[int64]interface{} can't be converted to json by go1.6 or older
-	Tweet2Action map[string]*Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
+	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
 	Images       []ImageCacheData   `json:"images" toml:"images" bson:"images"`
 }
 
@@ -38,7 +38,7 @@ func newCacheProperties() CacheProperties {
 		make(map[string]int64),
 		make(map[string]int64),
 		0,
-		make(map[string]*Action),
+		make(map[string]Action),
 		[]ImageCacheData{},
 	}
 }
@@ -104,7 +104,7 @@ func (c *CacheProperties) SetLatestDMID(id int64) {
 	c.LatestDMID = id
 }
 
-func (c *CacheProperties) GetTweetAction(tweetID int64) *Action {
+func (c *CacheProperties) GetTweetAction(tweetID int64) Action {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
 	key := strconv.FormatInt(tweetID, 10)
@@ -112,7 +112,7 @@ func (c *CacheProperties) GetTweetAction(tweetID int64) *Action {
 	return action
 }
 
-func (c *CacheProperties) SetTweetAction(tweetID int64, action *Action) {
+func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
 	key := strconv.FormatInt(tweetID, 10)

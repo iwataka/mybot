@@ -1,10 +1,10 @@
 package mybot
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/deep"
 )
 
 func TestTwitterAction(t *testing.T) {
@@ -18,7 +18,7 @@ func TestTwitterAction(t *testing.T) {
 	a2.Retweet = true
 	a2.Favorite = true
 
-	result1 := a1.Add(&a2)
+	result1 := a1.Add(a2)
 	if result1.Retweet != true {
 		t.Fatalf("%v expected but %v found", false, result1.Retweet)
 	}
@@ -29,7 +29,7 @@ func TestTwitterAction(t *testing.T) {
 		t.Fatalf("%d expected but %d found", 3, len(result1.Collections))
 	}
 
-	result2 := a1.Sub(&a2)
+	result2 := a1.Sub(a2)
 	if result2.Retweet != false {
 		t.Fatalf("%v expected but %v found", false, result2.Retweet)
 	}
@@ -42,12 +42,13 @@ func TestTwitterAction(t *testing.T) {
 }
 
 func TestPostProcessorEach(t *testing.T) {
-	action := &Action{
-		Twitter: &TwitterAction{
+	action := Action{
+		Twitter: TwitterAction{
 			Collections: []string{"foo"},
 		},
-		Slack: &SlackAction{
-			Channels: []string{"bar"},
+		Slack: SlackAction{
+			Channels:  []string{"bar"},
+			Reactions: []string{},
 		},
 	}
 	action.Twitter.Retweet = true
@@ -64,11 +65,11 @@ func TestPostProcessorEach(t *testing.T) {
 		t.Fatal(err)
 	}
 	ac := cache.GetTweetAction(tweet.Id)
-	if !reflect.DeepEqual(ac, action) {
-		t.Fatalf("%v is not cached properly", action)
+	if diff := deep.Equal(ac, action); diff != nil {
+		t.Fatal(diff)
 	}
 
-	action2 := &Action{
+	action2 := Action{
 		Twitter: NewTwitterAction(),
 		Slack:   NewSlackAction(),
 	}

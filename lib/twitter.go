@@ -24,37 +24,32 @@ type TwitterAction struct {
 	Collections []string `json:"collections" toml:"collections" bson:"collections"`
 }
 
-func NewTwitterAction() *TwitterAction {
-	return &TwitterAction{
+func NewTwitterAction() TwitterAction {
+	return TwitterAction{
 		Collections: []string{},
 	}
 }
 
-func (a *TwitterAction) Add(action *TwitterAction) *TwitterAction {
+func (a TwitterAction) Add(action TwitterAction) TwitterAction {
 	return a.op(action, true)
 }
 
-func (a *TwitterAction) Sub(action *TwitterAction) *TwitterAction {
+func (a TwitterAction) Sub(action TwitterAction) TwitterAction {
 	return a.op(action, false)
 }
 
-func (a *TwitterAction) op(action *TwitterAction, add bool) *TwitterAction {
-	result := *a
-
-	// If action is nil, you have nothing to do
-	if action == nil {
-		return &result
-	}
+func (a TwitterAction) op(action TwitterAction, add bool) TwitterAction {
+	result := a
 
 	result.Tweet = BoolOp(a.Tweet, action.Tweet, add)
 	result.Retweet = BoolOp(a.Retweet, action.Retweet, add)
 	result.Favorite = BoolOp(a.Favorite, action.Favorite, add)
 	result.Collections = StringsOp(a.Collections, action.Collections, add)
 
-	return &result
+	return result
 }
 
-func (a *TwitterAction) IsEmpty() bool {
+func (a TwitterAction) IsEmpty() bool {
 	return !a.Tweet &&
 		!a.Retweet &&
 		!a.Favorite &&
@@ -153,7 +148,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *Action,
+	action Action,
 ) ([]anaconda.Tweet, error) {
 	latestID := a.Cache.GetLatestTweetID(name)
 	v.Set("screen_name", name)
@@ -190,7 +185,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *Action,
+	action Action,
 ) ([]anaconda.Tweet, error) {
 	latestID := a.Cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
@@ -227,7 +222,7 @@ func (a *TwitterAPI) ProcessSearch(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action *Action,
+	action Action,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.API.GetSearch(query, v)
 	if err != nil {
@@ -250,7 +245,7 @@ type (
 		cache      Cache
 	}
 	TwitterPostProcessorEach struct {
-		action *Action
+		action Action
 		cache  Cache
 	}
 )
@@ -266,11 +261,7 @@ func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
 func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
 	if match {
 		ac := p.cache.GetTweetAction(t.Id)
-		if ac != nil {
-			p.cache.SetTweetAction(t.Id, ac.Add(p.action))
-		} else {
-			p.cache.SetTweetAction(t.Id, p.action)
-		}
+		p.cache.SetTweetAction(t.Id, ac.Add(p.action))
 	}
 	return nil
 }
@@ -281,7 +272,7 @@ func (a *TwitterAPI) processTweets(
 	v VisionMatcher,
 	l LanguageMatcher,
 	slack *SlackAPI,
-	action *Action,
+	action Action,
 	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
@@ -310,7 +301,7 @@ func (a *TwitterAPI) processTweets(
 
 func (a *TwitterAPI) processTweet(
 	t anaconda.Tweet,
-	action *Action,
+	action Action,
 	slack *SlackAPI,
 ) error {
 	if action.Twitter.Retweet && !t.Retweeted {
@@ -342,7 +333,7 @@ func (a *TwitterAPI) processTweet(
 		fmt.Printf("Collect the tweet[%s] to %s\n", t.IdStr, col)
 	}
 
-	if slack.Enabled() && action.Slack != nil {
+	if slack.Enabled() {
 		for _, ch := range action.Slack.Channels {
 			err := slack.PostTweet(ch, t)
 			if err != nil {
@@ -388,7 +379,7 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 // all users specified in the configuration.
 func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
 	n := a.Config.GetTwitterNotification()
-	if n.Place != nil && t.HasCoordinates() {
+	if t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
 		allowSelf := n.Place.AllowSelf
 		users := n.Place.Users
@@ -534,23 +525,21 @@ func (l *TwitterDMListener) Listen() error {
 				fmt.Printf("DM[%s] created by %s at %s\n", c.IdStr, c.Sender.ScreenName, c.CreatedAt)
 
 				conf := l.api.Config.GetTwitterInteraction()
-				if conf != nil {
-					match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
+				match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
+				if err != nil {
+					return err
+				}
+				if match {
+					id := l.api.Cache.GetLatestDMID()
+					if id < c.Id {
+						l.api.Cache.SetLatestDMID(c.Id)
+					}
+					err = l.api.responseForDirectMessage(c, l.receiver)
 					if err != nil {
 						return err
 					}
-					if match {
-						id := l.api.Cache.GetLatestDMID()
-						if id < c.Id {
-							l.api.Cache.SetLatestDMID(c.Id)
-						}
-						err = l.api.responseForDirectMessage(c, l.receiver)
-						if err != nil {
-							return err
-						}
-					}
 				}
-				err := l.api.Cache.Save()
+				err = l.api.Cache.Save()
 				if err != nil {
 					return err
 				}

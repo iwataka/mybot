@@ -1,5 +1,4 @@
 [twitter]
-favorites = []
 duration = "30m"
 debug = false
 
@@ -9,7 +8,6 @@ screen_names = ["golang"]
 retweeted = false
 lang = "en"
 patterns = ["is released!", "#golang"]
-url_patterns = []
 [twitter.timelines.filter.vision]
 label = ["cartoon|clip art|artwork"]
 text = ["foo"]
@@ -20,7 +18,6 @@ anger_likelihood = "LIKELY"
 blurred_likelihood = "LIKELY"
 headwear_likelihood = "LIKELY"
 joy_likelihood = "LIKELY"
-[twitter.timelines.filter.language]
 [twitter.timelines.action]
 [twitter.timelines.action.twitter]
 retweet = true
@@ -30,41 +27,18 @@ collections = ["foo"]
 pin = false
 star = false
 channels = ["foo"]
-reactions = []
 
 [[twitter.timelines]]
 screen_names = ["foo"]
-[twitter.timelines.filter]
-patterns = []
-url_patterns = []
-[twitter.timelines.filter.vision]
-label = []
-text = []
-landmark = []
-logo = []
-[twitter.timelines.filter.vision.face]
-[twitter.timelines.filter.language]
 [twitter.timelines.action]
 [twitter.timelines.action.twitter]
 retweet = true
-collections = []
-[twitter.timelines.action.slack]
-channels = []
-reactions = []
 
 [[twitter.searches]]
 queries = ["foo", "bar"]
 [twitter.searches.filter]
-patterns = []
 url_patterns = ["foo"]
 retweeted_threshold = 100
-[twitter.searches.filter.vision]
-label = []
-text = []
-landmark = []
-logo = []
-[twitter.searches.filter.vision.face]
-[twitter.searches.filter.language]
 [twitter.searches.action]
 [twitter.searches.action.twitter]
 tweet = false
@@ -75,7 +49,6 @@ collections = ["foo"]
 pin = false
 star = false
 channels = ["foo"]
-reactions = []
 [twitter.notification]
 [twitter.notification.Place]
 allow_self = true
@@ -89,14 +62,6 @@ users = ["foo", "bar"]
 channels = ["foo"]
 [slack.messages.filter]
 patterns = ["foo"]
-url_patterns = []
-[slack.messages.filter.vision]
-label = []
-text = []
-landmark = []
-logo = []
-[slack.messages.filter.vision.face]
-[slack.messages.filter.language]
 [slack.messages.action.twitter]
 tweet = true
 collections = []

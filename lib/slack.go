@@ -16,43 +16,38 @@ import (
 
 type SlackAction struct {
 	models.SlackActionProperties
-	Reactions []string `json:"reactions" toml:"reactions" bson:"reactions"`
-	Channels  []string `json:"channels" toml:"channels" bson:"channels"`
+	Reactions []string `json:"reactions,omitempty" toml:"reactions,omitempty" bson:"reactions,omitempty"`
+	Channels  []string `json:"channels,omitempty" toml:"channels,omitempty" bson:"channels,omitempty"`
 }
 
-func NewSlackAction() *SlackAction {
-	return &SlackAction{
+func NewSlackAction() SlackAction {
+	return SlackAction{
 		Channels:  []string{},
 		Reactions: []string{},
 	}
 }
 
-func (a *SlackAction) Add(action *SlackAction) *SlackAction {
+func (a SlackAction) Add(action SlackAction) SlackAction {
 	return a.op(action, true)
 }
 
-func (a *SlackAction) Sub(action *SlackAction) *SlackAction {
+func (a SlackAction) Sub(action SlackAction) SlackAction {
 	return a.op(action, false)
 }
 
-func (a *SlackAction) op(action *SlackAction, add bool) *SlackAction {
-	result := *a
-
-	// If action is nil, you have nothing to do
-	if action == nil {
-		return &result
-	}
+func (a SlackAction) op(action SlackAction, add bool) SlackAction {
+	result := a
 
 	result.Pin = BoolOp(a.Pin, action.Pin, add)
 	result.Star = BoolOp(a.Star, action.Star, add)
 	result.Reactions = StringsOp(a.Reactions, action.Reactions, add)
 	result.Channels = StringsOp(a.Channels, action.Channels, add)
 
-	return &result
+	return result
 
 }
 
-func (a *SlackAction) IsEmpty() bool {
+func (a SlackAction) IsEmpty() bool {
 	return !a.Pin &&
 		!a.Star &&
 		len(a.Channels) == 0 &&
@@ -201,7 +196,7 @@ func (a *SlackAPI) processMsgEvent(
 func (a *SlackAPI) processMsgEventWithAction(
 	ch string,
 	ev *slack.MessageEvent,
-	action *Action,
+	action Action,
 	twitterAPI *TwitterAPI,
 ) error {
 	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)

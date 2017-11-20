@@ -21,22 +21,22 @@ type Config interface {
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
 	SetTwitterTimelines(timelines []TimelineConfig)
-	AddTwitterTimeline(timeline *TimelineConfig)
+	AddTwitterTimeline(timeline TimelineConfig)
 	GetTwitterFavorites() []FavoriteConfig
 	SetTwitterFavorites(favorites []FavoriteConfig)
-	AddTwitterFavorite(favorite *FavoriteConfig)
+	AddTwitterFavorite(favorite FavoriteConfig)
 	GetTwitterSearches() []SearchConfig
 	SetTwitterSearches(searches []SearchConfig)
-	AddTwitterSearch(search *SearchConfig)
-	GetTwitterNotification() *Notification
-	SetTwitterNotification(notification *Notification)
-	GetTwitterInteraction() *InteractionConfig
-	SetTwitterInteraction(interaction *InteractionConfig)
+	AddTwitterSearch(search SearchConfig)
+	GetTwitterNotification() Notification
+	SetTwitterNotification(notification Notification)
+	GetTwitterInteraction() InteractionConfig
+	SetTwitterInteraction(interaction InteractionConfig)
 	GetTwitterDuration() string
 	SetTwitterDuration(dur string)
 	GetSlackMessages() []MessageConfig
 	SetSlackMessages(msgs []MessageConfig)
-	AddSlackMessage(msg *MessageConfig)
+	AddSlackMessage(msg MessageConfig)
 	Validate() error
 	ValidateWithAPI(api *TwitterAPI) error
 	Unmarshal(bytes []byte) error
@@ -53,9 +53,9 @@ type FileConfig struct {
 
 type ConfigProperties struct {
 	// Twitter is a configuration related to Twitter.
-	Twitter *TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter"`
+	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter"`
 	// Slack is a configuration related to Slack
-	Slack *SlackConfig `json:"slack" toml:"slack" bson:"slack"`
+	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack"`
 }
 
 func newConfigProperties() *ConfigProperties {
@@ -81,11 +81,8 @@ func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {
 	c.Twitter.Timelines = timelines
 }
 
-func (c *ConfigProperties) AddTwitterTimeline(timeline *TimelineConfig) {
-	if timeline == nil {
-		return
-	}
-	c.Twitter.Timelines = append(c.Twitter.Timelines, *timeline)
+func (c *ConfigProperties) AddTwitterTimeline(timeline TimelineConfig) {
+	c.Twitter.Timelines = append(c.Twitter.Timelines, timeline)
 }
 
 func (c *ConfigProperties) GetTwitterFavorites() []FavoriteConfig {
@@ -96,11 +93,8 @@ func (c *ConfigProperties) SetTwitterFavorites(favorites []FavoriteConfig) {
 	c.Twitter.Favorites = favorites
 }
 
-func (c *ConfigProperties) AddTwitterFavorite(favorite *FavoriteConfig) {
-	if favorite == nil {
-		return
-	}
-	c.Twitter.Favorites = append(c.Twitter.Favorites, *favorite)
+func (c *ConfigProperties) AddTwitterFavorite(favorite FavoriteConfig) {
+	c.Twitter.Favorites = append(c.Twitter.Favorites, favorite)
 }
 
 func (c *ConfigProperties) GetTwitterSearches() []SearchConfig {
@@ -111,26 +105,23 @@ func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
 	c.Twitter.Searches = searches
 }
 
-func (c *ConfigProperties) AddTwitterSearch(search *SearchConfig) {
-	if search == nil {
-		return
-	}
-	c.Twitter.Searches = append(c.Twitter.Searches, *search)
+func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
+	c.Twitter.Searches = append(c.Twitter.Searches, search)
 }
 
-func (c *ConfigProperties) GetTwitterNotification() *Notification {
+func (c *ConfigProperties) GetTwitterNotification() Notification {
 	return c.Twitter.Notification
 }
 
-func (c *ConfigProperties) SetTwitterNotification(notification *Notification) {
+func (c *ConfigProperties) SetTwitterNotification(notification Notification) {
 	c.Twitter.Notification = notification
 }
 
-func (c *ConfigProperties) GetTwitterInteraction() *InteractionConfig {
+func (c *ConfigProperties) GetTwitterInteraction() InteractionConfig {
 	return c.Twitter.Interaction
 }
 
-func (c *ConfigProperties) SetTwitterInteraction(interaction *InteractionConfig) {
+func (c *ConfigProperties) SetTwitterInteraction(interaction InteractionConfig) {
 	c.Twitter.Interaction = interaction
 }
 
@@ -142,11 +133,8 @@ func (c *ConfigProperties) SetSlackMessages(msgs []MessageConfig) {
 	c.Slack.Messages = msgs
 }
 
-func (c *ConfigProperties) AddSlackMessage(msg *MessageConfig) {
-	if msg == nil {
-		return
-	}
-	c.Slack.Messages = append(c.Slack.Messages, *msg)
+func (c *ConfigProperties) AddSlackMessage(msg MessageConfig) {
+	c.Slack.Messages = append(c.Slack.Messages, msg)
 }
 
 func (c *ConfigProperties) GetTwitterDuration() string {
@@ -164,21 +152,6 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	err := c.Load()
 	if err != nil {
 		return nil, err
-	}
-
-	// Assign empty values to config instance to prevent nil pointer
-	// reference error.
-	for _, t := range c.Twitter.Timelines {
-		t.Init()
-	}
-	for _, f := range c.Twitter.Favorites {
-		f.Init()
-	}
-	for _, s := range c.Twitter.Searches {
-		s.Init()
-	}
-	for _, m := range c.Slack.Messages {
-		m.Init()
 	}
 
 	err = c.Validate()
@@ -315,9 +288,9 @@ func (c *FileConfig) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type Source struct {
 	// Filter filters out incoming data from sources.
-	Filter *Filter `json:"filter" toml:"filter" bson:"filter"`
+	Filter Filter `json:"filter" toml:"filter" bson:"filter"`
 	// Action defines actions for data passing through filters.
-	Action *Action `json:"action" toml:"action" bson:"action"`
+	Action Action `json:"action" toml:"action" bson:"action"`
 }
 
 func NewSource() Source {
@@ -327,84 +300,40 @@ func NewSource() Source {
 	}
 }
 
-func (c *Source) Init() {
-	if c.Filter.Vision == nil {
-		c.Filter.Vision = new(models.VisionCondition)
-	}
-	if c.Filter.Vision.Face == nil {
-		c.Filter.Vision.Face = new(models.VisionFaceCondition)
-	}
-	if c.Filter.Language == nil {
-		c.Filter.Language = new(models.LanguageCondition)
-	}
-
-	if c.Action.Twitter == nil {
-		c.Action.Twitter = NewTwitterAction()
-	}
-	if c.Action.Slack == nil {
-		c.Action.Slack = NewSlackAction()
-	}
-}
-
 func (c *Source) Validate() error {
-	if c.Action == nil || c.Action.IsEmpty() {
+	if c.Action.IsEmpty() {
 		return fmt.Errorf("%v has no action", c)
 	}
 	return nil
 }
 
 type Action struct {
-	Twitter *TwitterAction `json:"twitter" toml:"twitter" bson:"twitter"`
-	Slack   *SlackAction   `json:"slack" toml:"slack" bson:"slack"`
+	Twitter TwitterAction `json:"twitter" toml:"twitter" bson:"twitter"`
+	Slack   SlackAction   `json:"slack" toml:"slack" bson:"slack"`
 }
 
-func NewAction() *Action {
-	return &Action{
+func NewAction() Action {
+	return Action{
 		Twitter: NewTwitterAction(),
 		Slack:   NewSlackAction(),
 	}
 }
 
-func (a *Action) Add(action *Action) *Action {
-	if action == nil {
-		return a
-	}
-
-	result := *a
-
-	if a.Twitter == nil {
-		result.Twitter = action.Twitter
-	} else {
-		result.Twitter = a.Twitter.Add(action.Twitter)
-	}
-
-	if a.Slack == nil {
-		result.Slack = action.Slack
-	} else {
-		result.Slack = a.Slack.Add(action.Slack)
-	}
-
-	return &result
+func (a Action) Add(action Action) Action {
+	result := a
+	result.Twitter = a.Twitter.Add(action.Twitter)
+	result.Slack = a.Slack.Add(action.Slack)
+	return result
 }
 
-func (a *Action) Sub(action *Action) *Action {
-	if action == nil {
-		return a
-	}
-
-	result := *a
-
-	if a.Twitter != nil {
-		result.Twitter = a.Twitter.Sub(action.Twitter)
-	}
-	if a.Slack != nil {
-		result.Slack = a.Slack.Sub(action.Slack)
-	}
-
-	return &result
+func (a Action) Sub(action Action) Action {
+	result := a
+	result.Twitter = a.Twitter.Sub(action.Twitter)
+	result.Slack = a.Slack.Sub(action.Slack)
+	return result
 }
 
-func (a *Action) IsEmpty() bool {
+func (a Action) IsEmpty() bool {
 	return a.Twitter.IsEmpty() && a.Slack.IsEmpty()
 }
 
@@ -417,10 +346,10 @@ type TwitterConfig struct {
 	// Currently only place notification is supported, which means that
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
-	Notification *Notification `json:"notification" toml:"notification" bson:"notification"`
+	Notification Notification `json:"notification" toml:"notification" bson:"notification"`
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
-	Interaction *InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
+	Interaction InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
 	Duration string `json:"duration" toml:"duration" bson:"duration"`
@@ -429,11 +358,11 @@ type TwitterConfig struct {
 	Debug bool `json:"debug" toml:"debug" bson:"debug"`
 }
 
-func NewTwitterConfig() *TwitterConfig {
-	return &TwitterConfig{
+func NewTwitterConfig() TwitterConfig {
+	return TwitterConfig{
 		Timelines:    []TimelineConfig{},
 		Searches:     []SearchConfig{},
-		Interaction:  &InteractionConfig{},
+		Interaction:  InteractionConfig{},
 		Duration:     "1h",
 		Notification: NewNotification(),
 	}
@@ -441,7 +370,7 @@ func NewTwitterConfig() *TwitterConfig {
 
 // GetScreenNames returns all screen names in the TwitterConfig instance. This
 // is useful to do something for all related users.
-func (tc *TwitterConfig) GetScreenNames() []string {
+func (tc TwitterConfig) GetScreenNames() []string {
 	result := []string{}
 	for _, t := range tc.Timelines {
 		result = append(result, t.ScreenNames...)
@@ -462,8 +391,8 @@ type TimelineConfig struct {
 
 // NewTimelineConfig returns TimelineConfig instance, which is empty but has a
 // non-nil filter and action.
-func NewTimelineConfig() *TimelineConfig {
-	return &TimelineConfig{
+func NewTimelineConfig() TimelineConfig {
+	return TimelineConfig{
 		Source: NewSource(),
 	}
 }
@@ -489,8 +418,8 @@ type FavoriteConfig struct {
 
 // NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
 // non-nil filter and action.
-func NewFavoriteConfig() *FavoriteConfig {
-	return &FavoriteConfig{
+func NewFavoriteConfig() FavoriteConfig {
+	return FavoriteConfig{
 		Source: NewSource(),
 	}
 }
@@ -515,8 +444,8 @@ type SearchConfig struct {
 
 // NewSearchConfig returns SearchConfig instance, which is empty but has a
 // non-nil filter and action.
-func NewSearchConfig() *SearchConfig {
-	return &SearchConfig{
+func NewSearchConfig() SearchConfig {
+	return SearchConfig{
 		Source: NewSource(),
 	}
 }
@@ -542,8 +471,8 @@ type SlackConfig struct {
 	Messages []MessageConfig `json:"messages" toml:"messages" bson:"messages"`
 }
 
-func NewSlackConfig() *SlackConfig {
-	return &SlackConfig{
+func NewSlackConfig() SlackConfig {
+	return SlackConfig{
 		Messages: []MessageConfig{},
 	}
 }
@@ -553,7 +482,7 @@ type MessageConfig struct {
 	Channels []string `json:"channels" toml:"channels" bson:"channels"`
 }
 
-func (c *MessageConfig) Validate() error {
+func (c MessageConfig) Validate() error {
 	err := c.Source.Validate()
 	if err != nil {
 		return err
@@ -564,8 +493,8 @@ func (c *MessageConfig) Validate() error {
 	return nil
 }
 
-func NewMessageConfig() *MessageConfig {
-	return &MessageConfig{
+func NewMessageConfig() MessageConfig {
+	return MessageConfig{
 		Source: NewSource(),
 	}
 }

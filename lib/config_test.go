@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/iwataka/deep"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -78,86 +80,48 @@ func TestNewConfigWhenNotExist(t *testing.T) {
 	}
 }
 
-func TestNewTimelineConfig(t *testing.T) {
-	tl := NewTimelineConfig()
-	if tl.Filter == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if tl.Filter.Vision == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if tl.Action == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-}
-
-func TestNewFavoriteConfig(t *testing.T) {
-	f := NewFavoriteConfig()
-	if f.Filter == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if f.Filter.Vision == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if f.Action == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-}
-
-func TestNewSearchConfig(t *testing.T) {
-	s := NewSearchConfig()
-	if s.Filter == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if s.Filter.Vision == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-	if s.Action == nil {
-		t.Fatalf("Non-nil expected but nil found")
-	}
-}
-
 func TestTweetAction_AddNil(t *testing.T) {
-	a1 := &Action{
-		Twitter: nil,
-		Slack:   nil,
+	a1 := Action{
+		Twitter: NewTwitterAction(),
+		Slack:   NewSlackAction(),
 	}
-	a2 := &Action{
-		Twitter: &TwitterAction{
+	a2 := Action{
+		Twitter: TwitterAction{
 			Collections: []string{"foo"},
 		},
-		Slack: &SlackAction{
-			Channels: []string{"bar"},
+		Slack: SlackAction{
+			Channels:  []string{"bar"},
+			Reactions: []string{},
 		},
 	}
 	a2.Twitter.Retweet = true
 
 	result1 := a1.Add(a2)
-	if !reflect.DeepEqual(result1, a2) {
-		t.Fatalf("Failed to add %v to %v: %v", a2, a1, result1)
+	if diff := deep.Equal(result1, a2); diff != nil {
+		t.Fatal(diff)
 	}
 
 	result2 := a2.Add(a1)
-	if !reflect.DeepEqual(result2, a2) {
-		t.Fatalf("Failed to add %v to %v: %v", a1, a2, result2)
+	if diff := deep.Equal(result2, a2); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
 func TestTweetAction_Add(t *testing.T) {
-	a1 := &Action{
-		Twitter: &TwitterAction{
+	a1 := Action{
+		Twitter: TwitterAction{
 			Collections: []string{"twitter"},
 		},
-		Slack: &SlackAction{
+		Slack: SlackAction{
 			Channels: []string{"slack"},
 		},
 	}
 	a1.Twitter.Retweet = true
-	a2 := &Action{
-		Twitter: &TwitterAction{
+	a2 := Action{
+		Twitter: TwitterAction{
 			Collections: []string{"facebook"},
 		},
-		Slack: &SlackAction{
+		Slack: SlackAction{
 			Channels: []string{"mattermost"},
 		},
 	}
@@ -295,8 +259,8 @@ func TestFileConfigTwitterNotification(t *testing.T) {
 }
 
 func testConfigTwitterNotification(t *testing.T, c Config) {
-	notification := &Notification{
-		Place: &PlaceNotification{
+	notification := Notification{
+		Place: PlaceNotification{
 			Users: []string{"foo"},
 		},
 	}
@@ -344,7 +308,7 @@ func TestFileConfigInteraction(t *testing.T) {
 }
 
 func testConfigInteraction(t *testing.T, c Config) {
-	interaction := &InteractionConfig{}
+	interaction := InteractionConfig{}
 	interaction.Users = []string{"foo"}
 	c.SetTwitterInteraction(interaction)
 	i := c.GetTwitterInteraction()

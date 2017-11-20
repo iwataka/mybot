@@ -12,12 +12,12 @@ import (
 )
 
 func TestSlackActionAdd(t *testing.T) {
-	a1 := &SlackAction{
+	a1 := SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
 	a1.Pin = true
 	a1.Reactions = []string{":smile:"}
-	a2 := &SlackAction{
+	a2 := SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
 	a2.Reactions = []string{":smile:", ":plane:"}
@@ -38,10 +38,10 @@ func TestSlackActionAdd(t *testing.T) {
 }
 
 func TestSlackActionSub(t *testing.T) {
-	a1 := &SlackAction{
+	a1 := SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
-	a2 := &SlackAction{
+	a2 := SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
 	result := a1.Sub(a2)

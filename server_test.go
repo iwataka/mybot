@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -17,6 +16,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/deep"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/worker"
@@ -180,6 +180,44 @@ func TestGetSetupTwitter(t *testing.T) {
 	}
 }
 
+func TestGetConfigJson(t *testing.T) {
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
+
+	s := httptest.NewServer(http.HandlerFunc(configJsonHandler))
+	defer s.Close()
+
+	res, err := http.Get(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = checkHTTPResponse(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := mybot.NewFileConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cfg.Unmarshal(bs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfgProps := cfg.GetProperties()
+	configProps := serverTestUserSpecificData.config.GetProperties()
+	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
+	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
+	if diff := deep.Equal(cfgProps, configProps); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestGetConfigFile(t *testing.T) {
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
@@ -297,8 +335,12 @@ func testPostConfigWithoutModification(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
+	cProps := c.GetProperties()
+	configProps := serverTestUserSpecificData.config.GetProperties()
+	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
+	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
+	if diff := deep.Equal(cProps, configProps); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -400,8 +442,13 @@ func testPostConfigDoubleDelete(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
+	cProps := c.GetProperties()
+	configProps := serverTestUserSpecificData.config.GetProperties()
+	if diff := deep.Equal(cProps.Slack, configProps.Slack); diff != nil {
+		t.Fatal(diff)
+	}
+	if diff := deep.Equal(cProps.Twitter, configProps.Twitter); diff != nil {
+		t.Fatal(diff)
 	}
 }
 
@@ -430,8 +477,10 @@ func testPostConfigError(
 	}
 	wg.Wait()
 
-	if !reflect.DeepEqual(c.GetProperties(), serverTestUserSpecificData.config.GetProperties()) {
-		t.Fatalf("%v expected but %v found", c, serverTestUserSpecificData.config)
+	cProps := c.GetProperties()
+	configProps := serverTestUserSpecificData.config.GetProperties()
+	if diff := deep.Equal(cProps, configProps); diff != nil {
+		t.Fatal(diff)
 	}
 }
 

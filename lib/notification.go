@@ -2,12 +2,12 @@ package mybot
 
 // Notification represents a notification about tweets
 type Notification struct {
-	Place *PlaceNotification
+	Place PlaceNotification
 }
 
-func NewNotification() *Notification {
-	return &Notification{
-		Place: &PlaceNotification{},
+func NewNotification() Notification {
+	return Notification{
+		Place: PlaceNotification{},
 	}
 }
 

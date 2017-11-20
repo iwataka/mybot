@@ -141,6 +141,10 @@ func startServer(host, port, cert, key string) error {
 		wrapHandler(configHandler),
 	)
 	http.HandleFunc(
+		"/config/json/",
+		wrapHandler(configJsonHandler),
+	)
+	http.HandleFunc(
 		"/config/file/",
 		wrapHandler(configFileHandler),
 	)
@@ -449,7 +453,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 		if deletedFlags[i] == "true" {
 			continue
 		}
-		timeline := *mybot.NewTimelineConfig()
+		timeline := mybot.NewTimelineConfig()
 		timeline.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
 		timeline.ExcludeReplies = mybot.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
 		timeline.IncludeRts = mybot.GetBoolSelectboxValue(val, i, prefix+".include_rts")
@@ -475,7 +479,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 		if deletedFlags[i] == "true" {
 			continue
 		}
-		favorite := *mybot.NewFavoriteConfig()
+		favorite := mybot.NewFavoriteConfig()
 		favorite.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
 		if favorite.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
@@ -499,7 +503,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 		if deletedFlags[i] == "true" {
 			continue
 		}
-		search := *mybot.NewSearchConfig()
+		search := mybot.NewSearchConfig()
 		search.Queries = mybot.GetListTextboxValue(val, i, prefix+".queries")
 		search.ResultType = val[prefix+".result_type"][i]
 		if search.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
@@ -524,7 +528,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 		if deletedFlags[i] == "true" {
 			continue
 		}
-		msg := *mybot.NewMessageConfig()
+		msg := mybot.NewMessageConfig()
 		msg.Channels = mybot.GetListTextboxValue(val, i, prefix+".channels")
 		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
@@ -556,7 +560,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	}
 }
 
-func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.Filter, error) {
+func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {
 	prefix = prefix + ".filter."
 	filter := mybot.NewFilter()
 	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+"patterns")
@@ -565,12 +569,12 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.
 	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+"retweeted")
 	fThreshold, err := mybot.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
-		return nil, err
+		return mybot.NewFilter(), err
 	}
 	filter.FavoriteThreshold = fThreshold
 	rThreshold, err := mybot.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
-		return nil, err
+		return mybot.NewFilter(), err
 	}
 	filter.RetweetedThreshold = rThreshold
 	filter.Lang = mybot.GetString(val, prefix+"lang", i, "")
@@ -584,12 +588,12 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (*mybot.
 	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
 	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
-		return nil, err
+		return mybot.NewFilter(), err
 	}
 	filter.Language.MinSentiment = minSentiment
 	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
-		return nil, err
+		return mybot.NewFilter(), err
 	}
 	filter.Language.MaxSentiment = maxSentiment
 	return filter, nil
@@ -599,14 +603,14 @@ func postConfigForActions(
 	val map[string][]string,
 	prefix string,
 	deletedFlags []string,
-) ([]*mybot.Action, error) {
+) ([]mybot.Action, error) {
 	prefix = prefix + ".action."
 	tweetCounter := checkboxCounter{prefix + "twitter.tweet", 0}
 	retweetCounter := checkboxCounter{prefix + "twitter.retweet", 0}
 	favoriteCounter := checkboxCounter{prefix + "twitter.favorite", 0}
 	pinCounter := checkboxCounter{prefix + "slack.pin", 0}
 	starCounter := checkboxCounter{prefix + "slack.star", 0}
-	results := []*mybot.Action{}
+	results := []mybot.Action{}
 	for i := 0; i < len(deletedFlags); i++ {
 		a, err := postConfigForAction(val, i, prefix)
 		if err != nil {
@@ -622,7 +626,7 @@ func postConfigForActions(
 	return results, nil
 }
 
-func postConfigForAction(val map[string][]string, i int, prefix string) (*mybot.Action, error) {
+func postConfigForAction(val map[string][]string, i int, prefix string) (mybot.Action, error) {
 	action := mybot.NewAction()
 	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
 	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
@@ -759,6 +763,74 @@ func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c mybot.Config
 
 func addMessageConfig(config mybot.Config) {
 	config.AddSlackMessage(mybot.NewMessageConfig())
+}
+
+func configJsonHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	if r.Method == http.MethodPost {
+		postConfigJson(w, r, data.config)
+	} else if r.Method == http.MethodGet {
+		getConfigJson(w, r, data.config)
+	}
+}
+
+func postConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+	var err error
+	defer func() {
+		r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}()
+
+	var bs []byte
+	bs, err = ioutil.ReadAll(r.Body)
+	if err != nil {
+		return
+	}
+	err = config.Unmarshal(bs)
+	if err != nil {
+		return
+	}
+	err = config.Validate()
+	if err != nil {
+		config.Load()
+		return
+	}
+	err = config.Save()
+	if err != nil {
+		return
+	}
+}
+
+func getConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+	var err error
+	defer func() {
+		r.Body.Close()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}()
+
+	var bs []byte
+	bs, err = config.Marshal("  ", ".json")
+	if err != nil {
+		return
+	}
+	_, err = w.Write(bs)
+	if err != nil {
+		return
+	}
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {

@@ -39,7 +39,7 @@ func NewVisionAPI(file string) (*VisionAPI, error) {
 }
 
 type VisionMatcher interface {
-	MatchImages([]string, *models.VisionCondition) ([]string, []bool, error)
+	MatchImages([]string, models.VisionCondition) ([]string, []bool, error)
 	Enabled() bool
 }
 
@@ -47,7 +47,7 @@ type VisionMatcher interface {
 // specified images match or not.
 func (a *VisionAPI) MatchImages(
 	urls []string,
-	cond *models.VisionCondition,
+	cond models.VisionCondition,
 ) ([]string, []bool, error) {
 	// No image never match any conditions
 	if len(urls) == 0 {
@@ -178,7 +178,7 @@ func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 	return true, nil
 }
 
-func matchFace(as []*vision.FaceAnnotation, face *models.VisionFaceCondition) (bool, error) {
+func matchFace(as []*vision.FaceAnnotation, face models.VisionFaceCondition) (bool, error) {
 	for _, a := range as {
 		match := false
 		var err error

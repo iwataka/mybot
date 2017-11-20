@@ -29,7 +29,7 @@ func (_m *MockLanguageMatcher) EXPECT() *_MockLanguageMatcherRecorder {
 	return _m.recorder
 }
 
-func (_m *MockLanguageMatcher) MatchText(_param0 string, _param1 *models.LanguageCondition) (string, bool, error) {
+func (_m *MockLanguageMatcher) MatchText(_param0 string, _param1 models.LanguageCondition) (string, bool, error) {
 	ret := _m.ctrl.Call(_m, "MatchText", _param0, _param1)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(bool)

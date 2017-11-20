@@ -130,11 +130,11 @@ func TestDBCacheTweetAction(t *testing.T) {
 
 func testCacheTweetAction(t *testing.T, c Cache) {
 	var tweetID int64 = 1
-	action := &Action{
-		Twitter: &TwitterAction{
+	action := Action{
+		Twitter: TwitterAction{
 			Collections: []string{"foo"},
 		},
-		Slack: &SlackAction{
+		Slack: SlackAction{
 			Reactions: []string{"smile"},
 			Channels:  []string{"bar"},
 		},
