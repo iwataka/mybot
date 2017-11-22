@@ -214,3 +214,14 @@ func (_m *MockTwitterAPI) GetUsersShow(_param0 string, _param1 url.Values) (anac
 func (_mr *_MockTwitterAPIRecorder) GetUsersShow(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUsersShow", arg0, arg1)
 }
+
+func (_m *MockTwitterAPI) GetUserSearch(_param0 string, _param1 url.Values) ([]anaconda.User, error) {
+	ret := _m.ctrl.Call(_m, "GetUserSearch", _param0, _param1)
+	ret0, _ := ret[0].([]anaconda.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockTwitterAPIRecorder) GetUserSearch(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetUserSearch", arg0, arg1)
+}

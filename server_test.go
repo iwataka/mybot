@@ -617,3 +617,41 @@ func testIndex(t *testing.T, f func(url string) error) {
 		t.Fatal(err)
 	}
 }
+
+func TestGetTwitterUserSearch(t *testing.T) {
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = &TestAuthenticator{}
+
+	ctrl := gomock.NewController(t)
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	user1 := anaconda.User{Name: "foo"}
+	user2 := anaconda.User{Name: "bar"}
+	users := []anaconda.User{user1, user2}
+	twitterAPIMock.EXPECT().GetUserSearch(gomock.Any(), gomock.Any()).Return(users, nil)
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
+	s := httptest.NewServer(http.HandlerFunc(twitterUserSearchHandler))
+	defer s.Close()
+
+	res, err := http.Get(s.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	bs, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	us := []anaconda.User{}
+	err = json.Unmarshal(bs, &us)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := deep.Equal(users, us); diff != nil {
+		t.Fatal(diff)
+	}
+}

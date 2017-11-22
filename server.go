@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -191,6 +192,10 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/logout/twitter/",
 		twitterLogoutHandler,
+	)
+	http.HandleFunc(
+		"/twitter/users/search/",
+		twitterUserSearchHandler,
 	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -1027,6 +1032,44 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(buf.Bytes())
+}
+
+func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	if r.Method == http.MethodGet {
+		getTwitterUserSearch(w, r, data.twitterAPI)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	vals, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	searchTerm := vals.Get("q")
+	vals.Del("q")
+	vals.Encode()
+	res, err := twitterAPI.GetUserSearch(searchTerm, vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+	w.WriteHeader(http.StatusOK)
 }
 
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {

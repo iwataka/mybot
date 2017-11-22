@@ -224,7 +224,7 @@ func (a *TwitterAPI) ProcessSearch(
 	slack *SlackAPI,
 	action Action,
 ) ([]anaconda.Tweet, error) {
-	res, err := a.API.GetSearch(query, v)
+	res, err := a.GetSearch(query, v)
 	if err != nil {
 		return nil, err
 	}
@@ -408,6 +408,14 @@ func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) err
 		}
 	}
 	return nil
+}
+
+func (a *TwitterAPI) GetSearch(query string, url url.Values) (anaconda.SearchResponse, error) {
+	return a.API.GetSearch(query, url)
+}
+
+func (a *TwitterAPI) GetUserSearch(searchTerm string, v url.Values) ([]anaconda.User, error) {
+	return a.API.GetUserSearch(searchTerm, v)
 }
 
 type TwitterUserListener struct {
