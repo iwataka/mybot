@@ -9,7 +9,7 @@ var bestPictures = new Bloodhound({
 
 $('#typeahead .typeahead').typeahead(null, {
   name: 'best-pictures',
-  display: 'name',
+  display: 'screen_name',
   source: bestPictures,
   templates: {
     empty: [
