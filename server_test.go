@@ -33,22 +33,6 @@ var (
 	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
 )
 
-type TestAuthenticator struct{}
-
-func (a *TestAuthenticator) SetProvider(req *http.Request, name string) {
-}
-
-func (a *TestAuthenticator) InitProvider(host, name, callback string) {
-}
-
-func (a *TestAuthenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
-	return serverTestTwitterUser, nil
-}
-
-func (a *TestAuthenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
-
 func init() {
 	err := initServer()
 	if err != nil {
@@ -108,11 +92,14 @@ func TestGetTwitterCols(t *testing.T) {
 }
 
 func testTwitterCols(t *testing.T, f func(url string) error) {
+	ctrl := gomock.NewController(t)
+
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
-	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	fooCol := anaconda.Collection{
 		Name:          "foo",
@@ -142,9 +129,12 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 }
 
 func TestGetConfig(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
 	s := httptest.NewServer(http.HandlerFunc(configHandler))
 	defer s.Close()
@@ -181,9 +171,12 @@ func TestGetSetupTwitter(t *testing.T) {
 }
 
 func TestGetConfigJson(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
 	s := httptest.NewServer(http.HandlerFunc(configJsonHandler))
 	defer s.Close()
@@ -219,9 +212,12 @@ func TestGetConfigJson(t *testing.T) {
 }
 
 func TestGetConfigFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
 	s := httptest.NewServer(http.HandlerFunc(configFileHandler))
 	defer s.Close()
@@ -282,9 +278,12 @@ func checkHTTPResponse(res *http.Response) error {
 }
 
 func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup, mybot.Config)) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -604,9 +603,12 @@ func TestGetIndex(t *testing.T) {
 }
 
 func testIndex(t *testing.T, f func(url string) error) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
 	tmpCache := serverTestUserSpecificData.cache
 	defer func() { serverTestUserSpecificData.cache = tmpCache }()
@@ -624,11 +626,13 @@ func testIndex(t *testing.T, f func(url string) error) {
 }
 
 func TestGetTwitterUserSearch(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
-	authenticator = &TestAuthenticator{}
+	authenticator = authMock
 
-	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	user1 := anaconda.User{Name: "foo"}
 	user2 := anaconda.User{Name: "bar"}

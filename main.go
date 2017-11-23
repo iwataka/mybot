@@ -19,6 +19,7 @@ import (
 //go:generate go-bindata assets/...
 //go:generate mockgen -source=models/slack.go -destination=mocks/slack.go -package=mocks
 //go:generate mockgen -source=models/twitter.go -destination=mocks/twitter.go -package=mocks
+//go:generate mockgen -source=models/auth.go -destination=mocks/auth.go -package=mocks
 //go:generate mockgen -source=lib/vision.go -destination=mocks/vision.go -package=mocks
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 //go:generate mockgen -source=lib/batch.go -destination=mocks/batch.go -package=mocks
