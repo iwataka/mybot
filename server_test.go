@@ -519,7 +519,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterTimelines()) },
-		func() { addTimelineConfig(serverTestUserSpecificData.config) },
+		configTimelineAddHandler,
 		"message",
 	)
 }
@@ -528,7 +528,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterFavorites()) },
-		func() { addFavoriteConfig(serverTestUserSpecificData.config) },
+		configFavoriteAddHandler,
 		"message",
 	)
 }
@@ -537,7 +537,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterSearches()) },
-		func() { addSearchConfig(serverTestUserSpecificData.config) },
+		configSearchAddHandler,
 		"message",
 	)
 }
@@ -546,7 +546,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
-		func() { addMessageConfig(serverTestUserSpecificData.config) },
+		configMessageAddHandler,
 		"message",
 	)
 }
@@ -554,20 +554,37 @@ func TestPostConfigMessageAdd(t *testing.T) {
 func testPostConfigAdd(
 	t *testing.T,
 	length func() int,
-	add func(),
+	handler func(w http.ResponseWriter, r *http.Request),
 	name string,
 ) {
+	ctrl := gomock.NewController(t)
+	authMock := mocks.NewMockAuthenticator(ctrl)
+	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
+	tmpAuth := authenticator
+	defer func() { authenticator = tmpAuth }()
+	authenticator = authMock
+
+	s := httptest.NewServer(http.HandlerFunc(handler))
+	defer s.Close()
+
+	expectedErrMsg := "expected error"
+	expectedErr := fmt.Errorf(expectedErrMsg)
+
 	prev := length()
-	add()
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return expectedErr
+		},
+	}
+	res, err := client.Post(s.URL, "", nil)
+	if err != nil && !strings.HasSuffix(err.Error(), expectedErrMsg) {
+		t.Fatal(err)
+	}
 	cur := length()
 	if cur != (prev + 1) {
 		t.Fatalf("Failed to add %s", name)
 	}
-
-	_, err := configPage("", "", "", "", serverTestUserSpecificData.config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testResponseIsRedirect(t, res, "/config")
 }
 
 func TestIndexPage(t *testing.T) {
@@ -720,11 +737,15 @@ func testRedirectToSetupPage(f http.HandlerFunc, t *testing.T) {
 	if err != nil && !strings.HasSuffix(err.Error(), expectedErrMsg) {
 		t.Fatal(err)
 	}
+	testResponseIsRedirect(t, res, "/setup")
+}
+
+func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
 	if res.StatusCode != http.StatusSeeOther {
-		t.Fatal("Status code is expected to be %d but %d", http.StatusSeeOther, res.StatusCode)
+		t.Fatalf("Status code is expected to be %d but %d", http.StatusSeeOther, res.StatusCode)
 	}
 	loc := res.Header.Get("Location")
-	if !strings.HasPrefix(loc, "/setup") {
-		t.Fatal("Location header value should start with %s but %s", "/setup", loc)
+	if !strings.HasPrefix(loc, locPrefix) {
+		t.Fatalf("Location header value should start with %s but %s", locPrefix, loc)
 	}
 }
