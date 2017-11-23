@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -170,6 +171,10 @@ func startServer(host, port, cert, key string) error {
 		getAssetsCSS,
 	)
 	http.HandleFunc(
+		"/assets/js/",
+		getAssetsJS,
+	)
+	http.HandleFunc(
 		"/auth/twitter/",
 		getAuthTwitter,
 	)
@@ -193,6 +198,10 @@ func startServer(host, port, cert, key string) error {
 		"/logout/twitter/",
 		twitterLogoutHandler,
 	)
+	http.HandleFunc(
+		"/twitter/users/search/",
+		twitterUserSearchHandler,
+	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -215,8 +224,10 @@ func initServer() error {
 
 	tmplTexts := []string{}
 	for _, name := range AssetNames() {
-		tmplBytes := MustAsset(name)
-		tmplTexts = append(tmplTexts, string(tmplBytes))
+		if filepath.Ext(name) == ".tmpl" {
+			tmplBytes := MustAsset(name)
+			tmplTexts = append(tmplTexts, string(tmplBytes))
+		}
 	}
 
 	funcMap := template.FuncMap{
@@ -707,7 +718,15 @@ func addTimelineConfig(config mybot.Config) {
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
 	if r.Method == http.MethodPost {
+		postConfigFavoriteAdd(w, r, data.config)
 	}
 }
 
@@ -911,14 +930,22 @@ func getConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config) 
 	w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
 }
 
+func getAssetsJS(w http.ResponseWriter, r *http.Request) {
+	getAssets(w, r, "application/javascript")
+}
+
 func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
+	getAssets(w, r, "text/css")
+}
+
+func getAssets(w http.ResponseWriter, r *http.Request, contentType string) {
 	path := r.URL.Path[len("/"):]
 	data, err := readFile(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/css")
+	w.Header().Set("Content-Type", contentType)
 	_, err = w.Write(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1065,7 +1092,6 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *my
 		return
 	}
 	w.Write(bs)
-	w.WriteHeader(http.StatusOK)
 }
 
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {

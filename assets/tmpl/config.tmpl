@@ -3,30 +3,8 @@
 <html lang="en">
 {{template "header" .}}
 <body>
-    <script>
-        function deleteRow(button, modal) {
-            var tr = button.parentNode.parentNode;
-            if (tr.className === 'deleted') {
-                for (var i = 0; i < tr.childNodes.length; i++) {
-                    var child = tr.childNodes[i]
-                    if (child.type === 'hidden' && child.nodeName === 'INPUT') {
-                        child.value = 'false';
-                        tr.className = '';
-                        button.innerHTML = 'Delete';
-                    }
-                }
-            } else {
-                for (var i = 0; i < tr.childNodes.length; i++) {
-                    var child = tr.childNodes[i]
-                    if (child.type === 'hidden' && child.nodeName === 'INPUT') {
-                        child.value = 'true';
-                        tr.className = 'deleted';
-                        button.innerHTML = 'Revert';
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="/assets/js/config.js"></script>
+
     <div class="container">
         {{template "navbar" .}}
 
@@ -49,6 +27,10 @@
         {{if .Message}}
         <div class="alert alert-danger">{{.Message}}</div>
         {{end}}
+
+        <div id="typeahead" class="form-group">
+            <input type="text" class="typeahead form-control" placeholder="Type account name here">
+        </div>
 
         <h3>Twitter Timelines</h3>
         <div class="table-responsive">
@@ -366,8 +348,9 @@
                 </div>
             </div>
         {{end}}
-
     </div>
+
+    <script src="/assets/js/typeahead.js"></script>
 </body>
 </html>
 {{end}}

@@ -288,12 +288,17 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 
 	wg := new(sync.WaitGroup)
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			serverTestUserSpecificData.config = mybot.NewTestFileConfig("", t)
-			postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
-			wg.Done()
-		} else if r.Method == http.MethodGet {
-			getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestTwitterUser)
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/assets/js") {
+			getAssetsJS(w, r)
+		} else {
+			if r.Method == http.MethodPost {
+				serverTestUserSpecificData.config = mybot.NewTestFileConfig("", t)
+				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
+				wg.Done()
+			} else if r.Method == http.MethodGet {
+				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestTwitterUser)
+			}
 		}
 	}
 
