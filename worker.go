@@ -109,8 +109,8 @@ func (w *twitterDMWorker) Name() string {
 type twitterUserWorker struct {
 	twitterAPI  *mybot.TwitterAPI
 	slackAPI    *mybot.SlackAPI
-	visionAPI   *mybot.VisionAPI
-	languageAPI *mybot.LanguageAPI
+	visionAPI   mybot.VisionMatcher
+	languageAPI mybot.LanguageMatcher
 	cache       mybot.Cache
 	id          string
 	listener    *mybot.TwitterUserListener
@@ -120,8 +120,8 @@ type twitterUserWorker struct {
 func newTwitterUserWorker(
 	twitterAPI *mybot.TwitterAPI,
 	slackAPI *mybot.SlackAPI,
-	visionAPI *mybot.VisionAPI,
-	languageAPI *mybot.LanguageAPI,
+	visionAPI mybot.VisionMatcher,
+	languageAPI mybot.LanguageMatcher,
 	cache mybot.Cache,
 	id string,
 	timeout time.Duration,
@@ -216,8 +216,8 @@ func (w *twitterPeriodicWorker) Name() string {
 type slackWorker struct {
 	slackAPI    *mybot.SlackAPI
 	twitterAPI  *mybot.TwitterAPI
-	visionAPI   *mybot.VisionAPI
-	languageAPI *mybot.LanguageAPI
+	visionAPI   mybot.VisionMatcher
+	languageAPI mybot.LanguageMatcher
 	id          string
 	listener    *mybot.SlackListener
 }
@@ -225,8 +225,8 @@ type slackWorker struct {
 func newSlackWorker(
 	slackAPI *mybot.SlackAPI,
 	twitterAPI *mybot.TwitterAPI,
-	visionAPI *mybot.VisionAPI,
-	languageAPI *mybot.LanguageAPI,
+	visionAPI mybot.VisionMatcher,
+	languageAPI mybot.LanguageMatcher,
 	id string,
 ) *slackWorker {
 	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}

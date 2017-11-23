@@ -18,9 +18,9 @@ type VisionAPI struct {
 	api *vision.Service
 }
 
-// NewVisionAPI takes a path of a user's google-cloud credential file
+// NewVisionMatcher takes a path of a user's google-cloud credential file
 // and returns a VisionAPI instance for that user.
-func NewVisionAPI(file string) (*VisionAPI, error) {
+func NewVisionMatcher(file string) (VisionMatcher, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {

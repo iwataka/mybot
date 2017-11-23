@@ -15,16 +15,16 @@ type BatchRunner interface {
 type BatchRunnerWithStream struct {
 	twitterAPI  *TwitterAPI
 	slackAPI    *SlackAPI
-	visionAPI   *VisionAPI
-	languageAPI *LanguageAPI
+	visionAPI   VisionMatcher
+	languageAPI LanguageMatcher
 	config      Config
 }
 
 func NewBatchRunnerWithStream(
 	twitterAPI *TwitterAPI,
 	slackAPI *SlackAPI,
-	visionAPI *VisionAPI,
-	languageAPI *LanguageAPI,
+	visionAPI VisionMatcher,
+	languageAPI LanguageMatcher,
 	config Config,
 ) *BatchRunnerWithStream {
 	return &BatchRunnerWithStream{twitterAPI, slackAPI, visionAPI, languageAPI, config}

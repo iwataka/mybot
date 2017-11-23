@@ -30,8 +30,8 @@ var (
 	// Global-scope data
 	twitterApp    mybot.OAuthApp
 	slackApp      mybot.OAuthApp
-	visionAPI     *mybot.VisionAPI
-	languageAPI   *mybot.LanguageAPI
+	visionAPI     mybot.VisionMatcher
+	languageAPI   mybot.LanguageMatcher
 	cliContext    *cli.Context
 	dbSession     *mgo.Session
 	serverSession sessions.Store
@@ -494,9 +494,9 @@ func beforeRunning(c *cli.Context) error {
 	exitIfError(err)
 
 	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
-		visionAPI, err = mybot.NewVisionAPI(c.String("gcloud"))
+		visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
 		exitIfError(err)
-		languageAPI, err = mybot.NewLanguageAPI(c.String("gcloud"))
+		languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
 		exitIfError(err)
 	} else {
 		visionAPI = &mybot.VisionAPI{}

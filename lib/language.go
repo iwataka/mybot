@@ -13,7 +13,7 @@ type LanguageAPI struct {
 	api *language.Service
 }
 
-func NewLanguageAPI(file string) (*LanguageAPI, error) {
+func NewLanguageMatcher(file string) (LanguageMatcher, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
