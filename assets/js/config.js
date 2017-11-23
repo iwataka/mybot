@@ -21,3 +21,8 @@ function deleteRow(button, modal) {
     }
 }
 
+function openInNewTab() {
+    var screenName = document.getElementById('search-twitter-account-input').value;
+    var url = 'https://twitter.com/' + screenName;
+    window.open(url, '_blank');
+}

@@ -28,8 +28,11 @@
         <div class="alert alert-danger">{{.Message}}</div>
         {{end}}
 
-        <div id="typeahead" class="form-group">
-            <input type="text" class="typeahead form-control" placeholder="Type account name here">
+        <div id="typeahead" class="form-group input-group">
+            <input type="text" class="typeahead form-control" placeholder="Type account name here" id="search-twitter-account-input">
+            <span class="input-group-btn">
+                <button class="btn btn-default" type="button" onclick="openInNewTab()">New tab</button>
+            </span>
         </div>
 
         <h3>Twitter Timelines</h3>
