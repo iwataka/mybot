@@ -1,4 +1,4 @@
-var bestPictures = new Bloodhound({
+var twitterAccounts = new Bloodhound({
   datumTokenizer: Bloodhound.tokenizers.whitespace,
   queryTokenizer: Bloodhound.tokenizers.whitespace,
   remote: {
@@ -8,15 +8,21 @@ var bestPictures = new Bloodhound({
 });
 
 $('#typeahead .typeahead').typeahead(null, {
-  name: 'best-pictures',
+  name: 'twitter-accounts',
   display: 'screen_name',
-  source: bestPictures,
+  source: twitterAccounts,
   templates: {
     empty: [
       '<div class="empty-message"',
       'Type anything here',
       '</div>'
     ].join('\n'),
-    suggestion: Handlebars.compile('<div><img src="{{profile_image_url}}" alt="profile image" height="42" width="42"/>{{name}}@{{screen_name}}</div>')
+    suggestion: Handlebars.compile([
+      '<div>',
+      '<img src="{{profile_image_url}}" alt="profile image" height="42" width="42"/>',
+      '<span>{{name}}@{{screen_name}}</span>',
+      '<span class="label label-primary">followers: {{followers_count}}</span>',
+      '</div>'
+    ].join('\n'))
   }
 });
