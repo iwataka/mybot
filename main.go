@@ -197,7 +197,6 @@ func main() {
 
 	gcloudFlag := cli.StringFlag{
 		Name:   "gcloud",
-		Value:  filepath.Join(configDir, "google_application_credentials.json"),
 		Usage:  "Credential file for Google Cloud Platform",
 		EnvVar: "MYBOT_GCLOUD_CREDENTIAL",
 	}
@@ -492,17 +491,8 @@ func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) er
 func beforeRunning(c *cli.Context) error {
 	err := beforeAll(c)
 	exitIfError(err)
-
-	if info, err := os.Stat(c.String("gcloud")); err == nil && !info.IsDir() {
-		visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
-		exitIfError(err)
-		languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
-		exitIfError(err)
-	} else {
-		visionAPI = &mybot.VisionAPI{}
-		languageAPI = &mybot.LanguageAPI{}
-	}
-
+	visionAPI, _ = mybot.NewVisionMatcher(c.String("gcloud"))
+	languageAPI, _ = mybot.NewLanguageMatcher(c.String("gcloud"))
 	return nil
 }
 
