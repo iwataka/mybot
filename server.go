@@ -193,10 +193,6 @@ func startServer(host, port, cert, key string) error {
 		"/logout/twitter/",
 		twitterLogoutHandler,
 	)
-	http.HandleFunc(
-		"/twitter/users/search/",
-		twitterUserSearchHandler,
-	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
