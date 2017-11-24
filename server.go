@@ -255,7 +255,7 @@ func initServer() error {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -333,7 +333,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, slackAP
 func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -413,7 +413,7 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bo
 func configHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -698,7 +698,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -720,7 +720,7 @@ func addTimelineConfig(config mybot.Config) {
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -742,7 +742,7 @@ func addFavoriteConfig(config mybot.Config) {
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -766,7 +766,7 @@ func addSearchConfig(config mybot.Config) {
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -788,7 +788,7 @@ func addMessageConfig(config mybot.Config) {
 func configJsonHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -856,7 +856,7 @@ func getConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
@@ -1060,7 +1060,7 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]

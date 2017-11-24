@@ -682,64 +682,6 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	}
 }
 
-func TestConfigRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configHandler), t)
-}
-
-func TestIndexRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(indexHandler), t)
-}
-
-func TestTwitterColsRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(twitterColsHandler), t)
-}
-
-func TestConfigTimelineAddRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configTimelineAddHandler), t)
-}
-
-func TestConfigSearchAddRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configSearchAddHandler), t)
-}
-
-func TestConfigFavoriteAddRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configFavoriteAddHandler), t)
-}
-
-func TestConfigFileRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configFileHandler), t)
-}
-
-func TestConfigJsonRedirectToSetupPage(t *testing.T) {
-	testRedirectToSetupPage(http.HandlerFunc(configJsonHandler), t)
-}
-
-func testRedirectToSetupPage(f http.HandlerFunc, t *testing.T) {
-	s := httptest.NewServer(f)
-	defer s.Close()
-
-	expectedErrMsg := "expected error"
-	expectedErr := fmt.Errorf(expectedErrMsg)
-
-	ctrl := gomock.NewController(t)
-	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(goth.User{}, expectedErr)
-	tmpAuth := authenticator
-	defer func() { authenticator = tmpAuth }()
-	authenticator = authMock
-
-	client := &http.Client{
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return expectedErr
-		},
-	}
-	res, err := client.Get(s.URL)
-	if err != nil && !strings.HasSuffix(err.Error(), expectedErrMsg) {
-		t.Fatal(err)
-	}
-	testResponseIsRedirect(t, res, "/setup")
-}
-
 func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
 	if res.StatusCode != http.StatusSeeOther {
 		t.Fatalf("Status code is expected to be %d but %d", http.StatusSeeOther, res.StatusCode)

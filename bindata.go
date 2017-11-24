@@ -113,7 +113,7 @@ func assetsJsConfig_afterJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/js/config_after.js", size: 792, mode: os.FileMode(420), modTime: time.Unix(1511455045, 0)}
+	info := bindataFileInfo{name: "assets/js/config_after.js", size: 792, mode: os.FileMode(420), modTime: time.Unix(1511520473, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -193,7 +193,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 17079, mode: os.FileMode(420), modTime: time.Unix(1511454962, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 17079, mode: os.FileMode(420), modTime: time.Unix(1511520484, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -213,7 +213,7 @@ func assetsTmplHeaderTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1525, mode: os.FileMode(420), modTime: time.Unix(1511440982, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1525, mode: os.FileMode(420), modTime: time.Unix(1511520496, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
