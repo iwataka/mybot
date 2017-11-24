@@ -633,6 +633,13 @@ func testIndex(t *testing.T, f func(url string) error) {
 	img := mybot.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	user := anaconda.User{ScreenName: "foo"}
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
 	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
 

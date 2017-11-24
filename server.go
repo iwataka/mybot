@@ -130,6 +130,7 @@ func startServer(host, port, cert, key string) error {
 		return err
 	}
 
+	// View endpoints
 	http.HandleFunc(
 		"/",
 		wrapHandler(indexHandler),
@@ -141,10 +142,6 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc(
 		"/config/",
 		wrapHandler(configHandler),
-	)
-	http.HandleFunc(
-		"/config/json/",
-		wrapHandler(configJsonHandler),
 	)
 	http.HandleFunc(
 		"/config/file/",
@@ -198,9 +195,23 @@ func startServer(host, port, cert, key string) error {
 		"/logout/twitter/",
 		twitterLogoutHandler,
 	)
+
+	// API endpoints
+	http.HandleFunc(
+		"/config/json/",
+		wrapHandler(configJsonHandler),
+	)
+	http.HandleFunc(
+		"/setting/",
+		wrapHandler(settingHandler),
+	)
 	http.HandleFunc(
 		"/twitter/users/search/",
 		twitterUserSearchHandler,
+	)
+	http.HandleFunc(
+		"/twitter/collections/list/",
+		twitterCollectionListByUserId,
 	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -261,36 +272,19 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.URL.Path == "/" {
-		getIndex(w, r, data.cache, data.slackAPI, data.statuses, twitterUser)
+		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, data.statuses)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, slackAPI *mybot.SlackAPI, statuses map[int]*bool, twitterUser goth.User) {
-	imageSource := ""
-	imageURL := ""
-	imageAnalysisResult := ""
-	imageAnalysisDate := ""
-	images := cache.GetLatestImages(1)
-	if len(images) != 0 {
-		imgCache := images[0]
-		imageSource = imgCache.Src
-		imageURL = imgCache.URL
-		if cache != nil {
-			buf := new(bytes.Buffer)
-			result := imgCache.AnalysisResult
-			err := json.Indent(buf, []byte(result), "", "  ")
-			if err != nil {
-				imageAnalysisResult = "Error while formatting the result"
-			} else {
-				imageAnalysisResult = buf.String()
-			}
-		}
-		imageAnalysisDate = imgCache.AnalysisDate
+func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
+	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
 	data := &struct {
 		NavbarName               string
 		TwitterName              string
@@ -307,27 +301,161 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, slackAP
 		SlackListenerStatus      bool
 	}{
 		"",
-		twitterUser.NickName,
-		slackTeam,
-		slackURL,
-		googleEnabled(),
-		imageURL,
-		imageSource,
-		imageAnalysisResult,
-		imageAnalysisDate,
-		*statuses[twitterDMRoutineKey],
-		*statuses[twitterUserRoutineKey],
-		*statuses[twitterPeriodicRoutineKey],
-		*statuses[slackRoutineKey],
+		setting.TwitterName,
+		setting.SlackTeam,
+		setting.SlackURL,
+		setting.GoogleEnabled,
+		setting.Image.URL,
+		setting.Image.Src,
+		setting.Image.AnalysisResult,
+		setting.Image.AnalysisDate,
+		setting.Status.TwitterDMListener,
+		setting.Status.TwitterUserListener,
+		setting.Status.TwitterPeriodicJob,
+		setting.Status.SlackListener,
 	}
 
 	buf := new(bytes.Buffer)
-	err := htmlTemplate.ExecuteTemplate(buf, "index", data)
+	err = htmlTemplate.ExecuteTemplate(buf, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	buf.WriteTo(w)
+}
+
+func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	if r.Method == http.MethodGet {
+		getTwitterCollectionListByUserId(w, r, data.twitterAPI)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterCollectionListByUserId(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	user, err := twitterAPI.GetSelf()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res, err := twitterAPI.GetCollectionListByUserId(user.Id, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func settingHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	if r.Method == http.MethodGet {
+		getSetting(w, r, data.twitterAPI, data.slackAPI, data.cache, data.statuses)
+	} else {
+		http.NotFound(w, r)
+	}
+}
+
+func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) {
+	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(setting)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+type SettingResponse struct {
+	TwitterName   string         `json:"twitter_name" toml:"twitter_name" bson:"twitter_name"`
+	SlackTeam     string         `json:"slack_team" toml:"slack_team" bson:"slack_team"`
+	SlackURL      string         `json:"slack_url" toml:"slack_url" bson:"slack_url"`
+	GoogleEnabled bool           `json:"google_enabled" toml:"google_enabled" bson:"google_enabled"`
+	Status        StatusResponse `json:"status" toml:"status" bson:"status"`
+	Image         ImageResponse  `json:"image" toml:"image" bson:"image"`
+}
+
+type StatusResponse struct {
+	TwitterDMListener   bool `json:"twitter_dm_listener" toml:"twitter_dm_listener" bson:"twitter_dm_listener"`
+	TwitterUserListener bool `json:"twitter_user_listener" toml:"twitter_user_listener" bson:"twitter_user_listener"`
+	TwitterPeriodicJob  bool `json:"twitter_periodic_job" toml:"twitter_periodic_job" bson:"twitter_periodic_job"`
+	SlackListener       bool `json:"slack_listener" toml:"slack_listener" bson:"slack_listener"`
+}
+
+type ImageResponse struct {
+	URL            string `json:"url" toml:"url" bson:"url"`
+	Src            string `json:"src" toml:"src" bson:"src"`
+	AnalysisResult string `json:"analysis_result" toml:"analysis_result" bson:"analysis_result"`
+	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
+}
+
+func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+	twitterUser, err := twitterAPI.GetSelf()
+	if err != nil {
+		return nil, err
+	}
+	slackTeam, slackURL := getSlackInfo(slackAPI)
+
+	status := StatusResponse{
+		TwitterDMListener:   *statuses[twitterDMRoutineKey],
+		TwitterUserListener: *statuses[twitterUserRoutineKey],
+		TwitterPeriodicJob:  *statuses[twitterPeriodicRoutineKey],
+		SlackListener:       *statuses[slackRoutineKey],
+	}
+
+	imageSource := ""
+	imageURL := ""
+	imageAnalysisResult := ""
+	imageAnalysisDate := ""
+	images := cache.GetLatestImages(1)
+	if len(images) != 0 {
+		imgCache := images[0]
+		imageSource = imgCache.Src
+		imageURL = imgCache.URL
+		buf := new(bytes.Buffer)
+		result := imgCache.AnalysisResult
+		err := json.Indent(buf, []byte(result), "", "  ")
+		if err == nil {
+			imageAnalysisResult = buf.String()
+		}
+		imageAnalysisDate = imgCache.AnalysisDate
+	}
+	img := ImageResponse{
+		URL:            imageURL,
+		Src:            imageSource,
+		AnalysisResult: imageAnalysisResult,
+		AnalysisDate:   imageAnalysisDate,
+	}
+
+	return &SettingResponse{
+		TwitterName:   twitterUser.ScreenName,
+		SlackTeam:     slackTeam,
+		SlackURL:      slackURL,
+		GoogleEnabled: googleEnabled(),
+		Status:        status,
+		Image:         img,
+	}, nil
 }
 
 func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
@@ -365,7 +493,7 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 		activeCol = names[0]
 	}
 
-	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
+	slackTeam, slackURL := getSlackInfo(slackAPI)
 	data := &struct {
 		NavbarName       string
 		TwitterName      string
@@ -659,7 +787,7 @@ func getConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, slac
 		http.SetCookie(w, msgCookie)
 	}
 
-	slackTeam, slackURL := getSlackInfo(w, r, slackAPI)
+	slackTeam, slackURL := getSlackInfo(slackAPI)
 	bs, err := configPage(twitterUser.NickName, slackTeam, slackURL, msg, config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1191,7 +1319,7 @@ func readFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-func getSlackInfo(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI) (string, string) {
+func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {
 	if slackAPI != nil {
 		user, err := slackAPI.AuthTest()
 		if err == nil {
