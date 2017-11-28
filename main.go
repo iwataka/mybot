@@ -492,8 +492,14 @@ func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) er
 func beforeRunning(c *cli.Context) error {
 	err := beforeAll(c)
 	exitIfError(err)
-	visionAPI, _ = mybot.NewVisionMatcher(c.String("gcloud"))
-	languageAPI, _ = mybot.NewLanguageMatcher(c.String("gcloud"))
+	visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
+	if err != nil {
+		fmt.Println(err)
+	}
 	return nil
 }
 
