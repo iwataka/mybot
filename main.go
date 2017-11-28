@@ -129,6 +129,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 	slackId, _ := data.slackAuth.GetCreds()
 	data.slackAPI = mybot.NewSlackAPI(slackId, data.config, data.cache)
 
+	return data, nil
+}
+
+func startUserSpecificData(userID string, data *userSpecificData) {
 	manageWorkerWithStart(
 		twitterDMRoutineKey,
 		data.workerChans,
@@ -154,8 +158,6 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		data.statuses,
 		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID),
 	)
-
-	return data, nil
 }
 
 func initStatuses(statuses map[int]*bool) {
@@ -314,11 +316,15 @@ func main() {
 		EnvVar: "MYBOT_SLACK_APP",
 	}
 
-	runFlags := []cli.Flag{
+	apiFlag := cli.BoolFlag{
+		Name:  "api",
+		Usage: "Use API to validate configuration",
+	}
+
+	commonFlags := []cli.Flag{
 		envFlag,
 		configFlag,
 		cacheFlag,
-		gcloudFlag,
 		twitterFlag,
 		slackFlag,
 		dbAddrFlag,
@@ -333,15 +339,31 @@ func main() {
 		slackClientFileFlag,
 	}
 
+	runFlags := []cli.Flag{
+		gcloudFlag,
+	}
+
+	for _, f := range commonFlags {
+		runFlags = append(runFlags, f)
+	}
+
 	serveFlags := []cli.Flag{
 		certFlag,
 		keyFlag,
 		hostFlag,
 		portFlag,
 	}
+
 	// All `run` flags should be `serve` flag
 	for _, f := range runFlags {
 		serveFlags = append(serveFlags, f)
+	}
+
+	validateFlags := []cli.Flag{apiFlag}
+
+	// All `run` flags should be `validate` flag
+	for _, f := range commonFlags {
+		validateFlags = append(validateFlags, f)
 	}
 
 	app := cli.NewApp()
@@ -364,20 +386,8 @@ func main() {
 		Aliases: []string{"s"},
 		Usage:   "Runs the all functions (both interactive and non-interactive) periodically",
 		Flags:   serveFlags,
-		Before:  beforeRunning,
+		Before:  beforeServing,
 		Action:  serve,
-	}
-
-	apiFlag := cli.BoolFlag{
-		Name:  "api",
-		Usage: "Use API to validate configuration",
-	}
-
-	validateFlags := []cli.Flag{
-		configFlag,
-		cacheFlag,
-		twitterFlag,
-		apiFlag,
 	}
 
 	validateCmd := cli.Command{
@@ -385,7 +395,7 @@ func main() {
 		Aliases: []string{"v"},
 		Usage:   "Validates the user configuration",
 		Flags:   validateFlags,
-		Before:  beforeAll,
+		Before:  beforeValidating,
 		Action:  validate,
 	}
 
@@ -394,7 +404,64 @@ func main() {
 	exitIfError(err)
 }
 
-func beforeAll(c *cli.Context) error {
+func run(c *cli.Context) {
+	for _, data := range userSpecificDataMap {
+		baseRunner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+		runner := mybot.NewBatchRunnerWithoutStream(baseRunner)
+		if err := runner.Run(); err != nil {
+			log.Print(err)
+			return
+		}
+		if err := data.cache.Save(); err != nil {
+			log.Print(err)
+			return
+		}
+	}
+}
+
+func serve(c *cli.Context) error {
+	go httpServer(c)
+	ch := make(chan bool)
+	<-ch
+	return nil
+}
+
+func validate(c *cli.Context) {
+	for _, data := range userSpecificDataMap {
+		err := data.config.Validate()
+		exitIfError(err)
+		if c.Bool("api") {
+			err := data.config.ValidateWithAPI(data.twitterAPI)
+			exitIfError(err)
+		}
+	}
+}
+
+func beforeRunning(c *cli.Context) error {
+	var err error
+	visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = beforeValidating(c)
+	exitIfError(err)
+	return nil
+}
+
+func beforeServing(c *cli.Context) error {
+	err := beforeRunning(c)
+	exitIfError(err)
+	for userID, data := range userSpecificDataMap {
+		startUserSpecificData(userID, data)
+	}
+	return nil
+}
+
+func beforeValidating(c *cli.Context) error {
 	cliContext = c
 	dbAddress := c.String("db-addr")
 	dbUser := c.String("db-user")
@@ -489,20 +556,6 @@ func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) er
 	return nil
 }
 
-func beforeRunning(c *cli.Context) error {
-	err := beforeAll(c)
-	exitIfError(err)
-	visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
-	if err != nil {
-		fmt.Println(err)
-	}
-	languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
-	if err != nil {
-		fmt.Println(err)
-	}
-	return nil
-}
-
 func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, error) {
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "twitter-auth")
@@ -535,42 +588,9 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 	}
 }
 
-func run(c *cli.Context) {
-	for _, data := range userSpecificDataMap {
-		baseRunner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-		runner := mybot.NewBatchRunnerWithoutStream(baseRunner)
-		if err := runner.Run(); err != nil {
-			log.Print(err)
-			return
-		}
-		if err := data.cache.Save(); err != nil {
-			log.Print(err)
-			return
-		}
-	}
-}
-
-func serve(c *cli.Context) error {
-	go httpServer(c)
-	ch := make(chan bool)
-	<-ch
-	return nil
-}
-
 func httpServer(c *cli.Context) {
 	err := startServer(c.String("host"), c.String("port"), c.String("cert"), c.String("key"))
 	exitIfError(err)
-}
-
-func validate(c *cli.Context) {
-	for _, data := range userSpecificDataMap {
-		err := data.config.Validate()
-		exitIfError(err)
-		if c.Bool("api") {
-			err := data.config.ValidateWithAPI(data.twitterAPI)
-			exitIfError(err)
-		}
-	}
 }
 
 func exitIfError(err error) {
