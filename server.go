@@ -1082,6 +1082,13 @@ func getAssets(w http.ResponseWriter, r *http.Request, contentType string) {
 }
 
 func setupHandler(w http.ResponseWriter, r *http.Request) {
+	twitterCk, twitterCs := twitterApp.GetCreds()
+	slackCk, slackCs := slackApp.GetCreds()
+	if twitterCk != "" && twitterCs != "" && slackCk != "" && slackCs != "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		postSetup(w, r)
 	} else if r.Method == http.MethodGet {
