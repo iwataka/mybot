@@ -13,6 +13,14 @@ func TestWithStack(t *testing.T) {
 	}
 }
 
+func TestWithStackForInterruptedError(t *testing.T) {
+	err := NewInterruptedError()
+	_, ok := WithStack(err).(stackTracer)
+	if ok {
+		t.Fatal("WithStack with InterruptedError should not return stackTracer")
+	}
+}
+
 func TestErrorf(t *testing.T) {
 	_, ok := Errorf("").(stackTracer)
 	if !ok {
