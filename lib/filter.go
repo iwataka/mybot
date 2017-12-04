@@ -1,7 +1,6 @@
 package mybot
 
 import (
-	"fmt"
 	"regexp"
 	"time"
 
@@ -31,7 +30,7 @@ func NewFilter() Filter {
 func (f Filter) Validate() error {
 	flag := !f.Vision.IsEmpty() && (f.RetweetedThreshold != nil || f.FavoriteThreshold != nil)
 	if flag {
-		return fmt.Errorf("%v use both of Vision API and retweeted/favorite threshold", f)
+		return Errorf("%v use both of Vision API and retweeted/favorite threshold", f)
 	}
 	return nil
 }
@@ -45,7 +44,7 @@ func (c Filter) CheckTweet(
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -57,7 +56,7 @@ func (c Filter) CheckTweet(
 		for _, u := range t.Entities.Urls {
 			match, err = regexp.MatchString(url, u.Display_url)
 			if err != nil {
-				return false, err
+				return false, WithStack(err)
 			}
 			if match {
 				break
@@ -90,7 +89,7 @@ func (c Filter) CheckTweet(
 	if !c.Vision.IsEmpty() && v != nil && v.Enabled() {
 		match, err := c.matchTweetImages(t, v, cache)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -102,7 +101,7 @@ func (c Filter) CheckTweet(
 	if !c.Language.IsEmpty() && l != nil && l.Enabled() {
 		_, match, err := l.MatchText(t.Text, c.Language)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -121,7 +120,7 @@ func (c Filter) CheckSlackMsg(
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, ev.Text)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -147,7 +146,7 @@ func (c Filter) CheckSlackMsg(
 	if !c.Vision.IsEmpty() && v != nil && v.Enabled() {
 		match, err := c.matchSlackImages(ev.Attachments, v, cache)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -159,7 +158,7 @@ func (c Filter) CheckSlackMsg(
 	if !c.Language.IsEmpty() && l != nil && l.Enabled() {
 		_, match, err := l.MatchText(ev.Text, c.Language)
 		if err != nil {
-			return false, err
+			return false, WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -191,7 +190,7 @@ func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache
 func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache Cache) (bool, error) {
 	results, matches, err := v.MatchImages(urls, c.Vision)
 	if err != nil {
-		return false, err
+		return false, WithStack(err)
 	}
 
 	// Cache the results of matching images

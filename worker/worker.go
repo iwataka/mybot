@@ -66,7 +66,7 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 				select {
 				case <-innerChan:
 				case <-time.After(time.Minute):
-					log.Printf("Faield to wait stopping worker (timeout: 1m)")
+					log.Printf("Faield to wait stopping worker (timeout: 1m)\n")
 				}
 				innerStatus = false
 			}

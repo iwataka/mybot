@@ -46,7 +46,7 @@ func DecodeFile(file string, v interface{}) error {
 	case ".toml":
 		md, err := toml.Decode(string(bs), v)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 		if len(md.Undecoded()) != 0 {
 			return &TomlUndecodedKeysError{md.Undecoded(), file}
@@ -54,7 +54,7 @@ func DecodeFile(file string, v interface{}) error {
 	default:
 		err = json.Unmarshal(bs, v)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -73,18 +73,18 @@ func EncodeFile(file string, v interface{}) error {
 		enc := toml.NewEncoder(buf)
 		err = enc.Encode(v)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 		bs = buf.Bytes()
 	default:
 		bs, err = json.Marshal(v)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	err = ioutil.WriteFile(file, bs, 0640)
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	return nil
 }

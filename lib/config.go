@@ -3,7 +3,6 @@ package mybot
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -151,12 +150,12 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	c := &FileConfig{newConfigProperties(), path}
 	err := c.Load()
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 
 	err = c.Validate()
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 
 	return c, nil
@@ -168,27 +167,27 @@ func (c *ConfigProperties) Validate() error {
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
 		if err := timeline.Validate(); err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 
 	// Validate favorite configurations
 	for _, favorite := range c.Twitter.Favorites {
 		if err := favorite.Validate(); err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 
 	// Validate search configurations
 	for _, search := range c.Twitter.Searches {
 		if err := search.Validate(); err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 
 	for _, msg := range c.Slack.Messages {
 		if err := msg.Validate(); err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 
@@ -199,7 +198,7 @@ func (c *ConfigProperties) ValidateWithAPI(api *TwitterAPI) error {
 	for _, name := range c.Twitter.GetScreenNames() {
 		_, err := api.API.GetUsersShow(name, nil)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -216,19 +215,19 @@ func (c *ConfigProperties) Marshal(indent, ext string) ([]byte, error) {
 		enc := json.NewEncoder(b)
 		err := enc.Encode(c)
 		if err != nil {
-			return []byte{}, err
+			return []byte{}, WithStack(err)
 		}
 		// go1.6 or lower doesn't support json.Encoder#SetIndent.
 		err = json.Indent(buf, b.Bytes(), "", indent)
 		if err != nil {
-			return []byte{}, err
+			return []byte{}, WithStack(err)
 		}
 	case ".toml":
 		enc := toml.NewEncoder(buf)
 		enc.Indent = indent
 		err := enc.Encode(c)
 		if err != nil {
-			return []byte{}, err
+			return []byte{}, WithStack(err)
 		}
 	}
 	return buf.Bytes(), nil
@@ -245,7 +244,7 @@ func (c *ConfigProperties) Unmarshal(bytes []byte) error {
 		return nil
 	}
 
-	return fmt.Errorf("Configuration must be written in either json or toml format")
+	return Errorf("Configuration must be written in either json or toml format")
 }
 
 // Save saves the specified configuration to the source file.
@@ -253,16 +252,16 @@ func (c *FileConfig) Save() error {
 	// Make a directory before all.
 	err := os.MkdirAll(filepath.Dir(c.File), 0751)
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if c != nil {
 		bs, err := c.Marshal("", filepath.Ext(c.File))
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 		err = ioutil.WriteFile(c.File, bs, 0640)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -274,11 +273,11 @@ func (c *FileConfig) Load() error {
 	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
 		bytes, err := ioutil.ReadFile(c.File)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 		err = c.Unmarshal(bytes)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -302,7 +301,7 @@ func NewSource() Source {
 
 func (c *Source) Validate() error {
 	if c.Action.IsEmpty() {
-		return fmt.Errorf("%v has no action", c)
+		return Errorf("%v has no action", c)
 	}
 	return nil
 }
@@ -400,10 +399,10 @@ func NewTimelineConfig() TimelineConfig {
 func (c *TimelineConfig) Validate() error {
 	err := c.Source.Validate()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if len(c.ScreenNames) == 0 {
-		return fmt.Errorf("%v has no screen names", c)
+		return Errorf("%v has no screen names", c)
 	}
 	return c.Filter.Validate()
 }
@@ -427,10 +426,10 @@ func NewFavoriteConfig() FavoriteConfig {
 func (c *FavoriteConfig) Validate() error {
 	err := c.Source.Validate()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if len(c.ScreenNames) == 0 {
-		return fmt.Errorf("%v has no screen names", c)
+		return Errorf("%v has no screen names", c)
 	}
 	return c.Filter.Validate()
 }
@@ -453,10 +452,10 @@ func NewSearchConfig() SearchConfig {
 func (c *SearchConfig) Validate() error {
 	err := c.Source.Validate()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if len(c.Queries) == 0 {
-		return fmt.Errorf("%v has no queries", c)
+		return Errorf("%v has no queries", c)
 	}
 	return c.Filter.Validate()
 }
@@ -485,10 +484,10 @@ type MessageConfig struct {
 func (c MessageConfig) Validate() error {
 	err := c.Source.Validate()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if len(c.Channels) == 0 {
-		return fmt.Errorf("At least one channel required")
+		return Errorf("At least one channel required")
 	}
 	return nil
 }
@@ -508,25 +507,25 @@ type DBConfig struct {
 func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
 	c := &DBConfig{newConfigProperties(), col, id}
 	err := c.Load()
-	return c, err
+	return c, WithStack(err)
 }
 
 func (c *DBConfig) Load() error {
 	query := c.col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if count > 0 {
 		tmpCol := c.col
 		err := query.One(c)
 		c.col = tmpCol
-		return err
+		return WithStack(err)
 	}
 	return nil
 }
 
 func (c *DBConfig) Save() error {
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
-	return err
+	return WithStack(err)
 }

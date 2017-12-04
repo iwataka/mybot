@@ -70,7 +70,7 @@ func (a *Authenticator) InitProvider(host, name, callback string) {
 func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
-		return goth.User{}, err
+		return goth.User{}, mybot.WithStack(err)
 	}
 	val, exists := sess.Values["mybot-user"]
 	if exists {
@@ -89,21 +89,21 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 		sess.Values["mybot-user"] = user
 		err := sess.Save(r, w)
 		if err != nil {
-			return goth.User{}, err
+			return goth.User{}, mybot.WithStack(err)
 		}
 	}
-	return user, err
+	return user, mybot.WithStack(err)
 }
 
 func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
-		return err
+		return mybot.WithStack(err)
 	}
 	sess.Options.MaxAge = -1
 	err = sess.Save(r, w)
 	if err != nil {
-		return err
+		return mybot.WithStack(err)
 	}
 
 	a.SetProvider(r, provider)
@@ -127,7 +127,7 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 func startServer(host, port, cert, key string) error {
 	err := initServer()
 	if err != nil {
-		return err
+		return mybot.WithStack(err)
 	}
 
 	// View endpoints
@@ -225,7 +225,7 @@ func startServer(host, port, cert, key string) error {
 		err = http.ListenAndServe(addr, nil)
 	}
 	if err != nil {
-		return err
+		return mybot.WithStack(err)
 	}
 	return nil
 }
@@ -258,7 +258,7 @@ func initServer() error {
 	htmlTemplate = tmpl
 
 	if err != nil {
-		return err
+		return mybot.WithStack(err)
 	}
 	return nil
 }
@@ -413,7 +413,7 @@ type ImageResponse struct {
 func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) (*SettingResponse, error) {
 	twitterUser, err := twitterAPI.GetSelf()
 	if err != nil {
-		return nil, err
+		return nil, mybot.WithStack(err)
 	}
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
@@ -709,12 +709,12 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.F
 	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+"retweeted")
 	fThreshold, err := mybot.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
-		return mybot.NewFilter(), err
+		return mybot.NewFilter(), mybot.WithStack(err)
 	}
 	filter.FavoriteThreshold = fThreshold
 	rThreshold, err := mybot.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
-		return mybot.NewFilter(), err
+		return mybot.NewFilter(), mybot.WithStack(err)
 	}
 	filter.RetweetedThreshold = rThreshold
 	filter.Lang = mybot.GetString(val, prefix+"lang", i, "")
@@ -728,12 +728,12 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.F
 	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
 	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), err
+		return mybot.NewFilter(), mybot.WithStack(err)
 	}
 	filter.Language.MinSentiment = minSentiment
 	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), err
+		return mybot.NewFilter(), mybot.WithStack(err)
 	}
 	filter.Language.MaxSentiment = maxSentiment
 	return filter, nil
@@ -754,7 +754,7 @@ func postConfigForActions(
 	for i := 0; i < len(deletedFlags); i++ {
 		a, err := postConfigForAction(val, i, prefix)
 		if err != nil {
-			return nil, err
+			return nil, mybot.WithStack(err)
 		}
 		a.Twitter.Tweet = tweetCounter.returnValue(i, val, false)
 		a.Twitter.Retweet = retweetCounter.returnValue(i, val, false)
@@ -818,7 +818,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 	buf := new(bytes.Buffer)
 	err := htmlTemplate.ExecuteTemplate(buf, "config", data)
 	if err != nil {
-		return nil, err
+		return nil, mybot.WithStack(err)
 	}
 	return buf.Bytes(), nil
 }
@@ -1315,13 +1315,13 @@ func readFile(path string) ([]byte, error) {
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, err
+			return nil, mybot.WithStack(err)
 		}
 		return data, nil
 	}
 	data, err := Asset(path)
 	if err != nil {
-		return nil, err
+		return nil, mybot.WithStack(err)
 	}
 	return data, nil
 }

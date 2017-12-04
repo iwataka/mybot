@@ -272,7 +272,7 @@ func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg str
 func checkHTTPResponse(res *http.Response) error {
 	if res.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(res.Body)
-		return fmt.Errorf("%s %d", string(bs), res.StatusCode)
+		return mybot.Errorf("%s %d", string(bs), res.StatusCode)
 	}
 	return nil
 }
@@ -568,7 +568,7 @@ func testPostConfigAdd(
 	defer s.Close()
 
 	expectedErrMsg := "expected error"
-	expectedErr := fmt.Errorf(expectedErrMsg)
+	expectedErr := mybot.Errorf(expectedErrMsg)
 
 	prev := length()
 	client := &http.Client{

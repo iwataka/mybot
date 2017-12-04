@@ -114,7 +114,7 @@ func GetFloat64Ptr(val map[string][]string, index int, name string) (*float64, e
 	}
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 	return &f, nil
 }
@@ -140,7 +140,7 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	}
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 	result := int(i)
 	return &result, nil

@@ -17,16 +17,16 @@ func NewLanguageMatcher(file string) (LanguageMatcher, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
-			return nil, err
+			return nil, WithStack(err)
 		}
 	}
 	c, err := google.DefaultClient(context.Background(), language.CloudPlatformScope)
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 	a, err := language.New(c)
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 	return &LanguageAPI{a}, nil
 }
@@ -57,12 +57,12 @@ func (a *LanguageAPI) MatchText(
 
 	res, err := a.api.Documents.AnnotateText(req).Do(nil)
 	if err != nil {
-		return "", false, err
+		return "", false, WithStack(err)
 	}
 
 	bytes, err := res.MarshalJSON()
 	if err != nil {
-		return "", false, err
+		return "", false, WithStack(err)
 	}
 
 	if f.ExtractDocumentSentiment {

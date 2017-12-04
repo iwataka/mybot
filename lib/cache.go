@@ -30,7 +30,7 @@ type CacheProperties struct {
 	LatestDMID       int64            `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
 	// map[int64]interface{} can't be converted to json by go1.6 or older
 	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
-	Images       []ImageCacheData   `json:"images" toml:"images" bson:"images"`
+	Images       []ImageCacheData  `json:"images" toml:"images" bson:"images"`
 }
 
 func newCacheProperties() CacheProperties {
@@ -66,7 +66,7 @@ func NewFileCache(path string) (*FileCache, error) {
 	if info != nil && !info.IsDir() {
 		err := DecodeFile(path, c)
 		if err != nil {
-			return nil, err
+			return nil, WithStack(err)
 		}
 	}
 	return c, nil
@@ -135,12 +135,12 @@ func (c *CacheProperties) SetImage(data ImageCacheData) {
 func (c *FileCache) Save() error {
 	err := os.MkdirAll(filepath.Dir(c.File), 0600)
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	if c != nil {
 		err := EncodeFile(c.File, c)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -157,19 +157,19 @@ func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {
 	query := col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
 	if err != nil {
-		return nil, err
+		return nil, WithStack(err)
 	}
 	if count > 0 {
 		err := query.One(c)
 		if err != nil {
-			return nil, err
+			return nil, WithStack(err)
 		}
 		c.col = col
 	}
-	return c, err
+	return c, WithStack(err)
 }
 
 func (c *DBCache) Save() error {
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
-	return err
+	return WithStack(err)
 }

@@ -51,7 +51,7 @@ func (r BatchRunnerWithStream) Run() error {
 				a.Action,
 			)
 			if err != nil {
-				return err
+				return WithStack(err)
 			}
 			tweets = append(tweets, ts...)
 		}
@@ -73,14 +73,14 @@ func (r BatchRunnerWithStream) Run() error {
 			)
 			tweets = append(tweets, ts...)
 			if err != nil {
-				return err
+				return WithStack(err)
 			}
 		}
 	}
 	for _, t := range tweets {
 		err := r.twitterAPI.NotifyToAll(&t)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -101,7 +101,7 @@ func NewBatchRunnerWithoutStream(baseRunner *BatchRunnerWithStream) *BatchRunner
 func (r BatchRunnerWithoutStream) Run() error {
 	err := r.baseRunner.Run()
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	tweets := []anaconda.Tweet{}
 	for _, a := range r.baseRunner.config.GetTwitterTimelines() {
@@ -127,14 +127,14 @@ func (r BatchRunnerWithoutStream) Run() error {
 			)
 			tweets = append(tweets, ts...)
 			if err != nil {
-				return err
+				return WithStack(err)
 			}
 		}
 	}
 	for _, t := range tweets {
 		err := r.baseRunner.twitterAPI.NotifyToAll(&t)
 		if err != nil {
-			return err
+			return WithStack(err)
 		}
 	}
 	return nil
@@ -146,14 +146,14 @@ func (r BatchRunnerWithoutStream) Verify() error {
 
 func TwitterAPIIsAvailable(twitterAPI *TwitterAPI) error {
 	if twitterAPI == nil {
-		return fmt.Errorf("Twitter API is nil")
+		return Errorf("Twitter API is nil")
 	}
 	success, err := twitterAPI.VerifyCredentials()
 	if !success {
-		return fmt.Errorf("Twitter API credential verification failed")
+		return Errorf("Twitter API credential verification failed")
 	}
 	if err != nil {
-		return err
+		return WithStack(err)
 	}
 	return nil
 }

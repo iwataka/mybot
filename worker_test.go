@@ -6,7 +6,6 @@ import (
 	"github.com/iwataka/mybot/mocks"
 	worker "github.com/iwataka/mybot/worker"
 
-	"fmt"
 	"testing"
 	"time"
 )
@@ -16,7 +15,7 @@ func TestTwitterPeriodicWorkerStart(t *testing.T) {
 	times := 50
 	duration := "0.01s"
 	id := "id"
-	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
+	worker := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), nil)
 	err := worker.Start()
 	if err == nil || err.Error() != errMsg {
 		t.Fatal("Error not found or not expected error")
@@ -45,7 +44,7 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	times := -1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
@@ -63,7 +62,7 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	times := 1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
 
 	err := w.Start()
 	if err == nil || err.Error() != errMsg {
