@@ -314,7 +314,7 @@ func (a *TwitterAPI) processTweet(
 		if CheckTwitterError(err) {
 			return WithStack(err)
 		}
-		fmt.Printf("Retweet the tweet[%s]\n", id)
+		fmt.Printf("Retweet the tweet[%d]\n", id)
 	}
 	if action.Twitter.Favorite && !t.Favorited {
 		id := t.Id
@@ -322,7 +322,7 @@ func (a *TwitterAPI) processTweet(
 		if err != nil {
 			return WithStack(err)
 		}
-		fmt.Println("Favorite the tweet[%s]", id)
+		fmt.Println("Favorite the tweet[%d]", id)
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
