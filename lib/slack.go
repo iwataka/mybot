@@ -321,7 +321,9 @@ func (l *SlackListener) Start(
 			case *slack.RTMError:
 				return WithStack(ev)
 			case *slack.ConnectionErrorEvent:
-				return WithStack(ev)
+				log.Println(ev)
+				// Continue because ConnectionErrorEvent is treated as recoverable
+				continue
 			case *slack.InvalidAuthEvent:
 				return Errorf("Invalid slack authentication")
 			}
