@@ -7,8 +7,8 @@ RUN apk add --no-cache git
 RUN git config --global http.https://gopkg.in.followRedirects true
 RUN go get -u github.com/golang/dep/cmd/dep
 RUN go get github.com/iwataka/mybot
-RUN cd $GOPATH/src/iwataka/mybot && dep ensure && go build
+RUN cd $GOPATH/src/github.com/iwataka/mybot && dep ensure && go build
 
-CMD cd $GOPATH/src/iwataka/mybot && mybot serve -H 0.0.0.0
+CMD cd $GOPATH/src/github.com/iwataka/mybot && mybot serve -H 0.0.0.0
 
 EXPOSE 8080

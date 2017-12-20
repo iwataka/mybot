@@ -38,8 +38,8 @@
   name = "github.com/iwataka/anaconda"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/iwataka/deep"
-  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/jinzhu/gorm"
@@ -66,8 +66,8 @@
   version = "0.8.0"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/sclevine/agouti"
-  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"

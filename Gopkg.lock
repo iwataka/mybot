@@ -86,10 +86,10 @@
   revision = "bdb6b88a3685323bb00ca106487ed1710c2ce886"
 
 [[projects]]
+  branch = "master"
   name = "github.com/iwataka/deep"
   packages = ["."]
-  revision = "9898238679c264cfb10411539f14a0553dc8b295"
-  version = "v1.0.0"
+  revision = "ee0f823b0d6262da7ae316e08d200a76e58b0712"
 
 [[projects]]
   name = "github.com/jinzhu/gorm"
@@ -111,7 +111,12 @@
 
 [[projects]]
   name = "github.com/markbates/goth"
-  packages = [".","gothic","providers/slack","providers/twitter"]
+  packages = [
+    ".",
+    "gothic",
+    "providers/slack",
+    "providers/twitter"
+  ]
   revision = "86ca064cf1b7ebefa670bdc9eaadba0f3a6d9607"
   version = "v1.43.0"
 
@@ -140,10 +145,17 @@
   version = "v0.8.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/sclevine/agouti"
-  packages = [".","api","api/internal/bus","api/internal/service","internal/element","internal/target"]
-  revision = "b920a9cc753368454c642011939e1d7ec58e0024"
-  version = "v2.0"
+  packages = [
+    ".",
+    "api",
+    "api/internal/bus",
+    "api/internal/service",
+    "internal/element",
+    "internal/target"
+  ]
+  revision = "8cf0313221cb2c26a4059f8e273c0856b4cb091d"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -166,42 +178,78 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp","websocket"]
+  packages = [
+    "context",
+    "context/ctxhttp",
+    "websocket"
+  ]
   revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/oauth2"
-  packages = [".","google","internal","jws","jwt"]
+  packages = [
+    ".",
+    "google",
+    "internal",
+    "jws",
+    "jwt"
+  ]
   revision = "0448841f0cbe9d174c6c1cedd177f583337b8e2c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "d818ba11af4465e00c1998bd3f8a55603b422290"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/api"
-  packages = ["gensupport","googleapi","googleapi/internal/uritemplates","language/v1","vision/v1"]
+  packages = [
+    "gensupport",
+    "googleapi",
+    "googleapi/internal/uritemplates",
+    "language/v1",
+    "vision/v1"
+  ]
   revision = "cf39d2072c48ea15238bddbc2caac7dfec109a04"
 
 [[projects]]
   name = "google.golang.org/appengine"
-  packages = [".","internal","internal/app_identity","internal/base","internal/datastore","internal/log","internal/modules","internal/remote_api","internal/urlfetch","urlfetch"]
+  packages = [
+    ".",
+    "internal",
+    "internal/app_identity",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/modules",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
   revision = "150dc57a1b433e64154302bdc40b6bb8aefa313a"
   version = "v1.0.0"
 
 [[projects]]
   branch = "v2"
   name = "gopkg.in/mgo.v2"
-  packages = [".","bson","internal/json","internal/sasl","internal/scram"]
+  packages = [
+    ".",
+    "bson",
+    "internal/json",
+    "internal/sasl",
+    "internal/scram"
+  ]
   revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "28d1c53d1164c574960f93593e7d46b468f5fa0bc3dfe73fdcd16c071a388d96"
+  inputs-digest = "e2865c92039e014522720c758decc82d69fcc6fc5f43d055f8146a1f39256d9f"
   solver-name = "gps-cdcl"
   solver-version = 1

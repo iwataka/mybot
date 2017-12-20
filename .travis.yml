@@ -18,7 +18,7 @@ before_install:
 script:
   - git config --global http.https://gopkg.in.followRedirects true
   - dep ensure
-  - go test -v ./...
+  - make test
   - $HOME/gopath/bin/goveralls -service=travis-ci
 
 notifications:
