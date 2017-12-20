@@ -166,7 +166,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	if c.ShouldRepeat() {
 		pp = &TwitterPostProcessorEach{action, a.Cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.Cache}
+		pp = &TwitterPostProcessorTop{action, name, a.Cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -203,7 +203,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	if c.ShouldRepeat() {
 		pp = &TwitterPostProcessorEach{action, a.Cache}
 	} else {
-		pp = &TwitterPostProcessorTop{name, a.Cache}
+		pp = &TwitterPostProcessorTop{action, name, a.Cache}
 	}
 	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
@@ -240,6 +240,7 @@ type (
 		Process(anaconda.Tweet, bool) error
 	}
 	TwitterPostProcessorTop struct {
+		action     Action
 		screenName string
 		cache      Cache
 	}
@@ -253,6 +254,10 @@ func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
 	id := p.cache.GetLatestTweetID(p.screenName)
 	if t.Id > id {
 		p.cache.SetLatestTweetID(p.screenName, t.Id)
+	}
+	if match {
+		ac := p.cache.GetTweetAction(t.Id)
+		p.cache.SetTweetAction(t.Id, ac.Add(p.action))
 	}
 	return nil
 }
