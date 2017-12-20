@@ -13,10 +13,11 @@ before_install:
   - sudo apt-get install -y sqlite3
   - sudo apt-get install phantomjs
   - go get github.com/mattn/goveralls
+  - go get -u github.com/golang/dep/cmd/dep
 
 script:
   - git config --global http.https://gopkg.in.followRedirects true
-  - go get -v -t ./...
+  - dep ensure
   - go test -v ./...
   - $HOME/gopath/bin/goveralls -service=travis-ci
 
