@@ -92,6 +92,12 @@
   revision = "ee0f823b0d6262da7ae316e08d200a76e58b0712"
 
 [[projects]]
+  name = "github.com/iwataka/slack"
+  packages = ["."]
+  revision = "c86337c0ef2486a15edd804355d9c73d2f2caed1"
+  version = "v0.1.0"
+
+[[projects]]
   name = "github.com/jinzhu/gorm"
   packages = ["."]
   revision = "5174cc5c242a728b435ea2be8a2f7f998e15429b"
@@ -131,12 +137,6 @@
   name = "github.com/mrjones/oauth"
   packages = ["."]
   revision = "3f67d9c274355678b2f9844b08d643e2f9213340"
-
-[[projects]]
-  name = "github.com/nlopes/slack"
-  packages = ["."]
-  revision = "5cde21b8b96a43fc3435a1f514123d14fd7eabdc"
-  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -250,6 +250,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e2865c92039e014522720c758decc82d69fcc6fc5f43d055f8146a1f39256d9f"
+  inputs-digest = "7ebdd75777a1df92002c3747f14f7c6fcdd05272f2291cead765bc2c0671dfc3"
   solver-name = "gps-cdcl"
   solver-version = 1

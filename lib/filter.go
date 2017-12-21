@@ -6,7 +6,7 @@ import (
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
-	"github.com/nlopes/slack"
+	"github.com/iwataka/slack"
 )
 
 // Filter is a configuration to filter out tweets

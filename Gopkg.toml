@@ -58,7 +58,7 @@
   name = "github.com/mitchellh/go-homedir"
 
 [[constraint]]
-  name = "github.com/nlopes/slack"
+  name = "github.com/iwataka/slack"
   version = "0.1.0"
 
 [[constraint]]

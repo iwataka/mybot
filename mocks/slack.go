@@ -5,7 +5,7 @@ package mocks
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	slack "github.com/nlopes/slack"
+	slack "github.com/iwataka/slack"
 )
 
 // Mock of SlackAPI interface

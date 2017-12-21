@@ -10,7 +10,7 @@ import (
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
-	"github.com/nlopes/slack"
+	"github.com/iwataka/slack"
 )
 
 // NOTE: This must be fixed because multiple applications having different

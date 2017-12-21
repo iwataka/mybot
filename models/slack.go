@@ -1,8 +1,8 @@
 package models
 
 import (
+	"github.com/iwataka/slack"
 	"github.com/jinzhu/gorm"
-	"github.com/nlopes/slack"
 )
 
 type SlackAPI interface {

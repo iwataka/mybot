@@ -3,7 +3,7 @@ package mybot
 import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
-	"github.com/nlopes/slack"
+	"github.com/iwataka/slack"
 
 	"container/list"
 	"fmt"
