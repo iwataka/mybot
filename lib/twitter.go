@@ -744,10 +744,11 @@ func CheckTwitterError(err error) bool {
 
 	switch twitterErr := err.(type) {
 	case *anaconda.TwitterError:
+		// 130: Over capacity
 		// 187: The status text has already been Tweeted by the authenticated account.
 		// 327: You have already retweeted this tweet.
 		switch twitterErr.Code {
-		case 187, 327:
+		case 130, 187, 327:
 			return false
 		}
 	case anaconda.TwitterError:
