@@ -1,6 +1,8 @@
 package mybot
 
 import (
+	models "github.com/iwataka/mybot/models"
+
 	"os"
 	"path/filepath"
 	"reflect"
@@ -170,7 +172,7 @@ func TestDBCacheImage(t *testing.T) {
 }
 
 func testCacheImage(t *testing.T, c Cache) {
-	img := ImageCacheData{}
+	img := models.ImageCacheData{}
 	c.SetImage(img)
 	is := c.GetLatestImages(1)
 	if !reflect.DeepEqual(img, is[0]) {

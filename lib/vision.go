@@ -2,6 +2,7 @@ package mybot
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -39,7 +40,7 @@ func NewVisionMatcher(file string) (VisionMatcher, error) {
 }
 
 type VisionMatcher interface {
-	MatchImages([]string, models.VisionCondition) ([]string, []bool, error)
+	MatchImages([]string, models.VisionCondition, []models.ImageCacheData) ([]string, []bool, error)
 	Enabled() bool
 }
 
@@ -48,6 +49,7 @@ type VisionMatcher interface {
 func (a *VisionAPI) MatchImages(
 	urls []string,
 	cond models.VisionCondition,
+	imgCaches []models.ImageCacheData,
 ) ([]string, []bool, error) {
 	// No image never match any conditions
 	if len(urls) == 0 {
@@ -64,49 +66,14 @@ func (a *VisionAPI) MatchImages(
 		return results, matches, nil
 	}
 
-	imgData := make([][]byte, len(urls))
-	for i, url := range urls {
-		resp, err := http.Get(url)
-		if err != nil {
-			return nil, nil, WithStack(err)
-		}
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil, nil, WithStack(err)
-		}
-		imgData[i] = data
-		err = resp.Body.Close()
-		if err != nil {
-			return nil, nil, WithStack(err)
-		}
-	}
-
-	imgs := make([]*vision.Image, len(imgData))
-	for i, d := range imgData {
-		enc := base64.StdEncoding.EncodeToString(d)
-		imgs[i] = &vision.Image{Content: enc}
-	}
-
-	reqs := make([]*vision.AnnotateImageRequest, len(imgs))
-	for i, img := range imgs {
-		reqs[i] = &vision.AnnotateImageRequest{
-			Image:    img,
-			Features: features,
-		}
-	}
-
-	batch := &vision.BatchAnnotateImagesRequest{
-		Requests: reqs,
-	}
-
-	res, err := a.api.Images.Annotate(batch).Do()
+	responses, err := a.retrieveaAnnotateImageResponses(urls, imgCaches, features)
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
 
 	results := []string{}
 	matches := []bool{}
-	for _, r := range res.Responses {
+	for _, r := range responses {
 		result, err := r.MarshalJSON()
 		if err != nil {
 			return nil, nil, WithStack(err)
@@ -152,6 +119,96 @@ func (a *VisionAPI) MatchImages(
 		matches = append(matches, match)
 	}
 	return results, matches, nil
+}
+
+func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []models.ImageCacheData, features []*vision.Feature) ([]*vision.AnnotateImageResponse, error) {
+	uncachedUrls := []string{}
+	reses := []*vision.AnnotateImageResponse{}
+	url2res := map[string]*vision.AnnotateImageResponse{}
+
+	if caches == nil {
+		uncachedUrls = urls
+	} else {
+		for _, url := range urls {
+			var exists bool
+			for _, cache := range caches {
+				if cache.URL == url {
+					res := &vision.AnnotateImageResponse{}
+					err := json.Unmarshal([]byte(cache.AnalysisResult), res)
+					if err != nil {
+						return nil, WithStack(err)
+					}
+					exists = true
+					continue
+				}
+			}
+			if !exists {
+				uncachedUrls = append(uncachedUrls, url)
+			}
+		}
+	}
+
+	uncachedReses, err := a.retrieveaAnnotateImageResponsesThroughAPI(uncachedUrls, features)
+	if err != nil {
+		return nil, WithStack(err)
+	}
+	for i, url := range uncachedUrls {
+		url2res[url] = uncachedReses[i]
+	}
+
+	for _, url := range urls {
+		reses = append(reses, url2res[url])
+	}
+
+	return reses, nil
+}
+
+func (a *VisionAPI) retrieveaAnnotateImageResponsesThroughAPI(urls []string, features []*vision.Feature) ([]*vision.AnnotateImageResponse, error) {
+	if len(urls) == 0 {
+		return nil, nil
+	}
+
+	imgData := make([][]byte, len(urls))
+	for i, url := range urls {
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, WithStack(err)
+		}
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, WithStack(err)
+		}
+		imgData[i] = data
+		err = resp.Body.Close()
+		if err != nil {
+			return nil, WithStack(err)
+		}
+	}
+
+	imgs := make([]*vision.Image, len(imgData))
+	for i, d := range imgData {
+		enc := base64.StdEncoding.EncodeToString(d)
+		imgs[i] = &vision.Image{Content: enc}
+	}
+
+	reqs := make([]*vision.AnnotateImageRequest, len(imgs))
+	for i, img := range imgs {
+		reqs[i] = &vision.AnnotateImageRequest{
+			Image:    img,
+			Features: features,
+		}
+	}
+
+	batch := &vision.BatchAnnotateImagesRequest{
+		Requests: reqs,
+	}
+
+	res, err := a.api.Images.Annotate(batch).Do()
+	if err != nil {
+		return nil, WithStack(err)
+	}
+
+	return res.Responses, nil
 }
 
 func (a *VisionAPI) Enabled() bool {

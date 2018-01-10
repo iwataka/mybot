@@ -188,7 +188,7 @@ func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache
 }
 
 func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache Cache) (bool, error) {
-	results, matches, err := v.MatchImages(urls, c.Vision)
+	results, matches, err := v.MatchImages(urls, c.Vision, cache.GetLatestImages(-1))
 	if err != nil {
 		return false, WithStack(err)
 	}
@@ -201,7 +201,7 @@ func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache
 		}
 
 		tweetSrc := src
-		imgCache := ImageCacheData{}
+		imgCache := models.ImageCacheData{}
 		imgCache.URL = urls[i]
 		imgCache.Src = tweetSrc
 		imgCache.AnalysisResult = result

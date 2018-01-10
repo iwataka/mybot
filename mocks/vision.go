@@ -29,16 +29,16 @@ func (_m *MockVisionMatcher) EXPECT() *_MockVisionMatcherRecorder {
 	return _m.recorder
 }
 
-func (_m *MockVisionMatcher) MatchImages(_param0 []string, _param1 models.VisionCondition) ([]string, []bool, error) {
-	ret := _m.ctrl.Call(_m, "MatchImages", _param0, _param1)
+func (_m *MockVisionMatcher) MatchImages(_param0 []string, _param1 models.VisionCondition, _param2 []models.ImageCacheData) ([]string, []bool, error) {
+	ret := _m.ctrl.Call(_m, "MatchImages", _param0, _param1, _param2)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].([]bool)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-func (_mr *_MockVisionMatcherRecorder) MatchImages(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "MatchImages", arg0, arg1)
+func (_mr *_MockVisionMatcherRecorder) MatchImages(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MatchImages", arg0, arg1, arg2)
 }
 
 func (_m *MockVisionMatcher) Enabled() bool {

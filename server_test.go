@@ -19,6 +19,7 @@ import (
 	"github.com/iwataka/deep"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
@@ -630,7 +631,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	tmpCache := serverTestUserSpecificData.cache
 	defer func() { serverTestUserSpecificData.cache = tmpCache }()
 	serverTestUserSpecificData.cache = mybot.NewTestFileCache("", t)
-	img := mybot.ImageCacheData{}
+	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)

@@ -150,7 +150,7 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := mocks.NewMockVisionMatcher(ctrl)
 	v.EXPECT().Enabled().Return(true)
-	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
 
 	tweet := anaconda.Tweet{
 		Entities: anaconda.Entities{
@@ -179,7 +179,7 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := mocks.NewMockVisionMatcher(ctrl)
 	v.EXPECT().Enabled().Return(true)
-	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{""}, []bool{true}, nil)
 
 	att := slack.Attachment{
 		ImageURL: "url",
@@ -206,7 +206,7 @@ func TestCheckTweetVisionUnmatched(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := mocks.NewMockVisionMatcher(ctrl)
 	v.EXPECT().Enabled().Return(true)
-	v.EXPECT().MatchImages(gomock.Any(), gomock.Any()).Return([]string{""}, []bool{false}, nil)
+	v.EXPECT().MatchImages(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{""}, []bool{false}, nil)
 
 	conf := &Filter{
 		Vision: models.VisionCondition{

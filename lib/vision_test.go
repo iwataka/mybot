@@ -53,3 +53,19 @@ func TestVisionAPIEnabled(t *testing.T) {
 		t.Fatalf("%v expected to be enabled, but not", a)
 	}
 }
+
+func TestRetrieveAnnotateImageResposes(t *testing.T) {
+	a := &VisionAPI{}
+	urls := []string{"url"}
+	imgCache := models.ImageCacheData{}
+	imgCache.URL = "url"
+	imgCache.AnalysisResult = "{}"
+	imgCaches := []models.ImageCacheData{imgCache}
+	reses, err := a.retrieveaAnnotateImageResponses(urls, imgCaches, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reses) != 1 {
+		t.Fatalf("Response array length should be 1 but %d", len(reses))
+	}
+}

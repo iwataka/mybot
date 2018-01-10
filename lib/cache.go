@@ -20,8 +20,8 @@ type Cache interface {
 	SetLatestDMID(id int64)
 	GetTweetAction(tweetID int64) Action
 	SetTweetAction(tweetID int64, action Action)
-	GetLatestImages(num int) []ImageCacheData
-	SetImage(data ImageCacheData)
+	GetLatestImages(num int) []models.ImageCacheData
+	SetImage(data models.ImageCacheData)
 }
 
 type CacheProperties struct {
@@ -29,8 +29,8 @@ type CacheProperties struct {
 	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id"`
 	LatestDMID       int64            `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
 	// map[int64]interface{} can't be converted to json by go1.6 or older
-	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
-	Images       []ImageCacheData  `json:"images" toml:"images" bson:"images"`
+	Tweet2Action map[string]Action       `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
+	Images       []models.ImageCacheData `json:"images" toml:"images" bson:"images"`
 }
 
 func newCacheProperties() CacheProperties {
@@ -39,7 +39,7 @@ func newCacheProperties() CacheProperties {
 		make(map[string]int64),
 		0,
 		make(map[string]Action),
-		[]ImageCacheData{},
+		[]models.ImageCacheData{},
 	}
 }
 
@@ -47,10 +47,6 @@ func newCacheProperties() CacheProperties {
 type FileCache struct {
 	CacheProperties
 	File string `json:"-" toml:"-" bson:"-"`
-}
-
-type ImageCacheData struct {
-	models.VisionCacheProperties
 }
 
 // NewFileCache creates a Cache instance by using the specified file.
@@ -119,15 +115,15 @@ func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
 	c.Tweet2Action[key] = action
 }
 
-func (c *CacheProperties) GetLatestImages(num int) []ImageCacheData {
-	if len(c.Images) >= num {
+func (c *CacheProperties) GetLatestImages(num int) []models.ImageCacheData {
+	if len(c.Images) >= num && num > 0 {
 		return c.Images[len(c.Images)-num:]
 	} else {
 		return c.Images
 	}
 }
 
-func (c *CacheProperties) SetImage(data ImageCacheData) {
+func (c *CacheProperties) SetImage(data models.ImageCacheData) {
 	c.Images = append(c.Images, data)
 }
 

@@ -19,6 +19,10 @@ type VisionCache struct {
 	CacheID uint
 }
 
+type ImageCacheData struct {
+	VisionCacheProperties
+}
+
 type VisionCacheProperties struct {
 	URL            string `json:"url" toml:"url" bson:"url"`
 	Src            string `json:"src" toml:"src" bson:"src"`
