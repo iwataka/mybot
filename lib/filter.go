@@ -171,7 +171,7 @@ func (c Filter) CheckSlackMsg(
 func (c Filter) matchTweetImages(t anaconda.Tweet, v VisionMatcher, cache Cache) (bool, error) {
 	urls := make([]string, len(t.Entities.Media))
 	for i, m := range t.Entities.Media {
-		urls[i] = m.Media_url
+		urls[i] = m.Media_url_https
 	}
 	return c.matchImageURLs(TwitterStatusURL(t), urls, v, cache)
 }
