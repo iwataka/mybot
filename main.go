@@ -36,6 +36,7 @@ var (
 	cliContext    *cli.Context
 	dbSession     *mgo.Session
 	serverSession sessions.Store
+	sessionDomain string
 )
 
 const (
@@ -312,8 +313,16 @@ func main() {
 	slackClientFileFlag := cli.StringFlag{
 		Name:   "slack-app",
 		Value:  filepath.Join(configDir, "slack_app.toml"),
-		Usage:  "slack application directory",
+		Usage:  "Slack application directory",
 		EnvVar: "MYBOT_SLACK_APP",
+	}
+
+	sessionDomainFlag := cli.StringFlag{
+		Name:        "session-domain",
+		Value:       "",
+		Usage:       "Session domain",
+		EnvVar:      "MYBOT_SESSION_DOMAIN",
+		Destination: &sessionDomain,
 	}
 
 	apiFlag := cli.BoolFlag{
@@ -352,6 +361,7 @@ func main() {
 		keyFlag,
 		hostFlag,
 		portFlag,
+		sessionDomainFlag,
 	}
 
 	// All `run` flags should be `serve` flag

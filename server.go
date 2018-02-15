@@ -87,6 +87,9 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 	if err == nil {
 		user.RawData = nil // RawData cannot be converted into session data cerrently
 		sess.Values["mybot-user"] = user
+		if sessionDomain != "" {
+			sess.Options.Domain = sessionDomain
+		}
 		err := sess.Save(r, w)
 		if err != nil {
 			return goth.User{}, mybot.WithStack(err)
