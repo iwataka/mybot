@@ -87,9 +87,6 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 	if err == nil {
 		user.RawData = nil // RawData cannot be converted into session data cerrently
 		sess.Values["mybot-user"] = user
-		if sessionDomain != "" {
-			sess.Options.Domain = sessionDomain
-		}
 		err := sess.Save(r, w)
 		if err != nil {
 			return goth.User{}, mybot.WithStack(err)
@@ -210,11 +207,11 @@ func startServer(host, port, cert, key string) error {
 	)
 	http.HandleFunc(
 		"/twitter/users/search/",
-		twitterUserSearchHandler,
+		wrapHandler(twitterUserSearchHandler),
 	)
 	http.HandleFunc(
 		"/twitter/collections/list/",
-		twitterCollectionListByUserId,
+		wrapHandler(twitterCollectionListByUserId),
 	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -328,6 +325,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 }
 
 func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
@@ -362,6 +360,7 @@ func getTwitterCollectionListByUserId(w http.ResponseWriter, r *http.Request, tw
 }
 
 func settingHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -917,6 +916,7 @@ func addMessageConfig(config mybot.Config) {
 }
 
 func configJsonHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1196,6 +1196,7 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1337,6 +1338,14 @@ func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+func setCORS(w http.ResponseWriter) {
+	if accessControlAllowOrigin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", accessControlAllowOrigin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Content-Type", "text/plain")
+	}
 }
 
 func googleEnabled() bool {

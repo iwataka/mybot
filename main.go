@@ -29,14 +29,15 @@ var (
 	userSpecificDataMap map[string]*userSpecificData = make(map[string]*userSpecificData)
 
 	// Global-scope data
-	twitterApp    mybot.OAuthApp
-	slackApp      mybot.OAuthApp
-	visionAPI     mybot.VisionMatcher
-	languageAPI   mybot.LanguageMatcher
-	cliContext    *cli.Context
-	dbSession     *mgo.Session
-	serverSession sessions.Store
-	sessionDomain string
+	twitterApp               mybot.OAuthApp
+	slackApp                 mybot.OAuthApp
+	visionAPI                mybot.VisionMatcher
+	languageAPI              mybot.LanguageMatcher
+	cliContext               *cli.Context
+	dbSession                *mgo.Session
+	serverSession            sessions.Store
+	sessionDomain            string
+	accessControlAllowOrigin string
 )
 
 const (
@@ -330,6 +331,14 @@ func main() {
 		Usage: "Use API to validate configuration",
 	}
 
+	accessControlAllowOriginFlag := cli.StringFlag{
+		Name:        "access-control-allow-origin",
+		Value:       "",
+		Usage:       "Access Control Allow Origin value for API endpoints",
+		EnvVar:      "MYBOT_ACCESS_CONTROL_ALLOW_ORIGIN",
+		Destination: &accessControlAllowOrigin,
+	}
+
 	commonFlags := []cli.Flag{
 		envFlag,
 		configFlag,
@@ -362,6 +371,7 @@ func main() {
 		hostFlag,
 		portFlag,
 		sessionDomainFlag,
+		accessControlAllowOriginFlag,
 	}
 
 	// All `run` flags should be `serve` flag
@@ -493,16 +503,24 @@ func beforeValidating(c *cli.Context) error {
 	}
 
 	if dbSession == nil {
-		serverSession = sessions.NewCookieStore(
+		sess := sessions.NewCookieStore(
 			[]byte("mybot_session_key"),
 		)
+		if sessionDomain != "" {
+			sess.Options.Domain = sessionDomain
+		}
+		serverSession = sess
 	} else {
-		serverSession = mongostore.NewMongoStore(
+		sess := mongostore.NewMongoStore(
 			dbSession.DB(dbName).C("user-session"),
 			86400*30,
 			true,
 			[]byte("mybot_session_key"),
 		)
+		if sessionDomain != "" {
+			sess.Options.Domain = sessionDomain
+		}
+		serverSession = sess
 	}
 
 	twitterCk := c.String("twitter-consumer-key")
