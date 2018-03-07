@@ -748,7 +748,7 @@ func CheckTwitterError(err error) bool {
 		// 187: The status text has already been Tweeted by the authenticated account.
 		// 327: You have already retweeted this tweet.
 		switch twitterErr.Code {
-		case 130, 187, 327:
+		case 130, 131, 187, 327:
 			return false
 		}
 	case anaconda.TwitterError:

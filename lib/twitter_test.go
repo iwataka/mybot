@@ -90,6 +90,8 @@ func TestPostProcessorEach(t *testing.T) {
 func TestCheckTwitterError(t *testing.T) {
 	err130 := anaconda.TwitterError{Code: 130}
 	testCheckTwitterError(t, err130)
+	err131 := anaconda.TwitterError{Code: 131}
+	testCheckTwitterError(t, err131)
 	err187 := anaconda.TwitterError{Code: 187}
 	testCheckTwitterError(t, err187)
 	err327 := anaconda.TwitterError{Code: 327}
