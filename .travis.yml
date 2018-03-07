@@ -1,3 +1,8 @@
+sudo: required
+
+services:
+  - docker
+
 branches:
   only:
     - master
@@ -20,6 +25,11 @@ script:
   - dep ensure
   - make test
   - $HOME/gopath/bin/goveralls -service=travis-ci
+
+after_script:
+  - docker build -t $DOCKER_REPO .
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - docker push $DOCKER_REPO
 
 notifications:
   slack:
