@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 	"github.com/kidstuff/mongostore"
@@ -30,8 +31,8 @@ var (
 	userSpecificDataMap map[string]*userSpecificData = make(map[string]*userSpecificData)
 
 	// Global-scope data
-	twitterApp               mybot.OAuthApp
-	slackApp                 mybot.OAuthApp
+	twitterApp               oauth.OAuthApp
+	slackApp                 oauth.OAuthApp
 	visionAPI                mybot.VisionMatcher
 	languageAPI              mybot.LanguageMatcher
 	cliContext               *cli.Context
@@ -52,9 +53,9 @@ type userSpecificData struct {
 	config      mybot.Config
 	cache       mybot.Cache
 	twitterAPI  *mybot.TwitterAPI
-	twitterAuth mybot.OAuthCreds
+	twitterAuth oauth.OAuthCreds
 	slackAPI    *mybot.SlackAPI
-	slackAuth   mybot.OAuthCreds
+	slackAuth   oauth.OAuthCreds
 	workerChans map[int]chan *worker.WorkerSignal
 	statuses    map[int]*bool
 }
@@ -103,10 +104,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.twitterAuth, err = mybot.NewFileOAuthCreds(file)
+		data.twitterAuth, err = oauth.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("twitter-user-auth")
-		data.twitterAuth, err = mybot.NewDBOAuthCreds(col, userID)
+		data.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -118,10 +119,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.slackAuth, err = mybot.NewFileOAuthCreds(file)
+		data.slackAuth, err = oauth.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("slack-user-auth")
-		data.slackAuth, err = mybot.NewDBOAuthCreds(col, userID)
+		data.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -527,10 +528,10 @@ func beforeValidating(c *cli.Context) error {
 	twitterCk := c.String("twitter-consumer-key")
 	twitterCs := c.String("twitter-consumer-secret")
 	if dbSession == nil {
-		twitterApp, err = mybot.NewFileTwitterOAuthApp(c.String("twitter-app"))
+		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String("twitter-app"))
 	} else {
 		col := dbSession.DB(dbName).C("twitter-app-auth")
-		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
+		twitterApp, err = oauth.NewDBTwitterOAuthApp(col)
 	}
 	if err != nil {
 		return utils.WithStack(err)
@@ -546,10 +547,10 @@ func beforeValidating(c *cli.Context) error {
 	slackCk := c.String("slack-client-id")
 	slackCs := c.String("slack-client-secret")
 	if dbSession == nil {
-		slackApp, err = mybot.NewFileOAuthApp(c.String("slack-app"))
+		slackApp, err = oauth.NewFileOAuthApp(c.String("slack-app"))
 	} else {
 		col := dbSession.DB(dbName).C("slack-app-auth")
-		slackApp, err = mybot.NewDBOAuthApp(col)
+		slackApp, err = oauth.NewDBOAuthApp(col)
 	}
 	if err != nil {
 		return utils.WithStack(err)

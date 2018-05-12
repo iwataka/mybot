@@ -20,6 +20,7 @@ import (
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
@@ -152,14 +153,14 @@ func TestGetSetupTwitter(t *testing.T) {
 
 	tmpTwitterApp := twitterApp
 	var err error
-	twitterApp, err = mybot.NewFileTwitterOAuthApp("")
+	twitterApp, err = oauth.NewFileTwitterOAuthApp("")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	tmpSlackApp := slackApp
-	slackApp, err = mybot.NewFileOAuthApp("")
+	slackApp, err = oauth.NewFileOAuthApp("")
 	if err != nil {
 		t.Fatal(err)
 	}

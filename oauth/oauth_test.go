@@ -1,6 +1,8 @@
-package mybot
+package oauth_test
 
 import (
+	. "github.com/iwataka/mybot/oauth"
+
 	"reflect"
 	"testing"
 )

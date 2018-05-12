@@ -3,4 +3,4 @@ build:
 	go build
 
 test:
-	go test . ./lib ./models ./worker ./utils
+	go test . ./lib ./models ./worker ./utils ./oauth

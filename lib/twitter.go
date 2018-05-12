@@ -11,6 +11,7 @@ import (
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/slack"
 )
@@ -67,7 +68,7 @@ type TwitterAPI struct {
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth OAuthCreds, c Cache, cfg Config) *TwitterAPI {
+func NewTwitterAPI(auth oauth.OAuthCreds, c Cache, cfg Config) *TwitterAPI {
 	at, ats := auth.GetCreds()
 	api := anaconda.NewTwitterApi(at, ats)
 	return &TwitterAPI{api, c, cfg, nil}
