@@ -3,4 +3,4 @@ build:
 	go build
 
 test:
-	go test . ./lib ./mocks ./models ./worker
+	go test . ./lib ./models ./worker ./utils
