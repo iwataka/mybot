@@ -1,4 +1,4 @@
-package mybot
+package tmpl
 
 import (
 	"github.com/iwataka/mybot/utils"
@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-const (
-	placeholder = "placeholder"
-)
-
 func Checkbox(flag bool, name string) template.HTML {
 	result := ""
 	format := `<input form="overwrite" type="checkbox" name="%s" value="%s" %s/>`
@@ -21,7 +17,7 @@ func Checkbox(flag bool, name string) template.HTML {
 	} else {
 		result += fmt.Sprintf(format, name, "true", "")
 	}
-	result += fmt.Sprintf(`<input form="overwrite" type="hidden" name="%s" value="%s"/>`, name, placeholder)
+	result += fmt.Sprintf(`<input form="overwrite" type="hidden" name="%s" value="%s"/>`, name, "placeholder")
 	return template.HTML(result)
 }
 

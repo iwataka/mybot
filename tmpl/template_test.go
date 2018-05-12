@@ -1,6 +1,8 @@
-package mybot
+package tmpl_test
 
 import (
+	. "github.com/iwataka/mybot/tmpl"
+
 	"reflect"
 	"testing"
 )

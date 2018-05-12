@@ -16,6 +16,7 @@ import (
 
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/tmpl"
 	"github.com/iwataka/mybot/utils"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
@@ -243,13 +244,13 @@ func initServer() error {
 	}
 
 	funcMap := template.FuncMap{
-		"checkbox":            mybot.Checkbox,
-		"boolSelectbox":       mybot.BoolSelectbox,
-		"selectbox":           mybot.Selectbox,
-		"listTextbox":         mybot.ListTextbox,
-		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
-		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
-		"newMap":              mybot.NewMap,
+		"checkbox":            tmpl.Checkbox,
+		"boolSelectbox":       tmpl.BoolSelectbox,
+		"selectbox":           tmpl.Selectbox,
+		"listTextbox":         tmpl.ListTextbox,
+		"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
+		"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
+		"newMap":              tmpl.NewMap,
 	}
 
 	tmpl, err := template.
@@ -597,10 +598,10 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		timeline := mybot.NewTimelineConfig()
-		timeline.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
-		timeline.ExcludeReplies = mybot.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
-		timeline.IncludeRts = mybot.GetBoolSelectboxValue(val, i, prefix+".include_rts")
-		if timeline.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
+		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
+		if timeline.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -623,8 +624,8 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		favorite := mybot.NewFavoriteConfig()
-		favorite.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
-		if favorite.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -647,9 +648,9 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		search := mybot.NewSearchConfig()
-		search.Queries = mybot.GetListTextboxValue(val, i, prefix+".queries")
+		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
 		search.ResultType = val[prefix+".result_type"][i]
-		if search.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -672,7 +673,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		msg := mybot.NewMessageConfig()
-		msg.Channels = mybot.GetListTextboxValue(val, i, prefix+".channels")
+		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
 		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
 		}
@@ -684,13 +685,13 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	prefix = "twitter.notification"
 	notif := config.GetTwitterNotification()
 	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
-	notif.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
+	notif.Place.Users = tmpl.GetListTextboxValue(val, 0, prefix+".place.users")
 	config.SetTwitterNotification(notif)
 
 	prefix = "twitter.interaction"
 	intr := config.GetTwitterInteraction()
 	intr.AllowSelf = len(val[prefix+".allow_self"]) > 1
-	intr.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
+	intr.Users = tmpl.GetListTextboxValue(val, 0, prefix+".users")
 	config.SetTwitterInteraction(intr)
 
 	config.SetTwitterDuration(val["twitter.duration"][0])
@@ -706,35 +707,35 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {
 	prefix = prefix + ".filter."
 	filter := mybot.NewFilter()
-	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+"patterns")
-	filter.URLPatterns = mybot.GetListTextboxValue(val, i, prefix+"url_patterns")
-	filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, prefix+"has_media")
-	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+"retweeted")
-	fThreshold, err := mybot.GetIntPtr(val, i, prefix+"favorite_threshold")
+	filter.Patterns = tmpl.GetListTextboxValue(val, i, prefix+"patterns")
+	filter.URLPatterns = tmpl.GetListTextboxValue(val, i, prefix+"url_patterns")
+	filter.HasMedia = tmpl.GetBoolSelectboxValue(val, i, prefix+"has_media")
+	filter.Retweeted = tmpl.GetBoolSelectboxValue(val, i, prefix+"retweeted")
+	fThreshold, err := tmpl.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
 		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.FavoriteThreshold = fThreshold
-	rThreshold, err := mybot.GetIntPtr(val, i, prefix+"retweeted_threshold")
+	rThreshold, err := tmpl.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
 		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.RetweetedThreshold = rThreshold
-	filter.Lang = mybot.GetString(val, prefix+"lang", i, "")
-	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+"vision.label")
-	filter.Vision.Face.AngerLikelihood = mybot.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
-	filter.Vision.Face.BlurredLikelihood = mybot.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
-	filter.Vision.Face.HeadwearLikelihood = mybot.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
-	filter.Vision.Face.JoyLikelihood = mybot.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
-	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+"vision.text")
-	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+"vision.landmark")
-	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
-	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
+	filter.Lang = tmpl.GetString(val, prefix+"lang", i, "")
+	filter.Vision.Label = tmpl.GetListTextboxValue(val, i, prefix+"vision.label")
+	filter.Vision.Face.AngerLikelihood = tmpl.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
+	filter.Vision.Face.BlurredLikelihood = tmpl.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
+	filter.Vision.Face.HeadwearLikelihood = tmpl.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
+	filter.Vision.Face.JoyLikelihood = tmpl.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
+	filter.Vision.Text = tmpl.GetListTextboxValue(val, i, prefix+"vision.text")
+	filter.Vision.Landmark = tmpl.GetListTextboxValue(val, i, prefix+"vision.landmark")
+	filter.Vision.Logo = tmpl.GetListTextboxValue(val, i, prefix+"vision.logo")
+	minSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
 		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.Language.MinSentiment = minSentiment
-	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
+	maxSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
 		return mybot.NewFilter(), utils.WithStack(err)
 	}
@@ -771,9 +772,9 @@ func postConfigForActions(
 
 func postConfigForAction(val map[string][]string, i int, prefix string) (mybot.Action, error) {
 	action := mybot.NewAction()
-	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
-	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
-	action.Slack.Reactions = mybot.GetListTextboxValue(val, i, prefix+"slack.reactions")
+	action.Twitter.Collections = tmpl.GetListTextboxValue(val, i, prefix+"twitter.collections")
+	action.Slack.Channels = tmpl.GetListTextboxValue(val, i, prefix+"slack.channels")
+	action.Slack.Reactions = tmpl.GetListTextboxValue(val, i, prefix+"slack.reactions")
 	return action, nil
 }
 
