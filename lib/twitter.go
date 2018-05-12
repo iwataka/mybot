@@ -17,8 +17,8 @@ import (
 	"github.com/iwataka/slack"
 )
 
-// NOTE: This must be fixed because multiple applications having different
-// values cause infinite number of messages.
+// msgPrefix is placed at the head of bot messages and indicates that messages
+// are sent by bot. This prevents infinite-loop bot-to-bot communication.
 const msgPrefix = "<bot message>\n"
 
 // TwitterAPI is a wrapper of anaconda.TwitterApi.

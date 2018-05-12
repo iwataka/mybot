@@ -5,7 +5,7 @@ import (
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
-	worker "github.com/iwataka/mybot/worker"
+	"github.com/iwataka/mybot/worker"
 
 	"fmt"
 	"testing"
