@@ -11,6 +11,7 @@ import (
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/oauth"
+	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 	"github.com/kidstuff/mongostore"
@@ -150,12 +151,12 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.statuses,
 		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute),
 	)
-	runner := mybot.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
 	manageWorkerWithStart(
 		twitterPeriodicRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterPeriodicWorker(runner, data.cache, data.config.GetTwitterDuration(), time.Minute, userID),
+		newTwitterPeriodicWorker(r, data.cache, data.config.GetTwitterDuration(), time.Minute, userID),
 	)
 	manageWorkerWithStart(
 		slackRoutineKey,
@@ -429,9 +430,9 @@ func main() {
 
 func run(c *cli.Context) {
 	for _, data := range userSpecificDataMap {
-		baseRunner := mybot.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-		runner := mybot.NewBatchRunnerUsedWithoutStream(baseRunner)
-		if err := runner.Run(); err != nil {
+		baseRunner := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+		r := runner.NewBatchRunnerUsedWithoutStream(baseRunner)
+		if err := r.Run(); err != nil {
 			log.Printf("%+v\n", err)
 			return
 		}

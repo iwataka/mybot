@@ -8,6 +8,7 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
 	mybot "github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 )
@@ -82,7 +83,7 @@ func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string, timeout time.Du
 }
 
 func (w *twitterDMWorker) Start() error {
-	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
+	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 
@@ -132,7 +133,7 @@ func newTwitterUserWorker(
 }
 
 func (w *twitterUserWorker) Start() error {
-	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
+	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 
@@ -158,7 +159,7 @@ func (w *twitterUserWorker) Name() string {
 }
 
 type twitterPeriodicWorker struct {
-	runner    mybot.BatchRunner
+	runner    runner.BatchRunner
 	cache     utils.Savable
 	duration  string
 	timeout   time.Duration
@@ -168,7 +169,7 @@ type twitterPeriodicWorker struct {
 }
 
 func newTwitterPeriodicWorker(
-	runner mybot.BatchRunner,
+	runner runner.BatchRunner,
 	cache utils.Savable,
 	duration string,
 	timeout time.Duration,

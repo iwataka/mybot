@@ -1,7 +1,8 @@
-package mybot
+package runner
 
 import (
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/utils"
 
 	"fmt"
@@ -20,21 +21,21 @@ type BatchRunner interface {
 // BatchRunnerUsedWithStream implements mybot batch processing and is intended
 // to be used with stream processing.
 type BatchRunnerUsedWithStream struct {
-	twitterAPI  *TwitterAPI
-	slackAPI    *SlackAPI
-	visionAPI   VisionMatcher
-	languageAPI LanguageMatcher
-	config      Config
+	twitterAPI  *mybot.TwitterAPI
+	slackAPI    *mybot.SlackAPI
+	visionAPI   mybot.VisionMatcher
+	languageAPI mybot.LanguageMatcher
+	config      mybot.Config
 }
 
 // NewBatchRunnerUsedWithStream returns new BatchRunnerUsedWithStream with
 // specified arguments.
 func NewBatchRunnerUsedWithStream(
-	twitterAPI *TwitterAPI,
-	slackAPI *SlackAPI,
-	visionAPI VisionMatcher,
-	languageAPI LanguageMatcher,
-	config Config,
+	twitterAPI *mybot.TwitterAPI,
+	slackAPI *mybot.SlackAPI,
+	visionAPI mybot.VisionMatcher,
+	languageAPI mybot.LanguageMatcher,
+	config mybot.Config,
 ) *BatchRunnerUsedWithStream {
 	return &BatchRunnerUsedWithStream{twitterAPI, slackAPI, visionAPI, languageAPI, config}
 }
@@ -177,7 +178,7 @@ func (r BatchRunnerUsedWithoutStream) IsAvailable() error {
 // TwitterAPIIsAvailable returns nil if twitterAPI client is available to use,
 // which means that twitterAPI's methods are callable and it is verified by a
 // valid credential.
-func TwitterAPIIsAvailable(twitterAPI *TwitterAPI) error {
+func TwitterAPIIsAvailable(twitterAPI *mybot.TwitterAPI) error {
 	if twitterAPI == nil {
 		return fmt.Errorf("Twitter API is nil")
 	}

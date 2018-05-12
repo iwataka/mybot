@@ -2,8 +2,8 @@ package main
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	worker "github.com/iwataka/mybot/worker"
 
@@ -79,7 +79,7 @@ func generatePeriodicWorker(t *testing.T, times int, duration string, id string,
 	return newTwitterPeriodicWorker(runner, cache, duration, time.Second, id)
 }
 
-func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) mybot.BatchRunner {
+func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) runner.BatchRunner {
 	runner := mocks.NewMockBatchRunner(ctrl)
 	var runCall *gomock.Call
 	if times < 0 {
