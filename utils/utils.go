@@ -1,9 +1,11 @@
-package mybot
+/*
+Package utils provides utility functions for Mybot.
+*/
+package utils
 
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"path/filepath"
@@ -12,26 +14,24 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// Savable provides a feature to save the instance data into an outside storage.
 type Savable interface {
 	Save() error
 }
 
+// Loadable provides a feature to load data from an outside storage and write
+// it into this instance.
 type Loadable interface {
 	Load() error
 }
 
-type TomlUndecodedKeysError struct {
-	Undecoded []toml.Key
-	File      string
-}
-
-func (e *TomlUndecodedKeysError) Error() string {
-	return fmt.Sprintf("%v undecoded in %s", e.Undecoded, e.File)
-}
-
-// DecodeFile decoded the specified value and write it to the specified file.
-// The file extension is used to detect its format and the default format is
-// JSON.
+// DecodeFile decodes file and write the content to v.
+// This method selects a proper decoder by the file extension (json decoder by
+// default).
 func DecodeFile(file string, v interface{}) error {
 	ext := filepath.Ext(file)
 	bs, err := ioutil.ReadFile(file)
@@ -60,9 +60,9 @@ func DecodeFile(file string, v interface{}) error {
 	return nil
 }
 
-// EncodeFile encoded the content of the specified file and assign it to the
-// value. The file extension is used to detect its format and the default
-// format is JSON.
+// EncodeFile encodes v into file.
+// This method selects a proper encoder by the file extension (json decoder by
+// default).
 func EncodeFile(file string, v interface{}) error {
 	ext := filepath.Ext(file)
 	var bs []byte
@@ -89,7 +89,9 @@ func EncodeFile(file string, v interface{}) error {
 	return nil
 }
 
-func StringsOp(s1, s2 []string, add bool) []string {
+// CalcStringSlices calculates an addition/subtraction result of s1 and s2.
+// If add is true then this method adds the two and otherwise subtracts.
+func CalcStringSlices(s1, s2 []string, add bool) []string {
 	m := make(map[string]bool)
 	for _, v := range s1 {
 		m[v] = true
@@ -106,14 +108,17 @@ func StringsOp(s1, s2 []string, add bool) []string {
 	return results
 }
 
-func BoolOp(b1, b2 bool, add bool) bool {
+// CalcBools calculates an addition/subtraction result of b1 and b2.
+// This method adds the two if add is true and otherwise subtracts.
+func CalcBools(b1, b2, add bool) bool {
 	if add {
 		return b1 || b2
 	}
 	return b1 && !b2
 }
 
-func StringsContains(ss []string, str string) bool {
+// CheckStringContained returns true if ss contains str and otherwise false.
+func CheckStringContained(ss []string, str string) bool {
 	for _, s := range ss {
 		if s == str {
 			return true
@@ -122,15 +127,19 @@ func StringsContains(ss []string, str string) bool {
 	return false
 }
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-func RandString(n int) string {
-	charas := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+// GenerateRandString generates a random string consisted of n upper/lower-case
+// alphabets.
+func GenerateRandString(n int) string {
+	chars := []rune{}
+	for i := 0; i < 26; i++ {
+		chars = append(chars, rune('a'+i))
+	}
+	for i := 0; i < 26; i++ {
+		chars = append(chars, rune('A'+i))
+	}
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = charas[rand.Intn(len(charas))]
+		b[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(b)
 }

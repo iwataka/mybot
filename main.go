@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 	"github.com/kidstuff/mongostore"
 	"github.com/mitchellh/go-homedir"
@@ -69,7 +70,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "cache")
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
 		data.cache, err = mybot.NewFileCache(file)
@@ -78,13 +79,13 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		data.cache, err = mybot.NewDBCache(col, userID)
 	}
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "config")
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
 		data.config, err = mybot.NewFileConfig(file)
@@ -93,13 +94,13 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		data.config, err = mybot.NewDBConfig(col, userID)
 	}
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "twitter-auth")
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
 		data.twitterAuth, err = mybot.NewFileOAuthCreds(file)
@@ -108,13 +109,13 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		data.twitterAuth, err = mybot.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "slack-auth")
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
 		data.slackAuth, err = mybot.NewFileOAuthCreds(file)
@@ -123,7 +124,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		data.slackAuth, err = mybot.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
 	data.twitterAPI = mybot.NewTwitterAPI(data.twitterAuth, data.cache, data.config)
@@ -147,7 +148,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.statuses,
 		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute),
 	)
-	runner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+	runner := mybot.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
 	manageWorkerWithStart(
 		twitterPeriodicRoutineKey,
 		data.workerChans,
@@ -426,8 +427,8 @@ func main() {
 
 func run(c *cli.Context) {
 	for _, data := range userSpecificDataMap {
-		baseRunner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-		runner := mybot.NewBatchRunnerWithoutStream(baseRunner)
+		baseRunner := mybot.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+		runner := mybot.NewBatchRunnerUsedWithoutStream(baseRunner)
 		if err := runner.Run(); err != nil {
 			log.Printf("%+v\n", err)
 			return
@@ -498,7 +499,7 @@ func beforeValidating(c *cli.Context) error {
 		var err error
 		dbSession, err = mgo.DialWithInfo(info)
 		if err != nil {
-			return mybot.WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 
@@ -532,13 +533,13 @@ func beforeValidating(c *cli.Context) error {
 		twitterApp, err = mybot.NewDBTwitterOAuthApp(col)
 	}
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	if twitterCk != "" && twitterCs != "" {
 		twitterApp.SetCreds(twitterCk, twitterCs)
 		err := twitterApp.Save()
 		if err != nil {
-			return mybot.WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 
@@ -551,25 +552,25 @@ func beforeValidating(c *cli.Context) error {
 		slackApp, err = mybot.NewDBOAuthApp(col)
 	}
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	if slackCk != "" && slackCs != "" {
 		slackApp.SetCreds(slackCk, slackCs)
 		err := slackApp.Save()
 		if err != nil {
-			return mybot.WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 
 	userIDs, err := getUserIDs(c, dbSession, dbName)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	for _, userID := range userIDs {
 		err := initForUser(c, dbSession, dbName, userID)
 		fmt.Printf("Initialize for user %s\n", userID)
 		if err != nil {
-			return mybot.WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 	return nil
@@ -578,7 +579,7 @@ func beforeValidating(c *cli.Context) error {
 func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) error {
 	data, err := newUserSpecificData(c, session, userID)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	userSpecificDataMap[userID] = data
 	return nil
@@ -588,7 +589,7 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 	if session == nil {
 		dir, err := argValueWithMkdir(c, "twitter-auth")
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
 		userIDs := []string{}
@@ -603,7 +604,7 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 		auths := []map[string]interface{}{}
 		err := col.Find(nil).All(&auths)
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		userIDs := []string{}
 		for _, auth := range auths {
@@ -632,7 +633,7 @@ func argValueWithMkdir(c *cli.Context, key string) (string, error) {
 	dir := c.String(key)
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
-		return "", mybot.WithStack(err)
+		return "", utils.WithStack(err)
 	}
 	return dir, nil
 }

@@ -4,8 +4,10 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/utils"
 	worker "github.com/iwataka/mybot/worker"
 
+	"fmt"
 	"testing"
 	"time"
 )
@@ -15,7 +17,7 @@ func TestTwitterPeriodicWorkerStart(t *testing.T) {
 	times := 50
 	duration := "0.01s"
 	id := "id"
-	worker := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), nil)
+	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
 	err := worker.Start()
 	if err == nil || err.Error() != errMsg {
 		t.Fatal("Error not found or not expected error")
@@ -44,7 +46,7 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	times := -1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
@@ -62,7 +64,7 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	times := 1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	err := w.Start()
 	if err == nil || err.Error() != errMsg {
@@ -87,14 +89,14 @@ func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr 
 	}
 	runner.EXPECT().Run().After(runCall).Return(runErr)
 	if times < 0 {
-		runner.EXPECT().Verify().AnyTimes().Return(verifyErr)
+		runner.EXPECT().IsAvailable().AnyTimes().Return(verifyErr)
 	} else {
-		runner.EXPECT().Verify().Times(times).Return(verifyErr)
+		runner.EXPECT().IsAvailable().Times(times).Return(verifyErr)
 	}
 	return runner
 }
 
-func generateCache(ctrl *gomock.Controller, times int) mybot.Savable {
+func generateCache(ctrl *gomock.Controller, times int) utils.Savable {
 	cache := mocks.NewMockSavable(ctrl)
 	if times < 0 {
 		cache.EXPECT().Save().AnyTimes().Return(nil)

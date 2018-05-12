@@ -2,6 +2,7 @@ package mybot
 
 import (
 	"container/list"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -118,8 +119,8 @@ func testSlackAPIPostMessage(t *testing.T, queue bool) {
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
 
-	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", NewError("channel_not_found"))
-	slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(nil, NewError("user_is_bot"))
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", errors.New("channel_not_found"))
+	slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(nil, errors.New("user_is_bot"))
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
 
 	ch := "channel"

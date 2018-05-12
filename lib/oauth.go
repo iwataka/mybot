@@ -2,13 +2,14 @@ package mybot
 
 import (
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type OAuthCreds interface {
-	Savable
-	Loadable
+	utils.Savable
+	utils.Loadable
 	SetCreds(at, ats string)
 	GetCreds() (string, string)
 }
@@ -21,17 +22,17 @@ type FileOAuthCreds struct {
 
 // Load does nothing and returns nil if the specified file doesn't exist.
 func (a *FileOAuthCreds) Load() error {
-	return DecodeFile(a.File, a)
+	return utils.DecodeFile(a.File, a)
 }
 
 func (a *FileOAuthCreds) Save() error {
-	return EncodeFile(a.File, a)
+	return utils.EncodeFile(a.File, a)
 }
 
 func NewFileOAuthCreds(file string) (*FileOAuthCreds, error) {
 	a := &FileOAuthCreds{newOAuthCredsProps(), file}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 type DBOAuthCreds struct {
@@ -43,27 +44,27 @@ type DBOAuthCreds struct {
 func NewDBOAuthCreds(col *mgo.Collection, id string) (*DBOAuthCreds, error) {
 	a := &DBOAuthCreds{newOAuthCredsProps(), col, id}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 func (a *DBOAuthCreds) Load() error {
 	query := a.col.Find(bson.M{"id": a.ID})
 	count, err := query.Count()
 	if err != nil {
-		return WithStack(err)
+		return utils.WithStack(err)
 	}
 	if count > 0 {
 		tmpCol := a.col
 		err := query.One(a)
 		a.col = tmpCol
-		return WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
 
 func (a *DBOAuthCreds) Save() error {
 	_, err := a.col.Upsert(bson.M{"id": a.ID}, a)
-	return WithStack(err)
+	return utils.WithStack(err)
 }
 
 type OAuthCredsProps struct {
@@ -85,8 +86,8 @@ func (a *OAuthCredsProps) GetCreds() (string, string) {
 }
 
 type OAuthApp interface {
-	Savable
-	Loadable
+	utils.Savable
+	utils.Loadable
 	SetCreds(ck, cs string)
 	GetCreds() (string, string)
 }
@@ -138,27 +139,27 @@ type FileOAuthApp struct {
 func NewFileOAuthApp(file string) (*FileOAuthApp, error) {
 	a := &FileOAuthApp{&DefaultOAuthAppProps{}, file}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 func NewFileTwitterOAuthApp(file string) (*FileOAuthApp, error) {
 	a := &FileOAuthApp{newTwitterOAuthAppProps(), file}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 // Decode does nothing and returns nil if the specified file doesn't exist.
 func (a *FileOAuthApp) Load() error {
 	tmp := &DefaultOAuthAppProps{}
-	err := DecodeFile(a.File, tmp)
+	err := utils.DecodeFile(a.File, tmp)
 	a.SetCreds(tmp.ConsumerKey, tmp.ConsumerSecret)
-	return WithStack(err)
+	return utils.WithStack(err)
 }
 
 func (a *FileOAuthApp) Save() error {
 	ck, cs := a.GetCreds()
 	tmp := &DefaultOAuthAppProps{ck, cs}
-	return EncodeFile(a.File, tmp)
+	return utils.EncodeFile(a.File, tmp)
 }
 
 type DBOAuthApp struct {
@@ -169,13 +170,13 @@ type DBOAuthApp struct {
 func NewDBOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
 	a := &DBOAuthApp{&DefaultOAuthAppProps{}, col}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 func NewDBTwitterOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
 	a := &DBOAuthApp{newTwitterOAuthAppProps(), col}
 	err := a.Load()
-	return a, WithStack(err)
+	return a, utils.WithStack(err)
 }
 
 func (a *DBOAuthApp) Load() error {
@@ -183,18 +184,18 @@ func (a *DBOAuthApp) Load() error {
 	query := a.col.Find(nil)
 	count, err := query.Count()
 	if err != nil {
-		return WithStack(err)
+		return utils.WithStack(err)
 	}
 	if count > 0 {
 		query.One(tmp)
 	}
 	a.SetCreds(tmp.ConsumerKey, tmp.ConsumerSecret)
-	return WithStack(err)
+	return utils.WithStack(err)
 }
 
 func (a *DBOAuthApp) Save() error {
 	ck, cs := a.GetCreds()
 	tmp := &DefaultOAuthAppProps{ck, cs}
 	_, err := a.col.Upsert(nil, tmp)
-	return WithStack(err)
+	return utils.WithStack(err)
 }

@@ -7,7 +7,8 @@ import (
 
 	"github.com/iwataka/anaconda"
 	mybot "github.com/iwataka/mybot/lib"
-	worker "github.com/iwataka/mybot/worker"
+	"github.com/iwataka/mybot/utils"
+	"github.com/iwataka/mybot/worker"
 )
 
 func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.RoutineWorker) {
@@ -81,17 +82,17 @@ func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string, timeout time.Du
 
 func (w *twitterDMWorker) Start() error {
 	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 
 	var err error
 	r := w.twitterAPI.DefaultDirectMessageReceiver
 	w.listener, err = w.twitterAPI.ListenMyself(nil, r, w.timeout)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	if err := w.listener.Listen(); err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
@@ -131,16 +132,16 @@ func newTwitterUserWorker(
 
 func (w *twitterUserWorker) Start() error {
 	if err := mybot.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 
 	var err error
 	w.listener, err = w.twitterAPI.ListenUsers(nil, w.timeout)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	if err := w.listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
@@ -157,7 +158,7 @@ func (w *twitterUserWorker) Name() string {
 
 type twitterPeriodicWorker struct {
 	runner    mybot.BatchRunner
-	cache     mybot.Savable
+	cache     utils.Savable
 	duration  string
 	timeout   time.Duration
 	id        string
@@ -167,7 +168,7 @@ type twitterPeriodicWorker struct {
 
 func newTwitterPeriodicWorker(
 	runner mybot.BatchRunner,
-	cache mybot.Savable,
+	cache utils.Savable,
 	duration string,
 	timeout time.Duration,
 	id string,
@@ -176,26 +177,26 @@ func newTwitterPeriodicWorker(
 }
 
 func (w *twitterPeriodicWorker) Start() error {
-	if err := w.runner.Verify(); err != nil {
-		return mybot.WithStack(err)
+	if err := w.runner.IsAvailable(); err != nil {
+		return utils.WithStack(err)
 	}
 
 	d, err := time.ParseDuration(w.duration)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	ticker := time.NewTicker(d)
 	for {
 		select {
 		case <-ticker.C:
 			if err := w.runner.Run(); err != nil {
-				return mybot.WithStack(err)
+				return utils.WithStack(err)
 			}
 			if err := w.cache.Save(); err != nil {
-				return mybot.WithStack(err)
+				return utils.WithStack(err)
 			}
 		case <-w.innerChan:
-			return mybot.NewInterruptedError()
+			return utils.NewStreamInterruptedError()
 		}
 	}
 	return nil
@@ -234,15 +235,15 @@ func newSlackWorker(
 
 func (w *slackWorker) Start() error {
 	if w.slackAPI == nil {
-		return mybot.Errorf("Slack API is nil")
+		return fmt.Errorf("Slack API is nil")
 	}
 	if !w.slackAPI.Enabled() {
-		return mybot.Errorf("Slack API is disabled")
+		return fmt.Errorf("Slack API is disabled")
 	}
 
 	w.listener = w.slackAPI.Listen()
 	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
