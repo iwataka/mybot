@@ -1,7 +1,8 @@
-package mybot
+package data_test
 
 import (
-	models "github.com/iwataka/mybot/models"
+	. "github.com/iwataka/mybot/data"
+	"github.com/iwataka/mybot/models"
 
 	"os"
 	"path/filepath"

@@ -2,6 +2,7 @@ package mybot
 
 import (
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/slack"
@@ -15,55 +16,15 @@ import (
 	"time"
 )
 
-type SlackAction struct {
-	models.SlackActionProperties
-	Reactions []string `json:"reactions,omitempty" toml:"reactions,omitempty" bson:"reactions,omitempty"`
-	Channels  []string `json:"channels,omitempty" toml:"channels,omitempty" bson:"channels,omitempty"`
-}
-
-func NewSlackAction() SlackAction {
-	return SlackAction{
-		Channels:  []string{},
-		Reactions: []string{},
-	}
-}
-
-func (a SlackAction) Add(action SlackAction) SlackAction {
-	return a.op(action, true)
-}
-
-func (a SlackAction) Sub(action SlackAction) SlackAction {
-	return a.op(action, false)
-}
-
-func (a SlackAction) op(action SlackAction, add bool) SlackAction {
-	result := a
-
-	result.Pin = utils.CalcBools(a.Pin, action.Pin, add)
-	result.Star = utils.CalcBools(a.Star, action.Star, add)
-	result.Reactions = utils.CalcStringSlices(a.Reactions, action.Reactions, add)
-	result.Channels = utils.CalcStringSlices(a.Channels, action.Channels, add)
-
-	return result
-
-}
-
-func (a SlackAction) IsEmpty() bool {
-	return !a.Pin &&
-		!a.Star &&
-		len(a.Channels) == 0 &&
-		len(a.Reactions) == 0
-}
-
 type SlackAPI struct {
 	api      models.SlackAPI
 	config   Config
-	cache    Cache
+	cache    data.Cache
 	msgQueue map[string]*list.List
 	user     *slack.AuthTestResponse
 }
 
-func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
+func NewSlackAPI(token string, config Config, cache data.Cache) *SlackAPI {
 	var api models.SlackAPI
 	if token != "" {
 		api = slack.New(token)
@@ -197,7 +158,7 @@ func (a *SlackAPI) processMsgEvent(
 func (a *SlackAPI) processMsgEventWithAction(
 	ch string,
 	ev *slack.MessageEvent,
-	action Action,
+	action data.Action,
 	twitterAPI *TwitterAPI,
 ) error {
 	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)

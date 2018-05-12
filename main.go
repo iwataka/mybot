@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
@@ -51,7 +52,7 @@ const (
 
 type userSpecificData struct {
 	config      mybot.Config
-	cache       mybot.Cache
+	cache       data.Cache
 	twitterAPI  *mybot.TwitterAPI
 	twitterAuth oauth.OAuthCreds
 	slackAPI    *mybot.SlackAPI
@@ -62,10 +63,10 @@ type userSpecificData struct {
 
 func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
-	data := &userSpecificData{}
-	data.workerChans = map[int]chan *worker.WorkerSignal{}
-	data.statuses = map[int]*bool{}
-	initStatuses(data.statuses)
+	userData := &userSpecificData{}
+	userData.workerChans = map[int]chan *worker.WorkerSignal{}
+	userData.statuses = map[int]*bool{}
+	initStatuses(userData.statuses)
 	dbName := c.String("db-name")
 
 	if session == nil {
@@ -74,10 +75,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.cache, err = mybot.NewFileCache(file)
+		userData.cache, err = data.NewFileCache(file)
 	} else {
 		col := session.DB(dbName).C("cache")
-		data.cache, err = mybot.NewDBCache(col, userID)
+		userData.cache, err = data.NewDBCache(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -89,10 +90,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.config, err = mybot.NewFileConfig(file)
+		userData.config, err = mybot.NewFileConfig(file)
 	} else {
 		col := session.DB(dbName).C("config")
-		data.config, err = mybot.NewDBConfig(col, userID)
+		userData.config, err = mybot.NewDBConfig(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -104,10 +105,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.twitterAuth, err = oauth.NewFileOAuthCreds(file)
+		userData.twitterAuth, err = oauth.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("twitter-user-auth")
-		data.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
+		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -119,21 +120,21 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 			return nil, utils.WithStack(err)
 		}
 		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		data.slackAuth, err = oauth.NewFileOAuthCreds(file)
+		userData.slackAuth, err = oauth.NewFileOAuthCreds(file)
 	} else {
 		col := session.DB(dbName).C("slack-user-auth")
-		data.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
+		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
 
-	data.twitterAPI = mybot.NewTwitterAPI(data.twitterAuth, data.cache, data.config)
+	userData.twitterAPI = mybot.NewTwitterAPI(userData.twitterAuth, userData.cache, userData.config)
 
-	slackId, _ := data.slackAuth.GetCreds()
-	data.slackAPI = mybot.NewSlackAPI(slackId, data.config, data.cache)
+	slackId, _ := userData.slackAuth.GetCreds()
+	userData.slackAPI = mybot.NewSlackAPI(slackId, userData.config, userData.cache)
 
-	return data, nil
+	return userData, nil
 }
 
 func startUserSpecificData(userID string, data *userSpecificData) {
@@ -453,7 +454,7 @@ func validate(c *cli.Context) {
 		err := data.config.Validate()
 		exitIfError(err)
 		if c.Bool("api") {
-			err := data.config.ValidateWithAPI(data.twitterAPI)
+			err := data.config.ValidateWithAPI(data.twitterAPI.API)
 			exitIfError(err)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
@@ -112,7 +113,7 @@ type twitterUserWorker struct {
 	slackAPI    *mybot.SlackAPI
 	visionAPI   mybot.VisionMatcher
 	languageAPI mybot.LanguageMatcher
-	cache       mybot.Cache
+	cache       data.Cache
 	id          string
 	listener    *mybot.TwitterUserListener
 	timeout     time.Duration
@@ -123,7 +124,7 @@ func newTwitterUserWorker(
 	slackAPI *mybot.SlackAPI,
 	visionAPI mybot.VisionMatcher,
 	languageAPI mybot.LanguageMatcher,
-	cache mybot.Cache,
+	cache data.Cache,
 	id string,
 	timeout time.Duration,
 ) *twitterUserWorker {

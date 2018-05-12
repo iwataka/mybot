@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/slack"
@@ -41,7 +42,7 @@ func (c Filter) CheckTweet(
 	t anaconda.Tweet,
 	v VisionMatcher,
 	l LanguageMatcher,
-	cache Cache,
+	cache data.Cache,
 ) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
@@ -117,7 +118,7 @@ func (c Filter) CheckSlackMsg(
 	ev *slack.MessageEvent,
 	v VisionMatcher,
 	l LanguageMatcher,
-	cache Cache,
+	cache data.Cache,
 ) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, ev.Text)
@@ -170,7 +171,7 @@ func (c Filter) CheckSlackMsg(
 	return true, nil
 }
 
-func (c Filter) matchTweetImages(t anaconda.Tweet, v VisionMatcher, cache Cache) (bool, error) {
+func (c Filter) matchTweetImages(t anaconda.Tweet, v VisionMatcher, cache data.Cache) (bool, error) {
 	urls := make([]string, len(t.Entities.Media))
 	for i, m := range t.Entities.Media {
 		urls[i] = m.Media_url_https
@@ -178,7 +179,7 @@ func (c Filter) matchTweetImages(t anaconda.Tweet, v VisionMatcher, cache Cache)
 	return c.matchImageURLs(TwitterStatusURL(t), urls, v, cache)
 }
 
-func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache Cache) (bool, error) {
+func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache data.Cache) (bool, error) {
 	urls := []string{}
 	for _, a := range atts {
 		if a.ImageURL == "" {
@@ -189,7 +190,7 @@ func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache
 	return c.matchImageURLs("", urls, v, cache)
 }
 
-func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache Cache) (bool, error) {
+func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache data.Cache) (bool, error) {
 	results, matches, err := v.MatchImages(urls, c.Vision, cache.GetLatestImages(-1))
 	if err != nil {
 		return false, utils.WithStack(err)

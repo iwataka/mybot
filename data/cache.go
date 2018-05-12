@@ -1,4 +1,4 @@
-package mybot
+package data
 
 import (
 	"github.com/iwataka/mybot/models"

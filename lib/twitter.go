@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
@@ -20,55 +21,17 @@ import (
 // values cause infinite number of messages.
 const msgPrefix = "<bot message>\n"
 
-// TwitterAction can indicate for various actions for Twitter's tweets.
-type TwitterAction struct {
-	models.TwitterActionProperties
-	Collections []string `json:"collections" toml:"collections" bson:"collections"`
-}
-
-func NewTwitterAction() TwitterAction {
-	return TwitterAction{
-		Collections: []string{},
-	}
-}
-
-func (a TwitterAction) Add(action TwitterAction) TwitterAction {
-	return a.op(action, true)
-}
-
-func (a TwitterAction) Sub(action TwitterAction) TwitterAction {
-	return a.op(action, false)
-}
-
-func (a TwitterAction) op(action TwitterAction, add bool) TwitterAction {
-	result := a
-
-	result.Tweet = utils.CalcBools(a.Tweet, action.Tweet, add)
-	result.Retweet = utils.CalcBools(a.Retweet, action.Retweet, add)
-	result.Favorite = utils.CalcBools(a.Favorite, action.Favorite, add)
-	result.Collections = utils.CalcStringSlices(a.Collections, action.Collections, add)
-
-	return result
-}
-
-func (a TwitterAction) IsEmpty() bool {
-	return !a.Tweet &&
-		!a.Retweet &&
-		!a.Favorite &&
-		len(a.Collections) == 0
-}
-
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
 	API    models.TwitterAPI
-	Cache  Cache
+	Cache  data.Cache
 	Config Config
 	self   *anaconda.User
 }
 
 // NewTwitterAPI takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPI(auth oauth.OAuthCreds, c Cache, cfg Config) *TwitterAPI {
+func NewTwitterAPI(auth oauth.OAuthCreds, c data.Cache, cfg Config) *TwitterAPI {
 	at, ats := auth.GetCreds()
 	api := anaconda.NewTwitterApi(at, ats)
 	return &TwitterAPI{api, c, cfg, nil}
@@ -150,7 +113,7 @@ func (a *TwitterAPI) ProcessTimeline(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action Action,
+	action data.Action,
 ) ([]anaconda.Tweet, error) {
 	latestID := a.Cache.GetLatestTweetID(name)
 	v.Set("screen_name", name)
@@ -187,7 +150,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action Action,
+	action data.Action,
 ) ([]anaconda.Tweet, error) {
 	latestID := a.Cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
@@ -224,7 +187,7 @@ func (a *TwitterAPI) ProcessSearch(
 	vision VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	action Action,
+	action data.Action,
 ) ([]anaconda.Tweet, error) {
 	res, err := a.GetSearch(query, v)
 	if err != nil {
@@ -243,13 +206,13 @@ type (
 		Process(anaconda.Tweet, bool) error
 	}
 	TwitterPostProcessorTop struct {
-		action     Action
+		action     data.Action
 		screenName string
-		cache      Cache
+		cache      data.Cache
 	}
 	TwitterPostProcessorEach struct {
-		action Action
-		cache  Cache
+		action data.Action
+		cache  data.Cache
 	}
 )
 
@@ -279,7 +242,7 @@ func (a *TwitterAPI) processTweets(
 	v VisionMatcher,
 	l LanguageMatcher,
 	slack *SlackAPI,
-	action Action,
+	action data.Action,
 	pp TwitterPostProcessor,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
@@ -308,7 +271,7 @@ func (a *TwitterAPI) processTweets(
 
 func (a *TwitterAPI) processTweet(
 	t anaconda.Tweet,
-	action Action,
+	action data.Action,
 	slack *SlackAPI,
 ) error {
 	if action.Twitter.Retweet && !t.Retweeted {
@@ -436,7 +399,7 @@ func (l *TwitterUserListener) Listen(
 	vis VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
-	cache Cache,
+	cache data.Cache,
 ) error {
 	for {
 		select {
@@ -617,7 +580,7 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 // TweetChecker function checks if the specified tweet is acceptable, which means it
 // should be retweeted.
 type TweetChecker interface {
-	CheckTweet(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c Cache) (bool, error)
+	CheckTweet(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c data.Cache) (bool, error)
 	ShouldRepeat() bool
 }
 

@@ -17,6 +17,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
@@ -631,7 +632,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 
 	tmpCache := serverTestUserSpecificData.cache
 	defer func() { serverTestUserSpecificData.cache = tmpCache }()
-	serverTestUserSpecificData.cache = mybot.NewTestFileCache("", t)
+	serverTestUserSpecificData.cache = data.NewTestFileCache("", t)
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 

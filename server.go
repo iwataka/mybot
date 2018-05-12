@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/tmpl"
@@ -280,7 +281,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -377,7 +378,7 @@ func settingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) {
+func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -414,7 +415,7 @@ type ImageResponse struct {
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
 }
 
-func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) (*SettingResponse, error) {
 	twitterUser, err := twitterAPI.GetSelf()
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -747,14 +748,14 @@ func postConfigForActions(
 	val map[string][]string,
 	prefix string,
 	deletedFlags []string,
-) ([]mybot.Action, error) {
+) ([]data.Action, error) {
 	prefix = prefix + ".action."
 	tweetCounter := checkboxCounter{prefix + "twitter.tweet", 0}
 	retweetCounter := checkboxCounter{prefix + "twitter.retweet", 0}
 	favoriteCounter := checkboxCounter{prefix + "twitter.favorite", 0}
 	pinCounter := checkboxCounter{prefix + "slack.pin", 0}
 	starCounter := checkboxCounter{prefix + "slack.star", 0}
-	results := []mybot.Action{}
+	results := []data.Action{}
 	for i := 0; i < len(deletedFlags); i++ {
 		a, err := postConfigForAction(val, i, prefix)
 		if err != nil {
@@ -770,8 +771,8 @@ func postConfigForActions(
 	return results, nil
 }
 
-func postConfigForAction(val map[string][]string, i int, prefix string) (mybot.Action, error) {
-	action := mybot.NewAction()
+func postConfigForAction(val map[string][]string, i int, prefix string) (data.Action, error) {
+	action := data.NewAction()
 	action.Twitter.Collections = tmpl.GetListTextboxValue(val, i, prefix+"twitter.collections")
 	action.Slack.Channels = tmpl.GetListTextboxValue(val, i, prefix+"slack.channels")
 	action.Slack.Reactions = tmpl.GetListTextboxValue(val, i, prefix+"slack.reactions")

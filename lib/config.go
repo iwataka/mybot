@@ -2,6 +2,7 @@ package mybot
 
 import (
 	"github.com/BurntSushi/toml"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"gopkg.in/mgo.v2"
@@ -14,6 +15,8 @@ import (
 	"os"
 	"path/filepath"
 )
+
+// TODO: move this module to data package
 
 type Config interface {
 	utils.Savable
@@ -39,7 +42,7 @@ type Config interface {
 	SetSlackMessages(msgs []MessageConfig)
 	AddSlackMessage(msg MessageConfig)
 	Validate() error
-	ValidateWithAPI(api *TwitterAPI) error
+	ValidateWithAPI(api models.TwitterAPI) error
 	Unmarshal(bytes []byte) error
 	Marshal(indent, ext string) ([]byte, error)
 }
@@ -196,9 +199,9 @@ func (c *ConfigProperties) Validate() error {
 	return nil
 }
 
-func (c *ConfigProperties) ValidateWithAPI(api *TwitterAPI) error {
+func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
 	for _, name := range c.Twitter.GetScreenNames() {
-		_, err := api.API.GetUsersShow(name, nil)
+		_, err := api.GetUsersShow(name, nil)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -291,13 +294,13 @@ type Source struct {
 	// Filter filters out incoming data from sources.
 	Filter Filter `json:"filter" toml:"filter" bson:"filter"`
 	// Action defines actions for data passing through filters.
-	Action Action `json:"action" toml:"action" bson:"action"`
+	Action data.Action `json:"action" toml:"action" bson:"action"`
 }
 
 func NewSource() Source {
 	return Source{
 		Filter: NewFilter(),
-		Action: NewAction(),
+		Action: data.NewAction(),
 	}
 }
 
@@ -306,36 +309,6 @@ func (c *Source) Validate() error {
 		return fmt.Errorf("%v has no action", c)
 	}
 	return nil
-}
-
-type Action struct {
-	Twitter TwitterAction `json:"twitter" toml:"twitter" bson:"twitter"`
-	Slack   SlackAction   `json:"slack" toml:"slack" bson:"slack"`
-}
-
-func NewAction() Action {
-	return Action{
-		Twitter: NewTwitterAction(),
-		Slack:   NewSlackAction(),
-	}
-}
-
-func (a Action) Add(action Action) Action {
-	result := a
-	result.Twitter = a.Twitter.Add(action.Twitter)
-	result.Slack = a.Slack.Add(action.Slack)
-	return result
-}
-
-func (a Action) Sub(action Action) Action {
-	result := a
-	result.Twitter = a.Twitter.Sub(action.Twitter)
-	result.Slack = a.Slack.Sub(action.Slack)
-	return result
-}
-
-func (a Action) IsEmpty() bool {
-	return a.Twitter.IsEmpty() && a.Slack.IsEmpty()
 }
 
 // TwitterConfig is a configuration related to Twitter.

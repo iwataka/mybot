@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/iwataka/deep"
+	"github.com/iwataka/mybot/data"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -80,68 +80,6 @@ func TestNewConfigWhenNotExist(t *testing.T) {
 	}
 }
 
-func TestTweetAction_AddNil(t *testing.T) {
-	a1 := Action{
-		Twitter: NewTwitterAction(),
-		Slack:   NewSlackAction(),
-	}
-	a2 := Action{
-		Twitter: TwitterAction{
-			Collections: []string{"foo"},
-		},
-		Slack: SlackAction{
-			Channels:  []string{"bar"},
-			Reactions: []string{},
-		},
-	}
-	a2.Twitter.Retweet = true
-
-	result1 := a1.Add(a2)
-	if diff := deep.Equal(result1, a2); diff != nil {
-		t.Fatal(diff)
-	}
-
-	result2 := a2.Add(a1)
-	if diff := deep.Equal(result2, a2); diff != nil {
-		t.Fatal(diff)
-	}
-}
-
-func TestTweetAction_Add(t *testing.T) {
-	a1 := Action{
-		Twitter: TwitterAction{
-			Collections: []string{"twitter"},
-		},
-		Slack: SlackAction{
-			Channels: []string{"slack"},
-		},
-	}
-	a1.Twitter.Retweet = true
-	a2 := Action{
-		Twitter: TwitterAction{
-			Collections: []string{"facebook"},
-		},
-		Slack: SlackAction{
-			Channels: []string{"mattermost"},
-		},
-	}
-	a2.Twitter.Favorite = true
-	result := a1.Add(a2)
-
-	if !result.Twitter.Retweet {
-		t.Fatalf("%v expected but %v found", true, result.Twitter.Retweet)
-	}
-	if !result.Twitter.Favorite {
-		t.Fatalf("%v expected but %v found", true, result.Twitter.Favorite)
-	}
-	if len(result.Twitter.Collections) != 2 {
-		t.Fatalf("%d expected but %d found", 2, len(result.Twitter.Collections))
-	}
-	if len(result.Slack.Channels) != 2 {
-		t.Fatalf("%d expected but %d found", 2, len(result.Slack.Channels))
-	}
-}
-
 func TestSaveLoad(t *testing.T) {
 	c, err := NewFileConfig("testdata/config.template.toml")
 	if err != nil {
@@ -193,7 +131,7 @@ func TestFileConfigTwitterTimelines(t *testing.T) {
 }
 
 func testConfigTwitterTimelines(t *testing.T, c Config) {
-	action := NewAction()
+	action := data.NewAction()
 	action.Twitter.Retweet = true
 	timeline := TimelineConfig{}
 	timeline.Action = action
@@ -215,7 +153,7 @@ func TestFileConfigTwitterFavorites(t *testing.T) {
 }
 
 func testConfigTwitterFavorites(t *testing.T, c Config) {
-	action := NewAction()
+	action := data.NewAction()
 	action.Twitter.Retweet = true
 	favorite := FavoriteConfig{}
 	favorite.Action = action
@@ -237,7 +175,7 @@ func TestFileConfigTwitterSearches(t *testing.T) {
 }
 
 func testConfigTwitterSearches(t *testing.T, c Config) {
-	action := NewAction()
+	action := data.NewAction()
 	action.Twitter.Retweet = true
 	search := SearchConfig{}
 	search.Action = action
@@ -282,7 +220,7 @@ func TestFileConfigSlackMessages(t *testing.T) {
 func testConfigSlackMessages(t *testing.T, c Config) {
 	filter := NewFilter()
 	filter.Lang = "ja"
-	action := NewAction()
+	action := data.NewAction()
 	action.Slack.Channels = []string{"foo"}
 	action.Slack.Reactions = []string{":smile:"}
 	msg := MessageConfig{

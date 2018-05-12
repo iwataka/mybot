@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/data"
 )
 
 func TestCache(t *testing.T) {
@@ -13,7 +13,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := f.Name()
-	c, err := mybot.NewFileCache(path)
+	c, err := data.NewFileCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err = mybot.NewFileCache(path)
+	c, err = data.NewFileCache(path)
 	if err != nil {
 		t.Fatal(err)
 	}
