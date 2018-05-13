@@ -2,7 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -66,7 +65,8 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 				select {
 				case <-innerChan:
 				case <-time.After(time.Minute):
-					log.Printf("Faield to wait stopping worker (timeout: 1m)\n")
+					msg := fmt.Sprintf("Faield to wait stopping worker %s (timeout: 1m)", worker.Name())
+					nonBlockingOutput(outChan, msg)
 				}
 				innerStatus = false
 			}
@@ -113,6 +113,6 @@ func nonBlockingOutput(ch chan interface{}, data interface{}) {
 	select {
 	case ch <- data:
 	case <-time.After(time.Minute):
-		log.Println("Failed to send data to outside channel (timeout: 1m)")
+		return
 	}
 }
