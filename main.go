@@ -135,26 +135,26 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 }
 
 func startUserSpecificData(userID string, data *userSpecificData) {
-	manageWorkerWithStart(
+	activateWorkerAndStart(
 		twitterDMRoutineKey,
 		data.workerChans,
 		data.statuses,
 		newTwitterDMWorker(data.twitterAPI, userID, time.Minute),
 	)
-	manageWorkerWithStart(
+	activateWorkerAndStart(
 		twitterUserRoutineKey,
 		data.workerChans,
 		data.statuses,
 		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute),
 	)
 	runner := mybot.NewBatchRunnerWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-	manageWorkerWithStart(
+	activateWorkerAndStart(
 		twitterPeriodicRoutineKey,
 		data.workerChans,
 		data.statuses,
 		newTwitterPeriodicWorker(runner, data.cache, data.config.GetTwitterDuration(), time.Minute, userID),
 	)
-	manageWorkerWithStart(
+	activateWorkerAndStart(
 		slackRoutineKey,
 		data.workerChans,
 		data.statuses,

@@ -10,7 +10,7 @@ import (
 	worker "github.com/iwataka/mybot/worker"
 )
 
-func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.RoutineWorker) {
+func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
 	ch, exists := workerChans[key]
 	if !exists {
 		ch = make(chan *worker.WorkerSignal)
@@ -18,7 +18,7 @@ func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSigna
 	}
 	outChan := make(chan interface{})
 	// Worker manager process
-	go worker.ManageWorker(ch, outChan, w)
+	worker.ActivateWorker(ch, outChan, w)
 	// Process handling logs from the above worker manager
 	go func() {
 		for msg := range outChan {

@@ -43,15 +43,19 @@ func (s WorkerSignal) String() string {
 	}
 }
 
-type RoutineWorker interface {
+type Worker interface {
 	Start() error
 	Stop()
 	Name() string
 }
 
-func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker RoutineWorker) {
-	innerChan := make(chan bool)
-	innerStatus := false
+func ActivateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker) {
+	go activateWorker(inChan, outChan, worker)
+}
+
+func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker) {
+	ch := make(chan bool)
+	status := false
 	timestamp := time.Now()
 
 	for workerSignal := range inChan {
@@ -60,26 +64,26 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 		// Stop worker
 		if signal == RestartSignal || signal == StopSignal || signal == KillSignal {
 			force := signal != RestartSignal
-			if innerStatus && (force || timestamp.Before(t)) {
+			if status && (force || timestamp.Before(t)) {
 				worker.Stop()
 				select {
-				case <-innerChan:
+				case <-ch:
 				case <-time.After(time.Minute):
 					msg := fmt.Sprintf("Faield to wait stopping worker %s (timeout: 1m)", worker.Name())
-					nonBlockingOutput(outChan, msg)
+					sendNonBlockingly(outChan, msg)
 				}
-				innerStatus = false
+				status = false
 			}
 			if signal == KillSignal {
-				nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s killed", worker.Name()))
+				sendNonBlockingly(outChan, fmt.Sprintf("Worker manager for %s killed", worker.Name()))
 				return
 			}
 		}
 		// Start worker
 		if signal == StartSignal || signal == RestartSignal {
-			if !innerStatus {
-				go wrapWithStatusManagement(worker.Start, outChan, innerChan)
-				innerStatus = true
+			if !status {
+				go startWorkerAndNotify(worker, outChan, ch)
+				status = true
 				timestamp = t
 			}
 		}
@@ -90,26 +94,26 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 		}
 	}
 
-	nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s finished successfully", worker.Name()))
+	sendNonBlockingly(outChan, fmt.Sprintf("Worker manager for %s finished successfully", worker.Name()))
 }
 
-func wrapWithStatusManagement(f func() error, outChan chan interface{}, innerChan chan bool) {
-	if outChan != nil {
-		nonBlockingOutput(outChan, true)
-	}
+func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool) {
 	defer func() {
 		if outChan != nil {
-			nonBlockingOutput(outChan, false)
+			sendNonBlockingly(outChan, false)
 		}
-		innerChan <- true
+		ch <- true
 	}()
-	err := f()
+	if outChan != nil {
+		sendNonBlockingly(outChan, true)
+	}
+	err := w.Start()
 	if err != nil {
-		nonBlockingOutput(outChan, err)
+		sendNonBlockingly(outChan, err)
 	}
 }
 
-func nonBlockingOutput(ch chan interface{}, data interface{}) {
+func sendNonBlockingly(ch chan interface{}, data interface{}) {
 	select {
 	case ch <- data:
 	case <-time.After(time.Minute):
