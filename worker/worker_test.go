@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+const (
+	timeout         = time.Minute
+	timeoutTooSmall = time.Second / 100
+)
+
 type testWorker struct {
 	count      *int32
 	totalCount *int32
@@ -41,9 +46,7 @@ func (w *testWorker) Name() string {
 
 func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	outChan := make(chan interface{})
-	ActivateWorker(inChan, outChan, w)
+	inChan, outChan := ActivateWorker(w, timeout)
 	for i := 0; i < 5; i++ {
 		inChan <- NewWorkerSignal(StartSignal)
 		if i == 0 {
@@ -57,9 +60,7 @@ func TestKeepSingleWorkerProcessIfMultipleStartSignal(t *testing.T) {
 
 func TestStopAndStartSignal(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	outChan := make(chan interface{})
-	ActivateWorker(inChan, outChan, w)
+	inChan, outChan := ActivateWorker(w, timeout)
 	var totalCount int32 = 5
 	var i int32 = 0
 	for ; i < totalCount*2; i++ {
@@ -79,9 +80,7 @@ func TestStopAndStartSignal(t *testing.T) {
 
 func TestStopSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	outChan := make(chan interface{})
-	ActivateWorker(inChan, outChan, w)
+	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
@@ -94,9 +93,7 @@ func TestStopSignalForWorker(t *testing.T) {
 
 func TestRestartSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	outChan := make(chan interface{})
-	ActivateWorker(inChan, outChan, w)
+	inChan, outChan := ActivateWorker(w, timeout)
 	var totalCount int32 = 5
 	var i int32 = 0
 	inChan <- NewWorkerSignal(StartSignal)
@@ -114,9 +111,7 @@ func TestRestartSignalForWorker(t *testing.T) {
 
 func TestKillSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	outChan := make(chan interface{})
-	ActivateWorker(inChan, outChan, w)
+	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
 	assertMessage(t, outChan, true)
 	<-w.outChan
@@ -133,8 +128,7 @@ func TestKillSignalForWorker(t *testing.T) {
 
 func TestWorkerWithoutOutChannel(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	ActivateWorker(inChan, nil, w)
+	inChan := ActivateWorkerWithoutOutChan(w, timeoutTooSmall)
 	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
 	inChan <- NewWorkerSignal(RestartSignal)
@@ -147,8 +141,7 @@ func TestWorkerWithoutOutChannel(t *testing.T) {
 
 func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	ActivateWorker(inChan, nil, w)
+	inChan := ActivateWorkerWithoutOutChan(w, timeoutTooSmall)
 	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
 	oldRestartSignal := &WorkerSignal{RestartSignal, time.Now().Add(-1 * time.Hour)}
@@ -161,8 +154,7 @@ func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 
 func TestMultipleRandomWorkerSignals(t *testing.T) {
 	w := newTestWorker()
-	inChan := make(chan *WorkerSignal)
-	ActivateWorker(inChan, nil, w)
+	inChan := ActivateWorkerWithoutOutChan(w, timeoutTooSmall)
 	prevSignal := StopSignal
 	for i := 0; i < 100; i++ {
 		signalSign := rand.Intn(3)

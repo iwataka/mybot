@@ -2,6 +2,7 @@ package worker_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/iwataka/mybot/worker"
 )
@@ -37,9 +38,7 @@ func (w *MyWorker) Name() string {
 func Example() {
 	ch := make(chan bool)
 	w := &MyWorker{"foo", ch}
-	inChan := make(chan *worker.WorkerSignal)
-	outChan := make(chan interface{})
-	worker.ActivateWorker(inChan, outChan, w)
+	inChan, outChan := worker.ActivateWorker(w, time.Minute)
 	inChan <- worker.NewWorkerSignal(worker.StartSignal)
 	<-outChan
 	ch <- true

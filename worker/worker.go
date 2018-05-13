@@ -49,11 +49,20 @@ type Worker interface {
 	Name() string
 }
 
-func ActivateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker) {
-	go activateWorker(inChan, outChan, worker)
+func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal, outChan chan interface{}) {
+	inChan = make(chan *WorkerSignal)
+	outChan = make(chan interface{})
+	go activateWorker(inChan, outChan, worker, timeout)
+	return
 }
 
-func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker) {
+func ActivateWorkerWithoutOutChan(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal) {
+	inChan = make(chan *WorkerSignal)
+	go activateWorker(inChan, nil, worker, timeout)
+	return
+}
+
+func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker, timeout time.Duration) {
 	ch := make(chan bool)
 	status := false
 	timestamp := time.Now()
@@ -68,21 +77,22 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				worker.Stop()
 				select {
 				case <-ch:
-				case <-time.After(time.Minute):
-					msg := fmt.Sprintf("Faield to wait stopping worker %s (timeout: 1m)", worker.Name())
-					sendNonBlockingly(outChan, msg)
+				case <-time.After(timeout):
+					msg := fmt.Sprintf("Faield to wait stopping worker %s (timeout: %v)", worker.Name(), timeout)
+					sendNonBlockingly(outChan, msg, timeout)
 				}
 				status = false
 			}
 			if signal == KillSignal {
-				sendNonBlockingly(outChan, fmt.Sprintf("Worker manager for %s killed", worker.Name()))
+				msg := fmt.Sprintf("Worker manager for %s killed", worker.Name())
+				sendNonBlockingly(outChan, msg, timeout)
 				return
 			}
 		}
 		// Start worker
 		if signal == StartSignal || signal == RestartSignal {
 			if !status {
-				go startWorkerAndNotify(worker, outChan, ch)
+				go startWorkerAndNotify(worker, outChan, ch, timeout)
 				status = true
 				timestamp = t
 			}
@@ -94,29 +104,30 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 	}
 
-	sendNonBlockingly(outChan, fmt.Sprintf("Worker manager for %s finished successfully", worker.Name()))
+	msg := fmt.Sprintf("Worker manager for %s finished successfully", worker.Name())
+	sendNonBlockingly(outChan, msg, timeout)
 }
 
-func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool) {
+func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
-			sendNonBlockingly(outChan, false)
+			sendNonBlockingly(outChan, false, timeout)
 		}
 		ch <- true
 	}()
 	if outChan != nil {
-		sendNonBlockingly(outChan, true)
+		sendNonBlockingly(outChan, true, timeout)
 	}
 	err := w.Start()
 	if err != nil {
-		sendNonBlockingly(outChan, err)
+		sendNonBlockingly(outChan, err, timeout)
 	}
 }
 
-func sendNonBlockingly(ch chan interface{}, data interface{}) {
+func sendNonBlockingly(ch chan interface{}, data interface{}, timeout time.Duration) {
 	select {
 	case ch <- data:
-	case <-time.After(time.Minute):
+	case <-time.After(timeout):
 		return
 	}
 }

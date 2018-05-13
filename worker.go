@@ -11,14 +11,12 @@ import (
 )
 
 func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
-	ch, exists := workerChans[key]
-	if !exists {
-		ch = make(chan *worker.WorkerSignal)
-		workerChans[key] = ch
+	if ch, exists := workerChans[key]; exists {
+		close(ch)
 	}
-	outChan := make(chan interface{})
 	// Worker manager process
-	worker.ActivateWorker(ch, outChan, w)
+	ch, outChan := worker.ActivateWorker(w, time.Minute)
+	workerChans[key] = ch
 	// Process handling logs from the above worker manager
 	go func() {
 		for msg := range outChan {
