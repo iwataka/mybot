@@ -2,97 +2,128 @@ package tmpl_test
 
 import (
 	. "github.com/iwataka/mybot/tmpl"
+	"github.com/stretchr/testify/assert"
 
-	"reflect"
+	"fmt"
 	"testing"
 )
 
 func TestGetBoolSelectboxValue(t *testing.T) {
 	val := make(map[string][]string)
 	name := "foo"
-	val[name] = []string{"true", ""}
+	val[name] = []string{"true", "undefined"}
 
-	first := GetBoolSelectboxValue(val, 0, name)
-	if first == nil || *first != true {
-		t.Fatalf("%v expected but %v found", true, first)
-	}
+	var result *bool
+	trueVal := true
 
-	second := GetBoolSelectboxValue(val, 1, name)
-	if second != nil {
-		t.Fatalf("%v expected but %v found", nil, second)
-	}
+	result = GetBoolSelectboxValue(val, 0, name)
+	assert.Equal(t, &trueVal, result)
+
+	result = GetBoolSelectboxValue(val, 1, name)
+	assert.Nil(t, result)
+
+	result = GetBoolSelectboxValue(val, 2, name)
+	assert.Nil(t, result)
 }
 
 func TestGetListTextboxValue(t *testing.T) {
 	val := make(map[string][]string)
 	name := "foo"
-	val[name] = []string{"fizz, buzz ", ""}
+	item1 := "fizz"
+	item2 := "buzz"
+	val[name] = []string{fmt.Sprintf("%s, %s ", item1, item2), ""}
 
-	first := GetListTextboxValue(val, 0, name)
-	if first[0] != "fizz" || first[1] != "buzz" || len(first) != 2 {
-		t.Fatalf("%v expected but %v found", []string{"fizz", "buzz"}, first)
-	}
+	var result []string
 
-	second := GetListTextboxValue(val, 1, name)
-	if len(second) != 0 {
-		t.Fatalf("%v expected but %v found", []string{}, second)
-	}
+	result = GetListTextboxValue(val, 0, name)
+	assert.Equal(t, []string{item1, item2}, result)
+
+	result = GetListTextboxValue(val, 1, name)
+	assert.Equal(t, []string{}, result)
+
+	result = GetListTextboxValue(val, 2, name)
+	assert.Equal(t, []string{}, result)
 }
 
 func TestGetFloat64Ptr(t *testing.T) {
 	val := make(map[string][]string)
 	name := "foo"
-	val[name] = []string{"1.23", ""}
+	val[name] = []string{"1.23", "", "foo"}
 
-	first, err := GetFloat64Ptr(val, 0, name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if first == nil || *first != 1.23 {
-		t.Fatalf("%s expected but %v found", "*1.23", first)
-	}
+	var result *float64
+	var err error
+	fval := 1.23
 
-	second, err := GetFloat64Ptr(val, 1, name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if second != nil {
-		t.Fatalf("%v expected but %v found", nil, second)
-	}
+	result, err = GetFloat64Ptr(val, 0, name)
+	assert.NoError(t, err)
+	assert.Equal(t, &fval, result)
+
+	result, err = GetFloat64Ptr(val, 1, name)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
+
+	result, err = GetFloat64Ptr(val, 2, name)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+
+	result, err = GetFloat64Ptr(val, 3, name)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
 }
 
 func TestGetIntPtr(t *testing.T) {
 	val := make(map[string][]string)
 	name := "foo"
-	val[name] = []string{"1", ""}
+	val[name] = []string{"1", "", "foo"}
 
-	first, err := GetIntPtr(val, 0, name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if first == nil || *first != 1 {
-		t.Fatalf("%s expected but %v found", "*1", first)
-	}
+	var result *int
+	var err error
+	ival := 1
 
-	second, err := GetIntPtr(val, 1, name)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if second != nil {
-		t.Fatalf("%v expected but %v found", nil, second)
-	}
+	result, err = GetIntPtr(val, 0, name)
+	assert.NoError(t, err)
+	assert.Equal(t, &ival, result)
+
+	result, err = GetIntPtr(val, 1, name)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
+
+	result, err = GetIntPtr(val, 2, name)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+
+	result, err = GetIntPtr(val, 3, name)
+	assert.NoError(t, err)
+	assert.Nil(t, result)
+}
+
+func TestGetString(t *testing.T) {
+	val := make(map[string][]string)
+	value := []string{"foo"}
+	key := "key"
+	val[key] = value
+
+	var result string
+	def := "default"
+
+	result = GetString(val, key, 0, def)
+	assert.Equal(t, value[0], result)
+
+	result = GetString(val, "other_key", 0, def)
+	assert.Equal(t, def, result)
+
+	result = GetString(val, key, 1, def)
+	assert.Equal(t, def, result)
 }
 
 func TestNewMap(t *testing.T) {
-	key1 := "1"
-	key2 := "2"
+	key1 := "key1"
+	key2 := "key2"
 	val1 := 1
 	val2 := []string{"foo"}
 	m := NewMap(key1, val1, key2, val2)
-	if m[key1] != val1 {
-		t.Fatal("%v expected but %v found", val1, m[key1])
-	}
-	if !reflect.DeepEqual(m[key2], val2) {
-		t.Fatal("%v expected but %v found", val2, m[key2])
-	}
+
+	assert.Equal(t, val1, m[key1])
+	assert.Equal(t, val2, m[key2])
+	assert.Panics(t, func() { NewMap(key1, key2, val1) })
 }
