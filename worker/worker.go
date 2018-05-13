@@ -1,3 +1,8 @@
+/*
+Package worker provides a way to manipulate concurrent processing.
+This guarantees all start/restart/stop/kill operation for worker is always
+thread-safe by using Go channel feature.
+*/
 package worker
 
 import (
@@ -6,6 +11,7 @@ import (
 	"time"
 )
 
+// These constants indicate signal type sent to worker
 const (
 	StartSignal = iota
 	RestartSignal
@@ -14,19 +20,25 @@ const (
 	PingSignal
 )
 
+// These constants indicate status type of worker at that time.
 const (
+	// StatusAlive means enable to respond your signals.
 	StatusAlive = iota
 )
 
+// WorkerSignal is a signal sent to worker.
+// Worker should behave as per the content of it and respond.
 type WorkerSignal struct {
 	signal    int
 	timestamp time.Time
 }
 
+// NewWorkerSignal returns a new WorkerSignal with a specified signal type.
 func NewWorkerSignal(signal int) *WorkerSignal {
 	return &WorkerSignal{signal, time.Now()}
 }
 
+// String returns a text indicating a type of this worker signal.
 func (s WorkerSignal) String() string {
 	switch s.signal {
 	case StartSignal:
@@ -44,13 +56,13 @@ func (s WorkerSignal) String() string {
 	}
 }
 
-type RoutineWorker interface {
+type Worker interface {
 	Start() error
 	Stop()
 	Name() string
 }
 
-func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker RoutineWorker) {
+func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker) {
 	innerChan := make(chan bool)
 	innerStatus := false
 	timestamp := time.Now()

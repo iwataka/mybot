@@ -13,7 +13,7 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
-func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.RoutineWorker) {
+func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
 	ch, exists := workerChans[key]
 	if !exists {
 		ch = make(chan *worker.WorkerSignal)
