@@ -24,6 +24,7 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 //go:generate mockgen -source=lib/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=lib/utils.go -destination=mocks/utils.go -package=mocks
+//go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
 
 var (
 	userSpecificDataMap map[string]*userSpecificData = make(map[string]*userSpecificData)
