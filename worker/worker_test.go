@@ -1,10 +1,12 @@
-package worker
+package worker_test
 
 import (
 	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	. "github.com/iwataka/mybot/worker"
 )
 
 const (
@@ -142,9 +144,9 @@ func TestWorkerWithoutOutChannel(t *testing.T) {
 func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	w := newTestWorker()
 	inChan := ActivateWorkerWithoutOutChan(w, timeoutTooSmall)
+	oldRestartSignal := NewWorkerSignal(RestartSignal)
 	inChan <- NewWorkerSignal(StartSignal)
 	<-w.outChan
-	oldRestartSignal := &WorkerSignal{RestartSignal, time.Now().Add(-1 * time.Hour)}
 	for i := 0; i < 10; i++ {
 		inChan <- oldRestartSignal
 	}
