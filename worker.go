@@ -22,20 +22,7 @@ func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSign
 		for msg := range outChan {
 			switch m := msg.(type) {
 			case worker.WorkerStatus:
-				switch m {
-				case worker.StatusAlive:
-					// Do nothing
-				case worker.StatusFinished:
-					fmt.Printf("Worker Finished: %s\n", w.Name())
-				case worker.StatusKilled:
-					fmt.Printf("Worker Killed: %s\n", w.Name())
-				case worker.StatusStarted:
-					fmt.Printf("Worker Started: %s\n", w.Name())
-				case worker.StatusStopped:
-					fmt.Printf("Worker Stopped: %s\n", w.Name())
-				case worker.StatusRepliedNothing:
-					fmt.Printf("Worker Replied Nothing: %s\n", w.Name())
-				}
+				fmt.Printf("Worker %s: %s\n", m, w.Name())
 			case error:
 				log.Printf("%+v\n", m)
 			}

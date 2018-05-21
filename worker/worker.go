@@ -49,6 +49,25 @@ const (
 
 type WorkerStatus int
 
+func (s WorkerStatus) String() string {
+	switch s {
+	case StatusAlive:
+		return "Alive"
+	case StatusFinished:
+		return "Finished"
+	case StatusKilled:
+		return "Killed"
+	case StatusRepliedNothing:
+		return "Replied Nothing"
+	case StatusStarted:
+		return "Started"
+	case StatusStopped:
+		return "Stopped"
+	default:
+		return ""
+	}
+}
+
 type Worker interface {
 	Start() error
 	Stop()
@@ -84,12 +103,12 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				select {
 				case <-ch:
 				case <-time.After(timeout):
-					sendNonBlockingly(outChan, StatusRepliedNothing, timeout)
+					sendNonBlockingly(outChan, WorkerStatus(StatusRepliedNothing), timeout)
 				}
 				status = false
 			}
 			if signal == KillSignal {
-				sendNonBlockingly(outChan, StatusKilled, timeout)
+				sendNonBlockingly(outChan, WorkerStatus(StatusKilled), timeout)
 				return
 			}
 		}
@@ -103,23 +122,23 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 		if signal == PingSignal {
 			if outChan != nil {
-				outChan <- StatusAlive
+				outChan <- WorkerStatus(StatusAlive)
 			}
 		}
 	}
 
-	sendNonBlockingly(outChan, StatusFinished, timeout)
+	sendNonBlockingly(outChan, WorkerStatus(StatusFinished), timeout)
 }
 
 func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
-			sendNonBlockingly(outChan, StatusStopped, timeout)
+			sendNonBlockingly(outChan, WorkerStatus(StatusStopped), timeout)
 		}
 		ch <- true
 	}()
 	if outChan != nil {
-		sendNonBlockingly(outChan, StatusStarted, timeout)
+		sendNonBlockingly(outChan, WorkerStatus(StatusStarted), timeout)
 	}
 	err := w.Start()
 	if err != nil {
