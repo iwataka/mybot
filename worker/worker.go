@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -11,10 +10,6 @@ const (
 	StopSignal
 	KillSignal
 	PingSignal
-)
-
-const (
-	StatusAlive = iota
 )
 
 type WorkerSignal struct {
@@ -42,6 +37,17 @@ func (s WorkerSignal) String() string {
 		return ""
 	}
 }
+
+const (
+	StatusAlive = iota
+	StatusStarted
+	StatusStopped
+	StatusKilled
+	StatusFinished
+	StatusRepliedNothing
+)
+
+type WorkerStatus int
 
 type Worker interface {
 	Start() error
@@ -78,14 +84,12 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				select {
 				case <-ch:
 				case <-time.After(timeout):
-					msg := fmt.Sprintf("Faield to wait stopping worker %s (timeout: %v)", worker.Name(), timeout)
-					sendNonBlockingly(outChan, msg, timeout)
+					sendNonBlockingly(outChan, StatusRepliedNothing, timeout)
 				}
 				status = false
 			}
 			if signal == KillSignal {
-				msg := fmt.Sprintf("Worker manager for %s killed", worker.Name())
-				sendNonBlockingly(outChan, msg, timeout)
+				sendNonBlockingly(outChan, StatusKilled, timeout)
 				return
 			}
 		}
@@ -104,19 +108,18 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 	}
 
-	msg := fmt.Sprintf("Worker manager for %s finished successfully", worker.Name())
-	sendNonBlockingly(outChan, msg, timeout)
+	sendNonBlockingly(outChan, StatusFinished, timeout)
 }
 
 func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
-			sendNonBlockingly(outChan, false, timeout)
+			sendNonBlockingly(outChan, StatusStopped, timeout)
 		}
 		ch <- true
 	}()
 	if outChan != nil {
-		sendNonBlockingly(outChan, true, timeout)
+		sendNonBlockingly(outChan, StatusStarted, timeout)
 	}
 	err := w.Start()
 	if err != nil {
