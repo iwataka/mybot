@@ -10,6 +10,8 @@ import (
 	worker "github.com/iwataka/mybot/worker"
 )
 
+// TODO: Make more simple and testable. I want to trace that workerChans is
+// used and statuses is changed correctly.
 func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
 	if ch, exists := workerChans[key]; exists {
 		close(ch)
@@ -23,6 +25,12 @@ func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSign
 			switch m := msg.(type) {
 			case worker.WorkerStatus:
 				fmt.Printf("Worker %s: %s\n", m, w.Name())
+				switch m {
+				case worker.StatusStarted:
+					*statuses[key] = true
+				case worker.StatusStopped:
+					*statuses[key] = false
+				}
 			case error:
 				log.Printf("%+v\n", m)
 			}
