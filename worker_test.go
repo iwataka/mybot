@@ -35,7 +35,7 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 	statuses := make(map[int]*bool)
 	status := false
 	statuses[key] = &status
-	manageWorkerWithStart(key, workerChans, statuses, w)
+	activateWorkerAndStart(key, workerChans, statuses, w)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
@@ -53,7 +53,7 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	statuses := make(map[int]*bool)
 	status := false
 	statuses[key] = &status
-	manageWorkerWithStart(key, workerChans, statuses, w)
+	activateWorkerAndStart(key, workerChans, statuses, w)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)

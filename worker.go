@@ -13,36 +13,21 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
-func manageWorkerWithStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
-	ch, exists := workerChans[key]
-	if !exists {
-		ch = make(chan *worker.WorkerSignal)
-		workerChans[key] = ch
+func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
+	if ch, exists := workerChans[key]; exists {
+		close(ch)
 	}
-	outChan := make(chan interface{})
 	// Worker manager process
-	go worker.ManageWorker(ch, outChan, w)
+	ch, outChan := worker.ActivateWorker(w, time.Minute)
+	workerChans[key] = ch
 	// Process handling logs from the above worker manager
 	go func() {
 		for msg := range outChan {
 			switch m := msg.(type) {
-			case bool:
-				if m {
-					fmt.Printf("Start %s\n", w.Name())
-					*statuses[key] = true
-				} else {
-					fmt.Printf("Stop %s\n", w.Name())
-					*statuses[key] = false
-				}
+			case worker.WorkerStatus:
+				fmt.Printf("Worker %s: %s\n", m, w.Name())
 			case error:
 				log.Printf("%+v\n", m)
-			case string:
-				fmt.Printf("Message: %s (%s)\n", m, w.Name())
-			case int:
-				switch m {
-				case worker.StatusAlive:
-					// Do nothing
-				}
 			}
 		}
 	}()

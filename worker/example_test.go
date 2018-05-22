@@ -2,6 +2,8 @@ package worker_test
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/iwataka/mybot/worker"
 )
@@ -11,22 +13,20 @@ type MyWorker struct {
 	ch   chan bool
 }
 
+func NewMyWorker(name string) *MyWorker {
+	return &MyWorker{name, make(chan bool)}
+}
+
 func (w *MyWorker) Start() error {
-	fmt.Println("Started")
 	for {
 		select {
-		case msg := <-w.ch:
-			if msg {
-				fmt.Println("Received")
-			} else {
-				return nil
-			}
+		case <-w.ch:
+			return nil
 		}
 	}
 }
 
 func (w *MyWorker) Stop() {
-	fmt.Println("Stopped")
 	w.ch <- false
 }
 
@@ -35,17 +35,29 @@ func (w *MyWorker) Name() string {
 }
 
 func Example() {
+	w := NewMyWorker("foo")
+	inChan, outChan := worker.ActivateWorker(w, time.Minute)
+
+	// ch is a channel to wait until the below goroutine processing
+	// finishes (not used in actual codes)
 	ch := make(chan bool)
-	w := &MyWorker{"foo", ch}
-	inChan := make(chan *worker.WorkerSignal)
-	outChan := make(chan interface{})
-	go worker.ManageWorker(inChan, outChan, w)
+	// Goroutine for capturing outputs
+	go func() {
+		for msg := range outChan {
+			switch m := msg.(type) {
+			case worker.WorkerStatus:
+				fmt.Printf("Worker %s\n", m)
+			case error:
+				log.Printf("%+v\n", m)
+			}
+			ch <- true
+		}
+	}()
+
 	inChan <- worker.NewWorkerSignal(worker.StartSignal)
-	<-outChan
-	ch <- true
+	<-ch
 	inChan <- worker.NewWorkerSignal(worker.StopSignal)
-	<-outChan
-	// Output: Started
-	// Received
-	// Stopped
+	<-ch
+	// Output: Worker Started
+	// Worker Stopped
 }
