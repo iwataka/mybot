@@ -1,8 +1,6 @@
 package worker
 
 import (
-	"fmt"
-	"log"
 	"time"
 )
 
@@ -12,10 +10,6 @@ const (
 	StopSignal
 	KillSignal
 	PingSignal
-)
-
-const (
-	StatusAlive = iota
 )
 
 type WorkerSignal struct {
@@ -44,15 +38,58 @@ func (s WorkerSignal) String() string {
 	}
 }
 
-type RoutineWorker interface {
+const (
+	StatusAlive = iota
+	StatusStarted
+	StatusStopped
+	StatusKilled
+	StatusFinished
+	StatusRepliedNothing
+)
+
+type WorkerStatus int
+
+func (s WorkerStatus) String() string {
+	switch s {
+	case StatusAlive:
+		return "Alive"
+	case StatusFinished:
+		return "Finished"
+	case StatusKilled:
+		return "Killed"
+	case StatusRepliedNothing:
+		return "Replied Nothing"
+	case StatusStarted:
+		return "Started"
+	case StatusStopped:
+		return "Stopped"
+	default:
+		return ""
+	}
+}
+
+type Worker interface {
 	Start() error
 	Stop()
 	Name() string
 }
 
-func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker RoutineWorker) {
-	innerChan := make(chan bool)
-	innerStatus := false
+func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal, outChan chan interface{}) {
+	inChan = make(chan *WorkerSignal)
+	outChan = make(chan interface{})
+	go activateWorker(inChan, outChan, worker, timeout)
+	return
+}
+
+func ActivateWorkerWithoutOutChan(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal) {
+	inChan = make(chan *WorkerSignal)
+	go activateWorker(inChan, nil, worker, timeout)
+	return
+}
+
+func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker, timeout time.Duration) {
+	ch := make(chan bool)
+	status := false
 	timestamp := time.Now()
 
 	for workerSignal := range inChan {
@@ -61,58 +98,58 @@ func ManageWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Ro
 		// Stop worker
 		if signal == RestartSignal || signal == StopSignal || signal == KillSignal {
 			force := signal != RestartSignal
-			if innerStatus && (force || timestamp.Before(t)) {
+			if status && (force || timestamp.Before(t)) {
 				worker.Stop()
 				select {
-				case <-innerChan:
-				case <-time.After(time.Minute):
-					log.Printf("Faield to wait stopping worker (timeout: 1m)\n")
+				case <-ch:
+				case <-time.After(timeout):
+					sendNonBlockingly(outChan, WorkerStatus(StatusRepliedNothing), timeout)
 				}
-				innerStatus = false
+				status = false
 			}
 			if signal == KillSignal {
-				nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s killed", worker.Name()))
+				sendNonBlockingly(outChan, WorkerStatus(StatusKilled), timeout)
 				return
 			}
 		}
 		// Start worker
 		if signal == StartSignal || signal == RestartSignal {
-			if !innerStatus {
-				go wrapWithStatusManagement(worker.Start, outChan, innerChan)
-				innerStatus = true
+			if !status {
+				go startWorkerAndNotify(worker, outChan, ch, timeout)
+				status = true
 				timestamp = t
 			}
 		}
 		if signal == PingSignal {
 			if outChan != nil {
-				outChan <- StatusAlive
+				outChan <- WorkerStatus(StatusAlive)
 			}
 		}
 	}
 
-	nonBlockingOutput(outChan, fmt.Sprintf("Worker manager for %s finished successfully", worker.Name()))
+	sendNonBlockingly(outChan, WorkerStatus(StatusFinished), timeout)
 }
 
-func wrapWithStatusManagement(f func() error, outChan chan interface{}, innerChan chan bool) {
-	if outChan != nil {
-		nonBlockingOutput(outChan, true)
-	}
+func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
-			nonBlockingOutput(outChan, false)
+			sendNonBlockingly(outChan, WorkerStatus(StatusStopped), timeout)
 		}
-		innerChan <- true
+		ch <- true
 	}()
-	err := f()
+	if outChan != nil {
+		sendNonBlockingly(outChan, WorkerStatus(StatusStarted), timeout)
+	}
+	err := w.Start()
 	if err != nil {
-		nonBlockingOutput(outChan, err)
+		sendNonBlockingly(outChan, err, timeout)
 	}
 }
 
-func nonBlockingOutput(ch chan interface{}, data interface{}) {
+func sendNonBlockingly(ch chan interface{}, data interface{}, timeout time.Duration) {
 	select {
 	case ch <- data:
-	case <-time.After(time.Minute):
-		log.Println("Failed to send data to outside channel (timeout: 1m)")
+	case <-time.After(timeout):
+		return
 	}
 }
