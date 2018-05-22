@@ -18,7 +18,7 @@ const (
 	PingSignal
 )
 
-// WorkerSignal is a signal sent to worker.
+// WorkerSignal is a signal sent to Worker.
 // Worker should behave as per the content of it and respond.
 type WorkerSignal struct {
 	signal    int
@@ -30,7 +30,7 @@ func NewWorkerSignal(signal int) *WorkerSignal {
 	return &WorkerSignal{signal, time.Now()}
 }
 
-// String returns a text indicating a type of this worker signal.
+// String returns a text indicating a type of this WorkerSignal.
 func (s WorkerSignal) String() string {
 	switch s.signal {
 	case StartSignal:
@@ -48,27 +48,36 @@ func (s WorkerSignal) String() string {
 	}
 }
 
+// These constants indicate status type of Worker
 const (
-	StatusAlive = iota
+	// StatusActive means worker is active, able to respond to WorkerSignal
+	// but doesn't indicate whether started or stopped.
+	StatusActive = iota
+	// StatusInactive means worker is inactive, unable to respond to
+	// WorkerSignal.
+	StatusInactive
 	StatusStarted
 	StatusStopped
+	// StatusKilled means worker was finished forcefully.
 	StatusKilled
+	// StatusFinished means worker was finished successfully.
 	StatusFinished
-	StatusRepliedNothing
 )
 
+// WorkerStatus is a type indicating Worker status
 type WorkerStatus int
 
+// String returns a text to indicating a type of this WorkerStatus.
 func (s WorkerStatus) String() string {
 	switch s {
-	case StatusAlive:
-		return "Alive"
+	case StatusActive:
+		return "Active"
 	case StatusFinished:
 		return "Finished"
 	case StatusKilled:
 		return "Killed"
-	case StatusRepliedNothing:
-		return "Replied Nothing"
+	case StatusInactive:
+		return "Inactive"
 	case StatusStarted:
 		return "Started"
 	case StatusStopped:
@@ -78,12 +87,18 @@ func (s WorkerStatus) String() string {
 	}
 }
 
+// Worker is worker which has its own operation and provides APIs to start/stop
+// it.
 type Worker interface {
 	Start() error
 	Stop()
+	// Name returns a name of this Worker, to distinguish this from others.
 	Name() string
 }
 
+// ActivateWorker activates worker, which means worker gets ready to receive
+// WorkerSignal to inChan. When worker receives WorkerSignal and changes its
+// status, then return corresponded WorkerStatus or error via outChan.
 func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal, outChan chan interface{}) {
 	inChan = make(chan *WorkerSignal)
 	outChan = make(chan interface{})
@@ -91,6 +106,8 @@ func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSi
 	return
 }
 
+// ActivateWorkerWithoutOutChan is almost same as ActivateWorker but doesn't
+// use outChan.
 func ActivateWorkerWithoutOutChan(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal) {
 	inChan = make(chan *WorkerSignal)
 	go activateWorker(inChan, nil, worker, timeout)
@@ -113,7 +130,7 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				select {
 				case <-ch:
 				case <-time.After(timeout):
-					sendNonBlockingly(outChan, WorkerStatus(StatusRepliedNothing), timeout)
+					sendNonBlockingly(outChan, WorkerStatus(StatusInactive), timeout)
 				}
 				status = false
 			}
@@ -132,7 +149,7 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 		if signal == PingSignal {
 			if outChan != nil {
-				outChan <- WorkerStatus(StatusAlive)
+				outChan <- WorkerStatus(StatusActive)
 			}
 		}
 	}

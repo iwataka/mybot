@@ -180,7 +180,7 @@ func TestPingSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(PingSignal)
-	assertMessage(t, outChan, WorkerStatus(StatusAlive))
+	assertMessage(t, outChan, WorkerStatus(StatusActive))
 	assertCount(t, *w.count, 0)
 	assertTotalCount(t, *w.totalCount, 0)
 }
