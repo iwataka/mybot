@@ -10,6 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/mocks"
 	. "github.com/iwataka/mybot/worker"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -59,12 +60,12 @@ func TestKeepSingleWorkerProcessAsItIsWhenMultipleStartSignalSent(t *testing.T) 
 	for i := 0; i < 5; i++ {
 		inChan <- NewWorkerSignal(StartSignal)
 		if i == 0 {
-			assertMessage(t, outChan, StatusStarted)
+			assert.Equal(t, StatusStarted, <-outChan)
 			<-w.outChan
 		}
 	}
-	assertCount(t, *w.count, 1)
-	assertTotalCount(t, *w.totalCount, 1)
+	assert.EqualValues(t, 1, *w.count)
+	assert.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestStopAndStartSignalSentAlternately(t *testing.T) {
@@ -75,29 +76,29 @@ func TestStopAndStartSignalSentAlternately(t *testing.T) {
 	for ; i < totalCount*2; i++ {
 		if i%2 == 0 {
 			inChan <- NewWorkerSignal(StartSignal)
-			assertMessage(t, outChan, StatusStarted)
+			assert.Equal(t, StatusStarted, <-outChan)
 			<-w.outChan
 		} else {
 			inChan <- NewWorkerSignal(StopSignal)
-			assertMessage(t, outChan, StatusStopped)
+			assert.Equal(t, StatusStopped, <-outChan)
 		}
 	}
 	inChan <- NewWorkerSignal(KillSignal)
-	assertCount(t, *w.count, 0)
-	assertTotalCount(t, *w.totalCount, totalCount)
+	assert.EqualValues(t, 0, *w.count)
+	assert.EqualValues(t, totalCount, *w.totalCount)
 }
 
 func TestStopSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assertMessage(t, outChan, StatusStarted)
+	assert.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	inChan <- NewWorkerSignal(StopSignal)
-	assertMessage(t, outChan, StatusStopped)
+	assert.Equal(t, StatusStopped, <-outChan)
 	inChan <- NewWorkerSignal(KillSignal)
-	assertCount(t, *w.count, 0)
-	assertTotalCount(t, *w.totalCount, 1)
+	assert.EqualValues(t, 0, *w.count)
+	assert.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestRestartSignalForWorker(t *testing.T) {
@@ -106,33 +107,33 @@ func TestRestartSignalForWorker(t *testing.T) {
 	var totalCount int32 = 5
 	var i int32 = 0
 	inChan <- NewWorkerSignal(StartSignal)
-	assertMessage(t, outChan, StatusStarted)
+	assert.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	for ; i < totalCount; i++ {
 		inChan <- NewWorkerSignal(RestartSignal)
-		assertMessage(t, outChan, StatusStopped)
-		assertMessage(t, outChan, StatusStarted)
+		assert.Equal(t, StatusStopped, <-outChan)
+		assert.Equal(t, StatusStarted, <-outChan)
 		<-w.outChan
 	}
-	assertCount(t, *w.count, 1)
-	assertTotalCount(t, *w.totalCount, totalCount+1)
+	assert.EqualValues(t, 1, *w.count)
+	assert.EqualValues(t, totalCount+1, *w.totalCount)
 }
 
 func TestKillSignalForWorker(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assertMessage(t, outChan, StatusStarted)
+	assert.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	inChan <- NewWorkerSignal(KillSignal)
-	assertMessage(t, outChan, StatusStopped)
+	assert.Equal(t, StatusStopped, <-outChan)
 	select {
 	case inChan <- NewWorkerSignal(KillSignal):
 		t.Fatal("Sent kill signal but worker manager process still wait for signals")
 	case <-time.After(time.Second):
 	}
-	assertCount(t, *w.count, 0)
-	assertTotalCount(t, *w.totalCount, 1)
+	assert.EqualValues(t, 0, *w.count)
+	assert.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestWorkerWithoutOutChannel(t *testing.T) {
@@ -144,8 +145,8 @@ func TestWorkerWithoutOutChannel(t *testing.T) {
 	<-w.outChan
 	inChan <- NewWorkerSignal(StopSignal)
 	inChan <- NewWorkerSignal(KillSignal)
-	assertCount(t, *w.count, 0)
-	assertTotalCount(t, *w.totalCount, 2)
+	assert.EqualValues(t, 0, *w.count)
+	assert.EqualValues(t, 2, *w.totalCount)
 }
 
 func TestWorkerSignalWithOldTimestamp(t *testing.T) {
@@ -157,8 +158,8 @@ func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		inChan <- oldRestartSignal
 	}
-	assertCount(t, *w.count, 1)
-	assertTotalCount(t, *w.totalCount, 1)
+	assert.EqualValues(t, 1, *w.count)
+	assert.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestMultipleRandomWorkerSignals(t *testing.T) {
@@ -180,9 +181,16 @@ func TestPingSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(PingSignal)
-	assertMessage(t, outChan, StatusActive)
-	assertCount(t, *w.count, 0)
-	assertTotalCount(t, *w.totalCount, 0)
+	assert.Equal(t, StatusActive, <-outChan)
+	assert.EqualValues(t, 0, *w.count)
+	assert.EqualValues(t, 0, *w.totalCount)
+}
+
+func TestWorkerFinished(t *testing.T) {
+	w := newTestWorker()
+	inChan, outChan := ActivateWorker(w, timeout)
+	close(inChan)
+	assert.EqualValues(t, StatusFinished, <-outChan)
 }
 
 func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
@@ -192,25 +200,7 @@ func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
 	w.EXPECT().Start().Return(err)
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assertMessage(t, outChan, StatusStarted)
-	assertMessage(t, outChan, err)
-	assertMessage(t, outChan, StatusStopped)
-}
-
-func assertMessage(t *testing.T, outChan chan interface{}, expected interface{}) {
-	if msg := <-outChan; msg != expected {
-		t.Fatal("Invalid message: ", msg)
-	}
-}
-
-func assertCount(t *testing.T, count int32, expected int32) {
-	if count != expected {
-		t.Fatalf("Invalid worker process count: %d (%d expected)", count, expected)
-	}
-}
-
-func assertTotalCount(t *testing.T, count int32, expected int32) {
-	if count != expected {
-		t.Fatalf("Invalid worker process total count: %d (%d expected)", count, expected)
-	}
+	assert.Equal(t, StatusStarted, <-outChan)
+	assert.Equal(t, err, <-outChan)
+	assert.Equal(t, StatusStopped, <-outChan)
 }
