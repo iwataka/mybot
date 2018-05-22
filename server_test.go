@@ -25,6 +25,7 @@ import (
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -126,9 +127,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetConfig(t *testing.T) {
@@ -143,9 +142,7 @@ func TestGetConfig(t *testing.T) {
 	defer s.Close()
 
 	err := testGet(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetSetupTwitter(t *testing.T) {
@@ -155,22 +152,16 @@ func TestGetSetupTwitter(t *testing.T) {
 	tmpTwitterApp := twitterApp
 	var err error
 	twitterApp, err = oauth.NewFileTwitterOAuthApp("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	tmpSlackApp := slackApp
 	slackApp, err = oauth.NewFileOAuthApp("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer func() { slackApp = tmpSlackApp }()
 
 	err = testGet(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetConfigJson(t *testing.T) {
@@ -185,33 +176,25 @@ func TestGetConfigJson(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = checkHTTPResponse(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	cfg, err := mybot.NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = cfg.Unmarshal(bs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	cfgProps := cfg.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	if diff := deep.Equal(cfgProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cfgProps, configProps))
 }
 
 func TestGetConfigFile(t *testing.T) {
@@ -226,34 +209,26 @@ func TestGetConfigFile(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = checkHTTPResponse(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	hasForceDownload := strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
-	if !hasForceDownload {
-		t.Fatalf("It must have force-download but not")
-	}
+	assert.True(t, hasForceDownload)
+
 	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), ".json")
-	if !hasContentDisposition {
-		t.Fatalf("It must have Content-Disposition but not")
-	}
+	assert.True(t, hasContentDisposition)
+
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	cfg, err := mybot.NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = json.Unmarshal(bs, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func testGet(url string) error {
@@ -266,9 +241,7 @@ func testGet(url string) error {
 
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	checkHTTPResponse(res)
 }
 
@@ -308,15 +281,11 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	defer s.Close()
 
 	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, driver.Start())
 	defer driver.Stop()
 
 	page, err := driver.NewPage()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	f(t, s.URL, page, wg, serverTestUserSpecificData.config)
 }
@@ -332,23 +301,17 @@ func testPostConfigWithoutModification(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	if diff := deep.Equal(cProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigDelete(t *testing.T) {
@@ -362,32 +325,16 @@ func testPostConfigDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := page.AllByButton("Delete").Click(); err != nil {
-		t.Fatal(err)
-	}
-
+	assert.NoError(t, page.Navigate(url))
+	assert.NoError(t, page.AllByButton("Delete").Click())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 
-	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterTimelines()))
-	}
-	if len(serverTestUserSpecificData.config.GetTwitterFavorites()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterFavorites()))
-	}
-	if len(serverTestUserSpecificData.config.GetTwitterSearches()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterSearches()))
-	}
-	if len(serverTestUserSpecificData.config.GetSlackMessages()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetSlackMessages()))
-	}
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterSearches())
+	assert.Empty(t, serverTestUserSpecificData.config.GetSlackMessages())
 
 	serverTestUserSpecificData.config = c
 }
@@ -403,23 +350,12 @@ func testPostConfigSingleDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := page.AllByButton("Delete").At(0).Click(); err != nil {
-		t.Fatal(err)
-	}
-
+	assert.NoError(t, page.Navigate(url))
+	assert.NoError(t, page.AllByButton("Delete").At(0).Click())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-
-	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != len(c.GetTwitterTimelines())-1 {
-		t.Fatalf("%s's length is not %d", serverTestUserSpecificData.config.GetTwitterTimelines(), len(c.GetTwitterTimelines())-1)
-	}
+	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 
 	serverTestUserSpecificData.config = c
 }
@@ -435,28 +371,16 @@ func testPostConfigDoubleDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := page.AllByButton("Delete").DoubleClick(); err != nil {
-		t.Fatal(err)
-	}
-
+	assert.NoError(t, page.Navigate(url))
+	assert.NoError(t, page.AllByButton("Delete").DoubleClick())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	if diff := deep.Equal(cProps.Slack, configProps.Slack); diff != nil {
-		t.Fatal(diff)
-	}
-	if diff := deep.Equal(cProps.Twitter, configProps.Twitter); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps.Slack, configProps.Slack))
+	assert.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
 }
 
 func TestPostConfigError(t *testing.T) {
@@ -470,25 +394,16 @@ func testPostConfigError(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := page.AllByName("twitter.timelines.count").Fill("foo"); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
+	assert.NoError(t, page.AllByName("twitter.timelines.count").Fill("foo"))
 
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	if diff := deep.Equal(cProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigTagsInput(t *testing.T) {
@@ -507,15 +422,11 @@ func testPostConfigTagsInput(
 		t.Skip("Skip because network is unavailable: ", err)
 	}
 
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
-	if err := page.AllByName(name).SendKeys(keys); err == nil {
-		t.Fatal("Tagsinput data-role elements must be uneditable currently")
-	}
+	assert.NoError(t, page.AllByName(name).SendKeys(keys))
 }
 
 func TestPostConfigTimelineAdd(t *testing.T) {
@@ -580,13 +491,9 @@ func testPostConfigAdd(
 		},
 	}
 	res, err := client.Post(s.URL, "", nil)
-	if err != nil && !strings.HasSuffix(err.Error(), expectedErrMsg) {
-		t.Fatal(err)
-	}
+	assert.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
 	cur := length()
-	if cur != (prev + 1) {
-		t.Fatalf("Failed to add %s", name)
-	}
+	assert.Equal(t, prev+1, cur)
 	testResponseIsRedirect(t, res, "/config")
 }
 
@@ -647,9 +554,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetTwitterUserSearch(t *testing.T) {
@@ -673,31 +578,19 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	us := []anaconda.User{}
 	err = json.Unmarshal(bs, &us)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if diff := deep.Equal(users, us); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(users, us))
 }
 
 func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
-	if res.StatusCode != http.StatusSeeOther {
-		t.Fatalf("Status code is expected to be %d but %d", http.StatusSeeOther, res.StatusCode)
-	}
+	assert.Equal(t, res.StatusCode, http.StatusSeeOther)
 	loc := res.Header.Get("Location")
-	if !strings.HasPrefix(loc, locPrefix) {
-		t.Fatalf("Location header value should start with %s but %s", locPrefix, loc)
-	}
+	assert.True(t, strings.HasPrefix(loc, locPrefix))
 }

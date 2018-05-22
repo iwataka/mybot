@@ -5,24 +5,20 @@ import (
 	"testing"
 
 	"github.com/iwataka/mybot/data"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCache(t *testing.T) {
 	f, err := ioutil.TempFile("", "mybot")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	path := f.Name()
 	c, err := data.NewFileCache(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = c.Save()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	c, err = data.NewFileCache(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }

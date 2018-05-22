@@ -6,6 +6,7 @@ import (
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
+	"github.com/stretchr/testify/assert"
 
 	"fmt"
 	"testing"
@@ -19,9 +20,8 @@ func TestTwitterPeriodicWorkerStart(t *testing.T) {
 	id := "id"
 	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
 	err := worker.Start()
-	if err == nil || err.Error() != errMsg {
-		t.Fatal("Error not found or not expected error")
-	}
+	assert.Error(t, err)
+	assert.Equal(t, errMsg, err.Error())
 }
 
 func TestManageTwitterPeriodicWorker(t *testing.T) {
@@ -67,9 +67,8 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	err := w.Start()
-	if err == nil || err.Error() != errMsg {
-		t.Fatal("Error not found or not expected error")
-	}
+	assert.Error(t, err)
+	assert.Equal(t, errMsg, err.Error())
 }
 
 func generatePeriodicWorker(t *testing.T, times int, duration string, id string, runErr error, verifyErr error) *twitterPeriodicWorker {
