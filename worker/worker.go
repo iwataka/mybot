@@ -48,24 +48,22 @@ func (s WorkerSignal) String() string {
 	}
 }
 
-// These constants indicate status type of Worker
-const (
-	// StatusActive means worker is active, able to respond to WorkerSignal
-	// but doesn't indicate whether started or stopped.
-	StatusActive = iota
-	// StatusInactive means worker is inactive, unable to respond to
-	// WorkerSignal.
-	StatusInactive
-	StatusStarted
-	StatusStopped
-	// StatusKilled means worker was finished forcefully.
-	StatusKilled
-	// StatusFinished means worker was finished successfully.
-	StatusFinished
-)
-
 // WorkerStatus is a type indicating Worker status
 type WorkerStatus int
+
+// These constants indicate status type of Worker
+const (
+	StatusActive WorkerStatus = iota
+	// StatusInactive means worker is inactive, unable to respond to
+	// WorkerSignal.
+	StatusInactive WorkerStatus = iota
+	StatusStarted  WorkerStatus = iota
+	StatusStopped  WorkerStatus = iota
+	// StatusKilled means worker was finished forcefully.
+	StatusKilled WorkerStatus = iota
+	// StatusFinished means worker was finished successfully.
+	StatusFinished WorkerStatus = iota
+)
 
 // String returns a text to indicating a type of this WorkerStatus.
 func (s WorkerStatus) String() string {
@@ -130,12 +128,12 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				select {
 				case <-ch:
 				case <-time.After(timeout):
-					sendNonBlockingly(outChan, WorkerStatus(StatusInactive), timeout)
+					sendNonBlockingly(outChan, StatusInactive, timeout)
 				}
 				status = false
 			}
 			if signal == KillSignal {
-				sendNonBlockingly(outChan, WorkerStatus(StatusKilled), timeout)
+				sendNonBlockingly(outChan, StatusKilled, timeout)
 				return
 			}
 		}
@@ -149,23 +147,23 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 		if signal == PingSignal {
 			if outChan != nil {
-				outChan <- WorkerStatus(StatusActive)
+				outChan <- StatusActive
 			}
 		}
 	}
 
-	sendNonBlockingly(outChan, WorkerStatus(StatusFinished), timeout)
+	sendNonBlockingly(outChan, StatusFinished, timeout)
 }
 
 func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
-			sendNonBlockingly(outChan, WorkerStatus(StatusStopped), timeout)
+			sendNonBlockingly(outChan, StatusStopped, timeout)
 		}
 		ch <- true
 	}()
 	if outChan != nil {
-		sendNonBlockingly(outChan, WorkerStatus(StatusStarted), timeout)
+		sendNonBlockingly(outChan, StatusStarted, timeout)
 	}
 	err := w.Start()
 	if err != nil {
