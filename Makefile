@@ -1,14 +1,12 @@
 GO := go
 TEST_PACKAGES := . ./lib ./models ./worker ./utils ./oauth ./tmpl ./data ./runner
 
-generate:
+build:
 	$(GO) generate
-
-build: generate
 	$(GO) build
 
-test: generate
+test:
 	$(GO) test $(TEST_PACKAGES)
 
-cover: generate
+cover:
 	$(GO) test -cover $(TEST_PACKAGES)
