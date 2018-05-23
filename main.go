@@ -26,8 +26,8 @@ import (
 //go:generate mockgen -source=models/auth.go -destination=mocks/auth.go -package=mocks
 //go:generate mockgen -source=lib/vision.go -destination=mocks/vision.go -package=mocks
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
-//go:generate mockgen -source=lib/batch.go -destination=mocks/batch.go -package=mocks
-//go:generate mockgen -source=lib/utils.go -destination=mocks/utils.go -package=mocks
+//go:generate mockgen -source=utils/utils.go -destination=mocks/utils.go -package=mocks
+//go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
 
 var (
