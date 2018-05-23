@@ -147,10 +147,6 @@ func (a *DefaultOAuthAppProps) GetCreds() (string, string) {
 	return a.ConsumerKey, a.ConsumerSecret
 }
 
-func newOAuthAppProps() *DefaultOAuthAppProps {
-	return &DefaultOAuthAppProps{"", ""}
-}
-
 // SetCreds sets application credential information to a.
 func (a *TwitterOAuthAppProps) SetCreds(ck, cs string) {
 	anaconda.SetConsumerKey(ck)
