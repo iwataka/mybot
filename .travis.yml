@@ -24,7 +24,7 @@ script:
   - git config --global http.https://gopkg.in.followRedirects true
   - dep ensure
   - make test
-  - $HOME/gopath/bin/goveralls -service=travis-ci
+  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,bindata.go
 
 after_script:
   - docker build -t $DOCKER_REPO .
