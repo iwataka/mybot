@@ -8,5 +8,5 @@ build:
 test:
 	$(GO) test $(TEST_PACKAGES)
 
-cover:
-	$(GO) test -cover $(TEST_PACKAGES)
+test/full:
+	$(GO) test -cover -race $(TEST_PACKAGES)
