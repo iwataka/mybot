@@ -39,13 +39,6 @@ func TestTwitterAPIIsAvailable(t *testing.T) {
 	}
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
-	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, nil)
-	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock}
-	if err := TwitterAPIIsAvailable(twitterAPI); err == nil {
-		t.Fatalf("Error expected but nothing occurred")
-	}
-
-	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, errors.New(""))
 	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock}
 	if err := TwitterAPIIsAvailable(twitterAPI); err == nil {

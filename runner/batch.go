@@ -183,11 +183,11 @@ func TwitterAPIIsAvailable(twitterAPI *mybot.TwitterAPI) error {
 		return fmt.Errorf("Twitter API is nil")
 	}
 	success, err := twitterAPI.VerifyCredentials()
-	if !success {
-		return fmt.Errorf("Twitter API credential verification failed")
-	}
 	if err != nil {
 		return utils.WithStack(err)
+	}
+	if !success {
+		return fmt.Errorf("Twitter API credential verification failed")
 	}
 	return nil
 }
