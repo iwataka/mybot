@@ -35,14 +35,18 @@ var (
 	authenticator models.Authenticator = &Authenticator{}
 )
 
+// Authenticator is an implementation of models.Authenticator and provides some
+// common functions for authenticating users.
 type Authenticator struct{}
 
-func (a *Authenticator) SetProvider(req *http.Request, name string) {
+// SetProvider sets a specified provider name to the gothic module.
+func (a *Authenticator) SetProvider(name string) {
 	gothic.GetProviderName = func(req *http.Request) (string, error) {
 		return name, nil
 	}
 }
 
+// InitProvider initializes a provider and makes it to be used.
 func (a *Authenticator) InitProvider(host, name, callback string) {
 	if callback == "" {
 		callback = fmt.Sprintf("http://%s/auth/%s/callback", host, name)
@@ -70,6 +74,8 @@ func (a *Authenticator) InitProvider(host, name, callback string) {
 	}
 }
 
+// CompleteUserAuth executes user authentication and returns the user
+// information.
 func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
@@ -82,13 +88,13 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 		}
 	}
 
-	a.SetProvider(r, provider)
+	a.SetProvider(provider)
 	q := r.URL.Query()
 	q.Add("state", "state")
 	r.URL.RawQuery = q.Encode()
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
-		user.RawData = nil // RawData cannot be converted into session data cerrently
+		user.RawData = nil // RawData cannot be converted into session data currently
 		sess.Values["mybot-user"] = user
 		err := sess.Save(r, w)
 		if err != nil {
@@ -98,6 +104,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 	return user, utils.WithStack(err)
 }
 
+// Logout executes logout operation of the current login-user.
 func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
@@ -109,7 +116,7 @@ func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.R
 		return utils.WithStack(err)
 	}
 
-	a.SetProvider(r, provider)
+	a.SetProvider(provider)
 	return gothic.Logout(w, r)
 }
 
@@ -202,7 +209,7 @@ func startServer(host, port, cert, key string) error {
 	// API endpoints
 	http.HandleFunc(
 		"/config/json/",
-		wrapHandler(configJsonHandler),
+		wrapHandler(configJSONHandler),
 	)
 	http.HandleFunc(
 		"/setting/",
@@ -214,7 +221,7 @@ func startServer(host, port, cert, key string) error {
 	)
 	http.HandleFunc(
 		"/twitter/collections/list/",
-		wrapHandler(twitterCollectionListByUserId),
+		wrapHandler(twitterCollectionListByUserID),
 	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -327,7 +334,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 	buf.WriteTo(w)
 }
 
-func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
+func twitterCollectionListByUserID(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
@@ -337,13 +344,13 @@ func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.Method == http.MethodGet {
-		getTwitterCollectionListByUserId(w, r, data.twitterAPI)
+		getTwitterCollectionListByUserID(w, r, data.twitterAPI)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCollectionListByUserId(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+func getTwitterCollectionListByUserID(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
 	user, err := twitterAPI.GetSelf()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -392,6 +399,7 @@ func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.Twitte
 	w.Write(bs)
 }
 
+// SettingResponse is a container of fields required to render various pages.
 type SettingResponse struct {
 	TwitterName   string         `json:"twitter_name" toml:"twitter_name" bson:"twitter_name"`
 	SlackTeam     string         `json:"slack_team" toml:"slack_team" bson:"slack_team"`
@@ -401,6 +409,7 @@ type SettingResponse struct {
 	Image         ImageResponse  `json:"image" toml:"image" bson:"image"`
 }
 
+// StatusResponse is a container of worker statuses to be rendered to web pages.
 type StatusResponse struct {
 	TwitterDMListener   bool `json:"twitter_dm_listener" toml:"twitter_dm_listener" bson:"twitter_dm_listener"`
 	TwitterUserListener bool `json:"twitter_user_listener" toml:"twitter_user_listener" bson:"twitter_user_listener"`
@@ -408,6 +417,7 @@ type StatusResponse struct {
 	SlackListener       bool `json:"slack_listener" toml:"slack_listener" bson:"slack_listener"`
 }
 
+// ImageResponse is a container of image caches to be rendered to web pages.
 type ImageResponse struct {
 	URL            string `json:"url" toml:"url" bson:"url"`
 	Src            string `json:"src" toml:"src" bson:"src"`
@@ -918,7 +928,7 @@ func addMessageConfig(config mybot.Config) {
 	config.AddSlackMessage(mybot.NewMessageConfig())
 }
 
-func configJsonHandler(w http.ResponseWriter, r *http.Request) {
+func configJSONHandler(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
@@ -928,13 +938,13 @@ func configJsonHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.Method == http.MethodPost {
-		postConfigJson(w, r, data.config)
+		postConfigJSON(w, r, data.config)
 	} else if r.Method == http.MethodGet {
-		getConfigJson(w, r, data.config)
+		getConfigJSON(w, r, data.config)
 	}
 }
 
-func postConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	var err error
 	defer func() {
 		r.Body.Close()
@@ -965,7 +975,7 @@ func postConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config)
 	}
 }
 
-func getConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func getConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	var err error
 	defer func() {
 		r.Body.Close()
@@ -1300,7 +1310,7 @@ func getAuthSlack(w http.ResponseWriter, r *http.Request) {
 
 func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
 	callback := r.URL.Query().Get("callback")
-	authenticator.SetProvider(r, provider)
+	authenticator.SetProvider(provider)
 	authenticator.InitProvider(r.Host, provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }
@@ -1354,7 +1364,7 @@ func setCORS(w http.ResponseWriter) {
 func googleEnabled() bool {
 	if visionAPI == nil {
 		return false
-	} else {
-		return visionAPI.Enabled()
 	}
+
+	return visionAPI.Enabled()
 }

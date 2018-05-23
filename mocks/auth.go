@@ -30,12 +30,12 @@ func (_m *MockAuthenticator) EXPECT() *_MockAuthenticatorRecorder {
 	return _m.recorder
 }
 
-func (_m *MockAuthenticator) SetProvider(req *http.Request, name string) {
-	_m.ctrl.Call(_m, "SetProvider", req, name)
+func (_m *MockAuthenticator) SetProvider(name string) {
+	_m.ctrl.Call(_m, "SetProvider", name)
 }
 
-func (_mr *_MockAuthenticatorRecorder) SetProvider(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetProvider", arg0, arg1)
+func (_mr *_MockAuthenticatorRecorder) SetProvider(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetProvider", arg0)
 }
 
 func (_m *MockAuthenticator) InitProvider(host string, name string, callback string) {

@@ -164,7 +164,7 @@ func TestGetSetupTwitter(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestGetConfigJson(t *testing.T) {
+func TestGetConfigJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
 	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
@@ -172,7 +172,7 @@ func TestGetConfigJson(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configJsonHandler))
+	s := httptest.NewServer(http.HandlerFunc(configJSONHandler))
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
@@ -590,7 +590,7 @@ func TestGetTwitterUserSearch(t *testing.T) {
 }
 
 func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
-	assert.Equal(t, res.StatusCode, http.StatusSeeOther)
+	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	loc := res.Header.Get("Location")
 	assert.True(t, strings.HasPrefix(loc, locPrefix))
 }

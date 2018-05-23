@@ -31,7 +31,7 @@ import (
 //go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
 
 var (
-	userSpecificDataMap map[string]*userSpecificData = make(map[string]*userSpecificData)
+	userSpecificDataMap = make(map[string]*userSpecificData)
 
 	// Global-scope data
 	twitterApp               oauth.OAuthApp
@@ -133,8 +133,8 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 
 	userData.twitterAPI = mybot.NewTwitterAPI(userData.twitterAuth, userData.cache, userData.config)
 
-	slackId, _ := userData.slackAuth.GetCreds()
-	userData.slackAPI = mybot.NewSlackAPI(slackId, userData.config, userData.cache)
+	slackID, _ := userData.slackAuth.GetCreds()
+	userData.slackAPI = mybot.NewSlackAPI(slackID, userData.config, userData.cache)
 
 	return userData, nil
 }
@@ -603,22 +603,22 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 			userIDs = append(userIDs, base[0:len(base)-len(ext)])
 		}
 		return userIDs, nil
-	} else {
-		col := session.DB(dbName).C("twitter-user-auth")
-		auths := []map[string]interface{}{}
-		err := col.Find(nil).All(&auths)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		userIDs := []string{}
-		for _, auth := range auths {
-			id, ok := auth["id"].(string)
-			if ok && id != "" {
-				userIDs = append(userIDs, id)
-			}
-		}
-		return userIDs, nil
 	}
+
+	col := session.DB(dbName).C("twitter-user-auth")
+	auths := []map[string]interface{}{}
+	err := col.Find(nil).All(&auths)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	userIDs := []string{}
+	for _, auth := range auths {
+		id, ok := auth["id"].(string)
+		if ok && id != "" {
+			userIDs = append(userIDs, id)
+		}
+	}
+	return userIDs, nil
 }
 
 func httpServer(c *cli.Context) {
