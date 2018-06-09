@@ -6,7 +6,7 @@ build:
 	$(GO) build
 
 test:
-	$(GO) test $(TEST_PACKAGES)
+	$(GO) test $(TEST_PACKAGES) $(ARGS)
 
 test/full:
-	$(GO) test -cover -race $(TEST_PACKAGES)
+	$(GO) test $(TEST_PACKAGES) -race $(ARGS)
