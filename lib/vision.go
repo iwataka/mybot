@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/utils"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/vision/v1"
@@ -25,16 +26,16 @@ func NewVisionMatcher(file string) (VisionMatcher, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 	}
 	c, err := google.DefaultClient(context.Background(), vision.CloudPlatformScope)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	a, err := vision.New(c)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	return &VisionAPI{a}, nil
 }
@@ -68,7 +69,7 @@ func (a *VisionAPI) MatchImages(
 
 	responses, err := a.retrieveaAnnotateImageResponses(urls, imgCaches, features)
 	if err != nil {
-		return nil, nil, WithStack(err)
+		return nil, nil, utils.WithStack(err)
 	}
 
 	results := []string{}
@@ -76,7 +77,7 @@ func (a *VisionAPI) MatchImages(
 	for _, r := range responses {
 		result, err := r.MarshalJSON()
 		if err != nil {
-			return nil, nil, WithStack(err)
+			return nil, nil, utils.WithStack(err)
 		}
 		results = append(results, string(result))
 
@@ -84,35 +85,35 @@ func (a *VisionAPI) MatchImages(
 		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
 			m, err := matchEntity(r.LabelAnnotations, cond.Label)
 			if err != nil {
-				return nil, nil, WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
 			match = match && m
 		}
 		if match && r.FaceAnnotations != nil && len(r.FaceAnnotations) != 0 {
 			m, err := matchFace(r.FaceAnnotations, cond.Face)
 			if err != nil {
-				return nil, nil, WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
 			match = match && m
 		}
 		if match && r.TextAnnotations != nil && len(r.TextAnnotations) != 0 {
 			m, err := matchEntity(r.TextAnnotations, cond.Text)
 			if err != nil {
-				return nil, nil, WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
 			match = match && m
 		}
 		if match && r.LandmarkAnnotations != nil && len(r.LandmarkAnnotations) != 0 {
 			m, err := matchEntity(r.LandmarkAnnotations, cond.Landmark)
 			if err != nil {
-				return nil, nil, WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
 			match = match && m
 		}
 		if match && r.LogoAnnotations != nil && len(r.LogoAnnotations) != 0 {
 			m, err := matchEntity(r.LogoAnnotations, cond.Logo)
 			if err != nil {
-				return nil, nil, WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
 			match = match && m
 		}
@@ -136,7 +137,7 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 					res := &vision.AnnotateImageResponse{}
 					err := json.Unmarshal([]byte(cache.AnalysisResult), res)
 					if err != nil {
-						return nil, WithStack(err)
+						return nil, utils.WithStack(err)
 					}
 					exists = true
 					continue
@@ -150,7 +151,7 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 
 	uncachedReses, err := a.retrieveaAnnotateImageResponsesThroughAPI(uncachedUrls, features)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	for i, url := range uncachedUrls {
 		url2res[url] = uncachedReses[i]
@@ -172,16 +173,16 @@ func (a *VisionAPI) retrieveaAnnotateImageResponsesThroughAPI(urls []string, fea
 	for i, url := range urls {
 		resp, err := http.Get(url)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		imgData[i] = data
 		err = resp.Body.Close()
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 	}
 
@@ -205,7 +206,7 @@ func (a *VisionAPI) retrieveaAnnotateImageResponsesThroughAPI(urls []string, fea
 
 	res, err := a.api.Images.Annotate(batch).Do()
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
 	return res.Responses, nil
@@ -221,7 +222,7 @@ func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 		for _, a := range as {
 			m, err := regexp.MatchString(d, a.Description)
 			if err != nil {
-				return false, WithStack(err)
+				return false, utils.WithStack(err)
 			}
 			if m {
 				match = true
@@ -242,22 +243,22 @@ func matchFace(as []*vision.FaceAnnotation, face models.VisionFaceCondition) (bo
 
 		match, err = regexp.MatchString(face.AngerLikelihood, a.AngerLikelihood)
 		if err != nil {
-			return false, WithStack(err)
+			return false, utils.WithStack(err)
 		}
 
 		match, err = regexp.MatchString(face.BlurredLikelihood, a.BlurredLikelihood)
 		if err != nil {
-			return false, WithStack(err)
+			return false, utils.WithStack(err)
 		}
 
 		match, err = regexp.MatchString(face.HeadwearLikelihood, a.HeadwearLikelihood)
 		if err != nil {
-			return false, WithStack(err)
+			return false, utils.WithStack(err)
 		}
 
 		match, err = regexp.MatchString(face.JoyLikelihood, a.JoyLikelihood)
 		if err != nil {
-			return false, WithStack(err)
+			return false, utils.WithStack(err)
 		}
 
 		if !match {

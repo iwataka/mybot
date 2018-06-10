@@ -1,17 +1,20 @@
-package mybot
+package data
 
 import (
+	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/utils"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+
 	"os"
 	"path/filepath"
 	"strconv"
-
-	"github.com/iwataka/mybot/models"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
 
+// Cache provides methods to fetch and manipulate cache data of Mybot
+// processing.
 type Cache interface {
-	Savable
+	utils.Savable
 	GetLatestTweetID(screenName string) int64
 	SetLatestTweetID(screenName string, id int64)
 	GetLatestFavoriteID(screenName string) int64
@@ -24,13 +27,24 @@ type Cache interface {
 	SetImage(data models.ImageCacheData)
 }
 
+// CacheProperties contains common actual cache variables and is intended to be
+// embedded into other structs.
 type CacheProperties struct {
-	LatestTweetID    map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id"`
+	// LatestTweetID associates Twitter screen name with the latest tweet
+	// ID in timeline.
+	LatestTweetID map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id"`
+	// LatestFavoriteID associates Twitter screen name with the latest
+	// tweet ID in favorite list.
 	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id"`
-	LatestDMID       int64            `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
-	// map[int64]interface{} can't be converted to json by go1.6 or older
-	Tweet2Action map[string]Action       `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
-	Images       []models.ImageCacheData `json:"images" toml:"images" bson:"images"`
+	// LatestDMID is latest direct message ID of the authenticated user
+	// with the latest direct message ID.
+	LatestDMID int64 `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
+	// Tweet2Action associates tweet ID with Mybot action.
+	// This is not an instance of map[int64]Action because it can't be
+	// converted to json when Go Runtime is v1.6 or older
+	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
+	// Images is cache data of images analyzed by some API or method.
+	Images []models.ImageCacheData `json:"images" toml:"images" bson:"images"`
 }
 
 func newCacheProperties() CacheProperties {
@@ -43,15 +57,15 @@ func newCacheProperties() CacheProperties {
 	}
 }
 
-// FileCache is a cache data stored in the specified file.
+// FileCache is a cache data associated with a specified file.
 type FileCache struct {
 	CacheProperties
 	File string `json:"-" toml:"-" bson:"-"`
 }
 
-// NewFileCache creates a Cache instance by using the specified file.
-// If no file specified, this returns an emtpy Cache instance which doesn't
-// have read/write features.
+// NewFileCache returns a new FileCache.
+// If no file specified, this returns an emtpy Cache instance, which has no
+// data and can't save the content to any file.
 func NewFileCache(path string) (*FileCache, error) {
 	c := &FileCache{
 		newCacheProperties(),
@@ -60,14 +74,17 @@ func NewFileCache(path string) (*FileCache, error) {
 
 	info, _ := os.Stat(path)
 	if info != nil && !info.IsDir() {
-		err := DecodeFile(path, c)
+		err := utils.DecodeFile(path, c)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 	}
 	return c, nil
 }
 
+// GetLatestTweetID returns the latest tweet ID associated with screenName in
+// timeline. If there is no ID of screenName in c , this returns 0 (tweet ID
+// can't be 0, which is known by Twitter API specification).
 func (c *CacheProperties) GetLatestTweetID(screenName string) int64 {
 	id, exists := c.LatestTweetID[screenName]
 	if exists {
@@ -76,10 +93,15 @@ func (c *CacheProperties) GetLatestTweetID(screenName string) int64 {
 	return 0
 }
 
+// SetLatestTweetID stores id as the latest tweet ID and associates it with
+// screenName.
 func (c *CacheProperties) SetLatestTweetID(screenName string, id int64) {
 	c.LatestTweetID[screenName] = id
 }
 
+// GetLatestFavoriteID returns the latest favorite tweet ID of screenName.
+// If there is no ID of screenName in c, this returns 0 (tweet ID can't be 0,
+// which is known by Twitter API specification).
 func (c *CacheProperties) GetLatestFavoriteID(screenName string) int64 {
 	id, exists := c.LatestFavoriteID[screenName]
 	if exists {
@@ -88,26 +110,33 @@ func (c *CacheProperties) GetLatestFavoriteID(screenName string) int64 {
 	return 0
 }
 
+// SetLatestFavoriteID stores id as the latest favorite tweet ID and associates
+// it with screeName.
 func (c *CacheProperties) SetLatestFavoriteID(screenName string, id int64) {
 	c.LatestFavoriteID[screenName] = id
 }
 
+// GetLatestDMID returns latest direct message ID of the authenticated user.
 func (c *CacheProperties) GetLatestDMID() int64 {
 	return c.LatestDMID
 }
 
+// SetLatestDMID sets id as the latest direct message ID of the authenticated
+// user.
 func (c *CacheProperties) SetLatestDMID(id int64) {
 	c.LatestDMID = id
 }
 
+// GetTweetAction returns Mybot action associated with tweetID.
 func (c *CacheProperties) GetTweetAction(tweetID int64) Action {
 	// Do not use string(tweetID) because it returns broken characters if
-	// tweetID is enough large
+	// tweetID is too large
 	key := strconv.FormatInt(tweetID, 10)
 	action, _ := c.Tweet2Action[key]
 	return action
 }
 
+// SetTweetAction associates action with tweetID.
 func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
@@ -115,6 +144,7 @@ func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
 	c.Tweet2Action[key] = action
 }
 
+// GetLatestImages returns the num latest pieces of cache image data.
 func (c *CacheProperties) GetLatestImages(num int) []models.ImageCacheData {
 	if len(c.Images) >= num && num > 0 {
 		return c.Images[len(c.Images)-num:]
@@ -123,6 +153,7 @@ func (c *CacheProperties) GetLatestImages(num int) []models.ImageCacheData {
 	}
 }
 
+// SetImage sets data as the latest image cache data.
 func (c *CacheProperties) SetImage(data models.ImageCacheData) {
 	c.Images = append(c.Images, data)
 }
@@ -131,12 +162,12 @@ func (c *CacheProperties) SetImage(data models.ImageCacheData) {
 func (c *FileCache) Save() error {
 	err := os.MkdirAll(filepath.Dir(c.File), 0600)
 	if err != nil {
-		return WithStack(err)
+		return utils.WithStack(err)
 	}
 	if c != nil {
-		err := EncodeFile(c.File, c)
+		err := utils.EncodeFile(c.File, c)
 		if err != nil {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 	return nil
@@ -153,19 +184,19 @@ func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {
 	query := col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	if count > 0 {
 		err := query.One(c)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		c.col = col
 	}
-	return c, WithStack(err)
+	return c, utils.WithStack(err)
 }
 
 func (c *DBCache) Save() error {
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
-	return WithStack(err)
+	return utils.WithStack(err)
 }

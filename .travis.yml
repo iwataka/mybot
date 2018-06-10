@@ -9,7 +9,8 @@ branches:
 
 language: go
 go:
-  - 1.8
+  - 1.8.x
+  - 1.9.x
 os:
   - linux
 
@@ -23,7 +24,7 @@ before_install:
 script:
   - git config --global http.https://gopkg.in.followRedirects true
   - dep ensure
-  - make test
+  - make test/full
   - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,bindata.go
 
 after_script:

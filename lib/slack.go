@@ -2,10 +2,13 @@ package mybot
 
 import (
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/slack"
 
 	"container/list"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -13,55 +16,15 @@ import (
 	"time"
 )
 
-type SlackAction struct {
-	models.SlackActionProperties
-	Reactions []string `json:"reactions,omitempty" toml:"reactions,omitempty" bson:"reactions,omitempty"`
-	Channels  []string `json:"channels,omitempty" toml:"channels,omitempty" bson:"channels,omitempty"`
-}
-
-func NewSlackAction() SlackAction {
-	return SlackAction{
-		Channels:  []string{},
-		Reactions: []string{},
-	}
-}
-
-func (a SlackAction) Add(action SlackAction) SlackAction {
-	return a.op(action, true)
-}
-
-func (a SlackAction) Sub(action SlackAction) SlackAction {
-	return a.op(action, false)
-}
-
-func (a SlackAction) op(action SlackAction, add bool) SlackAction {
-	result := a
-
-	result.Pin = BoolOp(a.Pin, action.Pin, add)
-	result.Star = BoolOp(a.Star, action.Star, add)
-	result.Reactions = StringsOp(a.Reactions, action.Reactions, add)
-	result.Channels = StringsOp(a.Channels, action.Channels, add)
-
-	return result
-
-}
-
-func (a SlackAction) IsEmpty() bool {
-	return !a.Pin &&
-		!a.Star &&
-		len(a.Channels) == 0 &&
-		len(a.Reactions) == 0
-}
-
 type SlackAPI struct {
 	api      models.SlackAPI
 	config   Config
-	cache    Cache
+	cache    data.Cache
 	msgQueue map[string]*list.List
 	user     *slack.AuthTestResponse
 }
 
-func NewSlackAPI(token string, config Config, cache Cache) *SlackAPI {
+func NewSlackAPI(token string, config Config, cache data.Cache) *SlackAPI {
 	var api models.SlackAPI
 	if token != "" {
 		api = slack.New(token)
@@ -116,17 +79,17 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 					if queue && err == nil {
 						a.enqueueMsg(channel, text, params)
 					}
-					return WithStack(err)
+					return utils.WithStack(err)
 				} else {
-					return WithStack(err)
+					return utils.WithStack(err)
 				}
 			}
 			_, _, err = a.api.PostMessage(channel, text, ps)
 			if err != nil {
-				return WithStack(err)
+				return utils.WithStack(err)
 			}
 		} else {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 	return nil
@@ -147,7 +110,7 @@ func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	params := slack.PostMessageParameters{}
 	msg := fmt.Sprintf("Create #%s and invite me to it", ch)
 	_, _, err := a.api.PostMessage("general", msg, params)
-	return WithStack(err)
+	return utils.WithStack(err)
 }
 
 func (a *SlackAPI) sendMsgQueues(ch string) error {
@@ -159,7 +122,7 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 		m := e.Value.(*SlackMsg)
 		err := a.PostMessage(ch, m.text, m.params, false)
 		if err != nil {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 	}
 	a.msgQueue[ch] = list.New()
@@ -175,17 +138,17 @@ func (a *SlackAPI) processMsgEvent(
 ) error {
 	msgs := a.config.GetSlackMessages()
 	for _, msg := range msgs {
-		if !StringsContains(msg.Channels, ch) {
+		if !utils.CheckStringContained(msg.Channels, ch) {
 			continue
 		}
 		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, a.cache)
 		if err != nil {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		if match {
 			err := a.processMsgEventWithAction(ch, ev, msg.Action, twitterAPI)
 			if err != nil {
-				return WithStack(err)
+				return utils.WithStack(err)
 			}
 		}
 	}
@@ -195,28 +158,28 @@ func (a *SlackAPI) processMsgEvent(
 func (a *SlackAPI) processMsgEventWithAction(
 	ch string,
 	ev *slack.MessageEvent,
-	action Action,
+	action data.Action,
 	twitterAPI *TwitterAPI,
 ) error {
 	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
 	if action.Slack.Pin {
 		err := a.api.AddPin(ev.Channel, item)
 		if CheckSlackError(err) {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		fmt.Println("Pin the message")
 	}
 	if action.Slack.Star {
 		err := a.api.AddStar(ev.Channel, item)
 		if CheckSlackError(err) {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		fmt.Println("Star the message")
 	}
 	for _, r := range action.Slack.Reactions {
 		err := a.api.AddReaction(r, item)
 		if CheckSlackError(err) {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		fmt.Println("React to the message")
 	}
@@ -229,7 +192,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		}
 		err := a.PostMessage(c, ev.Text, &params, true)
 		if CheckSlackError(err) {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		fmt.Printf("Send the message to %s\n", c)
 	}
@@ -237,7 +200,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 	if action.Twitter.Tweet {
 		_, err := twitterAPI.PostSlackMsg(ev.Text, ev.Attachments)
 		if CheckTwitterError(err) {
-			return WithStack(err)
+			return utils.WithStack(err)
 		}
 		fmt.Println("Tweet the message")
 	}
@@ -253,9 +216,9 @@ func (a *SlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
 		if err == nil {
 			a.user = user
 		}
-		return user, WithStack(err)
+		return user, utils.WithStack(err)
 	}
-	return nil, NewError("Slack API is not available")
+	return nil, errors.New("Slack API is not available")
 }
 
 func (a *SlackAPI) Listen() *SlackListener {
@@ -284,25 +247,25 @@ func (l *SlackListener) Start(
 				fmt.Printf("Joined to %s\n", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
-					return WithStack(err)
+					return utils.WithStack(err)
 				}
 			case *slack.GroupJoinedEvent:
 				fmt.Printf("Joined to %s\n", ev.Channel.Name)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
-					return WithStack(err)
+					return utils.WithStack(err)
 				}
 			case *slack.MessageEvent:
 				t, err := parseSlackTimestamp(ev.Timestamp)
 				if err != nil {
-					return WithStack(err)
+					return utils.WithStack(err)
 				}
 				if time.Now().Sub(*t)-time.Minute > 0 {
 					continue
 				}
 				chs, err := l.api.api.GetChannels(true)
 				if err != nil {
-					return WithStack(err)
+					return utils.WithStack(err)
 				}
 				ch := ""
 				for _, c := range chs {
@@ -315,20 +278,20 @@ func (l *SlackListener) Start(
 					fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
-						return WithStack(err)
+						return utils.WithStack(err)
 					}
 				}
 			case *slack.RTMError:
-				return WithStack(ev)
+				return utils.WithStack(ev)
 			case *slack.ConnectionErrorEvent:
 				log.Println(ev)
 				// Continue because ConnectionErrorEvent is treated as recoverable
 				continue
 			case *slack.InvalidAuthEvent:
-				return Errorf("Invalid slack authentication")
+				return fmt.Errorf("Invalid slack authentication")
 			}
 		case <-l.innerChan:
-			return NewInterruptedError()
+			return utils.NewStreamInterruptedError()
 		}
 	}
 	return nil
@@ -362,11 +325,11 @@ func parseSlackTimestamp(ts string) (*time.Time, error) {
 	splittedTimestamp := strings.Split(ts, ".")
 	sec, err := strconv.ParseInt(splittedTimestamp[0], 10, 64)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	nsec, err := strconv.ParseInt(splittedTimestamp[1], 10, 64)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	t := time.Unix(sec, nsec)
 	return &t, nil

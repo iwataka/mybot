@@ -2,10 +2,13 @@ package main
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
-	worker "github.com/iwataka/mybot/worker"
+	"github.com/iwataka/mybot/runner"
+	"github.com/iwataka/mybot/utils"
+	"github.com/iwataka/mybot/worker"
+	"github.com/stretchr/testify/assert"
 
+	"fmt"
 	"testing"
 	"time"
 )
@@ -15,11 +18,10 @@ func TestTwitterPeriodicWorkerStart(t *testing.T) {
 	times := 50
 	duration := "0.01s"
 	id := "id"
-	worker := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), nil)
+	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
 	err := worker.Start()
-	if err == nil || err.Error() != errMsg {
-		t.Fatal("Error not found or not expected error")
-	}
+	assert.Error(t, err)
+	assert.Equal(t, errMsg, err.Error())
 }
 
 func TestManageTwitterPeriodicWorker(t *testing.T) {
@@ -44,7 +46,7 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	times := -1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
@@ -62,12 +64,11 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	times := 1
 	duration := "0.01s"
 	id := "id"
-	w := generatePeriodicWorker(t, times, duration, id, mybot.Errorf(errMsg), mybot.Errorf(errMsg))
+	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	err := w.Start()
-	if err == nil || err.Error() != errMsg {
-		t.Fatal("Error not found or not expected error")
-	}
+	assert.Error(t, err)
+	assert.Equal(t, errMsg, err.Error())
 }
 
 func generatePeriodicWorker(t *testing.T, times int, duration string, id string, runErr error, verifyErr error) *twitterPeriodicWorker {
@@ -77,7 +78,7 @@ func generatePeriodicWorker(t *testing.T, times int, duration string, id string,
 	return newTwitterPeriodicWorker(runner, cache, duration, time.Second, id)
 }
 
-func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) mybot.BatchRunner {
+func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) runner.BatchRunner {
 	runner := mocks.NewMockBatchRunner(ctrl)
 	var runCall *gomock.Call
 	if times < 0 {
@@ -87,14 +88,14 @@ func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr 
 	}
 	runner.EXPECT().Run().After(runCall).Return(runErr)
 	if times < 0 {
-		runner.EXPECT().Verify().AnyTimes().Return(verifyErr)
+		runner.EXPECT().IsAvailable().AnyTimes().Return(verifyErr)
 	} else {
-		runner.EXPECT().Verify().Times(times).Return(verifyErr)
+		runner.EXPECT().IsAvailable().Times(times).Return(verifyErr)
 	}
 	return runner
 }
 
-func generateCache(ctrl *gomock.Controller, times int) mybot.Savable {
+func generateCache(ctrl *gomock.Controller, times int) utils.Savable {
 	cache := mocks.NewMockSavable(ctrl)
 	if times < 0 {
 		cache.EXPECT().Save().AnyTimes().Return(nil)

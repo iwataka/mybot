@@ -5,34 +5,47 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	serverTestTwitterUserID = "123456"
+	screenshotsDir          = "screenshots"
 )
 
 var (
 	serverTestUserSpecificData *userSpecificData
 	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
+	driver                     = agouti.PhantomJS()
 )
+
+func TestMain(m *testing.M) {
+	err := driver.Start()
+	if err != nil {
+		panic(err)
+	}
+	defer driver.Stop()
+	os.Exit(m.Run())
+}
 
 func init() {
 	err := initServer()
@@ -51,13 +64,16 @@ func init() {
 	}
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 
-	if _, err := os.Stat("screenshots"); err != nil {
-		err := os.Mkdir("screenshots", os.FileMode(0755))
+	if _, err := os.Stat(screenshotsDir); err != nil {
+		err := os.Mkdir(screenshotsDir, os.FileMode(0755))
 		if err != nil {
-			fmt.Println("Failed to make `screenshots` directory")
+			fmt.Printf("Failed to make `%s` directory\n", screenshotsDir)
 			os.Exit(1)
 		}
 	}
+
+	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
+	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
 }
 
 func TestTwitterColsPage(t *testing.T) {
@@ -65,12 +81,6 @@ func TestTwitterColsPage(t *testing.T) {
 }
 
 func testTwitterColsPage(url string) error {
-	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		return err
-	}
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
 	if err != nil {
 		return err
@@ -81,7 +91,7 @@ func testTwitterColsPage(url string) error {
 		return err
 	}
 
-	err = page.Screenshot("screenshots/twitter-collections.png")
+	err = page.Screenshot(filepath.Join(screenshotsDir, "twitter-collections.png"))
 	if err != nil {
 		return err
 	}
@@ -124,9 +134,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetConfig(t *testing.T) {
@@ -141,9 +149,7 @@ func TestGetConfig(t *testing.T) {
 	defer s.Close()
 
 	err := testGet(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetSetupTwitter(t *testing.T) {
@@ -152,26 +158,20 @@ func TestGetSetupTwitter(t *testing.T) {
 
 	tmpTwitterApp := twitterApp
 	var err error
-	twitterApp, err = mybot.NewFileTwitterOAuthApp("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	twitterApp, err = oauth.NewFileTwitterOAuthApp("")
+	assert.NoError(t, err)
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	tmpSlackApp := slackApp
-	slackApp, err = mybot.NewFileOAuthApp("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	slackApp, err = oauth.NewFileOAuthApp("")
+	assert.NoError(t, err)
 	defer func() { slackApp = tmpSlackApp }()
 
 	err = testGet(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
-func TestGetConfigJson(t *testing.T) {
+func TestGetConfigJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
 	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
@@ -179,37 +179,27 @@ func TestGetConfigJson(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configJsonHandler))
+	s := httptest.NewServer(http.HandlerFunc(configJSONHandler))
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = checkHTTPResponse(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	cfg, err := mybot.NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = cfg.Unmarshal(bs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	cfgProps := cfg.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
-	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	if diff := deep.Equal(cfgProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cfgProps, configProps))
 }
 
 func TestGetConfigFile(t *testing.T) {
@@ -224,34 +214,26 @@ func TestGetConfigFile(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = checkHTTPResponse(res)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	hasForceDownload := strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
-	if !hasForceDownload {
-		t.Fatalf("It must have force-download but not")
-	}
+	assert.True(t, hasForceDownload)
+
 	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), ".json")
-	if !hasContentDisposition {
-		t.Fatalf("It must have Content-Disposition but not")
-	}
+	assert.True(t, hasContentDisposition)
+
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	cfg, err := mybot.NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	err = json.Unmarshal(bs, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func testGet(url string) error {
@@ -264,16 +246,14 @@ func testGet(url string) error {
 
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	checkHTTPResponse(res)
 }
 
 func checkHTTPResponse(res *http.Response) error {
 	if res.StatusCode != http.StatusOK {
 		bs, _ := ioutil.ReadAll(res.Body)
-		return mybot.Errorf("%s %d", string(bs), res.StatusCode)
+		return fmt.Errorf("%s %d", string(bs), res.StatusCode)
 	}
 	return nil
 }
@@ -305,16 +285,8 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		t.Fatal(err)
-	}
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	f(t, s.URL, page, wg, serverTestUserSpecificData.config)
 }
@@ -330,23 +302,19 @@ func testPostConfigWithoutModification(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
+	page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png"))
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	if diff := deep.Equal(cProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigDelete(t *testing.T) {
@@ -360,32 +328,19 @@ func testPostConfigDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
-	if err := page.AllByButton("Delete").Click(); err != nil {
-		t.Fatal(err)
-	}
-
+	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png"))
+	assert.NoError(t, page.AllByButton("Delete").Click())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png"))
 
-	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterTimelines()))
-	}
-	if len(serverTestUserSpecificData.config.GetTwitterFavorites()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterFavorites()))
-	}
-	if len(serverTestUserSpecificData.config.GetTwitterSearches()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetTwitterSearches()))
-	}
-	if len(serverTestUserSpecificData.config.GetSlackMessages()) != 0 {
-		t.Fatalf("%d expected but %d found", 0, len(serverTestUserSpecificData.config.GetSlackMessages()))
-	}
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
+	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterSearches())
+	assert.Empty(t, serverTestUserSpecificData.config.GetSlackMessages())
 
 	serverTestUserSpecificData.config = c
 }
@@ -401,23 +356,16 @@ func testPostConfigSingleDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
-	if err := page.AllByButton("Delete").At(0).Click(); err != nil {
-		t.Fatal(err)
-	}
-
+	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
+	assert.NoError(t, page.AllByButton("Delete").At(0).Click())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png"))
 
-	if len(serverTestUserSpecificData.config.GetTwitterTimelines()) != len(c.GetTwitterTimelines())-1 {
-		t.Fatalf("%s's length is not %d", serverTestUserSpecificData.config.GetTwitterTimelines(), len(c.GetTwitterTimelines())-1)
-	}
+	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 
 	serverTestUserSpecificData.config = c
 }
@@ -433,28 +381,19 @@ func testPostConfigDoubleDelete(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
-	if err := page.AllByButton("Delete").DoubleClick(); err != nil {
-		t.Fatal(err)
-	}
-
+	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
+	assert.NoError(t, page.AllByButton("Delete").DoubleClick())
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	if diff := deep.Equal(cProps.Slack, configProps.Slack); diff != nil {
-		t.Fatal(diff)
-	}
-	if diff := deep.Equal(cProps.Twitter, configProps.Twitter); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps.Slack, configProps.Slack))
+	assert.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
 }
 
 func TestPostConfigError(t *testing.T) {
@@ -468,25 +407,18 @@ func testPostConfigError(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
+	assert.NoError(t, page.AllByName("twitter.timelines.count").Fill("foo"))
 
-	if err := page.AllByName("twitter.timelines.count").Fill("foo"); err != nil {
-		t.Fatal(err)
-	}
-
+	page.Screenshot(filepath.Join(screenshotsDir, "error_config_before_post.png"))
 	wg.Add(1)
-	if err := page.FindByID("overwrite").Submit(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "error_config_after_post.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	if diff := deep.Equal(cProps, configProps); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigTagsInput(t *testing.T) {
@@ -500,20 +432,19 @@ func testPostConfigTagsInput(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	_, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com", 30*time.Second)
-	if err != nil {
-		t.Skip("Skip because network is unavailable: ", err)
-	}
+	// _, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com:https", 30*time.Second)
+	// if err != nil {
+	// 	t.Skip("Skip because network is unavailable: ", err)
+	// }
+	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
 
-	if err := page.Navigate(url); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, page.Navigate(url))
 
+	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png"))
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
-	if err := page.AllByName(name).SendKeys(keys); err == nil {
-		t.Fatal("Tagsinput data-role elements must be uneditable currently")
-	}
+	assert.NoError(t, page.AllByName(name).SendKeys(keys))
+	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png"))
 }
 
 func TestPostConfigTimelineAdd(t *testing.T) {
@@ -569,7 +500,7 @@ func testPostConfigAdd(
 	defer s.Close()
 
 	expectedErrMsg := "expected error"
-	expectedErr := mybot.Errorf(expectedErrMsg)
+	expectedErr := fmt.Errorf(expectedErrMsg)
 
 	prev := length()
 	client := &http.Client{
@@ -578,13 +509,9 @@ func testPostConfigAdd(
 		},
 	}
 	res, err := client.Post(s.URL, "", nil)
-	if err != nil && !strings.HasSuffix(err.Error(), expectedErrMsg) {
-		t.Fatal(err)
-	}
+	assert.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
 	cur := length()
-	if cur != (prev + 1) {
-		t.Fatalf("Failed to add %s", name)
-	}
+	assert.Equal(t, prev+1, cur)
 	testResponseIsRedirect(t, res, "/config")
 }
 
@@ -593,12 +520,6 @@ func TestIndexPage(t *testing.T) {
 }
 
 func testIndexPage(url string) error {
-	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		return err
-	}
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
 	if err != nil {
 		return err
@@ -609,7 +530,7 @@ func testIndexPage(url string) error {
 		return err
 	}
 
-	err = page.Screenshot("screenshots/index.png")
+	err = page.Screenshot(filepath.Join(screenshotsDir, "index.png"))
 	if err != nil {
 		return err
 	}
@@ -630,7 +551,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 
 	tmpCache := serverTestUserSpecificData.cache
 	defer func() { serverTestUserSpecificData.cache = tmpCache }()
-	serverTestUserSpecificData.cache = mybot.NewTestFileCache("", t)
+	serverTestUserSpecificData.cache = data.NewTestFileCache("", t)
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
@@ -645,9 +566,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestGetTwitterUserSearch(t *testing.T) {
@@ -671,31 +590,19 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	us := []anaconda.User{}
 	err = json.Unmarshal(bs, &us)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
-	if diff := deep.Equal(users, us); diff != nil {
-		t.Fatal(diff)
-	}
+	assert.Nil(t, deep.Equal(users, us))
 }
 
 func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
-	if res.StatusCode != http.StatusSeeOther {
-		t.Fatalf("Status code is expected to be %d but %d", http.StatusSeeOther, res.StatusCode)
-	}
+	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	loc := res.Header.Get("Location")
-	if !strings.HasPrefix(loc, locPrefix) {
-		t.Fatalf("Location header value should start with %s but %s", locPrefix, loc)
-	}
+	assert.True(t, strings.HasPrefix(loc, locPrefix))
 }

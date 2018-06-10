@@ -14,8 +14,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/tmpl"
+	"github.com/iwataka/mybot/utils"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/slack"
@@ -32,14 +35,18 @@ var (
 	authenticator models.Authenticator = &Authenticator{}
 )
 
+// Authenticator is an implementation of models.Authenticator and provides some
+// common functions for authenticating users.
 type Authenticator struct{}
 
-func (a *Authenticator) SetProvider(req *http.Request, name string) {
+// SetProvider sets a specified provider name to the gothic module.
+func (a *Authenticator) SetProvider(name string) {
 	gothic.GetProviderName = func(req *http.Request) (string, error) {
 		return name, nil
 	}
 }
 
+// InitProvider initializes a provider and makes it to be used.
 func (a *Authenticator) InitProvider(host, name, callback string) {
 	if callback == "" {
 		callback = fmt.Sprintf("http://%s/auth/%s/callback", host, name)
@@ -67,10 +74,12 @@ func (a *Authenticator) InitProvider(host, name, callback string) {
 	}
 }
 
+// CompleteUserAuth executes user authentication and returns the user
+// information.
 func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
-		return goth.User{}, mybot.WithStack(err)
+		return goth.User{}, utils.WithStack(err)
 	}
 	val, exists := sess.Values["mybot-user"]
 	if exists {
@@ -79,34 +88,35 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 		}
 	}
 
-	a.SetProvider(r, provider)
+	a.SetProvider(provider)
 	q := r.URL.Query()
 	q.Add("state", "state")
 	r.URL.RawQuery = q.Encode()
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
-		user.RawData = nil // RawData cannot be converted into session data cerrently
+		user.RawData = nil // RawData cannot be converted into session data currently
 		sess.Values["mybot-user"] = user
 		err := sess.Save(r, w)
 		if err != nil {
-			return goth.User{}, mybot.WithStack(err)
+			return goth.User{}, utils.WithStack(err)
 		}
 	}
-	return user, mybot.WithStack(err)
+	return user, utils.WithStack(err)
 }
 
+// Logout executes logout operation of the current login-user.
 func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
 	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	sess.Options.MaxAge = -1
 	err = sess.Save(r, w)
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 
-	a.SetProvider(r, provider)
+	a.SetProvider(provider)
 	return gothic.Logout(w, r)
 }
 
@@ -127,7 +137,7 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 func startServer(host, port, cert, key string) error {
 	err := initServer()
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 
 	// View endpoints
@@ -199,7 +209,7 @@ func startServer(host, port, cert, key string) error {
 	// API endpoints
 	http.HandleFunc(
 		"/config/json/",
-		wrapHandler(configJsonHandler),
+		wrapHandler(configJSONHandler),
 	)
 	http.HandleFunc(
 		"/setting/",
@@ -211,7 +221,7 @@ func startServer(host, port, cert, key string) error {
 	)
 	http.HandleFunc(
 		"/twitter/collections/list/",
-		wrapHandler(twitterCollectionListByUserId),
+		wrapHandler(twitterCollectionListByUserID),
 	)
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -225,7 +235,7 @@ func startServer(host, port, cert, key string) error {
 		err = http.ListenAndServe(addr, nil)
 	}
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
@@ -242,13 +252,13 @@ func initServer() error {
 	}
 
 	funcMap := template.FuncMap{
-		"checkbox":            mybot.Checkbox,
-		"boolSelectbox":       mybot.BoolSelectbox,
-		"selectbox":           mybot.Selectbox,
-		"listTextbox":         mybot.ListTextbox,
-		"textboxOfFloat64Ptr": mybot.TextboxOfFloat64Ptr,
-		"textboxOfIntPtr":     mybot.TextboxOfIntPtr,
-		"newMap":              mybot.NewMap,
+		"checkbox":            tmpl.Checkbox,
+		"boolSelectbox":       tmpl.BoolSelectbox,
+		"selectbox":           tmpl.Selectbox,
+		"listTextbox":         tmpl.ListTextbox,
+		"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
+		"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
+		"newMap":              tmpl.NewMap,
 	}
 
 	tmpl, err := template.
@@ -258,7 +268,7 @@ func initServer() error {
 	htmlTemplate = tmpl
 
 	if err != nil {
-		return mybot.WithStack(err)
+		return utils.WithStack(err)
 	}
 	return nil
 }
@@ -278,7 +288,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -324,7 +334,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache mybot.Cache, twitter
 	buf.WriteTo(w)
 }
 
-func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
+func twitterCollectionListByUserID(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
@@ -334,13 +344,13 @@ func twitterCollectionListByUserId(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.Method == http.MethodGet {
-		getTwitterCollectionListByUserId(w, r, data.twitterAPI)
+		getTwitterCollectionListByUserID(w, r, data.twitterAPI)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCollectionListByUserId(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+func getTwitterCollectionListByUserID(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
 	user, err := twitterAPI.GetSelf()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -375,7 +385,7 @@ func settingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) {
+func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -389,6 +399,7 @@ func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.Twitte
 	w.Write(bs)
 }
 
+// SettingResponse is a container of fields required to render various pages.
 type SettingResponse struct {
 	TwitterName   string         `json:"twitter_name" toml:"twitter_name" bson:"twitter_name"`
 	SlackTeam     string         `json:"slack_team" toml:"slack_team" bson:"slack_team"`
@@ -398,6 +409,7 @@ type SettingResponse struct {
 	Image         ImageResponse  `json:"image" toml:"image" bson:"image"`
 }
 
+// StatusResponse is a container of worker statuses to be rendered to web pages.
 type StatusResponse struct {
 	TwitterDMListener   bool `json:"twitter_dm_listener" toml:"twitter_dm_listener" bson:"twitter_dm_listener"`
 	TwitterUserListener bool `json:"twitter_user_listener" toml:"twitter_user_listener" bson:"twitter_user_listener"`
@@ -405,6 +417,7 @@ type StatusResponse struct {
 	SlackListener       bool `json:"slack_listener" toml:"slack_listener" bson:"slack_listener"`
 }
 
+// ImageResponse is a container of image caches to be rendered to web pages.
 type ImageResponse struct {
 	URL            string `json:"url" toml:"url" bson:"url"`
 	Src            string `json:"src" toml:"src" bson:"src"`
@@ -412,10 +425,10 @@ type ImageResponse struct {
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
 }
 
-func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache mybot.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) (*SettingResponse, error) {
 	twitterUser, err := twitterAPI.GetSelf()
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
@@ -596,10 +609,10 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		timeline := mybot.NewTimelineConfig()
-		timeline.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
-		timeline.ExcludeReplies = mybot.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
-		timeline.IncludeRts = mybot.GetBoolSelectboxValue(val, i, prefix+".include_rts")
-		if timeline.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
+		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
+		if timeline.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -622,8 +635,8 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		favorite := mybot.NewFavoriteConfig()
-		favorite.ScreenNames = mybot.GetListTextboxValue(val, i, prefix+".screen_names")
-		if favorite.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -646,9 +659,9 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		search := mybot.NewSearchConfig()
-		search.Queries = mybot.GetListTextboxValue(val, i, prefix+".queries")
+		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
 		search.ResultType = val[prefix+".result_type"][i]
-		if search.Count, err = mybot.GetIntPtr(val, i, prefix+".count"); err != nil {
+		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
 		}
 		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
@@ -671,7 +684,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		msg := mybot.NewMessageConfig()
-		msg.Channels = mybot.GetListTextboxValue(val, i, prefix+".channels")
+		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
 		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
 		}
@@ -683,13 +696,13 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	prefix = "twitter.notification"
 	notif := config.GetTwitterNotification()
 	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
-	notif.Place.Users = mybot.GetListTextboxValue(val, 0, prefix+".place.users")
+	notif.Place.Users = tmpl.GetListTextboxValue(val, 0, prefix+".place.users")
 	config.SetTwitterNotification(notif)
 
 	prefix = "twitter.interaction"
 	intr := config.GetTwitterInteraction()
 	intr.AllowSelf = len(val[prefix+".allow_self"]) > 1
-	intr.Users = mybot.GetListTextboxValue(val, 0, prefix+".users")
+	intr.Users = tmpl.GetListTextboxValue(val, 0, prefix+".users")
 	config.SetTwitterInteraction(intr)
 
 	config.SetTwitterDuration(val["twitter.duration"][0])
@@ -705,37 +718,37 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {
 	prefix = prefix + ".filter."
 	filter := mybot.NewFilter()
-	filter.Patterns = mybot.GetListTextboxValue(val, i, prefix+"patterns")
-	filter.URLPatterns = mybot.GetListTextboxValue(val, i, prefix+"url_patterns")
-	filter.HasMedia = mybot.GetBoolSelectboxValue(val, i, prefix+"has_media")
-	filter.Retweeted = mybot.GetBoolSelectboxValue(val, i, prefix+"retweeted")
-	fThreshold, err := mybot.GetIntPtr(val, i, prefix+"favorite_threshold")
+	filter.Patterns = tmpl.GetListTextboxValue(val, i, prefix+"patterns")
+	filter.URLPatterns = tmpl.GetListTextboxValue(val, i, prefix+"url_patterns")
+	filter.HasMedia = tmpl.GetBoolSelectboxValue(val, i, prefix+"has_media")
+	filter.Retweeted = tmpl.GetBoolSelectboxValue(val, i, prefix+"retweeted")
+	fThreshold, err := tmpl.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
-		return mybot.NewFilter(), mybot.WithStack(err)
+		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.FavoriteThreshold = fThreshold
-	rThreshold, err := mybot.GetIntPtr(val, i, prefix+"retweeted_threshold")
+	rThreshold, err := tmpl.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
-		return mybot.NewFilter(), mybot.WithStack(err)
+		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.RetweetedThreshold = rThreshold
-	filter.Lang = mybot.GetString(val, prefix+"lang", i, "")
-	filter.Vision.Label = mybot.GetListTextboxValue(val, i, prefix+"vision.label")
-	filter.Vision.Face.AngerLikelihood = mybot.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
-	filter.Vision.Face.BlurredLikelihood = mybot.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
-	filter.Vision.Face.HeadwearLikelihood = mybot.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
-	filter.Vision.Face.JoyLikelihood = mybot.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
-	filter.Vision.Text = mybot.GetListTextboxValue(val, i, prefix+"vision.text")
-	filter.Vision.Landmark = mybot.GetListTextboxValue(val, i, prefix+"vision.landmark")
-	filter.Vision.Logo = mybot.GetListTextboxValue(val, i, prefix+"vision.logo")
-	minSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
+	filter.Lang = tmpl.GetString(val, prefix+"lang", i, "")
+	filter.Vision.Label = tmpl.GetListTextboxValue(val, i, prefix+"vision.label")
+	filter.Vision.Face.AngerLikelihood = tmpl.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
+	filter.Vision.Face.BlurredLikelihood = tmpl.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
+	filter.Vision.Face.HeadwearLikelihood = tmpl.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
+	filter.Vision.Face.JoyLikelihood = tmpl.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
+	filter.Vision.Text = tmpl.GetListTextboxValue(val, i, prefix+"vision.text")
+	filter.Vision.Landmark = tmpl.GetListTextboxValue(val, i, prefix+"vision.landmark")
+	filter.Vision.Logo = tmpl.GetListTextboxValue(val, i, prefix+"vision.logo")
+	minSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), mybot.WithStack(err)
+		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.Language.MinSentiment = minSentiment
-	maxSentiment, err := mybot.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
+	maxSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), mybot.WithStack(err)
+		return mybot.NewFilter(), utils.WithStack(err)
 	}
 	filter.Language.MaxSentiment = maxSentiment
 	return filter, nil
@@ -745,18 +758,18 @@ func postConfigForActions(
 	val map[string][]string,
 	prefix string,
 	deletedFlags []string,
-) ([]mybot.Action, error) {
+) ([]data.Action, error) {
 	prefix = prefix + ".action."
 	tweetCounter := checkboxCounter{prefix + "twitter.tweet", 0}
 	retweetCounter := checkboxCounter{prefix + "twitter.retweet", 0}
 	favoriteCounter := checkboxCounter{prefix + "twitter.favorite", 0}
 	pinCounter := checkboxCounter{prefix + "slack.pin", 0}
 	starCounter := checkboxCounter{prefix + "slack.star", 0}
-	results := []mybot.Action{}
+	results := []data.Action{}
 	for i := 0; i < len(deletedFlags); i++ {
 		a, err := postConfigForAction(val, i, prefix)
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		a.Twitter.Tweet = tweetCounter.returnValue(i, val, false)
 		a.Twitter.Retweet = retweetCounter.returnValue(i, val, false)
@@ -768,11 +781,11 @@ func postConfigForActions(
 	return results, nil
 }
 
-func postConfigForAction(val map[string][]string, i int, prefix string) (mybot.Action, error) {
-	action := mybot.NewAction()
-	action.Twitter.Collections = mybot.GetListTextboxValue(val, i, prefix+"twitter.collections")
-	action.Slack.Channels = mybot.GetListTextboxValue(val, i, prefix+"slack.channels")
-	action.Slack.Reactions = mybot.GetListTextboxValue(val, i, prefix+"slack.reactions")
+func postConfigForAction(val map[string][]string, i int, prefix string) (data.Action, error) {
+	action := data.NewAction()
+	action.Twitter.Collections = tmpl.GetListTextboxValue(val, i, prefix+"twitter.collections")
+	action.Slack.Channels = tmpl.GetListTextboxValue(val, i, prefix+"slack.channels")
+	action.Slack.Reactions = tmpl.GetListTextboxValue(val, i, prefix+"slack.reactions")
 	return action, nil
 }
 
@@ -820,7 +833,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 	buf := new(bytes.Buffer)
 	err := htmlTemplate.ExecuteTemplate(buf, "config", data)
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	return buf.Bytes(), nil
 }
@@ -915,7 +928,7 @@ func addMessageConfig(config mybot.Config) {
 	config.AddSlackMessage(mybot.NewMessageConfig())
 }
 
-func configJsonHandler(w http.ResponseWriter, r *http.Request) {
+func configJSONHandler(w http.ResponseWriter, r *http.Request) {
 	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
@@ -925,13 +938,13 @@ func configJsonHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
 	if r.Method == http.MethodPost {
-		postConfigJson(w, r, data.config)
+		postConfigJSON(w, r, data.config)
 	} else if r.Method == http.MethodGet {
-		getConfigJson(w, r, data.config)
+		getConfigJSON(w, r, data.config)
 	}
 }
 
-func postConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	var err error
 	defer func() {
 		r.Body.Close()
@@ -962,7 +975,7 @@ func postConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config)
 	}
 }
 
-func getConfigJson(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func getConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
 	var err error
 	defer func() {
 		r.Body.Close()
@@ -1297,7 +1310,7 @@ func getAuthSlack(w http.ResponseWriter, r *http.Request) {
 
 func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
 	callback := r.URL.Query().Get("callback")
-	authenticator.SetProvider(r, provider)
+	authenticator.SetProvider(provider)
 	authenticator.InitProvider(r.Host, provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }
@@ -1319,13 +1332,13 @@ func readFile(path string) ([]byte, error) {
 	if info, err := os.Stat(path); err == nil && !info.IsDir() {
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, mybot.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		return data, nil
 	}
 	data, err := Asset(path)
 	if err != nil {
-		return nil, mybot.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	return data, nil
 }
@@ -1351,7 +1364,7 @@ func setCORS(w http.ResponseWriter) {
 func googleEnabled() bool {
 	if visionAPI == nil {
 		return false
-	} else {
-		return visionAPI.Enabled()
 	}
+
+	return visionAPI.Enabled()
 }

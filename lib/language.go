@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/utils"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/language/v1"
@@ -17,16 +18,16 @@ func NewLanguageMatcher(file string) (LanguageMatcher, error) {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && len(file) != 0 {
 		err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file)
 		if err != nil {
-			return nil, WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 	}
 	c, err := google.DefaultClient(context.Background(), language.CloudPlatformScope)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	a, err := language.New(c)
 	if err != nil {
-		return nil, WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 	return &LanguageAPI{a}, nil
 }
@@ -57,12 +58,12 @@ func (a *LanguageAPI) MatchText(
 
 	res, err := a.api.Documents.AnnotateText(req).Do(nil)
 	if err != nil {
-		return "", false, WithStack(err)
+		return "", false, utils.WithStack(err)
 	}
 
 	bytes, err := res.MarshalJSON()
 	if err != nil {
-		return "", false, WithStack(err)
+		return "", false, utils.WithStack(err)
 	}
 
 	if f.ExtractDocumentSentiment {

@@ -5,6 +5,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/slack"
@@ -17,7 +18,7 @@ func TestCheckTweetPatternsMatched(t *testing.T) {
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +35,7 @@ func TestCheckSlackMsgPatternsMatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
 	ev.Text = "foo is bar"
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckSlackMsg(ev, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -51,7 +52,7 @@ func TestCheckTweetPatternsUnmatched(t *testing.T) {
 	conf := &Filter{
 		Patterns: []string{"foo"},
 	}
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +69,7 @@ func TestCheckSlackMsgPatternsUnmatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
 	ev.Text = "fizz buzz"
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckSlackMsg(ev, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +86,7 @@ func TestCheckTweetFavoriteThresholdExceeded(t *testing.T) {
 	threshold := 80
 	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +103,7 @@ func TestCheckTweetFavoriteThresholdNotExceeded(t *testing.T) {
 	threshold := 120
 	conf := NewFilter()
 	conf.FavoriteThreshold = &threshold
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +120,7 @@ func TestCheckTweetRetweetedThresholdExceeded(t *testing.T) {
 	threshold := 80
 	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -136,7 +137,7 @@ func TestCheckTweetRetweetedThresholdNotExceeded(t *testing.T) {
 	threshold := 120
 	conf := NewFilter()
 	conf.RetweetedThreshold = &threshold
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, nil, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +166,7 @@ func TestCheckTweetVisionMatched(t *testing.T) {
 		},
 	}
 
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckTweet(tweet, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +193,7 @@ func TestCheckSlackMsgVisionMatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{att}
 
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckSlackMsg(ev, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)
@@ -216,7 +217,7 @@ func TestCheckTweetVisionUnmatched(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
 
-	cache := NewTestFileCache("", t)
+	cache := data.NewTestFileCache("", t)
 	match, err := conf.CheckSlackMsg(ev, v, nil, cache)
 	if err != nil {
 		t.Fatal(err)

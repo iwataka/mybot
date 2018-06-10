@@ -1,13 +1,31 @@
-package models
+package models_test
 
 import (
-	language "google.golang.org/api/language/v1"
+	. "github.com/iwataka/mybot/models"
+	"github.com/stretchr/testify/assert"
+
+	"testing"
 )
 
-func LanguageFeatures(c *LanguageCondition) *language.Features {
-	f := &language.Features{}
-	if c.MinSentiment != nil || c.MaxSentiment != nil {
-		f.ExtractDocumentSentiment = true
-	}
-	return f
+func TestLanguageCondition_IsEmpty(t *testing.T) {
+	var c LanguageCondition
+
+	c = LanguageCondition{}
+	assert.True(t, c.IsEmpty())
+
+	min, max := 0.2, 0.8
+	c = LanguageCondition{&min, &max}
+	assert.False(t, c.IsEmpty())
+}
+
+func TestLanguageCondition_LanguageFeatures(t *testing.T) {
+	var c LanguageCondition
+
+	c = LanguageCondition{}
+	assert.False(t, c.LanguageFeatures().ExtractDocumentSentiment)
+
+	min, max := 0.2, 0.8
+	c = LanguageCondition{&min, &max}
+	assert.True(t, c.LanguageFeatures().ExtractDocumentSentiment)
+
 }
