@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
@@ -30,12 +29,23 @@ import (
 
 const (
 	serverTestTwitterUserID = "123456"
+	screenshotsDir          = "screenshots"
 )
 
 var (
 	serverTestUserSpecificData *userSpecificData
 	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
+	driver                     = agouti.PhantomJS()
 )
+
+func TestMain(m *testing.M) {
+	err := driver.Start()
+	if err != nil {
+		panic(err)
+	}
+	defer driver.Stop()
+	os.Exit(m.Run())
+}
 
 func init() {
 	err := initServer()
@@ -54,13 +64,16 @@ func init() {
 	}
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 
-	if _, err := os.Stat("screenshots"); err != nil {
-		err := os.Mkdir("screenshots", os.FileMode(0755))
+	if _, err := os.Stat(screenshotsDir); err != nil {
+		err := os.Mkdir(screenshotsDir, os.FileMode(0755))
 		if err != nil {
-			fmt.Println("Failed to make `screenshots` directory")
+			fmt.Printf("Failed to make `%s` directory\n", screenshotsDir)
 			os.Exit(1)
 		}
 	}
+
+	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
+	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
 }
 
 func TestTwitterColsPage(t *testing.T) {
@@ -68,12 +81,6 @@ func TestTwitterColsPage(t *testing.T) {
 }
 
 func testTwitterColsPage(url string) error {
-	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		return err
-	}
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
 	if err != nil {
 		return err
@@ -84,7 +91,7 @@ func testTwitterColsPage(url string) error {
 		return err
 	}
 
-	err = page.Screenshot("screenshots/twitter-collections.png")
+	err = page.Screenshot(filepath.Join(screenshotsDir, "twitter-collections.png"))
 	if err != nil {
 		return err
 	}
@@ -192,8 +199,6 @@ func TestGetConfigJSON(t *testing.T) {
 
 	cfgProps := cfg.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
-	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
 	assert.Nil(t, deep.Equal(cfgProps, configProps))
 }
 
@@ -280,10 +285,6 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	driver := agouti.PhantomJS()
-	assert.NoError(t, driver.Start())
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
 	assert.NoError(t, err)
 
@@ -303,9 +304,11 @@ func testPostConfigWithoutModification(
 ) {
 	assert.NoError(t, page.Navigate(url))
 
+	page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png"))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -326,10 +329,13 @@ func testPostConfigDelete(
 	c mybot.Config,
 ) {
 	assert.NoError(t, page.Navigate(url))
+
+	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png"))
 	assert.NoError(t, page.AllByButton("Delete").Click())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png"))
 
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
@@ -351,10 +357,14 @@ func testPostConfigSingleDelete(
 	c mybot.Config,
 ) {
 	assert.NoError(t, page.Navigate(url))
+
+	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
 	assert.NoError(t, page.AllByButton("Delete").At(0).Click())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png"))
+
 	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 
 	serverTestUserSpecificData.config = c
@@ -372,10 +382,13 @@ func testPostConfigDoubleDelete(
 	c mybot.Config,
 ) {
 	assert.NoError(t, page.Navigate(url))
+
+	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
 	assert.NoError(t, page.AllByButton("Delete").DoubleClick())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -397,9 +410,11 @@ func testPostConfigError(
 	assert.NoError(t, page.Navigate(url))
 	assert.NoError(t, page.AllByName("twitter.timelines.count").Fill("foo"))
 
+	page.Screenshot(filepath.Join(screenshotsDir, "error_config_before_post.png"))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
+	page.Screenshot(filepath.Join(screenshotsDir, "error_config_after_post.png"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -417,16 +432,19 @@ func testPostConfigTagsInput(
 	wg *sync.WaitGroup,
 	c mybot.Config,
 ) {
-	_, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com", 30*time.Second)
-	if err != nil {
-		t.Skip("Skip because network is unavailable: ", err)
-	}
+	// _, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com:https", 30*time.Second)
+	// if err != nil {
+	// 	t.Skip("Skip because network is unavailable: ", err)
+	// }
+	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
 
 	assert.NoError(t, page.Navigate(url))
 
+	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png"))
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
 	assert.NoError(t, page.AllByName(name).SendKeys(keys))
+	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png"))
 }
 
 func TestPostConfigTimelineAdd(t *testing.T) {
@@ -502,12 +520,6 @@ func TestIndexPage(t *testing.T) {
 }
 
 func testIndexPage(url string) error {
-	driver := agouti.PhantomJS()
-	if err := driver.Start(); err != nil {
-		return err
-	}
-	defer driver.Stop()
-
 	page, err := driver.NewPage()
 	if err != nil {
 		return err
@@ -518,7 +530,7 @@ func testIndexPage(url string) error {
 		return err
 	}
 
-	err = page.Screenshot("screenshots/index.png")
+	err = page.Screenshot(filepath.Join(screenshotsDir, "index.png"))
 	if err != nil {
 		return err
 	}
