@@ -21,8 +21,18 @@ function deleteRow(button, modal) {
     }
 }
 
-function openInNewTab() {
-    var screenName = document.getElementById('search-twitter-account-input').value;
-    var url = 'https://twitter.com/' + screenName;
-    window.open(url, '_blank');
+function openTimeline() {
+    var screenName = document.getElementById('twitter-search-account-input').value;
+    var modalBody = document.getElementById('twitter-search-timeline-modal-body');
+    modalBody.innerHTML = '';
+    twttr.widgets.createTimeline(
+        {
+            sourceType: 'profile',
+            screenName: screenName
+        },
+        modalBody,
+        {
+            tweetLimit: 10
+        }
+    )
 }

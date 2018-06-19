@@ -29,10 +29,25 @@
         {{end}}
 
         <div id="typeahead" class="form-group input-group">
-            <input type="text" class="typeahead form-control" placeholder="Type account name here" id="search-twitter-account-input">
+            <input type="text" class="typeahead form-control" placeholder="Type account name here" id="twitter-search-account-input" onkeypress="if (event.keyCode === 13) document.getElementById('twitter-search-account-open').click()">
             <span class="input-group-btn">
-                <button class="btn btn-default" type="button" onclick="openInNewTab()">New tab</button>
+                <button class="btn btn-default" type="button" data-toggle="modal" data-target="#twitter-search-timeline-modal" id="twitter-search-account-open" onclick="openTimeline()">Open</button>
             </span>
+        </div>
+
+        <div class="modal fade" id="twitter-search-timeline-modal" tabindex="-1" role="dialog" aria-labelledby="twitter-search-timeline-modal-title">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h3 class="modal-title" id="twitter-search-timeline-modal-title">Timeline</h3>
+                    </div>
+                    <div class="modal-body" id="twitter-search-timeline-modal-body"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <h3>Twitter Timelines</h3>
