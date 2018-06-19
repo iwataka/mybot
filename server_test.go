@@ -35,16 +35,27 @@ const (
 var (
 	serverTestUserSpecificData *userSpecificData
 	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
-	driver                     = agouti.PhantomJS()
+	driver                     *agouti.WebDriver
 )
 
 func TestMain(m *testing.M) {
-	err := driver.Start()
-	if err != nil {
-		panic(err)
-	}
-	defer driver.Stop()
+	defer func() {
+		if driver != nil {
+			driver.Stop()
+		}
+	}()
 	os.Exit(m.Run())
+}
+
+func getDriver() *agouti.WebDriver {
+	if driver == nil {
+		driver = agouti.PhantomJS()
+		err := driver.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+	return driver
 }
 
 func init() {
@@ -81,7 +92,7 @@ func TestTwitterColsPage(t *testing.T) {
 }
 
 func testTwitterColsPage(url string) error {
-	page, err := driver.NewPage()
+	page, err := getDriver().NewPage()
 	if err != nil {
 		return err
 	}
@@ -285,7 +296,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	s := httptest.NewServer(http.HandlerFunc(handler))
 	defer s.Close()
 
-	page, err := driver.NewPage()
+	page, err := getDriver().NewPage()
 	assert.NoError(t, err)
 
 	f(t, s.URL, page, wg, serverTestUserSpecificData.config)
@@ -520,7 +531,7 @@ func TestIndexPage(t *testing.T) {
 }
 
 func testIndexPage(url string) error {
-	page, err := driver.NewPage()
+	page, err := getDriver().NewPage()
 	if err != nil {
 		return err
 	}
