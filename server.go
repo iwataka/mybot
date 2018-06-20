@@ -343,9 +343,10 @@ func twitterCollectionListByUserID(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		getTwitterCollectionListByUserID(w, r, data.twitterAPI)
-	} else {
+	default:
 		http.NotFound(w, r)
 	}
 }
@@ -378,9 +379,10 @@ func settingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		getSetting(w, r, data.twitterAPI, data.slackAPI, data.cache, data.statuses)
-	} else {
+	default:
 		http.NotFound(w, r)
 	}
 }
@@ -481,9 +483,10 @@ func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		getTwitterCols(w, r, data.slackAPI, data.twitterAPI, twitterUser)
-	} else {
+	default:
 		http.NotFound(w, r)
 	}
 }
@@ -561,10 +564,13 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
 		postConfig(w, r, data.config, twitterUser)
-	} else if r.Method == http.MethodGet {
+	case http.MethodGet:
 		getConfig(w, r, data.config, data.slackAPI, twitterUser)
+	default:
+		http.NotFound(w, r)
 	}
 }
 
@@ -937,10 +943,13 @@ func configJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
 		postConfigJSON(w, r, data.config)
-	} else if r.Method == http.MethodGet {
+	case http.MethodGet:
 		getConfigJSON(w, r, data.config)
+	default:
+		http.NotFound(w, r)
 	}
 }
 
@@ -1005,10 +1014,13 @@ func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
 		postConfigFile(w, r, data.config)
-	} else if r.Method == http.MethodGet {
+	case http.MethodGet:
 		getConfigFile(w, r, data.config)
+	default:
+		http.NotFound(w, r)
 	}
 }
 
@@ -1105,10 +1117,13 @@ func setupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodPost {
+	switch r.Method {
+	case http.MethodPost:
 		postSetup(w, r)
-	} else if r.Method == http.MethodGet {
+	case http.MethodGet:
 		getSetup(w, r)
+	default:
+		http.NotFound(w, r)
 	}
 }
 
@@ -1217,9 +1232,10 @@ func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		getTwitterUserSearch(w, r, data.twitterAPI)
-	} else {
+	default:
 		http.NotFound(w, r)
 	}
 }
@@ -1316,9 +1332,10 @@ func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
 }
 
 func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		getTwitterLogout(w, r)
-	} else {
+	default:
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
