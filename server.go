@@ -171,6 +171,8 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/config/json/", wrapHandler(configJSONHandler))
 	http.HandleFunc("/setting/", wrapHandler(settingHandler))
 	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler))
+	http.HandleFunc("/twitter/favorites/list", wrapHandler(twitterFavoritesListHandler))
+	http.HandleFunc("/twitter/search", wrapHandler(twitterSearchHandler))
 	http.HandleFunc("/twitter/collections/list/", wrapHandler(twitterCollectionListByUserID))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
@@ -1198,8 +1200,81 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *my
 	}
 	searchTerm := vals.Get("q")
 	vals.Del("q")
-	vals.Encode()
 	res, err := twitterAPI.GetUserSearch(searchTerm, vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func twitterFavoritesListHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	switch r.Method {
+	case http.MethodGet:
+		getTwitterFavoritesList(w, r, data.twitterAPI)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterFavoritesList(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	vals, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res, err := twitterAPI.GetFavorites(vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func twitterSearchHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	switch r.Method {
+	case http.MethodGet:
+		getTwitterSearch(w, r, data.twitterAPI)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	vals, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	searchTerm := vals.Get("q")
+	vals.Del("q")
+	res, err := twitterAPI.GetSearch(searchTerm, vals)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
