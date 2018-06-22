@@ -61,7 +61,7 @@ function openSearch() {
         });
 }
 
-function createTweetsView(title, tweets, div) {
+function createTweetsView(tweets, div) {
     div.innerHTML = ''
     for (i = 0; i < tweets.length; i++) {
         var id = tweets[i].id_str;
