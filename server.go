@@ -28,6 +28,7 @@ import (
 const (
 	htmlTemplateDir     = "assets/tmpl"
 	twitterUserIDPrefix = "twitter-"
+	sessNameForProvider = "mybot-%s-session"
 )
 
 var (
@@ -77,11 +78,12 @@ func (a *Authenticator) InitProvider(host, name, callback string) {
 // CompleteUserAuth executes user authentication and returns the user
 // information.
 func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
-	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
+	sessKey := "mybot-user"
+	sess, err := serverSession.Get(r, fmt.Sprintf(sessNameForProvider, provider))
 	if err != nil {
 		return goth.User{}, utils.WithStack(err)
 	}
-	val, exists := sess.Values["mybot-user"]
+	val, exists := sess.Values[sessKey]
 	if exists {
 		if user, ok := val.(goth.User); ok {
 			return user, nil
@@ -95,7 +97,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
 		user.RawData = nil // RawData cannot be converted into session data currently
-		sess.Values["mybot-user"] = user
+		sess.Values[sessKey] = user
 		err := sess.Save(r, w)
 		if err != nil {
 			return goth.User{}, utils.WithStack(err)
@@ -106,7 +108,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 
 // Logout executes logout operation of the current login-user.
 func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
-	sess, err := serverSession.Get(r, fmt.Sprintf("mybot-%s-session", provider))
+	sess, err := serverSession.Get(r, fmt.Sprintf(sessNameForProvider, provider))
 	if err != nil {
 		return utils.WithStack(err)
 	}
@@ -124,13 +126,20 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if ck, cs := twitterApp.GetCreds(); ck == "" || cs == "" {
 			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		} else if ck, cs := slackApp.GetCreds(); ck == "" || cs == "" {
-			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		} else if _, err := authenticator.CompleteUserAuth("twitter", w, r); err != nil {
-			http.Redirect(w, r, "/auth/twitter/", http.StatusSeeOther)
-		} else {
-			f(w, r)
+			return
 		}
+
+		if ck, cs := slackApp.GetCreds(); ck == "" || cs == "" {
+			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+			return
+		}
+
+		if _, err := authenticator.CompleteUserAuth("twitter", w, r); err != nil {
+			http.Redirect(w, r, "/auth/twitter/", http.StatusSeeOther)
+			return
+		}
+
+		f(w, r)
 	}
 }
 
@@ -141,88 +150,30 @@ func startServer(host, port, cert, key string) error {
 	}
 
 	// View endpoints
-	http.HandleFunc(
-		"/",
-		wrapHandler(indexHandler),
-	)
-	http.HandleFunc(
-		"/twitter-collections/",
-		wrapHandler(twitterColsHandler),
-	)
-	http.HandleFunc(
-		"/config/",
-		wrapHandler(configHandler),
-	)
-	http.HandleFunc(
-		"/config/file/",
-		wrapHandler(configFileHandler),
-	)
-	http.HandleFunc(
-		"/config/timelines/add",
-		wrapHandler(configTimelineAddHandler),
-	)
-	http.HandleFunc(
-		"/config/favorites/add",
-		wrapHandler(configFavoriteAddHandler),
-	)
-	http.HandleFunc(
-		"/config/searches/add",
-		wrapHandler(configSearchAddHandler),
-	)
-	http.HandleFunc(
-		"/config/messages/add",
-		wrapHandler(configMessageAddHandler),
-	)
-	http.HandleFunc(
-		"/assets/css/",
-		getAssetsCSS,
-	)
-	http.HandleFunc(
-		"/assets/js/",
-		getAssetsJS,
-	)
-	http.HandleFunc(
-		"/auth/twitter/",
-		getAuthTwitter,
-	)
-	http.HandleFunc(
-		"/auth/slack",
-		getAuthSlack,
-	)
-	http.HandleFunc(
-		"/auth/twitter/callback",
-		getAuthTwitterCallback,
-	)
-	http.HandleFunc(
-		"/auth/slack/callback",
-		getAuthSlackCallback,
-	)
-	http.HandleFunc(
-		"/setup/",
-		setupHandler,
-	)
-	http.HandleFunc(
-		"/logout/twitter/",
-		twitterLogoutHandler,
-	)
+	http.HandleFunc("/", wrapHandler(indexHandler))
+	http.HandleFunc("/twitter-collections/", wrapHandler(twitterColsHandler))
+	http.HandleFunc("/config/", wrapHandler(configHandler))
+	http.HandleFunc("/config/file/", wrapHandler(configFileHandler))
+	http.HandleFunc("/config/timelines/add", wrapHandler(configTimelineAddHandler))
+	http.HandleFunc("/config/favorites/add", wrapHandler(configFavoriteAddHandler))
+	http.HandleFunc("/config/searches/add", wrapHandler(configSearchAddHandler))
+	http.HandleFunc("/config/messages/add", wrapHandler(configMessageAddHandler))
+	http.HandleFunc("/assets/css/", getAssetsCSS)
+	http.HandleFunc("/assets/js/", getAssetsJS)
+	http.HandleFunc("/auth/twitter/", getAuthTwitter)
+	http.HandleFunc("/auth/slack", getAuthSlack)
+	http.HandleFunc("/auth/twitter/callback", getAuthTwitterCallback)
+	http.HandleFunc("/auth/slack/callback", getAuthSlackCallback)
+	http.HandleFunc("/setup/", setupHandler)
+	http.HandleFunc("/logout/twitter/", twitterLogoutHandler)
 
 	// API endpoints
-	http.HandleFunc(
-		"/config/json/",
-		wrapHandler(configJSONHandler),
-	)
-	http.HandleFunc(
-		"/setting/",
-		wrapHandler(settingHandler),
-	)
-	http.HandleFunc(
-		"/twitter/users/search/",
-		wrapHandler(twitterUserSearchHandler),
-	)
-	http.HandleFunc(
-		"/twitter/collections/list/",
-		wrapHandler(twitterCollectionListByUserID),
-	)
+	http.HandleFunc("/config/json/", wrapHandler(configJSONHandler))
+	http.HandleFunc("/setting/", wrapHandler(settingHandler))
+	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler))
+	http.HandleFunc("/twitter/favorites/list", wrapHandler(twitterFavoritesListHandler))
+	http.HandleFunc("/twitter/search", wrapHandler(twitterSearchHandler))
+	http.HandleFunc("/twitter/collections/list/", wrapHandler(twitterCollectionListByUserID))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -281,9 +232,10 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
 
-	if r.URL.Path == "/" {
+	switch r.URL.Path {
+	case "/":
 		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, data.statuses)
-	} else {
+	default:
 		http.NotFound(w, r)
 	}
 }
@@ -1248,8 +1200,81 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *my
 	}
 	searchTerm := vals.Get("q")
 	vals.Del("q")
-	vals.Encode()
 	res, err := twitterAPI.GetUserSearch(searchTerm, vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func twitterFavoritesListHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	switch r.Method {
+	case http.MethodGet:
+		getTwitterFavoritesList(w, r, data.twitterAPI)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterFavoritesList(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	vals, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	res, err := twitterAPI.GetFavorites(vals)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(res)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(bs)
+}
+
+func twitterSearchHandler(w http.ResponseWriter, r *http.Request) {
+	setCORS(w)
+	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+
+	switch r.Method {
+	case http.MethodGet:
+		getTwitterSearch(w, r, data.twitterAPI)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getTwitterSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+	vals, err := url.ParseQuery(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	searchTerm := vals.Get("q")
+	vals.Del("q")
+	res, err := twitterAPI.GetSearch(searchTerm, vals)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

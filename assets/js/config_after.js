@@ -7,7 +7,7 @@ var twitterAccounts = new Bloodhound({
   }
 });
 
-$('#typeahead .typeahead').typeahead(null, {
+var typeaheadSettings = {
   name: 'twitter-accounts',
   display: 'screen_name',
   source: twitterAccounts,
@@ -25,4 +25,7 @@ $('#typeahead .typeahead').typeahead(null, {
       '</div>'
     ].join('\n'))
   }
-});
+}
+
+$('#typeahead-timeline .typeahead').typeahead(null, typeaheadSettings);
+$('#typeahead-favorites .typeahead').typeahead(null, typeaheadSettings);

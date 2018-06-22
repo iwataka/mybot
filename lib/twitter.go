@@ -388,6 +388,10 @@ func (a *TwitterAPI) GetUserSearch(searchTerm string, v url.Values) ([]anaconda.
 	return a.API.GetUserSearch(searchTerm, v)
 }
 
+func (a *TwitterAPI) GetFavorites(vals url.Values) ([]anaconda.Tweet, error) {
+	return a.API.GetFavorites(vals)
+}
+
 type TwitterUserListener struct {
 	stream    *anaconda.Stream
 	api       *TwitterAPI

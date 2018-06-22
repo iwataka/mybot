@@ -22,7 +22,7 @@ function deleteRow(button, modal) {
 }
 
 function openTimeline() {
-    var screenName = document.getElementById('twitter-search-account-input').value;
+    var screenName = document.getElementById('twitter-search-timeline-value').value;
     var modalBody = document.getElementById('twitter-search-timeline-modal-body');
     modalBody.innerHTML = '';
     twttr.widgets.createTimeline(
@@ -35,4 +35,36 @@ function openTimeline() {
             tweetLimit: 10
         }
     )
+}
+
+function openFavorites() {
+    var screenName = document.getElementById('twitter-search-favorites-value').value;
+    var modalBody = document.getElementById('twitter-search-favorites-modal-body');
+    axios.get('../twitter/favorites/list?count=10&screen_name=' + screenName)
+        .then(function (res) {
+            createTweetsView(res.data, modalBody);
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+}
+
+function openSearch() {
+    var query = document.getElementById('twitter-search-search-value').value;
+    var modalBody = document.getElementById('twitter-search-search-modal-body');
+    axios.get('../twitter/search?count=10&q=' + query)
+        .then(function (res) {
+            createTweetsView(res.data.statuses, modalBody);
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+}
+
+function createTweetsView(tweets, div) {
+    div.innerHTML = ''
+    for (i = 0; i < tweets.length; i++) {
+        var id = tweets[i].id_str;
+        twttr.widgets.createTweet(id, div);
+    }
 }
