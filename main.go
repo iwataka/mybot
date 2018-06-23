@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/oauth"
@@ -424,7 +425,13 @@ func main() {
 		Action:  validate,
 	}
 
-	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd}
+	restoreAssetsCmd := cli.Command{
+		Name:   "restoreAssets",
+		Usage:  "Restore assets to the current directory. You can edit restored assets if you want.",
+		Action: restoreAssets,
+	}
+
+	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd, restoreAssetsCmd}
 	err = app.Run(os.Args)
 	exitIfError(err)
 }
@@ -460,6 +467,13 @@ func validate(c *cli.Context) {
 			exitIfError(err)
 		}
 	}
+}
+
+func restoreAssets(c *cli.Context) {
+	if info, _ := os.Stat(assetsDir); info != nil {
+		fmt.Printf("Directory `%s` already exists.\n", assetsDir)
+	}
+	assets.RestoreAssets(".", assetsDir)
 }
 
 func beforeRunning(c *cli.Context) error {
