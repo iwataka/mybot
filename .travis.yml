@@ -26,8 +26,6 @@ script:
   - dep ensure
   - make test/full
   - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,bindata.go
-
-after_script:
   - docker build -t $DOCKER_REPO .
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - docker push $DOCKER_REPO
