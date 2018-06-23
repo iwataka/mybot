@@ -8,20 +8,11 @@
     <div class="container">
         {{{template "navbar" .}}}
 
+        <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
+
         <div class="jumbotron">
             <h1>Configuration</h1>
             <h2 class="lead">Configure your own bot's sources, filters and actions</h2>
-            <form id="overwrite" action="/config/" method="post" enctype="multipart/form-data"></form>
-            <input form="overwrite" type="submit" value="Save" class="btn btn-lg btn-primary" style="display:inline">
-
-            <form action="/config/file/" method="get" style="display:inline">
-                <input type="submit" value="Download" class="btn btn-lg btn-primary">
-            </form>
-
-            <form action="/config/file/" method="post" enctype="multipart/form-data" style="display:inline">
-                <input type="submit" value="Upload" class="btn btn-lg btn-primary">
-                <input type="file" name="mybot.config" style="display:inline">
-            </form>
         </div>
 
         {{{if .Message}}}
@@ -59,7 +50,7 @@
                             {{{textboxOfIntPtr $timeline.Count "twitter.timelines.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
@@ -129,7 +120,7 @@
                             {{{textboxOfIntPtr $favorite.Count "twitter.favorites.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
@@ -201,7 +192,7 @@
                             {{{textboxOfIntPtr $search.Count "twitter.searches.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
@@ -247,14 +238,14 @@
             </div>
         {{{end}}}
 
-        <h3>Twitter Other Settings</h3>
+        <h3>Twitter General Settings</h3>
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
                         <td colspan="2">Interaction</td>
                         <td colspan="2">Place Notification</td>
-                        <td></td>
+                        <td>Others</td>
                     </tr>
                     <tr>
                         <td>myself</td>
@@ -304,7 +295,7 @@
                             {{{listTextbox $msg.Channels "slack.messages.channels"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
@@ -347,8 +338,19 @@
                 </div>
             </div>
         {{{end}}}
-    </div>
 
+        <input form="overwrite" type="submit" value="Update configuration" class="btn btn-success">
+
+        <hr>
+
+        <form id="config-file-upload-form" action="/config/file/" method="post" enctype="multipart/form-data"></form>
+        <form action="/config/file/" method="get">
+            <input type="submit" value="Export as a .json file" class="btn btn-sm btn-default" style="margin-bottom:10px">
+        </form>
+        <input form="config-file-upload-form" type="submit" value="Import your configuration file" class="btn btn-sm btn-default" onsubmit="onsubmitImport()">
+        <input form="config-file-upload-form" id="config-file-upload-file-input" type="file" name="mybot.config" style="display:inline;margin-bottom:100px">
+
+    </div>
     <script src="/assets/js/config_after.js"></script>
 </body>
 </html>
