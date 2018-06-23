@@ -1,4 +1,4 @@
-{{define "action_config"}}
+{{{define "action_config"}}}
 <div class="table-responsive">
     <table class="table table-striped table-bordered">
         <thead>
@@ -9,67 +9,67 @@
             </tr>
         </thead>
         <tbody>
-            {{if or (eq .Type "slack") (eq .Type "webhook")}}
+            {{{if or (eq .Type "slack") (eq .Type "webhook")}}}
             <tr>
                 <td rowspan="1">Twitter</td>
                 <td>tweet</td>
                 <td>
-                    {{checkbox .Action.Twitter.Tweet (printf "%s%s" .Prefix ".action.twitter.tweet")}}
+                    {{{checkbox .Action.Twitter.Tweet (printf "%s%s" .Prefix ".action.twitter.tweet")}}}
                 </td>
             </tr>
-            {{end}}
-            {{if eq .Type "twitter"}}
+            {{{end}}}
+            {{{if eq .Type "twitter"}}}
             <tr>
                 <td rowspan="3">Twitter</td>
                 <td>retweet</td>
                 <td>
-                    {{checkbox .Action.Twitter.Retweet (printf "%s%s" .Prefix ".action.twitter.retweet")}}
+                    {{{checkbox .Action.Twitter.Retweet (printf "%s%s" .Prefix ".action.twitter.retweet")}}}
                 </td>
             </tr>
             <tr>
                 <td>favorite</td>
                 <td>
-                    {{checkbox .Action.Twitter.Favorite (printf "%s%s" .Prefix ".action.twitter.favorite")}}
+                    {{{checkbox .Action.Twitter.Favorite (printf "%s%s" .Prefix ".action.twitter.favorite")}}}
                 </td>
             </tr>
             <tr>
                 <td>collections</td>
                 <td>
-                    {{listTextbox .Action.Twitter.Collections (printf "%s%s" .Prefix ".action.twitter.collections")}}
+                    {{{listTextbox .Action.Twitter.Collections (printf "%s%s" .Prefix ".action.twitter.collections")}}}
                 </td>
             </tr>
-            {{end}}
-            {{if eq .Type "slack"}}
+            {{{end}}}
+            {{{if eq .Type "slack"}}}
             <tr>
                 <td rowspan="4">Slack</td>
                 <td>pin</td>
                 <td>
-                    {{checkbox .Action.Slack.Pin (printf "%s%s" .Prefix ".action.slack.pin")}}
+                    {{{checkbox .Action.Slack.Pin (printf "%s%s" .Prefix ".action.slack.pin")}}}
                 </td>
             </tr>
             <tr>
                 <td>star</td>
                 <td>
-                    {{checkbox .Action.Slack.Star (printf "%s%s" .Prefix ".action.slack.star")}}
+                    {{{checkbox .Action.Slack.Star (printf "%s%s" .Prefix ".action.slack.star")}}}
                 </td>
             </tr>
             <tr>
                 <td>reactions</td>
                 <td>
-                    {{listTextbox .Action.Slack.Reactions (printf "%s%s" .Prefix ".action.slack.reactions")}}
+                    {{{listTextbox .Action.Slack.Reactions (printf "%s%s" .Prefix ".action.slack.reactions")}}}
                 </td>
             </tr>
-            {{end}}
+            {{{end}}}
             <tr>
-                {{if eq .Type "twitter" }}
+                {{{if eq .Type "twitter" }}}
                 <td rowspan="1">Slack</td>
-                {{end}}
+                {{{end}}}
                 <td>channels</td>
                 <td>
-                    {{listTextbox .Action.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels")}}
+                    {{{listTextbox .Action.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels")}}}
                 </td>
             </tr>
         </tbody>
     </table>
 </div>
-{{end}}
+{{{end}}}

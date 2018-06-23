@@ -1,10 +1,10 @@
-{{define "setup"}}
+{{{define "setup"}}}
 <!DOCTYPE html>
 <html lang="en">
-    {{template "header" .}}
+    {{{template "header" .}}}
     <body>
         <div class="container">
-            {{template "navbar" .}}
+            {{{template "navbar" .}}}
             <div class="jumbotron">
                 <h1>Setup</h1>
                 <h2 class="lead">This is the first step to use Mybot</h2>
@@ -12,9 +12,9 @@
                 <input form="setup" type="submit" value="Save" class="btn btn-primary btn-lg">
             </div>
 
-            {{if .Message}}
-            <div class="alert alert-danger">{{.Message}}</div>
-            {{end}}
+            {{{if .Message}}}
+            <div class="alert alert-danger">{{{.Message}}}</div>
+            {{{end}}}
 
             <div class="alert alert-info">
                 <a href="https://apps.twitter.com" target="_blank">Click here to create/check your own Twitter App</a>
@@ -25,13 +25,13 @@
                         <tr>
                             <td>Twitter Consumer Key</td>
                             <td>
-                                <input form="setup" type="password" name="setup.twitter_consumer_key" value="{{.TwitterConsumerKey}}">
+                                <input form="setup" type="password" name="setup.twitter_consumer_key" value="{{{.TwitterConsumerKey}}}">
                             </td>
                         </tr>
                         <tr>
                             <td>Twitter Consumer Secret</td>
                             <td>
-                                <input form="setup" type="password" name="setup.twitter_consumer_secret" value="{{.TwitterConsumerSecret}}">
+                                <input form="setup" type="password" name="setup.twitter_consumer_secret" value="{{{.TwitterConsumerSecret}}}">
                             </td>
                         </tr>
                     </tbody>
@@ -47,13 +47,13 @@
                         <tr>
                             <td>Slack Client ID</td>
                             <td>
-                                <input form="setup" type="password" name="setup.slack_client_id" value="{{.SlackClientID}}">
+                                <input form="setup" type="password" name="setup.slack_client_id" value="{{{.SlackClientID}}}">
                             </td>
                         </tr>
                         <tr>
                             <td>Slack Client Secret</td>
                             <td>
-                                <input form="setup" type="password" name="setup.slack_client_secret" value="{{.SlackClientSecret}}">
+                                <input form="setup" type="password" name="setup.slack_client_secret" value="{{{.SlackClientSecret}}}">
                             </td>
                         </tr>
                     </tbody>
@@ -63,4 +63,4 @@
         </div>
     </body>
 </html>
-{{end}}
+{{{end}}}

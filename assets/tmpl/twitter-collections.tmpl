@@ -1,10 +1,10 @@
-{{define "twitterCols"}}
+{{{define "twitterCols"}}}
 <!DOCTYPE html>
 <html lang="en">
-{{template "header" .}}
+{{{template "header" .}}}
 <body>
     <div class="container">
-        {{template "navbar" .}}
+        {{{template "navbar" .}}}
 
         <div class="jumbotron">
             <h1>Twitter Collections</h1>
@@ -12,20 +12,20 @@
         </div>
 
         <ul class="nav nav-pills nav-justified">
-          {{range $key, $val := .CollectionMap}}
-          <li role="presentation" class="{{if eq $.ActiveCollection $key}}active{{end}}"><a data-toggle="tab" href="#{{$key}}">{{$key}}</a></li>
-          {{end}}
+          {{{range $key, $val := .CollectionMap}}}
+          <li role="presentation" class="{{{if eq $.ActiveCollection $key}}}active{{{end}}}"><a data-toggle="tab" href="#{{{$key}}}">{{{$key}}}</a></li>
+          {{{end}}}
         </ul>
 
         <div class="tab-content">
-            {{range $key, $val := .CollectionMap}}
-            <div id="{{$key}}" class="tab-pane fade{{if eq $.ActiveCollection $key}}in active{{end}}">
-                <a class="twitter-grid" href="{{$val}}"></a>
+            {{{range $key, $val := .CollectionMap}}}
+            <div id="{{{$key}}}" class="tab-pane fade{{{if eq $.ActiveCollection $key}}}in active{{{end}}}">
+                <a class="twitter-grid" href="{{{$val}}}"></a>
             </div>
-            {{end}}
+            {{{end}}}
         </div>
 
     </div>
 </body>
 </html>
-{{end}}
+{{{end}}}

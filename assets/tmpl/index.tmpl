@@ -1,10 +1,10 @@
-{{define "index"}}
+{{{define "index"}}}
 <!DOCTYPE html>
 <html lang="en">
-{{template "header" .}}
+{{{template "header" .}}}
 <body>
     <div class="container">
-        {{template "navbar" .}}
+        {{{template "navbar" .}}}
 
         <div class="jumbotron">
             <h1>Mybot</h1>
@@ -14,25 +14,25 @@
         <!-- Vision API result -->
         <div class="panel panel-info">
             <div class="panel-heading">
-                {{if .ImageAnalysisDate}}
-                <h3 class="panel-title">Google Vision API Result ({{.ImageAnalysisDate}})</h3>
-                {{else}}
+                {{{if .ImageAnalysisDate}}}
+                <h3 class="panel-title">Google Vision API Result ({{{.ImageAnalysisDate}}})</h3>
+                {{{else}}}
                 <h3 class="panel-title">Google Vision API Result</h3>
-                {{end}}
+                {{{end}}}
             </div>
             <div class="panel-body">
-                {{if .ImageURL}}
+                {{{if .ImageURL}}}
                 <div class="row">
                     <div class="col-md-6">
-                        <a href="{{.ImageSource}}"><img src="{{.ImageURL}}" class="img-responsive", alt="Image analyzed by Google Vision API"></a>
+                        <a href="{{{.ImageSource}}}"><img src="{{{.ImageURL}}}" class="img-responsive", alt="Image analyzed by Google Vision API"></a>
                     </div>
                     <div class="col-md-6" style="overflow:auto;max-height:480px">
-                        <pre><code>{{.ImageAnalysisResult}}</code></pre>
+                        <pre><code>{{{.ImageAnalysisResult}}}</code></pre>
                     </div>
                 </div>
-                {{else}}
+                {{{else}}}
                 <em>Nothing to show</em>
-                {{end}}
+                {{{end}}}
             </div>
         </div>
 
@@ -49,41 +49,41 @@
                     <tr>
                         <td>Twitter Direct Message Listener</td>
                         <td>
-                            {{if eq .TwitterListenDMStatus true}}
+                            {{{if eq .TwitterListenDMStatus true}}}
                             <span id="twitter-dm-listener-status" style="color:blue">Active</span>
-                            {{else}}
+                            {{{else}}}
                             <span id="twitter-dm-listener-status" style="color:red">Stop</span>
-                            {{end}}
+                            {{{end}}}
                         </td>
                     </tr>
                     <tr>
                         <td>Twitter User Listener</td>
                         <td>
-                            {{if eq .TwitterListenUsersStatus true}}
+                            {{{if eq .TwitterListenUsersStatus true}}}
                             <span id="twitter-user-listener-status" style="color:blue">Active</span>
-                            {{else}}
+                            {{{else}}}
                             <span id="twitter-user-listener-status" style="color:red">Stop</span>
-                            {{end}}
+                            {{{end}}}
                         </td>
                     </tr>
                     <tr>
                         <td>Twitter Periodic Job</td>
                         <td>
-                            {{if eq .TwitterPeriodicStatus true}}
+                            {{{if eq .TwitterPeriodicStatus true}}}
                             <span id="twitter-periodic-job-status" style="color:blue">Active</span>
-                            {{else}}
+                            {{{else}}}
                             <span id="twitter-periodic-job-status" style="color:red">Stop</span>
-                            {{end}}
+                            {{{end}}}
                         </td>
                     </tr>
                     <tr>
                         <td>Slack Listener</td>
                         <td>
-                            {{if eq .SlackListenerStatus true}}
+                            {{{if eq .SlackListenerStatus true}}}
                             <span id="slack-listener-status" style="color:blue">Active</span>
-                            {{else}}
+                            {{{else}}}
                             <span id="slack-listener-status" style="color:red">Stop</span>
-                            {{end}}
+                            {{{end}}}
                         </td>
                     </tr>
                 </tbody>
@@ -92,4 +92,4 @@
     </div>
 </body>
 </html>
-{{end}}
+{{{end}}}

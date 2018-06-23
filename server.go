@@ -204,7 +204,7 @@ func startServer(host, port, cert, key string) error {
 
 func HTMLTemplate() (*template.Template, error) {
 	var err error
-	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap)
+	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap).Delims("{{{", "}}}")
 
 	if info, _ := os.Stat(assetsDir); info != nil && info.IsDir() {
 		tmplFiles, err := zglob.Glob(filepath.Join(assetsDir, "**", "*.tmpl"))

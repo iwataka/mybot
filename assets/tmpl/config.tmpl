@@ -1,12 +1,12 @@
-{{define "config"}}
+{{{define "config"}}}
 <!DOCTYPE html>
 <html lang="en">
-{{template "header" .}}
+{{{template "header" .}}}
 <body>
     <script src="/assets/js/config_before.js"></script>
 
     <div class="container">
-        {{template "navbar" .}}
+        {{{template "navbar" .}}}
 
         <div class="jumbotron">
             <h1>Configuration</h1>
@@ -24,12 +24,12 @@
             </form>
         </div>
 
-        {{if .Message}}
-        <div class="alert alert-danger">{{.Message}}</div>
-        {{end}}
+        {{{if .Message}}}
+        <div class="alert alert-danger">{{{.Message}}}</div>
+        {{{end}}}
 
         <h3>Twitter Timelines</h3>
-        {{template "twitter_user_search" (newMap "Keyword" "timeline" "Title" "Timeline" "OpenFunc" "openTimeline" "Typeahead" true "Placeholder" "Type account name here") }}
+        {{{template "twitter_user_search" (newMap "Keyword" "timeline" "Title" "Timeline" "OpenFunc" "openTimeline" "Typeahead" true "Placeholder" "Type account name here") }}}
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead>
@@ -43,31 +43,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $index, $timeline := .Config.Twitter.Timelines}}
+                    {{{range $index, $timeline := .Config.Twitter.Timelines}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.timelines.deleted" value="false"/>
                         <td>
-                            {{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}
+                            {{{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}}
                         </td>
                         <td>
-                            {{boolSelectbox $timeline.ExcludeReplies "twitter.timelines.exclude_replies"}}
+                            {{{boolSelectbox $timeline.ExcludeReplies "twitter.timelines.exclude_replies"}}}
                         </td>
                         <td>
-                            {{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}
+                            {{{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}}
                         </td>
                         <td>
-                            {{textboxOfIntPtr $timeline.Count "twitter.timelines.count"}}
+                            {{{textboxOfIntPtr $timeline.Count "twitter.timelines.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-timelines-filter_{{$index}}">
+                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-timelines-filter_{{$index}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-timelines-filter_{{{$index}}}')">Delete</button>
                         </td>
                     </tr>
-                    {{end}}
+                    {{{end}}}
                     <tr>
                         <td>
                             <form action="/config/timelines/add" method="post">
@@ -84,19 +84,19 @@
             </table>
         </div>
 
-        {{range $index, $timeline := .Config.Twitter.Timelines}}
-            <div class="modal fade" id="twitter-timelines-filter_{{$index}}" tabindex="-1" role="dialog" aria-labelledby="twitter-timelines-filter_{{$index}}-title">
+        {{{range $index, $timeline := .Config.Twitter.Timelines}}}
+            <div class="modal fade" id="twitter-timelines-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-timelines-filter_{{{$index}}}-title">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-timelines-filter_{{$index}}-title">Details</h3>
+                            <h3 class="modal-title" id="twitter-timelines-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
                             <h3>Filter</h3>
-                            {{template "filter_config" (newMap "Type" "twitter" "Filter" $timeline.Filter "Prefix" "twitter.timelines")}}
+                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $timeline.Filter "Prefix" "twitter.timelines")}}}
                             <h3>Action</h3>
-                            {{template "action_config" (newMap "Type" "twitter" "Action" $timeline.Action "Prefix" "twitter.timelines")}}
+                            {{{template "action_config" (newMap "Type" "twitter" "Action" $timeline.Action "Prefix" "twitter.timelines")}}}
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -104,10 +104,10 @@
                     </div>
                 </div>
             </div>
-        {{end}}
+        {{{end}}}
 
         <h3>Twitter Favorites</h3>
-        {{template "twitter_user_search" (newMap "Keyword" "favorites" "Title" "Favorites" "OpenFunc" "openFavorites" "Typeahead" true "Placeholder" "Type account name here") }}
+        {{{template "twitter_user_search" (newMap "Keyword" "favorites" "Title" "Favorites" "OpenFunc" "openFavorites" "Typeahead" true "Placeholder" "Type account name here") }}}
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead>
@@ -119,25 +119,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $index, $favorite := .Config.Twitter.Favorites}}
+                    {{{range $index, $favorite := .Config.Twitter.Favorites}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.favorites.deleted" value="false"/>
                         <td>
-                            {{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}
+                            {{{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}}
                         </td>
                         <td>
-                            {{textboxOfIntPtr $favorite.Count "twitter.favorites.count"}}
+                            {{{textboxOfIntPtr $favorite.Count "twitter.favorites.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-favorites-filter_{{$index}}">
+                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-favorites-filter_{{$index}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-favorites-filter_{{{$index}}}')">Delete</button>
                         </td>
                     </tr>
-                    {{end}}
+                    {{{end}}}
                     <tr>
                         <td>
                             <form action="/config/favorites/add" method="post">
@@ -152,19 +152,19 @@
             </table>
         </div>
 
-        {{range $index, $favorite := .Config.Twitter.Favorites}}
-            <div class="modal fade" id="twitter-favorites-filter_{{$index}}" tabindex="-1" role="dialog" aria-labelledby="twitter-favorites-filter_{{$index}}-title">
+        {{{range $index, $favorite := .Config.Twitter.Favorites}}}
+            <div class="modal fade" id="twitter-favorites-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-favorites-filter_{{{$index}}}-title">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-favorites-filter_{{$index}}-title">Details</h3>
+                            <h3 class="modal-title" id="twitter-favorites-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
                             <h3>Filter</h3>
-                            {{template "filter_config" (newMap "Type" "twitter" "Filter" $favorite.Filter "Prefix" "twitter.favorites")}}
+                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $favorite.Filter "Prefix" "twitter.favorites")}}}
                             <h3>Action</h3>
-                            {{template "action_config" (newMap "Type" "twitter" "Action" $favorite.Action "Prefix" "twitter.favorites")}}
+                            {{{template "action_config" (newMap "Type" "twitter" "Action" $favorite.Action "Prefix" "twitter.favorites")}}}
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -172,10 +172,10 @@
                     </div>
                 </div>
             </div>
-        {{end}}
+        {{{end}}}
 
         <h3>Twitter Searches</h3>
-        {{template "twitter_user_search" (newMap "Keyword" "search" "Title" "Search" "OpenFunc" "openSearch" "Typeahead" false "Placeholder" "Type query here") }}
+        {{{template "twitter_user_search" (newMap "Keyword" "search" "Title" "Search" "OpenFunc" "openSearch" "Typeahead" false "Placeholder" "Type query here") }}}
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead>
@@ -188,28 +188,28 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $index, $search := .Config.Twitter.Searches}}
+                    {{{range $index, $search := .Config.Twitter.Searches}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.searches.deleted" value="false"/>
                         <td>
-                            {{listTextbox $search.Queries "twitter.searches.queries"}}
+                            {{{listTextbox $search.Queries "twitter.searches.queries"}}}
                         </td>
                         <td>
-                            {{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}
+                            {{{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}}
                         </td>
                         <td>
-                            {{textboxOfIntPtr $search.Count "twitter.searches.count"}}
+                            {{{textboxOfIntPtr $search.Count "twitter.searches.count"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-searches-filter_{{$index}}">
+                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-searches-filter_{{$index}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-searches-filter_{{{$index}}}')">Delete</button>
                         </td>
                     </tr>
-                    {{end}}
+                    {{{end}}}
                     <tr>
                         <td>
                             <form action="/config/searches/add" method="post">
@@ -225,19 +225,19 @@
             </table>
         </div>
 
-        {{range $index, $search := .Config.Twitter.Searches}}
-            <div class="modal fade" id="twitter-searches-filter_{{$index}}" tabindex="-1" role="dialog" aria-labelledby="twitter-searches-filter_{{$index}}-title">
+        {{{range $index, $search := .Config.Twitter.Searches}}}
+            <div class="modal fade" id="twitter-searches-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-searches-filter_{{{$index}}}-title">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-searches-filter_{{$index}}-title">Details</h3>
+                            <h3 class="modal-title" id="twitter-searches-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
                             <h3>Filter</h3>
-                            {{template "filter_config" (newMap "Type" "twitter" "Filter" $search.Filter "Prefix" "twitter.searches")}}
+                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $search.Filter "Prefix" "twitter.searches")}}}
                             <h3>Action</h3>
-                            {{template "action_config" (newMap "Type" "twitter" "Action" $search.Action "Prefix" "twitter.searches")}}
+                            {{{template "action_config" (newMap "Type" "twitter" "Action" $search.Action "Prefix" "twitter.searches")}}}
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -245,7 +245,7 @@
                     </div>
                 </div>
             </div>
-        {{end}}
+        {{{end}}}
 
         <h3>Twitter Other Settings</h3>
         <div class="table-responsive">
@@ -267,19 +267,19 @@
                 <tbody>
                     <tr>
                         <td>
-                            {{checkbox .Config.Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}
+                            {{{checkbox .Config.Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}}
                         </td>
                         <td>
-                            {{listTextbox .Config.Twitter.Interaction.Users "twitter.interaction.users"}}
+                            {{{listTextbox .Config.Twitter.Interaction.Users "twitter.interaction.users"}}}
                         </td>
                         <td>
-                            {{checkbox .Config.Twitter.Notification.Place.AllowSelf "twitter.notification.place.allow_self"}}
+                            {{{checkbox .Config.Twitter.Notification.Place.AllowSelf "twitter.notification.place.allow_self"}}}
                         </td>
                         <td>
-                            {{listTextbox .Config.Twitter.Notification.Place.Users "twitter.notification.place.users"}}
+                            {{{listTextbox .Config.Twitter.Notification.Place.Users "twitter.notification.place.users"}}}
                         </td>
                         <td>
-                            <input form="overwrite" type="text" name="twitter.duration" value="{{.Config.Twitter.Duration}}">
+                            <input form="overwrite" type="text" name="twitter.duration" value="{{{.Config.Twitter.Duration}}}">
                         </td>
                     </tr>
                 </tbody>
@@ -297,22 +297,22 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{range $index, $msg := .Config.Slack.Messages}}
+                    {{{range $index, $msg := .Config.Slack.Messages}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="slack.messages.deleted" value="false"/>
                         <td>
-                            {{listTextbox $msg.Channels "slack.messages.channels"}}
+                            {{{listTextbox $msg.Channels "slack.messages.channels"}}}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#slack-messages-filter_{{$index}}">
+                            <button type="button" class="btn btn-info" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
                                 details here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'slack-messages-filter_{{$index}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'slack-messages-filter_{{{$index}}}')">Delete</button>
                         </td>
                     </tr>
-                    {{end}}
+                    {{{end}}}
                     <tr>
                         <td>
                             <form action="/config/messages/add" method="post">
@@ -326,19 +326,19 @@
             </table>
         </div>
 
-        {{range $index, $msg := .Config.Slack.Messages}}
-            <div class="modal fade" id="slack-messages-filter_{{$index}}" tabindex="-1" role="dialog" aria-labelledby="slack-messages-filter_{{$index}}-title">
+        {{{range $index, $msg := .Config.Slack.Messages}}}
+            <div class="modal fade" id="slack-messages-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="slack-messages-filter_{{{$index}}}-title">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
                             <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="slack-messages-filter_{{$index}}-title">Details</h3>
+                            <h3 class="modal-title" id="slack-messages-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
                             <h3>Filter</h3>
-                            {{template "filter_config" (newMap "Type" "slack" "Filter" $msg.Filter "Prefix" "slack.messages")}}
+                            {{{template "filter_config" (newMap "Type" "slack" "Filter" $msg.Filter "Prefix" "slack.messages")}}}
                             <h3>Action</h3>
-                            {{template "action_config" (newMap "Type" "slack" "Action" $msg.Action "Prefix" "slack.messages")}}
+                            {{{template "action_config" (newMap "Type" "slack" "Action" $msg.Action "Prefix" "slack.messages")}}}
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -346,10 +346,10 @@
                     </div>
                 </div>
             </div>
-        {{end}}
+        {{{end}}}
     </div>
 
     <script src="/assets/js/config_after.js"></script>
 </body>
 </html>
-{{end}}
+{{{end}}}
