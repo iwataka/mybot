@@ -59,11 +59,7 @@ func getDriver() *agouti.WebDriver {
 }
 
 func init() {
-	err := initServer()
-	if err != nil {
-		panic(err)
-	}
-
+	var err error
 	serverTestUserSpecificData = &userSpecificData{}
 	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
 	serverTestUserSpecificData.statuses = map[int]*bool{}

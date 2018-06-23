@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
@@ -23,18 +24,30 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/slack"
 	"github.com/markbates/goth/providers/twitter"
+	"github.com/mattn/go-zglob"
 )
 
 const (
-	htmlTemplateDir     = "assets/tmpl"
+	assetsDir           = "assets"
 	twitterUserIDPrefix = "twitter-"
 	sessNameForProvider = "mybot-%s-session"
 )
 
 var (
-	htmlTemplate  *template.Template
-	authenticator models.Authenticator = &Authenticator{}
+	htmlTemplateDir = filepath.Join(assetsDir, "tmpl")
+	htmlTemplate    *template.Template
+	authenticator   models.Authenticator = &Authenticator{}
 )
+
+var templateFuncMap = template.FuncMap{
+	"checkbox":            tmpl.Checkbox,
+	"boolSelectbox":       tmpl.BoolSelectbox,
+	"selectbox":           tmpl.Selectbox,
+	"listTextbox":         tmpl.ListTextbox,
+	"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
+	"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
+	"newMap":              tmpl.NewMap,
+}
 
 // Authenticator is an implementation of models.Authenticator and provides some
 // common functions for authenticating users.
@@ -144,10 +157,8 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func startServer(host, port, cert, key string) error {
-	err := initServer()
-	if err != nil {
-		return utils.WithStack(err)
-	}
+	var err error
+	gothic.Store = serverSession
 
 	// View endpoints
 	http.HandleFunc("/", wrapHandler(indexHandler))
@@ -191,37 +202,31 @@ func startServer(host, port, cert, key string) error {
 	return nil
 }
 
-func initServer() error {
-	gothic.Store = serverSession
+func HTMLTemplate() (*template.Template, error) {
+	var err error
+	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap)
 
-	tmplTexts := []string{}
-	for _, name := range AssetNames() {
-		if filepath.Ext(name) == ".tmpl" {
-			tmplBytes := MustAsset(name)
-			tmplTexts = append(tmplTexts, string(tmplBytes))
+	if info, _ := os.Stat(assetsDir); info != nil && info.IsDir() {
+		tmplFiles, err := zglob.Glob(filepath.Join(assetsDir, "**", "*.tmpl"))
+		if err != nil {
+			return nil, utils.WithStack(err)
 		}
+		htmlTemplate, err = tmpl.ParseFiles(tmplFiles...)
+	} else if htmlTemplate == nil {
+		tmplTexts := []string{}
+		for _, name := range assets.AssetNames() {
+			if filepath.Ext(name) == ".tmpl" {
+				tmplBytes := assets.MustAsset(name)
+				tmplTexts = append(tmplTexts, string(tmplBytes))
+			}
+		}
+		htmlTemplate, err = tmpl.Parse(strings.Join(tmplTexts, "\n"))
 	}
-
-	funcMap := template.FuncMap{
-		"checkbox":            tmpl.Checkbox,
-		"boolSelectbox":       tmpl.BoolSelectbox,
-		"selectbox":           tmpl.Selectbox,
-		"listTextbox":         tmpl.ListTextbox,
-		"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
-		"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
-		"newMap":              tmpl.NewMap,
-	}
-
-	tmpl, err := template.
-		New("mybot_template_root").
-		Funcs(funcMap).
-		Parse(strings.Join(tmplTexts, "\n"))
-	htmlTemplate = tmpl
 
 	if err != nil {
-		return utils.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
-	return nil
+	return htmlTemplate, nil
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -278,7 +283,12 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 	}
 
 	buf := new(bytes.Buffer)
-	err = htmlTemplate.ExecuteTemplate(buf, "index", data)
+	tmpl, err := HTMLTemplate()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.ExecuteTemplate(buf, "index", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -483,7 +493,12 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 	}
 
 	buf := new(bytes.Buffer)
-	err = htmlTemplate.ExecuteTemplate(buf, "twitterCols", data)
+	tmpl, err := HTMLTemplate()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.ExecuteTemplate(buf, "twitterCols", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -789,7 +804,11 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 	}
 
 	buf := new(bytes.Buffer)
-	err := htmlTemplate.ExecuteTemplate(buf, "config", data)
+	tmpl, err := HTMLTemplate()
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	err = tmpl.ExecuteTemplate(buf, "config", data)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -1167,7 +1186,12 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buf := new(bytes.Buffer)
-	err = htmlTemplate.ExecuteTemplate(buf, "setup", data)
+	tmpl, err := HTMLTemplate()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = tmpl.ExecuteTemplate(buf, "setup", data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1378,7 +1402,7 @@ func readFile(path string) ([]byte, error) {
 		}
 		return data, nil
 	}
-	data, err := Asset(path)
+	data, err := assets.Asset(path)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
