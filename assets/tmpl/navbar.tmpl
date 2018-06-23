@@ -1,4 +1,4 @@
-{{define "navbar"}}
+{{{define "navbar"}}}
 <nav class="navbar navbar-default navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -11,49 +11,49 @@
         </div>
         <div class="navbar-collapse collapse" id="navbarMenus">
             <ul class="nav navbar-nav">
-                <li class="nav-item{{if eq .NavbarName `Config`}}active{{end}}">
+                <li class="nav-item{{{if eq .NavbarName `Config`}}}active{{{end}}}">
                     <a class="nav-link" href="/config/">Configuration</a>
                 </li>
             </ul>
 
             <ul class="nav navbar-nav">
-                <li class="nav-item{{if eq .NavbarName `TwitterCols`}}active{{end}}">
+                <li class="nav-item{{{if eq .NavbarName `TwitterCols`}}}active{{{end}}}">
                     <a class="nav-link" href="/twitter-collections/">Twitter Collections</a>
                 </li>
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
-                {{if ne .TwitterName ""}}
+                {{{if ne .TwitterName ""}}}
                 <li class="nav-item">
-                    <a href="https://twitter.com/{{.TwitterName}}" class="btn btn-lg btn-social-icon btn-twitter">
-                        <span class="fa fa-lg fa-twitter fa-active"></span> @{{.TwitterName}}
+                    <a href="https://twitter.com/{{{.TwitterName}}}" class="btn btn-lg btn-social-icon btn-twitter">
+                        <span class="fa fa-lg fa-twitter fa-active"></span> @{{{.TwitterName}}}
                     </a>
                 </li>
-                {{else}}
+                {{{else}}}
                 <li class="nav-item">
                     <a href="https://apps.twitter.com" class="btn btn-lg btn-social-icon btn-twitter">
                         <span class="fa fa-lg fa-twitter fa-passive"></span>
                     </a>
                 </li>
-                {{end}}
+                {{{end}}}
 
-                {{if ne .SlackTeam ""}}
+                {{{if ne .SlackTeam ""}}}
                 <li class="nav-item">
-                    <a href="{{.SlackURL}}" class="btn btn-lg btn-social-icon btn-slack">
-                        <span class="fa fa-lg fa-slack fa-active"></span> @{{.SlackTeam}}
+                    <a href="{{{.SlackURL}}}" class="btn btn-lg btn-social-icon btn-slack">
+                        <span class="fa fa-lg fa-slack fa-active"></span> @{{{.SlackTeam}}}
                     </a>
                 </li>
-                {{else}}
+                {{{else}}}
                 <li class="nav-item">
                     <a href="/auth/slack" class="btn btn-lg btn-social-icon btn-slack">
                         <span class="fa fa-lg fa-slack fa-passive"></span>
                     </a>
                 </li>
-                {{end}}
+                {{{end}}}
 
                 <li class="nav-item">
                     <a href="https://console.developers.google.com/apis/api/vision.googleapis.com/quotas" class="btn btn-lg btn-social-icon btn-google">
-                        <span class="fa fa-lg fa-google fa-{{if eq .GoogleEnabled true}}active{{else}}passive{{end}}"></span>
+                        <span class="fa fa-lg fa-google fa-{{{if eq .GoogleEnabled true}}}active{{{else}}}passive{{{end}}}"></span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -71,4 +71,4 @@
         </div>
     </div>
 </nav>
-{{end}}
+{{{end}}}
