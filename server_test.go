@@ -25,6 +25,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/sclevine/agouti"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -109,6 +110,10 @@ func TestGetTwitterCols(t *testing.T) {
 	testTwitterCols(t, testGet)
 }
 
+func TestGetTwitterColsIfAssetsNotExist(t *testing.T) {
+	testIfAssetsNotExist(t, TestGetTwitterCols)
+}
+
 func testTwitterCols(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 
@@ -159,6 +164,10 @@ func TestGetConfig(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGetConfigIfAssetsNotExist(t *testing.T) {
+	testIfAssetsNotExist(t, TestGetConfig)
+}
+
 func TestGetSetupTwitter(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getSetup))
 	defer s.Close()
@@ -176,6 +185,10 @@ func TestGetSetupTwitter(t *testing.T) {
 
 	err = testGet(s.URL)
 	assert.NoError(t, err)
+}
+
+func TestGetSetupTwitterIfAssetsNotExist(t *testing.T) {
+	testIfAssetsNotExist(t, TestGetSetupTwitter)
 }
 
 func TestGetConfigJSON(t *testing.T) {
@@ -548,6 +561,10 @@ func TestGetIndex(t *testing.T) {
 	testIndex(t, testGet)
 }
 
+func TestGetIndexIfAssetsNotExist(t *testing.T) {
+	testIfAssetsNotExist(t, TestGetIndex)
+}
+
 func testIndex(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
@@ -612,4 +629,17 @@ func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) 
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
 	loc := res.Header.Get("Location")
 	assert.True(t, strings.HasPrefix(loc, locPrefix))
+}
+
+func testIfAssetsNotExist(t *testing.T, f func(t *testing.T)) {
+	tmpdir := "tmp"
+	require.NoError(t, os.Mkdir(tmpdir, os.FileMode(0777)))
+	defer os.Remove(tmpdir)
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tmpdir))
+	defer os.Chdir(wd)
+
+	f(t)
 }
