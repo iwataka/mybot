@@ -69,7 +69,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 	userData := &userSpecificData{}
 	userData.workerChans = map[int]chan *worker.WorkerSignal{}
 	userData.statuses = map[int]*bool{}
-	initStatuses(userData.statuses)
+	userData.statuses = initialStatuses()
 	dbName := c.String("db-name")
 
 	if session == nil {
@@ -168,12 +168,14 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 	)
 }
 
-func initStatuses(statuses map[int]*bool) {
+func initialStatuses() map[int]*bool {
+	statuses := map[int]*bool{}
 	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
 	for _, key := range keys {
 		val := false
 		statuses[key] = &val
 	}
+	return statuses
 }
 
 func main() {

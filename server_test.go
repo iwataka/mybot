@@ -66,7 +66,7 @@ func init() {
 	serverTestUserSpecificData.statuses = map[int]*bool{}
 	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
 	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPI("", serverTestUserSpecificData.config, nil)
-	initStatuses(serverTestUserSpecificData.statuses)
+	serverTestUserSpecificData.statuses = initialStatuses()
 	if err != nil {
 		panic(err)
 	}
