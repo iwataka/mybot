@@ -1,0 +1,40 @@
+{{{define "modal"}}}
+    <div class="modal fade" id="{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}" tabindex="-1" role="dialog" aria-labelledby="{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}-title" style="overflow-y:scroll">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h3 class="modal-title" id="{{{replace .Prefix "." "-"}}}-filter_{{{.Index}}}-title">Details</h3>
+                </div>
+                <div class="modal-body">
+                    <h3>Source</h3>
+                    {{{template "source_config" (newMap "Type" .Type "Source" .ConfigItem "Prefix" .Prefix)}}}
+                    <h3>Filter</h3>
+                    {{{template "filter_config" (newMap "Type" .Type "Filter" .ConfigItem.Filter "Prefix" .Prefix)}}}
+                    <h3>Action</h3>
+                    {{{template "action_config" (newMap "Type" .Type "Action" .ConfigItem.Action "Prefix" .Prefix)}}}
+                </div>
+                <div class="modal-footer">
+                    <nav aria-label="...">
+                      <ul class="pager">
+                          {{{if gt .Index 0}}}
+                              <li class="previous">
+                                  <a data-dismiss="modal" data-toggle="modal" href="#{{{replace .Prefix "." "-"}}}-filter-{{{add .Index -1}}}">
+                                      <span aria-hidden="true">&larr;</span> Prev
+                                  </a>
+                              </li>
+                          {{{end}}}
+                          {{{if lt .Index (add .ItemLen -1)}}}
+                              <li class="next">
+                                  <a data-dismiss="modal" data-toggle="modal" href="#{{{replace .Prefix "." "-"}}}-filter-{{{add .Index 1}}}">
+                                      Next <span aria-hidden="true">&rarr;</span>
+                                  </a>
+                              </li>
+                          {{{end}}}
+                      </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+{{{end}}}

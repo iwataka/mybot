@@ -38,7 +38,7 @@
                             <input form="overwrite" type="text" name="twitter.timelines.name" value="{{{$timeline.Name}}}"/>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter-{{{$index}}}">
                                 Click here
                             </button>
                         </td>
@@ -61,27 +61,7 @@
         </div>
 
         {{{range $index, $timeline := .Config.Twitter.Timelines}}}
-            <div class="modal fade" id="twitter-timelines-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-timelines-filter_{{{$index}}}-title">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-timelines-filter_{{{$index}}}-title">Details</h3>
-                        </div>
-                        <div class="modal-body">
-                            <h3>Source</h3>
-                            {{{template "source_config" (newMap "Type" "twitter" "Source" $timeline "Prefix" "twitter.timelines")}}}
-                            <h3>Filter</h3>
-                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $timeline.Filter "Prefix" "twitter.timelines")}}}
-                            <h3>Action</h3>
-                            {{{template "action_config" (newMap "Type" "twitter" "Action" $timeline.Action "Prefix" "twitter.timelines")}}}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $timeline "Index" $index "ItemLen" (len $.Config.Twitter.Timelines) "Prefix" "twitter.timelines")}}}
         {{{end}}}
 
         <h3>Twitter Favorites</h3>
@@ -103,7 +83,7 @@
                             <input form="overwrite" type="text" name="twitter.favorites.name" value="{{{$favorite.Name}}}"/>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter-{{{$index}}}">
                                 Click here
                             </button>
                         </td>
@@ -126,27 +106,7 @@
         </div>
 
         {{{range $index, $favorite := .Config.Twitter.Favorites}}}
-            <div class="modal fade" id="twitter-favorites-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-favorites-filter_{{{$index}}}-title">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-favorites-filter_{{{$index}}}-title">Details</h3>
-                        </div>
-                        <div class="modal-body">
-                            <h3>Source</h3>
-                            {{{template "source_config" (newMap "Type" "twitter" "Source" $favorite "Prefix" "twitter.favorites")}}}
-                            <h3>Filter</h3>
-                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $favorite.Filter "Prefix" "twitter.favorites")}}}
-                            <h3>Action</h3>
-                            {{{template "action_config" (newMap "Type" "twitter" "Action" $favorite.Action "Prefix" "twitter.favorites")}}}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $favorite "Index" $index "ItemLen" (len $.Config.Twitter.Favorites) "Prefix" "twitter.favorites")}}}
         {{{end}}}
 
         <h3>Twitter Searches</h3>
@@ -168,7 +128,7 @@
                             <input form="overwrite" type="text" name="twitter.searches.name" value="{{{$search.Name}}}"/>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter-{{{$index}}}">
                                 Click here
                             </button>
                         </td>
@@ -191,27 +151,7 @@
         </div>
 
         {{{range $index, $search := .Config.Twitter.Searches}}}
-            <div class="modal fade" id="twitter-searches-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="twitter-searches-filter_{{{$index}}}-title">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="twitter-searches-filter_{{{$index}}}-title">Details</h3>
-                        </div>
-                        <div class="modal-body">
-                            <h3>Source</h3>
-                            {{{template "source_config" (newMap "Type" "twitter" "Source" $search "Prefix" "twitter.searches")}}}
-                            <h3>Filter</h3>
-                            {{{template "filter_config" (newMap "Type" "twitter" "Filter" $search.Filter "Prefix" "twitter.searches")}}}
-                            <h3>Action</h3>
-                            {{{template "action_config" (newMap "Type" "twitter" "Action" $search.Action "Prefix" "twitter.searches")}}}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $search "Index" $index "ItemLen" (len $.Config.Twitter.Searches) "Prefix" "twitter.searches")}}}
         {{{end}}}
 
         <h3>Twitter General Settings</h3>
@@ -235,7 +175,7 @@
                             <input form="overwrite" type="text" name="slack.messages.name" value="{{{$msg.Name}}}"/>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#slack-messages-filter-{{{$index}}}">
                                 Click here
                             </button>
                         </td>
@@ -258,27 +198,7 @@
         </div>
 
         {{{range $index, $msg := .Config.Slack.Messages}}}
-            <div class="modal fade" id="slack-messages-filter_{{{$index}}}" tabindex="-1" role="dialog" aria-labelledby="slack-messages-filter_{{{$index}}}-title">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                            <h3 class="modal-title" id="slack-messages-filter_{{{$index}}}-title">Details</h3>
-                        </div>
-                        <div class="modal-body">
-                            <h3>Source</h3>
-                            {{{template "source_config" (newMap "Type" "slack" "Source" $msg "Prefix" "slack.messages")}}}
-                            <h3>Filter</h3>
-                            {{{template "filter_config" (newMap "Type" "slack" "Filter" $msg.Filter "Prefix" "slack.messages")}}}
-                            <h3>Action</h3>
-                            {{{template "action_config" (newMap "Type" "slack" "Action" $msg.Action "Prefix" "slack.messages")}}}
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {{{template "modal" (newMap "Type" "slack" "ConfigItem" $msg "Index" $index "ItemLen" (len $.Config.Slack.Messages) "Prefix" "slack.messages")}}}
         {{{end}}}
 
         <input form="overwrite" type="submit" value="Update configuration" class="btn btn-success">

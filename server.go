@@ -47,6 +47,8 @@ var templateFuncMap = template.FuncMap{
 	"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
 	"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
 	"newMap":              tmpl.NewMap,
+	"add":                 func(i1, i2 int) int { return i1 + i2 },
+	"replace":             func(s, old, new string) string { return strings.Replace(s, old, new, -1) },
 }
 
 // Authenticator is an implementation of models.Authenticator and provides some
