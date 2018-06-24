@@ -550,7 +550,8 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			err = config.Save()
 			go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
 		} else {
-			err = config.Load()
+			// TODO: Needs a proper error handling
+			config.Load()
 		}
 
 		if err != nil {

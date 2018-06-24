@@ -308,10 +308,17 @@ func NewSource() Source {
 }
 
 func (c *Source) Validate() error {
+	if c.Name == "" {
+		return fmt.Errorf("No name")
+	}
 	if c.Action.IsEmpty() {
-		return fmt.Errorf("%v has no action", c)
+		return fmt.Errorf("No action")
 	}
 	return nil
+}
+
+func (c *Source) String() string {
+	return c.Name
 }
 
 // TwitterConfig is a configuration related to Twitter.

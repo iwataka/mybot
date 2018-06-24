@@ -278,7 +278,7 @@ func checkHTTPResponse(res *http.Response) error {
 	return nil
 }
 
-func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup, mybot.Config)) {
+func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup)) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
 	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
@@ -308,7 +308,9 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	page, err := getDriver().NewPage()
 	assert.NoError(t, err)
 
-	f(t, s.URL, page, wg, serverTestUserSpecificData.config)
+	curUserData := serverTestUserSpecificData.config
+	defer func() { serverTestUserSpecificData.config = curUserData }()
+	f(t, s.URL, page, wg)
 }
 
 func TestPostConfigWithoutModification(t *testing.T) {
@@ -320,8 +322,9 @@ func testPostConfigWithoutModification(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
+	c := serverTestUserSpecificData.config
+
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png"))
@@ -346,7 +349,6 @@ func testPostConfigDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
 	assert.NoError(t, page.Navigate(url))
 
@@ -362,8 +364,6 @@ func testPostConfigDelete(
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterSearches())
 	assert.Empty(t, serverTestUserSpecificData.config.GetSlackMessages())
-
-	serverTestUserSpecificData.config = c
 }
 
 func TestPostConfigSingleDelete(t *testing.T) {
@@ -375,8 +375,9 @@ func testPostConfigSingleDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
+	c := serverTestUserSpecificData.config
+
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
@@ -387,8 +388,6 @@ func testPostConfigSingleDelete(
 	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png"))
 
 	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
-
-	serverTestUserSpecificData.config = c
 }
 
 func TestPostConfigDoubleDelete(t *testing.T) {
@@ -400,8 +399,9 @@ func testPostConfigDoubleDelete(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
+	c := serverTestUserSpecificData.config
+
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
@@ -417,27 +417,46 @@ func testPostConfigDoubleDelete(
 	assert.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
 }
 
-func TestPostConfigError(t *testing.T) {
-	testPostConfig(t, testPostConfigError)
+func TestPostConfigNameError(t *testing.T) {
+	testPostConfig(t, testPostConfigNameError)
 }
 
-func testPostConfigError(
+func testPostConfigNameError(
 	t *testing.T,
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
-	t.Skip("This test is deperecated")
+	c := serverTestUserSpecificData.config
+
+	timelines := c.GetTwitterTimelines()
+	for i, _ := range timelines {
+		timelines[i].Name = ""
+	}
+	favorites := c.GetTwitterFavorites()
+	for i, _ := range favorites {
+		favorites[i].Name = ""
+	}
+	searches := c.GetTwitterSearches()
+	for i, _ := range searches {
+		searches[i].Name = ""
+	}
+	msgs := c.GetSlackMessages()
+	for i, _ := range msgs {
+		msgs[i].Name = ""
+	}
 
 	assert.NoError(t, page.Navigate(url))
-	assert.NoError(t, page.AllByName("twitter.timelines.count").Fill("foo"))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "error_config_before_post.png"))
+	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png"))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "error_config_after_post.png"))
+	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png"))
+
+	msg, err := page.FindByID("error-message").Text()
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(msg, "No name"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -453,7 +472,6 @@ func testPostConfigTagsInput(
 	url string,
 	page *agouti.Page,
 	wg *sync.WaitGroup,
-	c mybot.Config,
 ) {
 	// _, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com:https", 30*time.Second)
 	// if err != nil {
