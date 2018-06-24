@@ -3,6 +3,7 @@ duration = "30m"
 debug = false
 
 [[twitter.timelines]]
+name = "Golang Release"
 screen_names = ["golang"]
 [twitter.timelines.filter]
 retweeted = false
@@ -29,12 +30,14 @@ star = false
 channels = ["foo"]
 
 [[twitter.timelines]]
+name = "foo"
 screen_names = ["foo"]
 [twitter.timelines.action]
 [twitter.timelines.action.twitter]
 retweet = true
 
 [[twitter.searches]]
+name = "foo bar"
 queries = ["foo", "bar"]
 [twitter.searches.filter]
 url_patterns = ["foo"]
@@ -59,6 +62,7 @@ users = ["foo", "bar"]
 
 [slack]
 [[slack.messages]]
+name = "foo"
 channels = ["foo"]
 [slack.messages.filter]
 patterns = ["foo"]

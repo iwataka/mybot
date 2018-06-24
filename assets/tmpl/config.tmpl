@@ -25,11 +25,8 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <td>screen names</td>
-                        <td>exclude replies</td>
-                        <td>include rts</td>
-                        <td>count</td>
-                        <td>details</td>
+                        <td>Name</td>
+                        <td>Details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -37,18 +34,8 @@
                     {{{range $index, $timeline := .Config.Twitter.Timelines}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.timelines.deleted" value="false"/>
-                        <input form="overwrite" type="hidden" name="twitter.timelines.name" value=""/>
                         <td>
-                            {{{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}}
-                        </td>
-                        <td>
-                            {{{boolSelectbox $timeline.ExcludeReplies "twitter.timelines.exclude_replies"}}}
-                        </td>
-                        <td>
-                            {{{boolSelectbox $timeline.IncludeRts "twitter.timelines.include_rts"}}}
-                        </td>
-                        <td>
-                            {{{textboxOfIntPtr $timeline.Count "twitter.timelines.count"}}}
+                            <input form="overwrite" type="text" name="twitter.timelines.name" value="{{{$timeline.Name}}}"/>
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
@@ -68,9 +55,6 @@
                         </td>
                         <td></td>
                         <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
                     </tr>
                 </tbody>
             </table>
@@ -85,6 +69,8 @@
                             <h3 class="modal-title" id="twitter-timelines-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
+                            <h3>Source</h3>
+                            {{{template "source_config" (newMap "Type" "twitter" "Source" $timeline "Prefix" "twitter.timelines")}}}
                             <h3>Filter</h3>
                             {{{template "filter_config" (newMap "Type" "twitter" "Filter" $timeline.Filter "Prefix" "twitter.timelines")}}}
                             <h3>Action</h3>
@@ -104,9 +90,8 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <td>screen names</td>
-                        <td>count</td>
-                        <td>details</td>
+                        <td>Name</td>
+                        <td>Details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -114,12 +99,8 @@
                     {{{range $index, $favorite := .Config.Twitter.Favorites}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.favorites.deleted" value="false"/>
-                        <input form="overwrite" type="hidden" name="twitter.favorites.name" value=""/>
                         <td>
-                            {{{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}}
-                        </td>
-                        <td>
-                            {{{textboxOfIntPtr $favorite.Count "twitter.favorites.count"}}}
+                            <input form="overwrite" type="text" name="twitter.favorites.name" value="{{{$favorite.Name}}}"/>
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
@@ -139,7 +120,6 @@
                         </td>
                         <td></td>
                         <td></td>
-                        <td></td>
                     </tr>
                 </tbody>
             </table>
@@ -154,6 +134,8 @@
                             <h3 class="modal-title" id="twitter-favorites-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
+                            <h3>Source</h3>
+                            {{{template "source_config" (newMap "Type" "twitter" "Source" $favorite "Prefix" "twitter.favorites")}}}
                             <h3>Filter</h3>
                             {{{template "filter_config" (newMap "Type" "twitter" "Filter" $favorite.Filter "Prefix" "twitter.favorites")}}}
                             <h3>Action</h3>
@@ -173,10 +155,8 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <td>queries</td>
-                        <td>result type</td>
-                        <td>count</td>
-                        <td>details</td>
+                        <td>Name</td>
+                        <td>Details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -184,15 +164,8 @@
                     {{{range $index, $search := .Config.Twitter.Searches}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.searches.deleted" value="false"/>
-                        <input form="overwrite" type="hidden" name="twitter.searches.name" value=""/>
                         <td>
-                            {{{listTextbox $search.Queries "twitter.searches.queries"}}}
-                        </td>
-                        <td>
-                            {{{selectbox $search.ResultType "twitter.searches.result_type" "" "recent" "mixed" "popular"}}}
-                        </td>
-                        <td>
-                            {{{textboxOfIntPtr $search.Count "twitter.searches.count"}}}
+                            <input form="overwrite" type="text" name="twitter.searches.name" value="{{{$search.Name}}}"/>
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
@@ -212,8 +185,6 @@
                         </td>
                         <td></td>
                         <td></td>
-                        <td></td>
-                        <td></td>
                     </tr>
                 </tbody>
             </table>
@@ -228,6 +199,8 @@
                             <h3 class="modal-title" id="twitter-searches-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
+                            <h3>Source</h3>
+                            {{{template "source_config" (newMap "Type" "twitter" "Source" $search "Prefix" "twitter.searches")}}}
                             <h3>Filter</h3>
                             {{{template "filter_config" (newMap "Type" "twitter" "Filter" $search.Filter "Prefix" "twitter.searches")}}}
                             <h3>Action</h3>
@@ -285,8 +258,8 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <td>channels</td>
-                        <td>details</td>
+                        <td>Name</td>
+                        <td>Details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -294,9 +267,8 @@
                     {{{range $index, $msg := .Config.Slack.Messages}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="slack.messages.deleted" value="false"/>
-                        <input form="overwrite" type="hidden" name="slack.messages.name" value=""/>
                         <td>
-                            {{{listTextbox $msg.Channels "slack.messages.channels"}}}
+                            <input form="overwrite" type="text" name="slack.messages.name" value="{{{$msg.Name}}}"/>
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
@@ -330,6 +302,8 @@
                             <h3 class="modal-title" id="slack-messages-filter_{{{$index}}}-title">Details</h3>
                         </div>
                         <div class="modal-body">
+                            <h3>Source</h3>
+                            {{{template "source_config" (newMap "Type" "slack" "Source" $msg "Prefix" "slack.messages")}}}
                             <h3>Filter</h3>
                             {{{template "filter_config" (newMap "Type" "slack" "Filter" $msg.Filter "Prefix" "slack.messages")}}}
                             <h3>Action</h3>

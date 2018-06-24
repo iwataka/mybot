@@ -1,0 +1,68 @@
+{{{define "source_config"}}}
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <td>name</td>
+                <td>value</td>
+            </tr>
+        </thead>
+        <tbody>
+            {{{if eq .Type "twitter"}}}
+                {{{if or (eq .Prefix "twitter.timelines") (eq .Prefix "twitter.favorites")}}}
+                    <tr>
+                        <td>screen names</td>
+                        <td>
+                            {{{listTextbox .Source.ScreenNames (printf "%s%s" .Prefix ".screen_names")}}}
+                        </td>
+                    </tr>
+                {{{end}}}
+                {{{if eq .Prefix "twitter.searches"}}}
+                    <tr>
+                        <td>queries</td>
+                        <td>
+                            {{{listTextbox .Source.Queries (printf "%s%s" .Prefix ".queries")}}}
+                        </td>
+                    </tr>
+                {{{end}}}
+                {{{if eq .Prefix "twitter.timelines"}}}
+                    <tr>
+                        <td>exclude replies</td>
+                        <td>
+                            {{{boolSelectbox .Source.ExcludeReplies (printf "%s%s" .Prefix ".exclude_replies")}}}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>include rts</td>
+                        <td>
+                            {{{boolSelectbox .Source.IncludeRts (printf "%s%s" .Prefix ".include_rts")}}}
+                        </td>
+                    </tr>
+                {{{end}}}
+                {{{if eq .Prefix "twitter.searches"}}}
+                    <tr>
+                        <td>result type</td>
+                        <td>
+                            {{{selectbox .Source.ResultType (printf "%s%s" .Prefix ".result_type") "" "recent" "mixed" "popular"}}}
+                        </td>
+                    </tr>
+                {{{end}}}
+                <tr>
+                    <td>count</td>
+                    <td>
+                        {{{textboxOfIntPtr .Source.Count (printf "%s%s" .Prefix ".count")}}}
+                    </td>
+                </tr>
+            {{{end}}}
+            {{{if eq .Type "slack"}}}
+                <tr>
+                    <td>channels</td>
+                    <td>
+                        {{{listTextbox .Source.Channels (printf "%s%s" .Prefix ".channels")}}}
+                    </td>
+                </tr>
+            {{{end}}}
+        </tbody>
+    </table>
+</div>
+{{{end}}}
