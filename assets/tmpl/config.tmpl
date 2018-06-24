@@ -29,7 +29,7 @@
                         <td>exclude replies</td>
                         <td>include rts</td>
                         <td>count</td>
-                        <td>others</td>
+                        <td>details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -37,6 +37,7 @@
                     {{{range $index, $timeline := .Config.Twitter.Timelines}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.timelines.deleted" value="false"/>
+                        <input form="overwrite" type="hidden" name="twitter.timelines.name" value=""/>
                         <td>
                             {{{listTextbox $timeline.ScreenNames "twitter.timelines.screen_names"}}}
                         </td>
@@ -51,11 +52,11 @@
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-timelines-filter_{{{$index}}}">
-                                details here
+                                Click here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-timelines-filter_{{{$index}}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this)">Delete</button>
                         </td>
                     </tr>
                     {{{end}}}
@@ -105,7 +106,7 @@
                     <tr>
                         <td>screen names</td>
                         <td>count</td>
-                        <td>others</td>
+                        <td>details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -113,6 +114,7 @@
                     {{{range $index, $favorite := .Config.Twitter.Favorites}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.favorites.deleted" value="false"/>
+                        <input form="overwrite" type="hidden" name="twitter.favorites.name" value=""/>
                         <td>
                             {{{listTextbox $favorite.ScreenNames "twitter.favorites.screen_names"}}}
                         </td>
@@ -121,11 +123,11 @@
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-favorites-filter_{{{$index}}}">
-                                details here
+                                Click here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-favorites-filter_{{{$index}}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this)">Delete</button>
                         </td>
                     </tr>
                     {{{end}}}
@@ -174,7 +176,7 @@
                         <td>queries</td>
                         <td>result type</td>
                         <td>count</td>
-                        <td>others</td>
+                        <td>details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -182,6 +184,7 @@
                     {{{range $index, $search := .Config.Twitter.Searches}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="twitter.searches.deleted" value="false"/>
+                        <input form="overwrite" type="hidden" name="twitter.searches.name" value=""/>
                         <td>
                             {{{listTextbox $search.Queries "twitter.searches.queries"}}}
                         </td>
@@ -193,11 +196,11 @@
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#twitter-searches-filter_{{{$index}}}">
-                                details here
+                                Click here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'twitter-searches-filter_{{{$index}}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this)">Delete</button>
                         </td>
                     </tr>
                     {{{end}}}
@@ -283,7 +286,7 @@
                 <thead>
                     <tr>
                         <td>channels</td>
-                        <td></td>
+                        <td>details</td>
                         <td></td>
                     </tr>
                 </thead>
@@ -291,16 +294,17 @@
                     {{{range $index, $msg := .Config.Slack.Messages}}}
                     <tr>
                         <input form="overwrite" type="hidden" name="slack.messages.deleted" value="false"/>
+                        <input form="overwrite" type="hidden" name="slack.messages.name" value=""/>
                         <td>
                             {{{listTextbox $msg.Channels "slack.messages.channels"}}}
                         </td>
                         <td>
                             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#slack-messages-filter_{{{$index}}}">
-                                details here
+                                Click here
                             </button>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger" onclick="deleteRow(this, 'slack-messages-filter_{{{$index}}}')">Delete</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteRow(this)">Delete</button>
                         </td>
                     </tr>
                     {{{end}}}

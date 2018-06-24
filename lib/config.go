@@ -291,6 +291,8 @@ func (c *FileConfig) Load() error {
 // Source is a configuration for common data sources such as Twitter's
 // timelines, favorites and searches. Sources should have filters and actions.
 type Source struct {
+	// Name is a label to identify each source
+	Name string `json:"name,omitempty" toml:"name,omitempty" bson:"name,omitempty"`
 	// Filter filters out incoming data from sources.
 	Filter Filter `json:"filter" toml:"filter" bson:"filter"`
 	// Action defines actions for data passing through filters.
@@ -299,6 +301,7 @@ type Source struct {
 
 func NewSource() Source {
 	return Source{
+		Name:   "",
 		Filter: NewFilter(),
 		Action: data.NewAction(),
 	}

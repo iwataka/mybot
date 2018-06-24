@@ -582,6 +582,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		timeline := mybot.NewTimelineConfig()
+		timeline.Name = val[prefix+".name"][i]
 		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
 		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
 		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
@@ -608,6 +609,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		favorite := mybot.NewFavoriteConfig()
+		favorite.Name = val[prefix+".name"][i]
 		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
 		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return
@@ -632,6 +634,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		search := mybot.NewSearchConfig()
+		search.Name = val[prefix+".name"][i]
 		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
 		search.ResultType = val[prefix+".result_type"][i]
 		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
@@ -657,6 +660,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 			continue
 		}
 		msg := mybot.NewMessageConfig()
+		msg.Name = val[prefix+".name"][i]
 		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
 		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
 			return
