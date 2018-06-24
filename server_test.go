@@ -429,6 +429,7 @@ func testPostConfigError(
 	c mybot.Config,
 ) {
 	t.Skip("This test is deperecated")
+
 	assert.NoError(t, page.Navigate(url))
 	assert.NoError(t, page.AllByName("twitter.timelines.count").Fill("foo"))
 

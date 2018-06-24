@@ -215,43 +215,7 @@
         {{{end}}}
 
         <h3>Twitter General Settings</h3>
-        <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead>
-                    <tr>
-                        <td colspan="2">Interaction</td>
-                        <td colspan="2">Place Notification</td>
-                        <td>Others</td>
-                    </tr>
-                    <tr>
-                        <td>myself</td>
-                        <td>other users</td>
-                        <td>myself</td>
-                        <td>other users</td>
-                        <td>duration for periodic job</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            {{{checkbox .Config.Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}}
-                        </td>
-                        <td>
-                            {{{listTextbox .Config.Twitter.Interaction.Users "twitter.interaction.users"}}}
-                        </td>
-                        <td>
-                            {{{checkbox .Config.Twitter.Notification.Place.AllowSelf "twitter.notification.place.allow_self"}}}
-                        </td>
-                        <td>
-                            {{{listTextbox .Config.Twitter.Notification.Place.Users "twitter.notification.place.users"}}}
-                        </td>
-                        <td>
-                            <input form="overwrite" type="text" name="twitter.duration" value="{{{.Config.Twitter.Duration}}}">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        {{{template "twitter_conf" .Config.Twitter}}}
 
         <h3>Slack Messages</h3>
         <div class="table-responsive">
