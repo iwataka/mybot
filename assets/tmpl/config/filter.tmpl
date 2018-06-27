@@ -15,13 +15,13 @@
                 {{{else if eq .Type "slack"}}}
                 <td rowspan="2" colspan="2">General</td>
                 {{{end}}}
-                <td>patterns</td>
+                <td>text patterns</td>
                 <td>
                     {{{listTextbox .Filter.Patterns (printf "%s%s" .Prefix ".filter.patterns") ""}}}
                 </td>
             </tr>
             <tr>
-                <td>has media</td>
+                <td>has media ?</td>
                 <td>
                     {{{boolSelectbox .Filter.HasMedia (printf "%s%s" .Prefix ".filter.has_media")}}}
                 </td>
@@ -34,7 +34,7 @@
                 </td>
             </tr>
             <tr>
-                <td>retweeted</td>
+                <td>retweeted ?</td>
                 <td>
                     {{{boolSelectbox .Filter.Retweeted (printf "%s%s" .Prefix ".filter.retweeted")}}}
                 </td>
@@ -52,7 +52,9 @@
                 </td>
             </tr>
             <tr>
-                <td>lang</td>
+                <td>
+                    language {{{template "config_info" "https://developer.twitter.com/en/docs/developer-utilities/supported-languages/api-reference/get-help-languages.html"}}}
+                </td>
                 <td>
                     <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.lang`}}}" value="{{{.Filter.Lang}}}">
                 </td>
@@ -60,7 +62,9 @@
             {{{end}}}
             <!-- Vision API -->
             <tr>
-                <td rowspan="8">Vision</td>
+                <td rowspan="8">
+                    Vision {{{template "config_info" "https://cloud.google.com/vision/docs/reference/rest/v1/images/annotate"}}}
+                </td>
                 <td colspan="2">Label</td>
                 <td>
                     {{{listTextbox .Filter.Vision.Label (printf "%s%s" .Prefix ".filter.vision.label") ""}}}
@@ -111,7 +115,9 @@
             </tr>
             <!-- Language API -->
             <tr>
-                <td rowspan="2" colspan="2">Language</td>
+                <td rowspan="2" colspan="2">
+                    Language {{{template "config_info" "https://cloud.google.com/natural-language/docs/reference/rest/"}}}
+                </td>
                 <td>min sentiment</td>
                 <td>
                     {{{textboxOfFloat64Ptr .Filter.Language.MinSentiment (printf "%s%s" .Prefix ".filter.language.min_sentiment")}}}
@@ -126,4 +132,10 @@
         </tbody>
     </table>
 </div>
+{{{end}}}
+
+{{{define "config_info"}}}
+<a href="{{{.}}}" target="_blank" rel="noopener noreferrer">
+    <span class="fa fa-lg fa-info-circle"></span>
+</a>
 {{{end}}}

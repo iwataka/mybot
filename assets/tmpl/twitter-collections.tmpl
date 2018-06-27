@@ -11,6 +11,10 @@
             <h2 class="lead">Using Twitter collections to store your favorite tweets is deadly useful</h2>
         </div>
 
+        <div class="well">
+            You can check your Twitter collections here, but go to <a href="https://tweetdeck.twitter.com/">Tweetdeck</a> for more details.
+        </div>
+
         <ul class="nav nav-pills nav-justified">
           {{{range $key, $val := .CollectionMap}}}
           <li role="presentation" class="{{{if eq $.ActiveCollection $key}}}active{{{end}}}"><a data-toggle="tab" href="#{{{$key}}}">{{{$key}}}</a></li>

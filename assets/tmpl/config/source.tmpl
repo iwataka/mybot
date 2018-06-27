@@ -27,13 +27,13 @@
                 {{{end}}}
                 {{{if eq .Prefix "twitter.timelines"}}}
                     <tr>
-                        <td>exclude replies</td>
+                        <td>exclude replies ?</td>
                         <td>
                             {{{boolSelectbox .Source.ExcludeReplies (printf "%s%s" .Prefix ".exclude_replies")}}}
                         </td>
                     </tr>
                     <tr>
-                        <td>include rts</td>
+                        <td>include retweets ?</td>
                         <td>
                             {{{boolSelectbox .Source.IncludeRts (printf "%s%s" .Prefix ".include_rts")}}}
                         </td>
@@ -48,7 +48,7 @@
                     </tr>
                 {{{end}}}
                 <tr>
-                    <td>count</td>
+                    <td>fetch count</td>
                     <td>
                         {{{textboxOfIntPtr .Source.Count (printf "%s%s" .Prefix ".count")}}}
                     </td>
