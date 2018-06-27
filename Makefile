@@ -6,7 +6,4 @@ build:
 	$(GO) build
 
 test:
-	$(GO) test $(TEST_PACKAGES) $(ARGS)
-
-test/full:
 	$(GO) test $(TEST_PACKAGES) -race $(ARGS)
