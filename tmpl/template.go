@@ -83,13 +83,13 @@ func Selectbox(str, name string, opts ...string) template.HTML {
 }
 
 // ListTextbox returns html text with specified initial list values and name.
-func ListTextbox(list []string, name string) template.HTML {
+func ListTextbox(list []string, name, class string) template.HTML {
 	str := ""
 	if list != nil {
 		str = strings.Join(list, ",")
 	}
-	format := `<input form="overwrite" type="text" name="%s" value="%s" data-role="tagsinput"/>`
-	result := fmt.Sprintf(format, name, str)
+	format := `<input form="overwrite" type="text" name="%s" value="%s" class="%s" data-role="tagsinput"/>`
+	result := fmt.Sprintf(format, name, str, class)
 	return template.HTML(result)
 }
 

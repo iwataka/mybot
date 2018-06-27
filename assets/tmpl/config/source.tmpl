@@ -13,7 +13,7 @@
                     <tr>
                         <td>screen names</td>
                         <td>
-                            {{{listTextbox .Source.ScreenNames (printf "%s%s" .Prefix ".screen_names")}}}
+                            {{{listTextbox .Source.ScreenNames (printf "%s%s" .Prefix ".screen_names") "typeahead-tagsinput"}}}
                         </td>
                     </tr>
                 {{{end}}}
@@ -21,7 +21,7 @@
                     <tr>
                         <td>queries</td>
                         <td>
-                            {{{listTextbox .Source.Queries (printf "%s%s" .Prefix ".queries")}}}
+                            {{{listTextbox .Source.Queries (printf "%s%s" .Prefix ".queries") ""}}}
                         </td>
                     </tr>
                 {{{end}}}
@@ -58,7 +58,7 @@
                 <tr>
                     <td>channels</td>
                     <td>
-                        {{{listTextbox .Source.Channels (printf "%s%s" .Prefix ".channels")}}}
+                        {{{listTextbox .Source.Channels (printf "%s%s" .Prefix ".channels") ""}}}
                     </td>
                 </tr>
             {{{end}}}

@@ -35,7 +35,7 @@
             <tr>
                 <td>collections</td>
                 <td>
-                    {{{listTextbox .Action.Twitter.Collections (printf "%s%s" .Prefix ".action.twitter.collections")}}}
+                    {{{listTextbox .Action.Twitter.Collections (printf "%s%s" .Prefix ".action.twitter.collections") ""}}}
                 </td>
             </tr>
             {{{end}}}
@@ -56,7 +56,7 @@
             <tr>
                 <td>reactions</td>
                 <td>
-                    {{{listTextbox .Action.Slack.Reactions (printf "%s%s" .Prefix ".action.slack.reactions")}}}
+                    {{{listTextbox .Action.Slack.Reactions (printf "%s%s" .Prefix ".action.slack.reactions") ""}}}
                 </td>
             </tr>
             {{{end}}}
@@ -66,7 +66,7 @@
                 {{{end}}}
                 <td>channels</td>
                 <td>
-                    {{{listTextbox .Action.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels")}}}
+                    {{{listTextbox .Action.Slack.Channels (printf "%s%s" .Prefix ".action.slack.channels") ""}}}
                 </td>
             </tr>
         </tbody>

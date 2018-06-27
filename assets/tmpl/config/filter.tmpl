@@ -17,7 +17,7 @@
                 {{{end}}}
                 <td>patterns</td>
                 <td>
-                    {{{listTextbox .Filter.Patterns (printf "%s%s" .Prefix ".filter.patterns")}}}
+                    {{{listTextbox .Filter.Patterns (printf "%s%s" .Prefix ".filter.patterns") ""}}}
                 </td>
             </tr>
             <tr>
@@ -30,7 +30,7 @@
             <tr>
                 <td>url patterns</td>
                 <td>
-                    {{{listTextbox .Filter.URLPatterns (printf "%s%s" .Prefix ".filter.url_patterns")}}}
+                    {{{listTextbox .Filter.URLPatterns (printf "%s%s" .Prefix ".filter.url_patterns") ""}}}
                 </td>
             </tr>
             <tr>
@@ -63,7 +63,7 @@
                 <td rowspan="8">Vision</td>
                 <td colspan="2">Label</td>
                 <td>
-                    {{{listTextbox .Filter.Vision.Label (printf "%s%s" .Prefix ".filter.vision.label")}}}
+                    {{{listTextbox .Filter.Vision.Label (printf "%s%s" .Prefix ".filter.vision.label") ""}}}
                 </td>
             </tr>
             <tr>
@@ -94,19 +94,19 @@
             <tr>
                 <td colspan="2">Text</td>
                 <td>
-                    {{{listTextbox .Filter.Vision.Text (printf "%s%s" .Prefix ".filter.vision.text")}}}
+                    {{{listTextbox .Filter.Vision.Text (printf "%s%s" .Prefix ".filter.vision.text") ""}}}
                 </td>
             </tr>
             <tr>
                 <td colspan="2">Landmark</td>
                 <td>
-                    {{{listTextbox .Filter.Vision.Landmark (printf "%s%s" .Prefix ".filter.vision.landmark")}}}
+                    {{{listTextbox .Filter.Vision.Landmark (printf "%s%s" .Prefix ".filter.vision.landmark") ""}}}
                 </td>
             </tr>
             <tr>
                 <td colspan="2">Logo</td>
                 <td>
-                    {{{listTextbox .Filter.Vision.Logo (printf "%s%s" .Prefix ".filter.vision.logo")}}}
+                    {{{listTextbox .Filter.Vision.Logo (printf "%s%s" .Prefix ".filter.vision.logo") ""}}}
                 </td>
             </tr>
             <!-- Language API -->
