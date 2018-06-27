@@ -393,9 +393,10 @@ type ImageResponse struct {
 }
 
 func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+	twitterScreenName := ""
 	twitterUser, err := twitterAPI.GetSelf()
-	if err != nil {
-		return nil, utils.WithStack(err)
+	if err == nil {
+		twitterScreenName = twitterUser.ScreenName
 	}
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
@@ -431,7 +432,7 @@ func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cac
 	}
 
 	return &SettingResponse{
-		TwitterName:   twitterUser.ScreenName,
+		TwitterName:   twitterScreenName,
 		SlackTeam:     slackTeam,
 		SlackURL:      slackURL,
 		GoogleEnabled: googleEnabled(),

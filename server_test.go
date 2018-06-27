@@ -557,6 +557,11 @@ func testPostConfigAdd(
 }
 
 func TestIndexPage(t *testing.T) {
+	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
 	testIndex(t, testIndexPage)
 }
 
@@ -578,12 +583,33 @@ func testIndexPage(url string) error {
 	return nil
 }
 
-func TestGetIndex(t *testing.T) {
+func TestGetIndexWithoutTwitterAuthenticated(t *testing.T) {
+	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("Your Twitter account is not authenticated."))
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
 	testIndex(t, testGet)
 }
 
+func TestGetIndexWithTwitterAuthenticated(t *testing.T) {
+	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
+	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
+	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
+	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
+
+	testIndex(t, testGet)
+}
+
+func generateTwitterAPIMock(t *testing.T, user anaconda.User, userErr error) *mocks.MockTwitterAPI {
+	ctrl := gomock.NewController(t)
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, userErr)
+	return twitterAPIMock
+}
+
 func TestGetIndexIfAssetsNotExist(t *testing.T) {
-	testIfAssetsNotExist(t, TestGetIndex)
+	testIfAssetsNotExist(t, TestGetIndexWithTwitterAuthenticated)
 }
 
 func testIndex(t *testing.T, f func(url string) error) {
@@ -599,13 +625,6 @@ func testIndex(t *testing.T, f func(url string) error) {
 	serverTestUserSpecificData.cache = data.NewTestFileCache("", t)
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
-
-	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
-	user := anaconda.User{ScreenName: "foo"}
-	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(user, nil)
-	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
-	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock, Cache: nil, Config: nil}
 
 	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
