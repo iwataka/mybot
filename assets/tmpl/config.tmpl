@@ -72,7 +72,7 @@
             </div>
 
             {{{range $index, $timeline := .Config.Twitter.Timelines}}}
-                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $timeline "Index" $index "ItemLen" (len $.Config.Twitter.Timelines) "Prefix" "twitter.timelines")}}}
+                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $timeline "Index" $index "ItemLen" (len $.Config.Twitter.Timelines) "Prefix" "twitter.timelines" "Name" $timeline.Name)}}}
             {{{end}}}
 
             <h3>Twitter Favorites</h3>
@@ -89,7 +89,7 @@
             </div>
 
             {{{range $index, $favorite := .Config.Twitter.Favorites}}}
-                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $favorite "Index" $index "ItemLen" (len $.Config.Twitter.Favorites) "Prefix" "twitter.favorites")}}}
+                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $favorite "Index" $index "ItemLen" (len $.Config.Twitter.Favorites) "Prefix" "twitter.favorites" "Name" $favorite.Name)}}}
             {{{end}}}
 
             <h3>Twitter Searches</h3>
@@ -106,7 +106,7 @@
             </div>
 
             {{{range $index, $search := .Config.Twitter.Searches}}}
-                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $search "Index" $index "ItemLen" (len $.Config.Twitter.Searches) "Prefix" "twitter.searches")}}}
+                {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $search "Index" $index "ItemLen" (len $.Config.Twitter.Searches) "Prefix" "twitter.searches" "Name" $search.Name)}}}
             {{{end}}}
 
             <h3>Twitter General Settings</h3>
@@ -126,7 +126,7 @@
             </div>
 
             {{{range $index, $msg := .Config.Slack.Messages}}}
-                {{{template "modal" (newMap "Type" "slack" "ConfigItem" $msg "Index" $index "ItemLen" (len $.Config.Slack.Messages) "Prefix" "slack.messages")}}}
+                {{{template "modal" (newMap "Type" "slack" "ConfigItem" $msg "Index" $index "ItemLen" (len $.Config.Slack.Messages) "Prefix" "slack.messages" "Name" $msg.Name)}}}
             {{{end}}}
 
             <input form="overwrite" type="submit" value="Update configuration" class="btn btn-success">

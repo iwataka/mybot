@@ -49,6 +49,7 @@ var templateFuncMap = template.FuncMap{
 	"newMap":              tmpl.NewMap,
 	"add":                 func(i1, i2 int) int { return i1 + i2 },
 	"replace":             func(s, old, new string) string { return strings.Replace(s, old, new, -1) },
+	"title":               func(s string) string { return strings.Title(s) },
 }
 
 // Authenticator is an implementation of models.Authenticator and provides some

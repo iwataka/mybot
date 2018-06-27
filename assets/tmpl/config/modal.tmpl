@@ -4,7 +4,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h3 class="modal-title" id="{{{replace .Prefix "." "-"}}}-filter_{{{.Index}}}-title">Details</h3>
+                    <h3 class="modal-title" id="{{{replace .Prefix "." "-"}}}-filter_{{{.Index}}}-title"><span class="label label-primary">{{{title (replace .Prefix "." " ")}}}</span> {{{.Name}}}</h3>
                 </div>
                 <div class="modal-body">
                     <h3>Source</h3>
