@@ -1,7 +1,7 @@
 # Mybot
 
 [![Build Status](https://travis-ci.org/iwataka/mybot.svg?branch=master)](https://travis-ci.org/iwataka/mybot)
-[![Coverage Status](https://coveralls.io/repos/github/iwataka/mybot/badge.svg?branch=master)](https://coveralls.io/github/iwataka/mybot?branch=master)
+[![Coverage Status](https://img.shields.io/coveralls/github/iwataka/mybot/master.svg)](https://coveralls.io/github/iwataka/mybot?branch=master)
 
 ## Introduction
 
