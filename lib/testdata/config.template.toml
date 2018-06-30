@@ -52,6 +52,7 @@ collections = ["foo"]
 pin = false
 star = false
 channels = ["foo"]
+
 [twitter.notification]
 [twitter.notification.Place]
 allow_self = true

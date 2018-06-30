@@ -949,7 +949,7 @@ func postConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config)
 	if err != nil {
 		return
 	}
-	err = config.Unmarshal(bs)
+	err = config.Unmarshal(".json", bs)
 	if err != nil {
 		return
 	}
@@ -1028,7 +1028,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config)
 		msg = err.Error()
 		return
 	}
-	err = config.Unmarshal(bytes)
+	err = config.Unmarshal(".json", bytes)
 	if err != nil {
 		msg = err.Error()
 		return

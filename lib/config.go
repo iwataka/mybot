@@ -43,7 +43,7 @@ type Config interface {
 	AddSlackMessage(msg MessageConfig)
 	Validate() error
 	ValidateWithAPI(api models.TwitterAPI) error
-	Unmarshal(bytes []byte) error
+	Unmarshal(ext string, bytes []byte) error
 	Marshal(indent, ext string) ([]byte, error)
 }
 
@@ -238,18 +238,24 @@ func (c *ConfigProperties) Marshal(indent, ext string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *ConfigProperties) Unmarshal(bytes []byte) error {
-	err := json.Unmarshal(bytes, c)
-	if err == nil {
-		return nil
+// TODO: Make error message clearer
+func (c *ConfigProperties) Unmarshal(ext string, bytes []byte) error {
+	switch ext {
+	case ".json":
+		err := json.Unmarshal(bytes, c)
+		if err != nil {
+			return err
+		}
+	case ".toml":
+		_, err := toml.Decode(string(bytes), c)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("Configuration must be written in either json or toml format")
 	}
 
-	_, err = toml.Decode(string(bytes), c)
-	if err == nil {
-		return nil
-	}
-
-	return fmt.Errorf("Configuration must be written in either json or toml format")
+	return nil
 }
 
 // Save saves the specified configuration to the source file.
@@ -280,7 +286,7 @@ func (c *FileConfig) Load() error {
 		if err != nil {
 			return utils.WithStack(err)
 		}
-		err = c.Unmarshal(bytes)
+		err = c.Unmarshal(filepath.Ext(c.File), bytes)
 		if err != nil {
 			return utils.WithStack(err)
 		}

@@ -214,7 +214,7 @@ func TestGetConfigJSON(t *testing.T) {
 	cfg, err := mybot.NewFileConfig("")
 	assert.NoError(t, err)
 
-	err = cfg.Unmarshal(bs)
+	err = cfg.Unmarshal(".json", bs)
 	assert.NoError(t, err)
 
 	cfgProps := cfg.GetProperties()
