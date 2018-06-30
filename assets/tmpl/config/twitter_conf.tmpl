@@ -1,15 +1,9 @@
 {{{define "twitter_conf"}}}
 <div class="table-responsive">
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <td colspan="2">Name</td>
-                <td>Value</td>
-            </tr>
-        </thead>
+    <table class="table">
         <tbody>
             <tr>
-                <td rowspan="2">Interaction</td>
+                <td rowspan="2">Twitter Interaction</td>
                 <td>myself</td>
                 <td>
                     {{{checkbox .Interaction.AllowSelf "twitter.interaction.allow_self"}}}
@@ -22,7 +16,7 @@
                 </td>
             </tr>
             <tr>
-                <td rowspan="2">Place Notification</td>
+                <td rowspan="2">Twitter Place Notification</td>
                 <td>myself</td>
                 <td>
                     {{{checkbox .Notification.Place.AllowSelf "twitter.notification.place.allow_self"}}}
@@ -38,7 +32,7 @@
                 <td>Others</td>
                 <td>polling duration</td>
                 <td>
-                    <input form="overwrite" type="text" name="twitter.duration" value="{{{.Duration}}}">
+                    <input class="form-control" form="overwrite" type="text" name="twitter.duration" value="{{{.Duration}}}">
                 </td>
             </tr>
         </tbody>

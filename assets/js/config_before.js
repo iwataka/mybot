@@ -1,16 +1,14 @@
 function deleteRow(button) {
-    var tr = button.parentNode.parentNode;
-    for (var i = 0; i < tr.childNodes.length; i++) {
-        var child = tr.childNodes[i];
+    var group = button.parentNode.parentNode;
+    for (var i = 0; i < group.childNodes.length; i++) {
+        var child = group.childNodes[i];
         if (child.type === 'hidden' && child.nodeName === 'INPUT' && strEndsWith(child.name, 'deleted')) {
-            if (tr.className === 'deleted') {
+            if (group.classList.contains('deleted')) {
                 child.value = 'false';
-                tr.className = '';
-                button.innerHTML = 'Delete';
+                group.classList.remove('deleted');
             } else {
                 child.value = 'true';
-                tr.className = 'deleted';
-                button.innerHTML = 'Revert';
+                group.classList.add('deleted');
             }
         }
     }

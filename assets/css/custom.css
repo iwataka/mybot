@@ -28,15 +28,11 @@ pre {
         color: grey;
 }
 
-table > thead {
-        background-color: aliceblue;
-}
-
-table.table-striped > tbody > tr.deleted {
-        opacity: 0.3;
-        background-color: grey;
-}
-
 div.tab-content {
         margin-top: 30px;
+}
+
+div.deleted .config-row-name {
+        text-decoration:line-through;
+        color:red;
 }

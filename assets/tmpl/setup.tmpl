@@ -19,18 +19,18 @@
                 Click <a href="https://apps.twitter.com" target="_blank">here</a> to create/check your own Twitter App
             </div>
             <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+                <table class="table">
                     <tbody>
                         <tr>
                             <td>Twitter Consumer Key</td>
                             <td>
-                                <input form="setup" type="password" name="setup.twitter_consumer_key" value="{{{.TwitterConsumerKey}}}">
+                                <input class="form-control" form="setup" type="password" name="setup.twitter_consumer_key" value="{{{.TwitterConsumerKey}}}">
                             </td>
                         </tr>
                         <tr>
                             <td>Twitter Consumer Secret</td>
                             <td>
-                                <input form="setup" type="password" name="setup.twitter_consumer_secret" value="{{{.TwitterConsumerSecret}}}">
+                                <input class="form-control" form="setup" type="password" name="setup.twitter_consumer_secret" value="{{{.TwitterConsumerSecret}}}">
                             </td>
                         </tr>
                     </tbody>
@@ -41,25 +41,25 @@
                 Click <a href="https://api.slack.com/apps" target="_blank">here</a> to create/check your own Slack App
             </div>
             <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+                <table class="table">
                     <tbody>
                         <tr>
                             <td>Slack Client ID</td>
                             <td>
-                                <input form="setup" type="password" name="setup.slack_client_id" value="{{{.SlackClientID}}}">
+                                <input class="form-control" form="setup" type="password" name="setup.slack_client_id" value="{{{.SlackClientID}}}">
                             </td>
                         </tr>
                         <tr>
                             <td>Slack Client Secret</td>
                             <td>
-                                <input form="setup" type="password" name="setup.slack_client_secret" value="{{{.SlackClientSecret}}}">
+                                <input class="form-control" form="setup" type="password" name="setup.slack_client_secret" value="{{{.SlackClientSecret}}}">
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <input form="setup" type="submit" value="Update setup information" class="btn btn-success">
+            <input form="setup" type="submit" value="Update setup information" class="btn btn-success form-control">
 
         </div>
     </body>

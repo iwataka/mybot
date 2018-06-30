@@ -1,40 +1,20 @@
-{{{define "config_table_header"}}}
-    <thead>
-        <tr>
-            <td>Name</td>
-            <td>Details</td>
-            <td></td>
-        </tr>
-    </thead>
-{{{end}}}
-
 {{{define "config_data_row"}}}
-    <tr>
-        <input form="overwrite" type="hidden" name="{{{.Prefix}}}.deleted" value="false"/>
-        <td>
-            <input form="overwrite" type="text" name="{{{.Prefix}}}.name" value="{{{.Name}}}"/>
-        </td>
-        <td>
-            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}">
-                Click here
-            </button>
-        </td>
-        <td>
-            <button type="button" class="btn btn-danger" onclick="deleteRow(this)">Delete</button>
-        </td>
-    </tr>
+    <li>
+        <div class="input-group">
+            <input form="overwrite" class="form-control config-row-name" type="text" name="{{{.Prefix}}}.name" value="{{{.Name}}}" style=""/>
+            <input form="overwrite" type="hidden" name="{{{.Prefix}}}.deleted" value="false"/>
+            <div class="input-group-addon"><a class="fa fa-lg fa-edit config-row-edit" data-toggle="modal" data-target="#{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}"></a></div>
+            <div class="input-group-addon"><a class="fa fa-lg fa-trash config-row-delete" onclick="deleteRow(this)"></a></div>
+        </div>
+    </li>
 {{{end}}}
 
 {{{define "config_new_data_row"}}}
-    <tr>
-        <td>
-            <form action="{{{.Action}}}" method="post">
-                <input type="submit" value="New" class="btn btn-primary"/>
-            </form>
-        </td>
-        <td></td>
-        <td></td>
-    </tr>
+    <small>
+        <form action="{{{.Action}}}" method="post" class="pull-right">
+            <button type="submit" class="btn fa fa-plus config-row-new"></button>
+        </form>
+    </small>
 {{{end}}}
 
 {{{define "config"}}}
@@ -58,79 +38,62 @@
             <div id="error-message" class="alert alert-danger">{{{.Message}}}</div>
             {{{end}}}
 
-            <h3>Twitter Timelines</h3>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    {{{template "config_table_header"}}}
-                    <tbody>
-                        {{{range $index, $timeline := .Config.Twitter.Timelines}}}
-                            {{{template "config_data_row" (newMap "Prefix" "twitter.timelines" "Name" $timeline.Name "Index" $index)}}}
-                        {{{end}}}
-                        {{{template "config_new_data_row" (newMap "Action" "/config/timelines/add")}}}
-                    </tbody>
-                </table>
-            </div>
-
+            <h3 class="page-header">
+                Twitter Timelines
+                {{{template "config_new_data_row" (newMap "Action" "/config/timelines/add")}}}
+            </h3>
+            <ul class="list-unstyled">
+                {{{range $index, $timeline := .Config.Twitter.Timelines}}}
+                    {{{template "config_data_row" (newMap "Prefix" "twitter.timelines" "Name" $timeline.Name "Index" $index)}}}
+                {{{end}}}
+            </ul>
             {{{range $index, $timeline := .Config.Twitter.Timelines}}}
                 {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $timeline "Index" $index "ItemLen" (len $.Config.Twitter.Timelines) "Prefix" "twitter.timelines" "Name" $timeline.Name)}}}
             {{{end}}}
 
-            <h3>Twitter Favorites</h3>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    {{{template "config_table_header"}}}
-                    <tbody>
-                        {{{range $index, $favorite := .Config.Twitter.Favorites}}}
-                            {{{template "config_data_row" (newMap "Prefix" "twitter.favorites" "Name" $favorite.Name "Index" $index)}}}
-                        {{{end}}}
-                        {{{template "config_new_data_row" (newMap "Action" "/config/favorites/add")}}}
-                    </tbody>
-                </table>
-            </div>
-
+            <h3 class="page-header">
+                Twitter Favorites
+                {{{template "config_new_data_row" (newMap "Action" "/config/favorites/add")}}}
+            </h3>
+            <ul class="list-unstyled">
+                {{{range $index, $favorite := .Config.Twitter.Favorites}}}
+                    {{{template "config_data_row" (newMap "Prefix" "twitter.favorites" "Name" $favorite.Name "Index" $index)}}}
+                {{{end}}}
+            </ul>
             {{{range $index, $favorite := .Config.Twitter.Favorites}}}
                 {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $favorite "Index" $index "ItemLen" (len $.Config.Twitter.Favorites) "Prefix" "twitter.favorites" "Name" $favorite.Name)}}}
             {{{end}}}
 
-            <h3>Twitter Searches</h3>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    {{{template "config_table_header"}}}
-                    <tbody>
-                        {{{range $index, $search := .Config.Twitter.Searches}}}
-                            {{{template "config_data_row" (newMap "Prefix" "twitter.searches" "Name" $search.Name "Index" $index)}}}
-                        {{{end}}}
-                        {{{template "config_new_data_row" (newMap "Action" "/config/searches/add")}}}
-                    </tbody>
-                </table>
-            </div>
-
+            <h3 class="page-header">
+                Twitter Searches
+                {{{template "config_new_data_row" (newMap "Action" "/config/searches/add")}}}
+            </h3>
+            <ul class="list-unstyled">
+                {{{range $index, $search := .Config.Twitter.Searches}}}
+                    {{{template "config_data_row" (newMap "Prefix" "twitter.searches" "Name" $search.Name "Index" $index)}}}
+                {{{end}}}
+            </ul>
             {{{range $index, $search := .Config.Twitter.Searches}}}
                 {{{template "modal" (newMap "Type" "twitter" "ConfigItem" $search "Index" $index "ItemLen" (len $.Config.Twitter.Searches) "Prefix" "twitter.searches" "Name" $search.Name)}}}
             {{{end}}}
 
-            <h3>Twitter General Settings</h3>
-            {{{template "twitter_conf" .Config.Twitter}}}
-
-            <h3>Slack Messages</h3>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    {{{template "config_table_header"}}}
-                    <tbody>
-                        {{{range $index, $msg := .Config.Slack.Messages}}}
-                            {{{template "config_data_row" (newMap "Prefix" "slack.messages" "Name" $msg.Name "Index" $index)}}}
-                        {{{end}}}
-                        {{{template "config_new_data_row" (newMap "Action" "/config/messages/add")}}}
-                    </tbody>
-                </table>
-            </div>
-
+            <h3 class="page-header">
+                Slack Messages
+                {{{template "config_new_data_row" (newMap "Action" "/config/messages/add")}}}
+            </h3>
+            <ul class="list-unstyled">
+                {{{range $index, $msg := .Config.Slack.Messages}}}
+                    {{{template "config_data_row" (newMap "Prefix" "slack.messages" "Name" $msg.Name "Index" $index)}}}
+                {{{end}}}
+            </ul>
             {{{range $index, $msg := .Config.Slack.Messages}}}
                 {{{template "modal" (newMap "Type" "slack" "ConfigItem" $msg "Index" $index "ItemLen" (len $.Config.Slack.Messages) "Prefix" "slack.messages" "Name" $msg.Name)}}}
             {{{end}}}
 
-            <input form="overwrite" type="submit" value="Update configuration" class="btn btn-success">
+            <h3 class="page-header">General</h3>
+            {{{template "twitter_conf" .Config.Twitter}}}
 
+            <input form="overwrite" type="submit" value="Update configuration" class="btn btn-success">
             <hr>
 
             <form id="config-file-upload-form" action="/config/file/" method="post" enctype="multipart/form-data"></form>

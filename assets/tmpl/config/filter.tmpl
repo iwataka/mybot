@@ -1,13 +1,6 @@
 {{{define "filter_config"}}}
 <div class="table-responsive">
-    <table class="table table-striped table-bordered">
-        <thead>
-            <tr>
-                <td colspan="2"></td>
-                <td>Name</td>
-                <td>Value</td>
-            </tr>
-        </thead>
+    <table class="table">
         <tbody>
             <tr>
                 {{{if eq .Type "twitter"}}}
@@ -56,7 +49,7 @@
                     language {{{template "config_info" "https://developer.twitter.com/en/docs/developer-utilities/supported-languages/api-reference/get-help-languages.html"}}}
                 </td>
                 <td>
-                    <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.lang`}}}" value="{{{.Filter.Lang}}}">
+                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.lang`}}}" value="{{{.Filter.Lang}}}">
                 </td>
             </tr>
             {{{end}}}
@@ -74,25 +67,25 @@
                 <td rowspan="4">Face</td>
                 <td>anger likelihood</td>
                 <td>
-                    <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.anger_likelihood`}}}" value="{{{.Filter.Vision.Face.AngerLikelihood}}}">
+                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.anger_likelihood`}}}" value="{{{.Filter.Vision.Face.AngerLikelihood}}}">
                 </td>
             </tr>
             <tr>
                 <td>blurred likelihood</td>
                 <td>
-                    <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.blurred_likelihood`}}}"` value="{{{.Filter.Vision.Face.BlurredLikelihood}}}">
+                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.blurred_likelihood`}}}"` value="{{{.Filter.Vision.Face.BlurredLikelihood}}}">
                 </td>
             </tr>
             <tr>
                 <td>headwear likelihood</td>
                 <td>
-                    <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.headwear_likelihood`}}}" value="{{{.Filter.Vision.Face.HeadwearLikelihood}}}">
+                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.headwear_likelihood`}}}" value="{{{.Filter.Vision.Face.HeadwearLikelihood}}}">
                 </td>
             </tr>
             <tr>
                 <td>joy likelihood</td>
                 <td>
-                    <input form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.joy_likelihood`}}}" value="{{{.Filter.Vision.Face.JoyLikelihood}}}">
+                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.joy_likelihood`}}}" value="{{{.Filter.Vision.Face.JoyLikelihood}}}">
                 </td>
             </tr>
             <tr>

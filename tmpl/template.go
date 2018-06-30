@@ -88,7 +88,7 @@ func ListTextbox(list []string, name, class string) template.HTML {
 	if list != nil {
 		str = strings.Join(list, ",")
 	}
-	format := `<input form="overwrite" type="text" name="%s" value="%s" class="%s" data-role="tagsinput"/>`
+	format := `<input form="overwrite" type="text" name="%s" value="%s" class="%s form-control" data-role="tagsinput"/>`
 	result := fmt.Sprintf(format, name, str, class)
 	return template.HTML(result)
 }
@@ -121,7 +121,7 @@ func TextboxOfFloat64Ptr(val *float64, name string) template.HTML {
 	if val != nil {
 		value = strconv.FormatFloat(*val, 'E', -1, 64)
 	}
-	format := `<input form="overwrite" type="number" name="%s" value="%s"/>`
+	format := `<input class="form-control" form="overwrite" type="number" name="%s" value="%s"/>`
 	result := fmt.Sprintf(format, name, value)
 	return template.HTML(result)
 }
@@ -155,7 +155,7 @@ func TextboxOfIntPtr(val *int, name string) template.HTML {
 	if val != nil {
 		value = strconv.Itoa(*val)
 	}
-	format := `<input form="overwrite" type="number" name="%s" value="%s"/>`
+	format := `<input class="form-control" form="overwrite" type="number" name="%s" value="%s"/>`
 	result := fmt.Sprintf(format, name, value)
 	return template.HTML(result)
 }

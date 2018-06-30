@@ -353,7 +353,7 @@ func testPostConfigDelete(
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png"))
-	assert.NoError(t, page.AllByButton("Delete").Click())
+	assert.NoError(t, page.AllByClass("config-row-delete").Click())
 	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png"))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
@@ -381,7 +381,7 @@ func testPostConfigSingleDelete(
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
-	assert.NoError(t, page.AllByButton("Delete").At(0).Click())
+	assert.NoError(t, page.AllByClass("config-row-delete").At(0).Click())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
@@ -405,7 +405,7 @@ func testPostConfigDoubleDelete(
 	assert.NoError(t, page.Navigate(url))
 
 	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
-	assert.NoError(t, page.AllByButton("Delete").DoubleClick())
+	assert.NoError(t, page.AllByClass("config-row-delete").DoubleClick())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
