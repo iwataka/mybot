@@ -307,7 +307,7 @@ type Source struct {
 
 func NewSource() Source {
 	return Source{
-		Name:   "",
+		Name:   "New",
 		Filter: NewFilter(),
 		Action: data.NewAction(),
 	}

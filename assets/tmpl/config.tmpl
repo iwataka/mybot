@@ -3,7 +3,7 @@
         <div class="input-group">
             <input form="overwrite" class="form-control config-row-name" type="text" name="{{{.Prefix}}}.name" value="{{{.Name}}}" style=""/>
             <input form="overwrite" type="hidden" name="{{{.Prefix}}}.deleted" value="false"/>
-            <div class="input-group-addon"><a class="fa fa-lg fa-edit config-row-edit" data-toggle="modal" data-target="#{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}"></a></div>
+            <div class="input-group-addon"><a class="fa fa-lg fa-edit config-row-edit" data-toggle="modal" href="#{{{replace .Prefix "." "-"}}}-filter-{{{.Index}}}"></a></div>
             <div class="input-group-addon"><a class="fa fa-lg fa-trash config-row-delete" onclick="deleteRow(this)"></a></div>
         </div>
     </li>
