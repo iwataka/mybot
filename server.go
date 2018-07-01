@@ -322,7 +322,7 @@ func getTwitterCollectionListByUserID(w http.ResponseWriter, r *http.Request, tw
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	res, err := twitterAPI.GetCollectionListByUserId(user.Id, nil)
+	res, err := twitterAPI.BaseAPI().GetCollectionListByUserId(user.Id, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -465,7 +465,7 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	colList, err := twitterAPI.GetCollectionListByUserId(id, nil)
+	colList, err := twitterAPI.BaseAPI().GetCollectionListByUserId(id, nil)
 	if err == nil && len(colList.Objects.Timelines) != 0 {
 		names := []string{}
 		for _, c := range colList.Objects.Timelines {
@@ -1344,7 +1344,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*data.twitterAPI = *mybot.NewTwitterAPI(data.twitterAuth, data.cache, data.config)
+	*data.twitterAPI = *mybot.NewTwitterAPIWithAuth(data.twitterAuth, data.cache, data.config)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -1369,7 +1369,7 @@ func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*data.slackAPI = *mybot.NewSlackAPI(user.AccessToken, data.config, data.cache)
+	*data.slackAPI = *mybot.NewSlackAPIWithAuth(user.AccessToken, data.config, data.cache)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

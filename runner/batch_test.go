@@ -22,7 +22,7 @@ func TestTwitterAPIIsAvailable(t *testing.T) {
 	ctrl = gomock.NewController(t)
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(true, nil)
-	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock}
+	twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
 	if err := TwitterAPIIsAvailable(twitterAPI); err != nil {
 		t.Fatalf("Error not expected but occurred: %s", err.Error())
 	}
@@ -33,14 +33,14 @@ func TestTwitterAPIIsAvailable(t *testing.T) {
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, nil)
-	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock}
+	twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
 	if err := TwitterAPIIsAvailable(twitterAPI); err == nil {
 		t.Fatalf("Error expected but nothing occurred")
 	}
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, errors.New(""))
-	twitterAPI = &mybot.TwitterAPI{API: twitterAPIMock}
+	twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
 	if err := TwitterAPIIsAvailable(twitterAPI); err == nil {
 		t.Fatalf("Error expected but nothing occurred")
 	}

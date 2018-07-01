@@ -132,10 +132,10 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		return nil, utils.WithStack(err)
 	}
 
-	userData.twitterAPI = mybot.NewTwitterAPI(userData.twitterAuth, userData.cache, userData.config)
+	userData.twitterAPI = mybot.NewTwitterAPIWithAuth(userData.twitterAuth, userData.cache, userData.config)
 
 	slackID, _ := userData.slackAuth.GetCreds()
-	userData.slackAPI = mybot.NewSlackAPI(slackID, userData.config, userData.cache)
+	userData.slackAPI = mybot.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 
 	return userData, nil
 }
@@ -465,7 +465,7 @@ func validate(c *cli.Context) {
 		err := data.config.Validate()
 		exitIfError(err)
 		if c.Bool("api") {
-			err := data.config.ValidateWithAPI(data.twitterAPI.API)
+			err := data.config.ValidateWithAPI(data.twitterAPI.BaseAPI())
 			exitIfError(err)
 		}
 	}

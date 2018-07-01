@@ -28,14 +28,14 @@ func TestSlackConvertFromTweet(t *testing.T) {
 }
 
 func TestNewSlackAPI(t *testing.T) {
-	api := NewSlackAPI("", nil, nil)
+	api := NewSlackAPIWithAuth("", nil, nil)
 	if api.Enabled() {
 		t.Fatalf("%v is expected to be disabled but not", api)
 	}
 }
 
 func TestSlackAPIDequeueMsg(t *testing.T) {
-	api := NewSlackAPI("", nil, nil)
+	api := NewSlackAPIWithAuth("", nil, nil)
 	msg := api.dequeueMsg("channel")
 	if msg != nil {
 		t.Fatalf("%s expected but %s found", nil, msg)
@@ -43,7 +43,7 @@ func TestSlackAPIDequeueMsg(t *testing.T) {
 }
 
 func TestSlackAPIEnqueueMsg(t *testing.T) {
-	api := NewSlackAPI("", nil, nil)
+	api := NewSlackAPIWithAuth("", nil, nil)
 	ch := "channel"
 	msg := &SlackMsg{"text", nil}
 	api.enqueueMsg(ch, msg.text, msg.params)
