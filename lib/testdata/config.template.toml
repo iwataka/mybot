@@ -40,7 +40,7 @@ retweet = true
 name = "foo bar"
 queries = ["foo", "bar"]
 [twitter.searches.filter]
-url_patterns = ["foo"]
+patterns = ["foo"]
 retweeted_threshold = 100
 [twitter.searches.action]
 [twitter.searches.action.twitter]

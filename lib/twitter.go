@@ -24,21 +24,21 @@ const msgPrefix = "<bot message>\n"
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
 	api    models.TwitterAPI
-	cache  data.Cache
 	config Config
+	cache  data.Cache
 	self   *anaconda.User
 }
 
 // NewTwitterAPIWithAuth takes a user's authentication, cache and configuration and
 // returns TwitterAPI instance for that user
-func NewTwitterAPIWithAuth(auth oauth.OAuthCreds, c data.Cache, cfg Config) *TwitterAPI {
+func NewTwitterAPIWithAuth(auth oauth.OAuthCreds, config Config, cache data.Cache) *TwitterAPI {
 	at, ats := auth.GetCreds()
 	api := anaconda.NewTwitterApi(at, ats)
-	return NewTwitterAPI(api, c, cfg)
+	return NewTwitterAPI(api, config, cache)
 }
 
-func NewTwitterAPI(api models.TwitterAPI, c data.Cache, cfg Config) *TwitterAPI {
-	return &TwitterAPI{api, c, cfg, nil}
+func NewTwitterAPI(api models.TwitterAPI, config Config, cache data.Cache) *TwitterAPI {
+	return &TwitterAPI{api, config, cache, nil}
 }
 
 func (a *TwitterAPI) BaseAPI() models.TwitterAPI {

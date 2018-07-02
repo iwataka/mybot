@@ -132,7 +132,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 		return nil, utils.WithStack(err)
 	}
 
-	userData.twitterAPI = mybot.NewTwitterAPIWithAuth(userData.twitterAuth, userData.cache, userData.config)
+	userData.twitterAPI = mybot.NewTwitterAPIWithAuth(userData.twitterAuth, userData.config, userData.cache)
 
 	slackID, _ := userData.slackAuth.GetCreds()
 	userData.slackAPI = mybot.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)

@@ -1344,7 +1344,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*data.twitterAPI = *mybot.NewTwitterAPIWithAuth(data.twitterAuth, data.cache, data.config)
+	*data.twitterAPI = *mybot.NewTwitterAPIWithAuth(data.twitterAuth, data.config, data.cache)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
