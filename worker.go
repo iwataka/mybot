@@ -92,10 +92,11 @@ func (w *twitterDMWorker) Start() error {
 	return nil
 }
 
-func (w *twitterDMWorker) Stop() {
+func (w *twitterDMWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *twitterDMWorker) Name() string {
@@ -141,10 +142,11 @@ func (w *twitterUserWorker) Start() error {
 	return nil
 }
 
-func (w *twitterUserWorker) Stop() {
+func (w *twitterUserWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *twitterUserWorker) Name() string {
@@ -197,11 +199,12 @@ func (w *twitterPeriodicWorker) Start() error {
 	return nil
 }
 
-func (w *twitterPeriodicWorker) Stop() {
+func (w *twitterPeriodicWorker) Stop() error {
 	select {
 	case w.innerChan <- true:
+		return nil
 	case <-time.After(w.timeout):
-		log.Printf("Faield to stop worker %s\n", w.Name())
+		return fmt.Errorf("Faield to stop worker %s\n", w.Name())
 	}
 }
 
@@ -243,10 +246,11 @@ func (w *slackWorker) Start() error {
 	return nil
 }
 
-func (w *slackWorker) Stop() {
+func (w *slackWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *slackWorker) Name() string {

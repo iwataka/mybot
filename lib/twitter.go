@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -467,12 +466,13 @@ func (l *TwitterUserListener) Listen(
 	}
 }
 
-func (l *TwitterUserListener) Stop() {
+func (l *TwitterUserListener) Stop() error {
 	l.stream.Stop()
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(l.timeout):
-		log.Println("Failed to stop twitter DM listener")
+		return fmt.Errorf("Failed to stop twitter DM listener")
 	}
 }
 
@@ -542,12 +542,13 @@ func (l *TwitterDMListener) Listen() error {
 	}
 }
 
-func (l *TwitterDMListener) Stop() {
+func (l *TwitterDMListener) Stop() error {
 	l.stream.Stop()
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(l.timeout):
-		log.Println("Failed to stop twitter DM listener")
+		return fmt.Errorf("Failed to stop twitter DM listener")
 	}
 }
 

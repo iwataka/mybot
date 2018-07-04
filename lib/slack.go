@@ -297,11 +297,12 @@ func (l *SlackListener) Start(
 	return nil
 }
 
-func (l *SlackListener) Stop() {
+func (l *SlackListener) Stop() error {
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(time.Minute):
-		log.Println("Faield to stop slack listener (timeout: 1m)")
+		return fmt.Errorf("Faield to stop slack listener (timeout: 1m)")
 	}
 }
 
