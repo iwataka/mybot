@@ -1,12 +1,3 @@
-sudo: required
-
-services:
-  - docker
-
-branches:
-  only:
-    - master
-
 language: go
 go:
   - 1.8.x
@@ -18,17 +9,29 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y sqlite3
   - sudo apt-get install phantomjs
-  - go get github.com/mattn/goveralls
   - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure
 
 script:
-  - git config --global http.https://gopkg.in.followRedirects true
-  - dep ensure
   - make test
-  - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,assets/bindata.go
-  - docker build -t $DOCKER_REPO .
-  - docker login -u $DOCKER_USER -p $DOCKER_PASS
-  - docker push $DOCKER_REPO
+
+jobs:
+  include:
+    - stage: publish test coverage to coveralls.io
+      script:
+      - go get github.com/mattn/goveralls
+      - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,assets/bindata.go
+    - stage: release to dockerhub
+      if: branch = master
+      sudo: required
+      services:
+        - docker
+      before_install: []
+      install: []
+      script:
+      - docker build -t $DOCKER_REPO .
+      - docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push $DOCKER_REPO
 
 notifications:
   slack:
