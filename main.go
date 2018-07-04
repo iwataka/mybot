@@ -158,7 +158,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		twitterPeriodicRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterPeriodicWorker(r, data.cache, data.config.GetTwitterDuration(), time.Minute, userID),
+		newTwitterPeriodicWorker(r, data.cache, data.config.GetPollingDuration(), time.Minute, userID),
 	)
 	activateWorkerAndStart(
 		slackRoutineKey,

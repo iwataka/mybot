@@ -1,0 +1,46 @@
+{{{define "general_conf"}}}
+<div class="table-responsive">
+    <table class="table">
+        <tbody>
+            <tr>
+                <td rowspan="2">Twitter Interaction</td>
+                <td>myself</td>
+                <td>
+                    {{{checkbox .Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}}
+                </td>
+            </tr>
+            <tr>
+                <td>other users</td>
+                <td>
+                    {{{listTextbox .Twitter.Interaction.Users "twitter.interaction.users" "typeahead-tagsinput"}}}
+                </td>
+            </tr>
+            <tr>
+                <td rowspan="3">Twitter Place Notification</td>
+                <td>twitter myself</td>
+                <td>
+                    {{{checkbox .Twitter.Notification.Place.TwitterAllowSelf "twitter.notification.place.twitter_allow_self"}}}
+                </td>
+            </tr>
+            <tr>
+                <td>twitter other users</td>
+                <td>
+                    {{{listTextbox .Twitter.Notification.Place.TwitterUsers "twitter.notification.place.twitter_users" "typeahead-tagsinput"}}}
+                </td>
+            </tr>
+            <tr>
+                <td>slack channels</td>
+                <td>
+                    {{{listTextbox .Twitter.Notification.Place.SlackChannels "twitter.notification.place.slack_channels" "typeahead-tagsinput"}}}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">Polling Duration</td>
+                <td>
+                    <input class="form-control" form="overwrite" type="text" name="duration" value="{{{.Duration}}}">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{{{end}}}

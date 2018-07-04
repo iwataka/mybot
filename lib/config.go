@@ -36,8 +36,8 @@ type Config interface {
 	SetTwitterNotification(notification Notification)
 	GetTwitterInteraction() InteractionConfig
 	SetTwitterInteraction(interaction InteractionConfig)
-	GetTwitterDuration() string
-	SetTwitterDuration(dur string)
+	GetPollingDuration() string
+	SetPollingDuration(dur string)
 	GetSlackMessages() []MessageConfig
 	SetSlackMessages(msgs []MessageConfig)
 	AddSlackMessage(msg MessageConfig)
@@ -60,12 +60,16 @@ type ConfigProperties struct {
 	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter"`
 	// Slack is a configuration related to Slack
 	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack"`
+	// Duration is a duration for some periodic jobs such as fetching
+	// users' favorites and searching by the specified condition.
+	Duration string `json:"duration" toml:"duration" bson:"duration"`
 }
 
 func newConfigProperties() *ConfigProperties {
 	return &ConfigProperties{
-		Twitter: NewTwitterConfig(),
-		Slack:   NewSlackConfig(),
+		Twitter:  NewTwitterConfig(),
+		Slack:    NewSlackConfig(),
+		Duration: "10m",
 	}
 }
 
@@ -141,12 +145,12 @@ func (c *ConfigProperties) AddSlackMessage(msg MessageConfig) {
 	c.Slack.Messages = append(c.Slack.Messages, msg)
 }
 
-func (c *ConfigProperties) GetTwitterDuration() string {
-	return c.Twitter.Duration
+func (c *ConfigProperties) GetPollingDuration() string {
+	return c.Duration
 }
 
-func (c *ConfigProperties) SetTwitterDuration(dur string) {
-	c.Twitter.Duration = dur
+func (c *ConfigProperties) SetPollingDuration(dur string) {
+	c.Duration = dur
 }
 
 // NewFileConfig takes the configuration file path and returns a configuration
@@ -334,9 +338,6 @@ type TwitterConfig struct {
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
 	Interaction InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
-	// Duration is a duration for some periodic jobs such as fetching
-	// users' favorites and searching by the specified condition.
-	Duration string `json:"duration" toml:"duration" bson:"duration"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
 	Debug bool `json:"debug" toml:"debug" bson:"debug"`
@@ -347,7 +348,6 @@ func NewTwitterConfig() TwitterConfig {
 		Timelines:    []TimelineConfig{},
 		Searches:     []SearchConfig{},
 		Interaction:  InteractionConfig{},
-		Duration:     "1h",
 		Notification: NewNotification(),
 	}
 }
@@ -497,8 +497,9 @@ func NewNotification() Notification {
 
 // PlaceNotification contains some setting values about notification.
 type PlaceNotification struct {
-	AllowSelf bool     `json:"allow_self" toml:"allow_self" bson:"allow_self"`
-	Users     []string `json:"users,omitempty" toml:"users,omitempty" bson:"users,omitempty"`
+	TwitterAllowSelf bool     `json:"twitter_allow_self" toml:"twitter_allow_self" bson:"twitter_allow_self"`
+	TwitterUsers     []string `json:"twitter_users,omitempty" toml:"twitter_users,omitempty" bson:"twitter_users,omitempty"`
+	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty"`
 }
 
 type DBConfig struct {

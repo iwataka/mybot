@@ -347,13 +347,23 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 
 // NotifyToAll sends metadata about the specified tweet, such as place, to the
 // all users specified in the configuration.
-func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
+func (a *TwitterAPI) NotifyToAll(slackAPI *SlackAPI, t *anaconda.Tweet) error {
 	n := a.Config.GetTwitterNotification()
 	if t.HasCoordinates() {
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		allowSelf := n.Place.AllowSelf
-		users := n.Place.Users
-		return a.PostDMToAll(msg, allowSelf, users)
+		allowSelf := n.Place.TwitterAllowSelf
+		users := n.Place.TwitterUsers
+		err := a.PostDMToAll(msg, allowSelf, users)
+		if err != nil {
+			return err
+		}
+		chans := n.Place.SlackChannels
+		for _, ch := range chans {
+			err := slackAPI.PostMessage(ch, msg, nil, true)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

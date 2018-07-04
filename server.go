@@ -677,8 +677,9 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 
 	prefix = "twitter.notification"
 	notif := config.GetTwitterNotification()
-	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
-	notif.Place.Users = tmpl.GetListTextboxValue(val, 0, prefix+".place.users")
+	notif.Place.TwitterAllowSelf = len(val[prefix+".place.twitter_allow_self"]) > 1
+	notif.Place.TwitterUsers = tmpl.GetListTextboxValue(val, 0, prefix+".place.twitter_users")
+	notif.Place.SlackChannels = tmpl.GetListTextboxValue(val, 0, prefix+".place.slack_channels")
 	config.SetTwitterNotification(notif)
 
 	prefix = "twitter.interaction"
@@ -687,7 +688,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	intr.Users = tmpl.GetListTextboxValue(val, 0, prefix+".users")
 	config.SetTwitterInteraction(intr)
 
-	config.SetTwitterDuration(val["twitter.duration"][0])
+	config.SetPollingDuration(val["duration"][0])
 
 	err = config.Validate()
 	if err == nil {
