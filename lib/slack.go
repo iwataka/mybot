@@ -269,15 +269,29 @@ func (l *SlackListener) Start(
 				if time.Now().Sub(*t)-time.Minute > 0 {
 					continue
 				}
-				chs, err := l.api.api.GetChannels(true)
-				if err != nil {
-					return utils.WithStack(err)
-				}
 				ch := ""
-				for _, c := range chs {
-					if c.ID == ev.Channel {
-						ch = c.Name
-						break
+				if ch == "" {
+					chs, err := l.api.api.GetChannels(true)
+					if err != nil {
+						return utils.WithStack(err)
+					}
+					for _, c := range chs {
+						if c.ID == ev.Channel {
+							ch = c.Name
+							break
+						}
+					}
+				}
+				if ch == "" {
+					grps, err := l.api.api.GetGroups(true)
+					if err != nil {
+						return utils.WithStack(err)
+					}
+					for _, g := range grps {
+						if g.ID == ev.Channel {
+							ch = g.Name
+							break
+						}
 					}
 				}
 				if ch != "" {

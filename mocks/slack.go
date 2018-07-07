@@ -84,6 +84,17 @@ func (_mr *_MockSlackAPIRecorder) GetChannels(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetChannels", arg0)
 }
 
+func (_m *MockSlackAPI) GetGroups(excludeArchived bool) ([]slack.Group, error) {
+	ret := _m.ctrl.Call(_m, "GetGroups", excludeArchived)
+	ret0, _ := ret[0].([]slack.Group)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockSlackAPIRecorder) GetGroups(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetGroups", arg0)
+}
+
 func (_m *MockSlackAPI) AddPin(ch string, item slack.ItemRef) error {
 	ret := _m.ctrl.Call(_m, "AddPin", ch, item)
 	ret0, _ := ret[0].(error)
