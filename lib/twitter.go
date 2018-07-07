@@ -347,41 +347,10 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 // NotifyToAll sends metadata about the specified tweet, such as place, to the
 // all users specified in the configuration.
 func (a *TwitterAPI) NotifyToAll(slackAPI *SlackAPI, t *anaconda.Tweet) error {
-	n := a.Config.GetTwitterNotification()
 	if t.HasCoordinates() {
+		n := a.Config.GetTwitterNotification()
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		allowSelf := n.Place.TwitterAllowSelf
-		users := n.Place.TwitterUsers
-		err := a.PostDMToAll(msg, allowSelf, users)
-		if err != nil {
-			return err
-		}
-		chans := n.Place.SlackChannels
-		for _, ch := range chans {
-			err := slackAPI.PostMessage(ch, msg, nil, true)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// PostDMToAll posts the specified message to the all users specified in the
-// configuration.
-func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) error {
-	for _, user := range users {
-		_, err := a.PostDMToScreenName(msg, user)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
-	if allowSelf {
-		self, err := a.GetSelf()
-		if err != nil {
-			return utils.WithStack(err)
-		}
-		_, err = a.PostDMToScreenName(msg, self.ScreenName)
+		err := n.Place.Notify(a, slackAPI, msg)
 		if err != nil {
 			return utils.WithStack(err)
 		}

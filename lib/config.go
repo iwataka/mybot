@@ -32,8 +32,8 @@ type Config interface {
 	GetTwitterSearches() []SearchConfig
 	SetTwitterSearches(searches []SearchConfig)
 	AddTwitterSearch(search SearchConfig)
-	GetTwitterNotification() Notification
-	SetTwitterNotification(notification Notification)
+	GetTwitterNotification() TwitterNotification
+	SetTwitterNotification(notification TwitterNotification)
 	GetTwitterInteraction() InteractionConfig
 	SetTwitterInteraction(interaction InteractionConfig)
 	GetPollingDuration() string
@@ -117,11 +117,11 @@ func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
 	c.Twitter.Searches = append(c.Twitter.Searches, search)
 }
 
-func (c *ConfigProperties) GetTwitterNotification() Notification {
+func (c *ConfigProperties) GetTwitterNotification() TwitterNotification {
 	return c.Twitter.Notification
 }
 
-func (c *ConfigProperties) SetTwitterNotification(notification Notification) {
+func (c *ConfigProperties) SetTwitterNotification(notification TwitterNotification) {
 	c.Twitter.Notification = notification
 }
 
@@ -334,7 +334,7 @@ type TwitterConfig struct {
 	// Currently only place notification is supported, which means that
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
-	Notification Notification `json:"notification" toml:"notification" bson:"notification"`
+	Notification TwitterNotification `json:"notification" toml:"notification" bson:"notification"`
 	// Interaction is a configuration related to interaction with users
 	// such as Twitter's direct message exchange.
 	Interaction InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
@@ -348,7 +348,7 @@ func NewTwitterConfig() TwitterConfig {
 		Timelines:    []TimelineConfig{},
 		Searches:     []SearchConfig{},
 		Interaction:  InteractionConfig{},
-		Notification: NewNotification(),
+		Notification: NewTwitterNotification(),
 	}
 }
 
@@ -483,23 +483,56 @@ func NewMessageConfig() MessageConfig {
 	}
 }
 
-// Notification contains some notification settings.
-type Notification struct {
+// TwitterNotification contains some notification settings.
+type TwitterNotification struct {
 	Place PlaceNotification
 }
 
-// NewNotification returns a new empty Notification.
-func NewNotification() Notification {
-	return Notification{
+// NewTwitterNotification returns a new empty Notification.
+func NewTwitterNotification() TwitterNotification {
+	return TwitterNotification{
 		Place: PlaceNotification{},
 	}
 }
 
 // PlaceNotification contains some setting values about notification.
 type PlaceNotification struct {
+	NotificationProperties
+}
+
+type NotificationProperties struct {
 	TwitterAllowSelf bool     `json:"twitter_allow_self" toml:"twitter_allow_self" bson:"twitter_allow_self"`
 	TwitterUsers     []string `json:"twitter_users,omitempty" toml:"twitter_users,omitempty" bson:"twitter_users,omitempty"`
 	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty"`
+}
+
+func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAPI, msg string) error {
+	allowSelf := p.TwitterAllowSelf
+	users := p.TwitterUsers
+	for _, user := range users {
+		_, err := twitterAPI.PostDMToScreenName(msg, user)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	if allowSelf {
+		self, err := twitterAPI.GetSelf()
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		_, err = twitterAPI.PostDMToScreenName(msg, self.ScreenName)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	chans := p.SlackChannels
+	for _, ch := range chans {
+		err := slackAPI.PostMessage(ch, msg, nil, true)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	return nil
 }
 
 type DBConfig struct {

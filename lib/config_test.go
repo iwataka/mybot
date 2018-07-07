@@ -203,9 +203,11 @@ func TestFileConfigTwitterNotification(t *testing.T) {
 }
 
 func testConfigTwitterNotification(t *testing.T, c Config) {
-	notification := Notification{
+	notification := TwitterNotification{
 		Place: PlaceNotification{
-			TwitterUsers: []string{"foo"},
+			NotificationProperties{
+				TwitterUsers: []string{"foo"},
+			},
 		},
 	}
 	c.SetTwitterNotification(notification)
