@@ -539,7 +539,7 @@ func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAP
 	}
 	chans := p.SlackChannels
 	for _, ch := range chans {
-		err := slackAPI.PostMessage(ch, msg, nil)
+		err := slackAPI.PostMessage(ch, msg, nil, false)
 		if err != nil {
 			return sendsSomeone, utils.WithStack(err)
 		}

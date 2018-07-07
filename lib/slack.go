@@ -38,7 +38,7 @@ func (a *SlackAPI) Enabled() bool {
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.PostMessage(channel, text, &params)
+	return a.PostMessage(channel, text, &params, false)
 }
 
 type SlackMsg struct {
@@ -65,7 +65,7 @@ func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 }
 
 // TODO: Prevent infinite message loop
-func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters) error {
+func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, channelIsOpen bool) error {
 	var ps slack.PostMessageParameters
 	if params != nil {
 		ps = *params
@@ -74,7 +74,11 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 	if err != nil {
 		if err.Error() == "channel_not_found" {
 			// TODO: Prevent from creating multiple channels with the same name
-			_, err := a.api.CreateChannel(channel)
+			if channelIsOpen {
+				_, err = a.api.CreateChannel(channel)
+			} else {
+				_, err = a.api.CreateGroup(channel)
+			}
 			if err != nil {
 				if err.Error() == "user_is_bot" {
 					err := a.notifyCreateChannel(channel)
@@ -122,7 +126,7 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 	}
 	for e := q.Front(); e != nil; e = e.Next() {
 		m := e.Value.(*SlackMsg)
-		err := a.PostMessage(ch, m.text, m.params)
+		err := a.PostMessage(ch, m.text, m.params, false)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -192,7 +196,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		params := slack.PostMessageParameters{
 			Attachments: ev.Attachments,
 		}
-		err := a.PostMessage(c, ev.Text, &params)
+		err := a.PostMessage(c, ev.Text, &params, false)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}

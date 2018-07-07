@@ -57,19 +57,31 @@ func TestSlackAPIEnqueueMsg(t *testing.T) {
 }
 
 func TestSlackAPIPostMessage(t *testing.T) {
+	testSlackAPIPostMessage(t, true)
+}
+
+func TestSlackAPIPostMessageWithPrivateChannel(t *testing.T) {
+	testSlackAPIPostMessage(t, false)
+}
+
+func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 	ctrl := gomock.NewController(t)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
 
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", errors.New("channel_not_found"))
-	slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(nil, errors.New("user_is_bot"))
+	if channelIsOpen {
+		slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(nil, errors.New("user_is_bot"))
+	} else {
+		slackAPIMock.EXPECT().CreateGroup(gomock.Any()).Return(nil, errors.New("user_is_bot"))
+	}
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
 
 	ch := "channel"
 	text := "text"
 	var msg *SlackMsg
 	msg = &SlackMsg{text, nil}
-	slackAPI.PostMessage(ch, text, nil)
+	slackAPI.PostMessage(ch, text, nil, channelIsOpen)
 	m := slackAPI.dequeueMsg(ch)
 
 	if !reflect.DeepEqual(msg, m) {

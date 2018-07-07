@@ -7,6 +7,7 @@ import (
 type SlackAPI interface {
 	PostMessage(ch, msg string, params slack.PostMessageParameters) (string, string, error)
 	CreateChannel(name string) (*slack.Channel, error)
+	CreateGroup(group string) (*slack.Group, error)
 	NewRTM() *slack.RTM
 	GetChannels(excludeArchived bool) ([]slack.Channel, error)
 	AddPin(ch string, item slack.ItemRef) error
