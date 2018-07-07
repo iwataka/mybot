@@ -350,7 +350,7 @@ func (a *TwitterAPI) NotifyToAll(slackAPI *SlackAPI, t *anaconda.Tweet) error {
 	if t.HasCoordinates() {
 		n := a.Config.GetTwitterNotification()
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		err := n.Place.Notify(a, slackAPI, msg)
+		_, err := n.Place.Notify(a, slackAPI, msg)
 		if err != nil {
 			return utils.WithStack(err)
 		}

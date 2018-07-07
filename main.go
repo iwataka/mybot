@@ -30,6 +30,7 @@ import (
 //go:generate mockgen -source=utils/utils.go -destination=mocks/utils.go -package=mocks
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
+//go:generate mockgen -source=worker.go -destination=mocks/worker_message_handler.go -package=mocks
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
@@ -141,30 +142,43 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 }
 
 func startUserSpecificData(userID string, data *userSpecificData) {
+	var w worker.Worker
+
+	w = newTwitterDMWorker(data.twitterAPI, userID, time.Minute)
 	activateWorkerAndStart(
 		twitterDMRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterDMWorker(data.twitterAPI, userID, time.Minute),
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
 	)
+
+	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
 	activateWorkerAndStart(
 		twitterUserRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute),
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
 	)
+
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+	w = newTwitterPeriodicWorker(r, data.cache, data.config.GetPollingDuration(), time.Minute, userID)
 	activateWorkerAndStart(
 		twitterPeriodicRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newTwitterPeriodicWorker(r, data.cache, data.config.GetPollingDuration(), time.Minute, userID),
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
 	)
+
+	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
 	activateWorkerAndStart(
 		slackRoutineKey,
 		data.workerChans,
 		data.statuses,
-		newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID),
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
 	)
 }
 

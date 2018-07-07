@@ -1,7 +1,30 @@
+{{{define "notification_conf"}}}
+    <tr>
+        <td rowspan="3">{{{.Title}}}</td>
+        <td>twitter myself</td>
+        <td>
+            {{{checkbox .Data.TwitterAllowSelf (printf "%s%s" .NamePrefix ".twitter_allow_self")}}}
+        </td>
+    </tr>
+    <tr>
+        <td>twitter other users</td>
+        <td>
+            {{{listTextbox .Data.TwitterUsers  (printf "%s%s" .NamePrefix ".twitter_users") "typeahead-tagsinput"}}}
+        </td>
+    </tr>
+    <tr>
+        <td>slack channels</td>
+        <td>
+            {{{listTextbox .Data.SlackChannels  (printf "%s%s" .NamePrefix ".slack_channels") "typeahead-tagsinput"}}}
+        </td>
+    </tr>
+{{{end}}}
+
 {{{define "general_conf"}}}
 <div class="table-responsive">
     <table class="table">
         <tbody>
+            {{{template "notification_conf" (newMap "Title" "Log Notification" "Data" .LogNotification "NamePrefix" "log_notification")}}}
             <tr>
                 <td rowspan="2">Twitter Interaction</td>
                 <td>myself</td>
@@ -15,25 +38,7 @@
                     {{{listTextbox .Twitter.Interaction.Users "twitter.interaction.users" "typeahead-tagsinput"}}}
                 </td>
             </tr>
-            <tr>
-                <td rowspan="3">Twitter Place Notification</td>
-                <td>twitter myself</td>
-                <td>
-                    {{{checkbox .Twitter.Notification.Place.TwitterAllowSelf "twitter.notification.place.twitter_allow_self"}}}
-                </td>
-            </tr>
-            <tr>
-                <td>twitter other users</td>
-                <td>
-                    {{{listTextbox .Twitter.Notification.Place.TwitterUsers "twitter.notification.place.twitter_users" "typeahead-tagsinput"}}}
-                </td>
-            </tr>
-            <tr>
-                <td>slack channels</td>
-                <td>
-                    {{{listTextbox .Twitter.Notification.Place.SlackChannels "twitter.notification.place.slack_channels" "typeahead-tagsinput"}}}
-                </td>
-            </tr>
+            {{{template "notification_conf" (newMap "Title" "Twitter Place Notification" "Data" .Twitter.Notification.Place "NamePrefix" "twitter.notification.place")}}}
             <tr>
                 <td colspan="2">Polling Duration</td>
                 <td>

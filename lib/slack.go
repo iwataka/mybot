@@ -64,6 +64,7 @@ func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 	return nil
 }
 
+// TODO: Prevent infinite message loop
 func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, queue bool) error {
 	var ps slack.PostMessageParameters
 	if params != nil {
@@ -72,6 +73,7 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 	_, _, err := a.api.PostMessage(channel, text, ps)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
+			// TODO: Prevent from creating multiple channels with the same name
 			_, err := a.api.CreateChannel(channel)
 			if err != nil {
 				if err.Error() == "user_is_bot" {

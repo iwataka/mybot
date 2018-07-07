@@ -13,8 +13,43 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
+type WorkerMessageHandler interface {
+	Handle(msg interface{}) error
+}
+
+type DefaultWorkerMessageHandler struct {
+	config     mybot.Config
+	twitterAPI *mybot.TwitterAPI
+	slackAPI   *mybot.SlackAPI
+	workerID   string
+}
+
+func (h DefaultWorkerMessageHandler) Handle(msg interface{}) error {
+	logMessage := ""
+	switch m := msg.(type) {
+	case worker.WorkerStatus:
+		logMessage = fmt.Sprintf("Worker %s: %s", m, h.workerID)
+	case error:
+		logMessage = m.Error()
+	}
+	sendsSomeone, err := h.config.GetLogNotification().Notify(h.twitterAPI, h.slackAPI, logMessage)
+	if err != nil {
+		return err
+	}
+	if !sendsSomeone {
+		log.Println(logMessage)
+	}
+	return nil
+}
+
 // TODO: Test statuses are changed correctly.
-func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]bool, w worker.Worker) {
+func activateWorkerAndStart(
+	key int,
+	workerChans map[int]chan *worker.WorkerSignal,
+	statuses map[int]bool,
+	w worker.Worker,
+	msgHandler WorkerMessageHandler,
+) {
 	if ch, exists := workerChans[key]; exists {
 		close(ch)
 	}
@@ -26,16 +61,14 @@ func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSign
 		for msg := range outChan {
 			switch m := msg.(type) {
 			case worker.WorkerStatus:
-				fmt.Printf("Worker %s: %s\n", m, w.Name())
 				switch m {
 				case worker.StatusStarted:
 					statuses[key] = true
 				case worker.StatusStopped:
 					statuses[key] = false
 				}
-			case error:
-				log.Printf("%+v\n", m)
 			}
+			msgHandler.Handle(msg)
 		}
 	}()
 	// Process sending ping to worker manager priodically

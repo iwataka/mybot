@@ -22,6 +22,8 @@ type Config interface {
 	utils.Savable
 	utils.Loadable
 	GetProperties() *ConfigProperties
+	GetLogNotification() NotificationProperties
+	SetLogNotification(notification NotificationProperties)
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
 	SetTwitterTimelines(timelines []TimelineConfig)
@@ -62,19 +64,29 @@ type ConfigProperties struct {
 	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
-	Duration string `json:"duration" toml:"duration" bson:"duration"`
+	Duration        string                 `json:"duration" toml:"duration" bson:"duration"`
+	LogNotification NotificationProperties `json:"log_notification" toml:"log_notification"  bson:"log_notification"`
 }
 
 func newConfigProperties() *ConfigProperties {
 	return &ConfigProperties{
-		Twitter:  NewTwitterConfig(),
-		Slack:    NewSlackConfig(),
-		Duration: "10m",
+		Twitter:         NewTwitterConfig(),
+		Slack:           NewSlackConfig(),
+		Duration:        "10m",
+		LogNotification: NotificationProperties{},
 	}
 }
 
 func (c *ConfigProperties) GetProperties() *ConfigProperties {
 	return c
+}
+
+func (c *ConfigProperties) GetLogNotification() NotificationProperties {
+	return c.LogNotification
+}
+
+func (c *ConfigProperties) SetLogNotification(notification NotificationProperties) {
+	c.LogNotification = notification
 }
 
 func (c *ConfigProperties) GetTwitterScreenNames() []string {
@@ -485,19 +497,14 @@ func NewMessageConfig() MessageConfig {
 
 // TwitterNotification contains some notification settings.
 type TwitterNotification struct {
-	Place PlaceNotification
+	Place NotificationProperties
 }
 
 // NewTwitterNotification returns a new empty Notification.
 func NewTwitterNotification() TwitterNotification {
 	return TwitterNotification{
-		Place: PlaceNotification{},
+		Place: NotificationProperties{},
 	}
-}
-
-// PlaceNotification contains some setting values about notification.
-type PlaceNotification struct {
-	NotificationProperties
 }
 
 type NotificationProperties struct {
@@ -506,33 +513,39 @@ type NotificationProperties struct {
 	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty"`
 }
 
-func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAPI, msg string) error {
+// Notify sends a specified messages to certain users according to properties p.
+// This returns false if sending the messages to no one.
+func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAPI, msg string) (bool, error) {
+	sendsSomeone := false
 	allowSelf := p.TwitterAllowSelf
 	users := p.TwitterUsers
 	for _, user := range users {
 		_, err := twitterAPI.PostDMToScreenName(msg, user)
 		if err != nil {
-			return utils.WithStack(err)
+			return sendsSomeone, utils.WithStack(err)
 		}
+		sendsSomeone = true
 	}
 	if allowSelf {
 		self, err := twitterAPI.GetSelf()
 		if err != nil {
-			return utils.WithStack(err)
+			return sendsSomeone, utils.WithStack(err)
 		}
 		_, err = twitterAPI.PostDMToScreenName(msg, self.ScreenName)
 		if err != nil {
-			return utils.WithStack(err)
+			return sendsSomeone, utils.WithStack(err)
 		}
+		sendsSomeone = true
 	}
 	chans := p.SlackChannels
 	for _, ch := range chans {
 		err := slackAPI.PostMessage(ch, msg, nil, true)
 		if err != nil {
-			return utils.WithStack(err)
+			return sendsSomeone, utils.WithStack(err)
 		}
+		sendsSomeone = true
 	}
-	return nil
+	return sendsSomeone, nil
 }
 
 type DBConfig struct {
