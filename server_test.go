@@ -40,13 +40,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	defer func() {
-		// TODO: Kill phantomjs process after tests finish
-		if driver != nil {
-			driver.Stop()
-		}
-	}()
-	os.Exit(m.Run())
+	exitCode := m.Run()
+	if driver != nil {
+		driver.Stop()
+	}
+	os.Exit(exitCode)
 }
 
 func getDriver() *agouti.WebDriver {
