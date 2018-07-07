@@ -57,14 +57,6 @@ func TestSlackAPIEnqueueMsg(t *testing.T) {
 }
 
 func TestSlackAPIPostMessage(t *testing.T) {
-	testSlackAPIPostMessage(t, true)
-}
-
-func TestSlackAPIPostMessageWithoutQueue(t *testing.T) {
-	testSlackAPIPostMessage(t, false)
-}
-
-func testSlackAPIPostMessage(t *testing.T, queue bool) {
 	ctrl := gomock.NewController(t)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
@@ -76,10 +68,8 @@ func testSlackAPIPostMessage(t *testing.T, queue bool) {
 	ch := "channel"
 	text := "text"
 	var msg *SlackMsg
-	if queue {
-		msg = &SlackMsg{text, nil}
-	}
-	slackAPI.PostMessage(ch, text, nil, queue)
+	msg = &SlackMsg{text, nil}
+	slackAPI.PostMessage(ch, text, nil)
 	m := slackAPI.dequeueMsg(ch)
 
 	if !reflect.DeepEqual(msg, m) {

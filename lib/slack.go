@@ -38,7 +38,7 @@ func (a *SlackAPI) Enabled() bool {
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.PostMessage(channel, text, &params, true)
+	return a.PostMessage(channel, text, &params)
 }
 
 type SlackMsg struct {
@@ -65,7 +65,7 @@ func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 }
 
 // TODO: Prevent infinite message loop
-func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, queue bool) error {
+func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters) error {
 	var ps slack.PostMessageParameters
 	if params != nil {
 		ps = *params
@@ -78,7 +78,7 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 			if err != nil {
 				if err.Error() == "user_is_bot" {
 					err := a.notifyCreateChannel(channel)
-					if queue && err == nil {
+					if err == nil {
 						a.enqueueMsg(channel, text, params)
 					}
 					return utils.WithStack(err)
@@ -110,7 +110,7 @@ func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, slack.PostMessagePara
 
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	params := slack.PostMessageParameters{}
-	msg := fmt.Sprintf("Create #%s and invite me to it", ch)
+	msg := fmt.Sprintf("Create %s channel and invite me to it", ch)
 	_, _, err := a.api.PostMessage("general", msg, params)
 	return utils.WithStack(err)
 }
@@ -122,7 +122,7 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 	}
 	for e := q.Front(); e != nil; e = e.Next() {
 		m := e.Value.(*SlackMsg)
-		err := a.PostMessage(ch, m.text, m.params, false)
+		err := a.PostMessage(ch, m.text, m.params)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -192,7 +192,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		params := slack.PostMessageParameters{
 			Attachments: ev.Attachments,
 		}
-		err := a.PostMessage(c, ev.Text, &params, true)
+		err := a.PostMessage(c, ev.Text, &params)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
