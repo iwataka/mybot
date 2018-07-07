@@ -61,14 +61,14 @@ type userSpecificData struct {
 	slackAPI    *mybot.SlackAPI
 	slackAuth   oauth.OAuthCreds
 	workerChans map[int]chan *worker.WorkerSignal
-	statuses    map[int]*bool
+	statuses    map[int]bool
 }
 
 func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
 	userData.workerChans = map[int]chan *worker.WorkerSignal{}
-	userData.statuses = map[int]*bool{}
+	userData.statuses = map[int]bool{}
 	userData.statuses = initialStatuses()
 	dbName := c.String("db-name")
 
@@ -168,12 +168,11 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 	)
 }
 
-func initialStatuses() map[int]*bool {
-	statuses := map[int]*bool{}
+func initialStatuses() map[int]bool {
+	statuses := map[int]bool{}
 	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
 	for _, key := range keys {
-		val := false
-		statuses[key] = &val
+		statuses[key] = false
 	}
 	return statuses
 }

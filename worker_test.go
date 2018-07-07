@@ -32,9 +32,8 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]*bool)
-	status := false
-	statuses[key] = &status
+	statuses := make(map[int]bool)
+	statuses[key] = false
 	activateWorkerAndStart(key, workerChans, statuses, w)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
@@ -50,9 +49,8 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]*bool)
-	status := false
-	statuses[key] = &status
+	statuses := make(map[int]bool)
+	statuses[key] = false
 	activateWorkerAndStart(key, workerChans, statuses, w)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
@@ -71,6 +69,7 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	assert.Equal(t, errMsg, err.Error())
 }
 
+// TODO: Call gomocl.Controlller#Finish to ensure all stub methods are called.
 func generatePeriodicWorker(t *testing.T, times int, duration string, id string, runErr error, verifyErr error) *twitterPeriodicWorker {
 	ctrl := gomock.NewController(t)
 	runner := generateRunner(ctrl, times, runErr, verifyErr)

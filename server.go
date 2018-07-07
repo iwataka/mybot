@@ -248,7 +248,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -352,7 +352,7 @@ func settingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) {
+func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -392,7 +392,7 @@ type ImageResponse struct {
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
 }
 
-func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) (*SettingResponse, error) {
 	twitterScreenName := ""
 	twitterUser, err := twitterAPI.GetSelf()
 	if err == nil {
@@ -401,10 +401,10 @@ func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cac
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
 	status := StatusResponse{
-		TwitterDMListener:   *statuses[twitterDMRoutineKey],
-		TwitterUserListener: *statuses[twitterUserRoutineKey],
-		TwitterPeriodicJob:  *statuses[twitterPeriodicRoutineKey],
-		SlackListener:       *statuses[slackRoutineKey],
+		TwitterDMListener:   statuses[twitterDMRoutineKey],
+		TwitterUserListener: statuses[twitterUserRoutineKey],
+		TwitterPeriodicJob:  statuses[twitterPeriodicRoutineKey],
+		SlackListener:       statuses[slackRoutineKey],
 	}
 
 	imageSource := ""
