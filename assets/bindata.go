@@ -236,7 +236,7 @@ func assetsTmplConfigTwitter_confTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/twitter_conf.tmpl", size: 1421, mode: os.FileMode(420), modTime: time.Unix(1530372585, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/twitter_conf.tmpl", size: 1421, mode: os.FileMode(420), modTime: time.Unix(1530958541, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -256,7 +256,7 @@ func assetsTmplConfigTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 5459, mode: os.FileMode(420), modTime: time.Unix(1530388523, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config.tmpl", size: 5459, mode: os.FileMode(420), modTime: time.Unix(1530958541, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -316,7 +316,7 @@ func assetsTmplNavbarTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 3338, mode: os.FileMode(420), modTime: time.Unix(1529738002, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/navbar.tmpl", size: 3338, mode: os.FileMode(420), modTime: time.Unix(1530435420, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

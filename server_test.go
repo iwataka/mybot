@@ -40,12 +40,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	defer func() {
-		if driver != nil {
-			driver.Stop()
-		}
-	}()
-	os.Exit(m.Run())
+	exitCode := m.Run()
+	if driver != nil {
+		driver.Stop()
+	}
+	os.Exit(exitCode)
 }
 
 func getDriver() *agouti.WebDriver {
