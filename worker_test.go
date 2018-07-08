@@ -29,13 +29,13 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, nil, nil)
+	h := generateWorkerMessageHandler(t, -1)
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]*bool)
-	status := false
-	statuses[key] = &status
-	activateWorkerAndStart(key, workerChans, statuses, w)
+	statuses := make(map[int]bool)
+	statuses[key] = false
+	activateWorkerAndStart(key, workerChans, statuses, w, h)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
@@ -47,13 +47,13 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
+	h := generateWorkerMessageHandler(t, -1)
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]*bool)
-	status := false
-	statuses[key] = &status
-	activateWorkerAndStart(key, workerChans, statuses, w)
+	statuses := make(map[int]bool)
+	statuses[key] = false
+	activateWorkerAndStart(key, workerChans, statuses, w, h)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
@@ -71,6 +71,7 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	assert.Equal(t, errMsg, err.Error())
 }
 
+// TODO: Call gomocl.Controlller#Finish to ensure all stub methods are called.
 func generatePeriodicWorker(t *testing.T, times int, duration string, id string, runErr error, verifyErr error) *twitterPeriodicWorker {
 	ctrl := gomock.NewController(t)
 	runner := generateRunner(ctrl, times, runErr, verifyErr)
@@ -103,4 +104,15 @@ func generateCache(ctrl *gomock.Controller, times int) utils.Savable {
 		cache.EXPECT().Save().Times(times).Return(nil)
 	}
 	return cache
+}
+
+func generateWorkerMessageHandler(t *testing.T, times int) WorkerMessageHandler {
+	ctrl := gomock.NewController(t)
+	h := mocks.NewMockWorkerMessageHandler(ctrl)
+	if times < 0 {
+		h.EXPECT().Handle(gomock.Any()).AnyTimes().Return(nil)
+	} else {
+		h.EXPECT().Handle(gomock.Any()).Times(times).Return(nil)
+	}
+	return h
 }

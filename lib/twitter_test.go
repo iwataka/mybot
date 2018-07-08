@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
 	"github.com/iwataka/mybot/data"
+	"github.com/iwataka/mybot/mocks"
 )
 
 func TestPostProcessorEach(t *testing.T) {
@@ -85,5 +87,33 @@ func testCheckTwitterError(t *testing.T, err error) {
 	}
 	if CheckTwitterError(err) {
 		t.Fatal(msg)
+	}
+}
+
+func TestTwitterAPI_NotifyToAll(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	config, err := NewFileConfig("testdata/config.template.toml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
+	twitterAPIMock.EXPECT().PostDMToScreenName(gomock.Any(), gomock.Any()).Return(anaconda.DirectMessage{}, nil)
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(anaconda.User{Name: "user"}, nil)
+	twitterAPIMock.EXPECT().PostDMToScreenName(gomock.Any(), gomock.Any()).Return(anaconda.DirectMessage{}, nil)
+	twitterAPI := &TwitterAPI{API: twitterAPIMock, Config: config}
+
+	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+	slackAPI := &SlackAPI{api: slackAPIMock, config: config}
+
+	tweet := &anaconda.Tweet{
+		Coordinates: &anaconda.Coordinates{Type: "Point"},
+		Place:       anaconda.Place{Country: "japan"},
+	}
+	if err := twitterAPI.NotifyToAll(slackAPI, tweet); err != nil {
+		t.Fatal(err)
 	}
 }
