@@ -26,8 +26,9 @@ func (w *MyWorker) Start() error {
 	}
 }
 
-func (w *MyWorker) Stop() {
+func (w *MyWorker) Stop() error {
 	w.ch <- false
+	return nil
 }
 
 func (w *MyWorker) Name() string {

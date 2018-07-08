@@ -52,6 +52,17 @@ func (_mr *_MockSlackAPIRecorder) CreateChannel(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateChannel", arg0)
 }
 
+func (_m *MockSlackAPI) CreateGroup(group string) (*slack.Group, error) {
+	ret := _m.ctrl.Call(_m, "CreateGroup", group)
+	ret0, _ := ret[0].(*slack.Group)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockSlackAPIRecorder) CreateGroup(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "CreateGroup", arg0)
+}
+
 func (_m *MockSlackAPI) NewRTM() *slack.RTM {
 	ret := _m.ctrl.Call(_m, "NewRTM")
 	ret0, _ := ret[0].(*slack.RTM)
@@ -71,6 +82,17 @@ func (_m *MockSlackAPI) GetChannels(excludeArchived bool) ([]slack.Channel, erro
 
 func (_mr *_MockSlackAPIRecorder) GetChannels(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetChannels", arg0)
+}
+
+func (_m *MockSlackAPI) GetGroups(excludeArchived bool) ([]slack.Group, error) {
+	ret := _m.ctrl.Call(_m, "GetGroups", excludeArchived)
+	ret0, _ := ret[0].([]slack.Group)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockSlackAPIRecorder) GetGroups(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetGroups", arg0)
 }
 
 func (_m *MockSlackAPI) AddPin(ch string, item slack.ItemRef) error {

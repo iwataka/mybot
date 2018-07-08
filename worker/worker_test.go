@@ -44,10 +44,11 @@ func (w *testWorker) Start() error {
 	return nil
 }
 
-func (w *testWorker) Stop() {
+func (w *testWorker) Stop() error {
 	if *w.count == 1 {
 		w.innerChan <- true
 	}
+	return nil
 }
 
 func (w *testWorker) Name() string {

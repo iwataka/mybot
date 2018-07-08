@@ -1,5 +1,11 @@
-[twitter]
 duration = "30m"
+
+[log_notification]
+twitter_allow_self = true
+twitter_users = ["foo"]
+slack_channels = ["slack_chan"]
+
+[twitter]
 debug = false
 
 [[twitter.timelines]]
@@ -54,8 +60,9 @@ star = false
 channels = ["foo"]
 [twitter.notification]
 [twitter.notification.Place]
-allow_self = true
-users = ["foo"]
+twitter_allow_self = true
+twitter_users = ["foo"]
+slack_channels = ["slack_chan"]
 [twitter.interaction]
 allow_self = false
 users = ["foo", "bar"]

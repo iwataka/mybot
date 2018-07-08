@@ -15,6 +15,9 @@ func TestNewConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n", err)
 	}
+	if c.GetPollingDuration() != "30m" {
+		t.Fatalf("%s expected but %s found", "30m", c.GetPollingDuration())
+	}
 	a := c.Twitter.Timelines[0]
 	if a.ScreenNames[0] != "golang" {
 		t.Fatalf("%s expected but %s found", "golang", a.ScreenNames[0])
@@ -56,11 +59,14 @@ func TestNewConfig(t *testing.T) {
 		t.Fatalf("%s expected but %v found", "foo", ch)
 	}
 	n := c.Twitter.Notification
-	if n.Place.AllowSelf != true {
-		t.Fatalf("%v expected but %v found", true, n.Place.AllowSelf)
+	if n.Place.TwitterAllowSelf != true {
+		t.Fatalf("%v expected but %v found", true, n.Place.TwitterAllowSelf)
 	}
-	if n.Place.Users[0] != "foo" {
-		t.Fatalf("%s expected but %s found", "foo", n.Place.Users[0])
+	if n.Place.TwitterUsers[0] != "foo" {
+		t.Fatalf("%s expected but %s found", "foo", n.Place.TwitterUsers[0])
+	}
+	if n.Place.SlackChannels[0] != "slack_chan" {
+		t.Fatalf("%s expected but %s found", "slack_chan", n.Place.SlackChannels[0])
 	}
 
 	clone := *c
@@ -197,9 +203,9 @@ func TestFileConfigTwitterNotification(t *testing.T) {
 }
 
 func testConfigTwitterNotification(t *testing.T, c Config) {
-	notification := Notification{
-		Place: PlaceNotification{
-			Users: []string{"foo"},
+	notification := TwitterNotification{
+		Place: NotificationProperties{
+			TwitterUsers: []string{"foo"},
 		},
 	}
 	c.SetTwitterNotification(notification)
@@ -265,8 +271,8 @@ func TestFileConfigTwitterDuration(t *testing.T) {
 
 func testConfigTwitterDuration(t *testing.T, c Config) {
 	duration := "20m"
-	c.SetTwitterDuration(duration)
-	dur := c.GetTwitterDuration()
+	c.SetPollingDuration(duration)
+	dur := c.GetPollingDuration()
 	if duration != dur {
 		t.Fatalf("%v is not set properly", duration)
 	}

@@ -38,8 +38,10 @@ func (_mr *_MockWorkerRecorder) Start() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
 }
 
-func (_m *MockWorker) Stop() {
-	_m.ctrl.Call(_m, "Stop")
+func (_m *MockWorker) Stop() error {
+	ret := _m.ctrl.Call(_m, "Stop")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 func (_mr *_MockWorkerRecorder) Stop() *gomock.Call {
