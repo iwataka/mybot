@@ -248,7 +248,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]*bool) {
+func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -352,7 +352,7 @@ func settingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) {
+func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) {
 	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -392,7 +392,7 @@ type ImageResponse struct {
 	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
 }
 
-func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]*bool) (*SettingResponse, error) {
+func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) (*SettingResponse, error) {
 	twitterScreenName := ""
 	twitterUser, err := twitterAPI.GetSelf()
 	if err == nil {
@@ -401,10 +401,10 @@ func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cac
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
 	status := StatusResponse{
-		TwitterDMListener:   *statuses[twitterDMRoutineKey],
-		TwitterUserListener: *statuses[twitterUserRoutineKey],
-		TwitterPeriodicJob:  *statuses[twitterPeriodicRoutineKey],
-		SlackListener:       *statuses[slackRoutineKey],
+		TwitterDMListener:   statuses[twitterDMRoutineKey],
+		TwitterUserListener: statuses[twitterUserRoutineKey],
+		TwitterPeriodicJob:  statuses[twitterPeriodicRoutineKey],
+		SlackListener:       statuses[slackRoutineKey],
 	}
 
 	imageSource := ""
@@ -675,10 +675,12 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	}
 	config.SetSlackMessages(msgs)
 
-	prefix = "twitter.notification"
+	prefix = "log_notification"
+	config.SetLogNotification(getNotificationProperties(val, prefix))
+
+	prefix = "twitter.notification.place"
 	notif := config.GetTwitterNotification()
-	notif.Place.AllowSelf = len(val[prefix+".place.allow_self"]) > 1
-	notif.Place.Users = tmpl.GetListTextboxValue(val, 0, prefix+".place.users")
+	notif.Place = getNotificationProperties(val, prefix)
 	config.SetTwitterNotification(notif)
 
 	prefix = "twitter.interaction"
@@ -687,7 +689,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	intr.Users = tmpl.GetListTextboxValue(val, 0, prefix+".users")
 	config.SetTwitterInteraction(intr)
 
-	config.SetTwitterDuration(val["twitter.duration"][0])
+	config.SetPollingDuration(val["duration"][0])
 
 	err = config.Validate()
 	if err == nil {
@@ -695,6 +697,14 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	} else {
 		return
 	}
+}
+
+func getNotificationProperties(val map[string][]string, prefix string) mybot.NotificationProperties {
+	props := mybot.NotificationProperties{}
+	props.TwitterAllowSelf = len(val[prefix+".twitter_allow_self"]) > 1
+	props.TwitterUsers = tmpl.GetListTextboxValue(val, 0, prefix+".twitter_users")
+	props.SlackChannels = tmpl.GetListTextboxValue(val, 0, prefix+".slack_channels")
+	return props
 }
 
 func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {

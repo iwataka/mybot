@@ -46,8 +46,9 @@ func TestNewConfig(t *testing.T) {
 	require.Equal(t, "foo", msg.Channels[0])
 
 	n := c.Twitter.Notification
-	require.True(t, n.Place.AllowSelf)
-	require.Equal(t, "foo", n.Place.Users[0])
+	require.True(t, n.Place.TwitterAllowSelf)
+	require.Equal(t, "foo", n.Place.TwitterUsers[0])
+	require.Equal(t, "slack_chan", n.Place.SlackChannels[0])
 
 	clone := *c
 	require.NoError(t, clone.Validate())
@@ -258,9 +259,9 @@ func TestFileConfigTwitterNotification(t *testing.T) {
 }
 
 func testConfigTwitterNotification(t *testing.T, c Config) {
-	notification := Notification{
-		Place: PlaceNotification{
-			Users: []string{"foo"},
+	notification := TwitterNotification{
+		Place: NotificationProperties{
+			TwitterUsers: []string{"foo"},
 		},
 	}
 	c.SetTwitterNotification(notification)
@@ -314,8 +315,8 @@ func TestFileConfigTwitterDuration(t *testing.T) {
 
 func testConfigTwitterDuration(t *testing.T, c Config) {
 	duration := "20m"
-	c.SetTwitterDuration(duration)
-	dur := c.GetTwitterDuration()
+	c.SetPollingDuration(duration)
+	dur := c.GetPollingDuration()
 	require.Equal(t, duration, dur)
 }
 

@@ -89,7 +89,7 @@ func (s WorkerStatus) String() string {
 // it.
 type Worker interface {
 	Start() error
-	Stop()
+	Stop() error
 	// Name returns a name of this Worker, to distinguish this from others.
 	Name() string
 }
@@ -124,7 +124,10 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		if signal == RestartSignal || signal == StopSignal || signal == KillSignal {
 			force := signal != RestartSignal
 			if status && (force || timestamp.Before(t)) {
-				worker.Stop()
+				err := worker.Stop()
+				if err != nil {
+					sendNonBlockingly(outChan, err, timeout)
+				}
 				select {
 				case <-ch:
 				case <-time.After(timeout):

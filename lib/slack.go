@@ -42,7 +42,7 @@ func (a *SlackAPI) Enabled() bool {
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
 	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.PostMessage(channel, text, &params, true)
+	return a.PostMessage(channel, text, &params, false)
 }
 
 type SlackMsg struct {
@@ -68,7 +68,8 @@ func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 	return nil
 }
 
-func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, queue bool) error {
+// TODO: Prevent infinite message loop
+func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, channelIsOpen bool) error {
 	var ps slack.PostMessageParameters
 	if params != nil {
 		ps = *params
@@ -76,11 +77,16 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 	_, _, err := a.api.PostMessage(channel, text, ps)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
-			_, err := a.api.CreateChannel(channel)
+			// TODO: Prevent from creating multiple channels with the same name
+			if channelIsOpen {
+				_, err = a.api.CreateChannel(channel)
+			} else {
+				_, err = a.api.CreateGroup(channel)
+			}
 			if err != nil {
 				if err.Error() == "user_is_bot" {
 					err := a.notifyCreateChannel(channel)
-					if queue && err == nil {
+					if err == nil {
 						a.enqueueMsg(channel, text, params)
 					}
 					return utils.WithStack(err)
@@ -112,7 +118,7 @@ func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, slack.PostMessagePara
 
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	params := slack.PostMessageParameters{}
-	msg := fmt.Sprintf("Create #%s and invite me to it", ch)
+	msg := fmt.Sprintf("Create %s channel and invite me to it", ch)
 	_, _, err := a.api.PostMessage("general", msg, params)
 	return utils.WithStack(err)
 }
@@ -194,7 +200,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		params := slack.PostMessageParameters{
 			Attachments: ev.Attachments,
 		}
-		err := a.PostMessage(c, ev.Text, &params, true)
+		err := a.PostMessage(c, ev.Text, &params, false)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
@@ -267,15 +273,29 @@ func (l *SlackListener) Start(
 				if time.Now().Sub(*t)-time.Minute > 0 {
 					continue
 				}
-				chs, err := l.api.api.GetChannels(true)
-				if err != nil {
-					return utils.WithStack(err)
-				}
 				ch := ""
-				for _, c := range chs {
-					if c.ID == ev.Channel {
-						ch = c.Name
-						break
+				if ch == "" {
+					chs, err := l.api.api.GetChannels(true)
+					if err != nil {
+						return utils.WithStack(err)
+					}
+					for _, c := range chs {
+						if c.ID == ev.Channel {
+							ch = c.Name
+							break
+						}
+					}
+				}
+				if ch == "" {
+					grps, err := l.api.api.GetGroups(true)
+					if err != nil {
+						return utils.WithStack(err)
+					}
+					for _, g := range grps {
+						if g.ID == ev.Channel {
+							ch = g.Name
+							break
+						}
 					}
 				}
 				if ch != "" {
@@ -301,11 +321,12 @@ func (l *SlackListener) Start(
 	return nil
 }
 
-func (l *SlackListener) Stop() {
+func (l *SlackListener) Stop() error {
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(time.Minute):
-		log.Println("Faield to stop slack listener (timeout: 1m)")
+		return fmt.Errorf("Faield to stop slack listener (timeout: 1m)")
 	}
 }
 

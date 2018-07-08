@@ -40,12 +40,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	defer func() {
-		if driver != nil {
-			driver.Stop()
-		}
-	}()
-	os.Exit(m.Run())
+	exitCode := m.Run()
+	if driver != nil {
+		driver.Stop()
+	}
+	os.Exit(exitCode)
 }
 
 func getDriver() *agouti.WebDriver {
@@ -63,13 +62,13 @@ func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
 	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
-	serverTestUserSpecificData.statuses = map[int]*bool{}
-	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
-	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
-	serverTestUserSpecificData.statuses = initialStatuses()
 	if err != nil {
 		panic(err)
 	}
+	serverTestUserSpecificData.statuses = map[int]bool{}
+	serverTestUserSpecificData.statuses = initialStatuses()
+	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
+	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 
 	if _, err := os.Stat(screenshotsDir); err != nil {

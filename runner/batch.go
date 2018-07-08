@@ -90,7 +90,7 @@ func (r BatchRunnerUsedWithStream) Run() error {
 		}
 	}
 	for _, t := range tweets {
-		err := r.twitterAPI.NotifyToAll(&t)
+		err := r.twitterAPI.NotifyToAll(r.slackAPI, &t)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -158,7 +158,7 @@ func (r BatchRunnerUsedWithoutStream) Run() error {
 		}
 	}
 	for _, t := range tweets {
-		err := r.baseRunner.twitterAPI.NotifyToAll(&t)
+		err := r.baseRunner.twitterAPI.NotifyToAll(r.baseRunner.slackAPI, &t)
 		if err != nil {
 			return utils.WithStack(err)
 		}

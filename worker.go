@@ -13,9 +13,43 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
-// TODO: Make more simple and testable. I want to trace that workerChans is
-// used and statuses is changed correctly.
-func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSignal, statuses map[int]*bool, w worker.Worker) {
+type WorkerMessageHandler interface {
+	Handle(msg interface{}) error
+}
+
+type DefaultWorkerMessageHandler struct {
+	config     mybot.Config
+	twitterAPI *mybot.TwitterAPI
+	slackAPI   *mybot.SlackAPI
+	workerID   string
+}
+
+func (h DefaultWorkerMessageHandler) Handle(msg interface{}) error {
+	logMessage := ""
+	switch m := msg.(type) {
+	case worker.WorkerStatus:
+		logMessage = fmt.Sprintf("Worker %s: %s", m, h.workerID)
+	case error:
+		logMessage = m.Error()
+	}
+	sendsSomeone, err := h.config.GetLogNotification().Notify(h.twitterAPI, h.slackAPI, logMessage)
+	if err != nil {
+		return err
+	}
+	if !sendsSomeone {
+		log.Println(logMessage)
+	}
+	return nil
+}
+
+// TODO: Test statuses are changed correctly.
+func activateWorkerAndStart(
+	key int,
+	workerChans map[int]chan *worker.WorkerSignal,
+	statuses map[int]bool,
+	w worker.Worker,
+	msgHandler WorkerMessageHandler,
+) {
 	if ch, exists := workerChans[key]; exists {
 		close(ch)
 	}
@@ -27,16 +61,14 @@ func activateWorkerAndStart(key int, workerChans map[int]chan *worker.WorkerSign
 		for msg := range outChan {
 			switch m := msg.(type) {
 			case worker.WorkerStatus:
-				fmt.Printf("Worker %s: %s\n", m, w.Name())
 				switch m {
 				case worker.StatusStarted:
-					*statuses[key] = true
+					statuses[key] = true
 				case worker.StatusStopped:
-					*statuses[key] = false
+					statuses[key] = false
 				}
-			case error:
-				log.Printf("%+v\n", m)
 			}
+			msgHandler.Handle(msg)
 		}
 	}()
 	// Process sending ping to worker manager priodically
@@ -92,10 +124,11 @@ func (w *twitterDMWorker) Start() error {
 	return nil
 }
 
-func (w *twitterDMWorker) Stop() {
+func (w *twitterDMWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *twitterDMWorker) Name() string {
@@ -141,10 +174,11 @@ func (w *twitterUserWorker) Start() error {
 	return nil
 }
 
-func (w *twitterUserWorker) Stop() {
+func (w *twitterUserWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *twitterUserWorker) Name() string {
@@ -197,11 +231,12 @@ func (w *twitterPeriodicWorker) Start() error {
 	return nil
 }
 
-func (w *twitterPeriodicWorker) Stop() {
+func (w *twitterPeriodicWorker) Stop() error {
 	select {
 	case w.innerChan <- true:
+		return nil
 	case <-time.After(w.timeout):
-		log.Printf("Faield to stop worker %s\n", w.Name())
+		return fmt.Errorf("Faield to stop worker %s\n", w.Name())
 	}
 }
 
@@ -243,10 +278,11 @@ func (w *slackWorker) Start() error {
 	return nil
 }
 
-func (w *slackWorker) Stop() {
+func (w *slackWorker) Stop() error {
 	if w.listener != nil {
-		w.listener.Stop()
+		return w.listener.Stop()
 	}
+	return nil
 }
 
 func (w *slackWorker) Name() string {

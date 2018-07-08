@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -333,32 +332,11 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 
 // NotifyToAll sends metadata about the specified tweet, such as place, to the
 // all users specified in the configuration.
-func (a *TwitterAPI) NotifyToAll(t *anaconda.Tweet) error {
-	n := a.config.GetTwitterNotification()
+func (a *TwitterAPI) NotifyToAll(slackAPI *SlackAPI, t *anaconda.Tweet) error {
 	if t.HasCoordinates() {
+		n := a.config.GetTwitterNotification()
 		msg := fmt.Sprintf("ID: %s\nCountry: %s\nCreatedAt: %s", t.IdStr, t.Place.Country, t.CreatedAt)
-		allowSelf := n.Place.AllowSelf
-		users := n.Place.Users
-		return a.PostDMToAll(msg, allowSelf, users)
-	}
-	return nil
-}
-
-// PostDMToAll posts the specified message to the all users specified in the
-// configuration.
-func (a *TwitterAPI) PostDMToAll(msg string, allowSelf bool, users []string) error {
-	for _, user := range users {
-		_, err := a.api.PostDMToScreenName(msg, user)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
-	if allowSelf {
-		self, err := a.GetSelf()
-		if err != nil {
-			return utils.WithStack(err)
-		}
-		_, err = a.api.PostDMToScreenName(msg, self.ScreenName)
+		_, err := n.Place.Notify(a, slackAPI, msg)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -443,12 +421,13 @@ func (l *TwitterUserListener) Listen(
 	}
 }
 
-func (l *TwitterUserListener) Stop() {
+func (l *TwitterUserListener) Stop() error {
 	l.stream.Stop()
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(l.timeout):
-		log.Println("Failed to stop twitter DM listener")
+		return fmt.Errorf("Failed to stop twitter DM listener")
 	}
 }
 
@@ -518,12 +497,13 @@ func (l *TwitterDMListener) Listen() error {
 	}
 }
 
-func (l *TwitterDMListener) Stop() {
+func (l *TwitterDMListener) Stop() error {
 	l.stream.Stop()
 	select {
 	case l.innerChan <- true:
+		return nil
 	case <-time.After(l.timeout):
-		log.Println("Failed to stop twitter DM listener")
+		return fmt.Errorf("Failed to stop twitter DM listener")
 	}
 }
 
