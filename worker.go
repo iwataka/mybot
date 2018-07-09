@@ -188,7 +188,7 @@ func (w *twitterUserWorker) Name() string {
 type twitterPeriodicWorker struct {
 	runner    runner.BatchRunner
 	cache     utils.Savable
-	duration  string
+	config    mybot.Config
 	timeout   time.Duration
 	id        string
 	stream    *anaconda.Stream
@@ -198,11 +198,11 @@ type twitterPeriodicWorker struct {
 func newTwitterPeriodicWorker(
 	runner runner.BatchRunner,
 	cache utils.Savable,
-	duration string,
+	config mybot.Config,
 	timeout time.Duration,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{runner, cache, duration, timeout, id, nil, make(chan bool)}
+	return &twitterPeriodicWorker{runner, cache, config, timeout, id, nil, make(chan bool)}
 }
 
 func (w *twitterPeriodicWorker) Start() error {
@@ -210,7 +210,7 @@ func (w *twitterPeriodicWorker) Start() error {
 		return utils.WithStack(err)
 	}
 
-	d, err := time.ParseDuration(w.duration)
+	d, err := time.ParseDuration(w.config.GetPollingDuration())
 	if err != nil {
 		return utils.WithStack(err)
 	}
