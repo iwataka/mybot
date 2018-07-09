@@ -4,6 +4,9 @@ TEST_PACKAGES := . ./lib ./models ./worker ./utils ./oauth ./tmpl ./data ./runne
 DOCKER_COMPOSE := docker-compose
 DOCKER_COMPOSE_SCRIPT := scripts/docker-compose.yml
 
+DOCKER := docker
+DOCKER_REPO := iwataka/mybot
+
 build:
 	$(GO) generate
 	$(GO) build
@@ -17,3 +20,9 @@ deploy_app:
 clean_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) stop
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) rm -f
+
+update_images:
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) pull
+
+create_image:
+	$(DOCKER) build -t $(DOCKER_REPO) .

@@ -4,7 +4,7 @@ RUN apk add --no-cache git
 # https://github.com/kubernetes/kubernetes/issues/39583
 RUN git config --global http.https://gopkg.in.followRedirects true
 RUN go get -u github.com/golang/dep/cmd/dep
-RUN go get -d github.com/iwataka/mybot
+COPY . $GOPATH/src/github.com/iwataka/mybot
 
 RUN cd $GOPATH/src/github.com/iwataka/mybot \
             && dep ensure \
