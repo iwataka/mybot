@@ -22,12 +22,17 @@ go get -u github.com/iwataka/mybot
 mybot s(erve)
 ```
 
-or:
+or by using Docker:
 
 ```
 docker run -d --name mybot -p 8080:8080 iwataka/mybot
 ```
 
-Mybot supports file-system and MongoDB as a storage, see `mybot help` for more details.
+or by using docker-compose:
 
-If you try MongoDB support easily, I recommend to use [mlab](https://mlab.com/).
+```
+go get -d github.com/iwataka/mybot
+cd $GOPATH/src/github.com/iwataka/mybot
+make deploy_app
+# To clean app, run `make clean_app`
+```
