@@ -1,15 +1,16 @@
+# build
 mybot
 mybot.exe
-config.toml
 bin/
-google_application_credentials.json
-twitter_authentication.json
+
+# MacOS
 .DS_Store
+
+# testing
 /screenshots/
+
+# Go
 /*vendor*/
 
-*.log
-*.crt
-*.csr
-*.key
-*.bak
+# Docker
+/scripts/mongodb/

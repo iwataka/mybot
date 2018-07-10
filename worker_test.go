@@ -2,6 +2,7 @@ package main
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
@@ -76,7 +77,8 @@ func generatePeriodicWorker(t *testing.T, times int, duration string, id string,
 	ctrl := gomock.NewController(t)
 	runner := generateRunner(ctrl, times, runErr, verifyErr)
 	cache := generateCache(ctrl, times)
-	return newTwitterPeriodicWorker(runner, cache, duration, time.Second, id)
+	config := generateConfig(t, duration)
+	return newTwitterPeriodicWorker(runner, cache, config, time.Second, id)
 }
 
 func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) runner.BatchRunner {
@@ -104,6 +106,12 @@ func generateCache(ctrl *gomock.Controller, times int) utils.Savable {
 		cache.EXPECT().Save().Times(times).Return(nil)
 	}
 	return cache
+}
+
+func generateConfig(t *testing.T, duration string) mybot.Config {
+	config := mybot.NewTestFileConfig("", t)
+	config.SetPollingDuration(duration)
+	return config
 }
 
 func generateWorkerMessageHandler(t *testing.T, times int) WorkerMessageHandler {

@@ -163,7 +163,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-	w = newTwitterPeriodicWorker(r, data.cache, data.config.GetPollingDuration(), time.Minute, userID)
+	w = newTwitterPeriodicWorker(r, data.cache, data.config, time.Minute, userID)
 	activateWorkerAndStart(
 		twitterPeriodicRoutineKey,
 		data.workerChans,
