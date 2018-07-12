@@ -4,6 +4,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
@@ -114,7 +115,7 @@ func generateConfig(t *testing.T, duration string) mybot.Config {
 	return config
 }
 
-func generateWorkerMessageHandler(t *testing.T, times int) WorkerMessageHandler {
+func generateWorkerMessageHandler(t *testing.T, times int) models.WorkerMessageHandler {
 	ctrl := gomock.NewController(t)
 	h := mocks.NewMockWorkerMessageHandler(ctrl)
 	if times < 0 {

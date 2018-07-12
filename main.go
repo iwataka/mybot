@@ -12,6 +12,7 @@ import (
 	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
@@ -30,8 +31,8 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 //go:generate mockgen -source=utils/utils.go -destination=mocks/utils.go -package=mocks
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
-//go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
-//go:generate mockgen -source=worker.go -destination=mocks/worker_message_handler.go -package=mocks
+//go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
+//go:generate mockgen -source=models/cli.go -destination=mocks/cli.go -package=mocks
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
@@ -352,7 +353,7 @@ type userSpecificData struct {
 	statuses    map[int]bool
 }
 
-func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
+func newUserSpecificData(c models.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
 	userData.workerChans = map[int]chan *worker.WorkerSignal{}
@@ -429,7 +430,7 @@ func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*
 }
 
 func startUserSpecificData(userID string, data *userSpecificData) {
-	var w worker.Worker
+	var w models.Worker
 
 	w = newTwitterDMWorker(data.twitterAPI, userID, time.Minute)
 	activateWorkerAndStart(
@@ -467,15 +468,6 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		w,
 		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
 	)
-}
-
-func initialStatuses() map[int]bool {
-	statuses := map[int]bool{}
-	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
-	for _, key := range keys {
-		statuses[key] = false
-	}
-	return statuses
 }
 
 func run(c *cli.Context) {
@@ -636,7 +628,7 @@ func beforeValidating(c *cli.Context) error {
 	return nil
 }
 
-func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) error {
+func initForUser(c models.Context, session *mgo.Session, dbName, userID string) error {
 	data, err := newUserSpecificData(c, session, userID)
 	if err != nil {
 		return utils.WithStack(err)
@@ -645,7 +637,7 @@ func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) er
 	return nil
 }
 
-func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, error) {
+func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string, error) {
 	if session == nil {
 		dir, err := argValueWithMkdir(c, twitterFlagName)
 		if err != nil {
@@ -677,7 +669,7 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 	return userIDs, nil
 }
 
-func httpServer(c *cli.Context) {
+func httpServer(c models.Context) {
 	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
 	exitIfError(err)
 }
@@ -689,11 +681,19 @@ func exitIfError(err error) {
 	}
 }
 
-func argValueWithMkdir(c *cli.Context, key string) (string, error) {
+func argValueWithMkdir(c models.Context, key string) (string, error) {
 	dir := c.String(key)
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
 		return "", utils.WithStack(err)
 	}
 	return dir, nil
+}
+func initialStatuses() map[int]bool {
+	statuses := map[int]bool{}
+	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
+	for _, key := range keys {
+		statuses[key] = false
+	}
+	return statuses
 }

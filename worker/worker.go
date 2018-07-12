@@ -7,6 +7,8 @@ package worker
 
 import (
 	"time"
+
+	"github.com/iwataka/mybot/models"
 )
 
 // These constants indicate signal type sent to worker
@@ -85,19 +87,10 @@ func (s WorkerStatus) String() string {
 	}
 }
 
-// Worker is worker which has its own operation and provides APIs to start/stop
-// it.
-type Worker interface {
-	Start() error
-	Stop() error
-	// Name returns a name of this Worker, to distinguish this from others.
-	Name() string
-}
-
 // ActivateWorker activates worker, which means worker gets ready to receive
 // WorkerSignal to inChan. When worker receives WorkerSignal and changes its
 // status, then return corresponded WorkerStatus or error via outChan.
-func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal, outChan chan interface{}) {
+func ActivateWorker(worker models.Worker, timeout time.Duration) (inChan chan *WorkerSignal, outChan chan interface{}) {
 	inChan = make(chan *WorkerSignal)
 	outChan = make(chan interface{})
 	go activateWorker(inChan, outChan, worker, timeout)
@@ -106,13 +99,13 @@ func ActivateWorker(worker Worker, timeout time.Duration) (inChan chan *WorkerSi
 
 // ActivateWorkerWithoutOutChan is almost same as ActivateWorker but doesn't
 // use outChan.
-func ActivateWorkerWithoutOutChan(worker Worker, timeout time.Duration) (inChan chan *WorkerSignal) {
+func ActivateWorkerWithoutOutChan(worker models.Worker, timeout time.Duration) (inChan chan *WorkerSignal) {
 	inChan = make(chan *WorkerSignal)
 	go activateWorker(inChan, nil, worker, timeout)
 	return
 }
 
-func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker Worker, timeout time.Duration) {
+func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker models.Worker, timeout time.Duration) {
 	ch := make(chan bool)
 	status := false
 	timestamp := time.Now()
@@ -158,7 +151,7 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 	sendNonBlockingly(outChan, StatusFinished, timeout)
 }
 
-func startWorkerAndNotify(w Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
+func startWorkerAndNotify(w models.Worker, outChan chan interface{}, ch chan bool, timeout time.Duration) {
 	defer func() {
 		if outChan != nil {
 			sendNonBlockingly(outChan, StatusStopped, timeout)
