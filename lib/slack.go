@@ -24,11 +24,15 @@ type SlackAPI struct {
 	user     *slack.AuthTestResponse
 }
 
-func NewSlackAPI(token string, config Config, cache data.Cache) *SlackAPI {
+func NewSlackAPIWithAuth(token string, config Config, cache data.Cache) *SlackAPI {
 	var api models.SlackAPI
 	if token != "" {
 		api = slack.New(token)
 	}
+	return NewSlackAPI(api, config, cache)
+}
+
+func NewSlackAPI(api models.SlackAPI, config Config, cache data.Cache) *SlackAPI {
 	return &SlackAPI{api, config, cache, make(map[string]*list.List), nil}
 }
 

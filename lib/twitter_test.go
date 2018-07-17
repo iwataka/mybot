@@ -103,7 +103,7 @@ func TestTwitterAPI_NotifyToAll(t *testing.T) {
 	twitterAPIMock.EXPECT().PostDMToScreenName(gomock.Any(), gomock.Any()).Return(anaconda.DirectMessage{}, nil)
 	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).Return(anaconda.User{Name: "user"}, nil)
 	twitterAPIMock.EXPECT().PostDMToScreenName(gomock.Any(), gomock.Any()).Return(anaconda.DirectMessage{}, nil)
-	twitterAPI := &TwitterAPI{API: twitterAPIMock, Config: config}
+	twitterAPI := NewTwitterAPI(twitterAPIMock, config, nil)
 
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)

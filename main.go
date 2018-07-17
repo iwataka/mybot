@@ -5,12 +5,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
@@ -29,8 +31,8 @@ import (
 //go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
 //go:generate mockgen -source=utils/utils.go -destination=mocks/utils.go -package=mocks
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
-//go:generate mockgen -source=worker/worker.go -destination=mocks/worker.go -package=mocks
-//go:generate mockgen -source=worker.go -destination=mocks/worker_message_handler.go -package=mocks
+//go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
+//go:generate mockgen -source=models/cli.go -destination=mocks/cli.go -package=mocks
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
@@ -48,148 +50,37 @@ var (
 )
 
 const (
+	envFlagName                      = "env"
+	configFlagName                   = "config"
+	cacheFlagName                    = "cache"
+	gcloudFlagName                   = "gcloud"
+	twitterFlagName                  = "twitter-auth"
+	slackFlagName                    = "slack-auth"
+	certFlagName                     = "cert"
+	keyFlagName                      = "key"
+	hostFlagName                     = "host"
+	portFlagName                     = "port"
+	dbAddrFlagName                   = "db-addr"
+	dbUserFlagName                   = "db-user"
+	dbPassFlagName                   = "db-passwd"
+	dbNameFlagName                   = "db-name"
+	twitterConsumerKeyFlagName       = "twitter-consumer-key"
+	twitterConsumerSecretFlagName    = "twitter-consumer-secret"
+	twitterConsumerFileFlagName      = "twitter-app"
+	slackClientIDFlagName            = "slack-client-id"
+	slackClientSecretFlagName        = "slack-client-secret"
+	slackClientFileFlagName          = "slack-app"
+	sessionDomainFlagName            = "session-domain"
+	apiFlagName                      = "api"
+	accessControlAllowOriginFlagName = "access-control-allow-origin"
+)
+
+const (
 	twitterDMRoutineKey = iota
 	twitterUserRoutineKey
 	slackRoutineKey
 	twitterPeriodicRoutineKey
 )
-
-type userSpecificData struct {
-	config      mybot.Config
-	cache       data.Cache
-	twitterAPI  *mybot.TwitterAPI
-	twitterAuth oauth.OAuthCreds
-	slackAPI    *mybot.SlackAPI
-	slackAuth   oauth.OAuthCreds
-	workerChans map[int]chan *worker.WorkerSignal
-	statuses    map[int]bool
-}
-
-func newUserSpecificData(c *cli.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
-	var err error
-	userData := &userSpecificData{}
-	userData.workerChans = map[int]chan *worker.WorkerSignal{}
-	userData.statuses = map[int]bool{}
-	userData.statuses = initialStatuses()
-	dbName := c.String("db-name")
-
-	if session == nil {
-		dir, err := argValueWithMkdir(c, "cache")
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.cache, err = data.NewFileCache(file)
-	} else {
-		col := session.DB(dbName).C("cache")
-		userData.cache, err = data.NewDBCache(col, userID)
-	}
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-
-	if session == nil {
-		dir, err := argValueWithMkdir(c, "config")
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.config, err = mybot.NewFileConfig(file)
-	} else {
-		col := session.DB(dbName).C("config")
-		userData.config, err = mybot.NewDBConfig(col, userID)
-	}
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-
-	if session == nil {
-		dir, err := argValueWithMkdir(c, "twitter-auth")
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.twitterAuth, err = oauth.NewFileOAuthCreds(file)
-	} else {
-		col := session.DB(dbName).C("twitter-user-auth")
-		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
-	}
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-
-	if session == nil {
-		dir, err := argValueWithMkdir(c, "slack-auth")
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.slackAuth, err = oauth.NewFileOAuthCreds(file)
-	} else {
-		col := session.DB(dbName).C("slack-user-auth")
-		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
-	}
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-
-	userData.twitterAPI = mybot.NewTwitterAPI(userData.twitterAuth, userData.cache, userData.config)
-
-	slackID, _ := userData.slackAuth.GetCreds()
-	userData.slackAPI = mybot.NewSlackAPI(slackID, userData.config, userData.cache)
-
-	return userData, nil
-}
-
-func startUserSpecificData(userID string, data *userSpecificData) {
-	var w worker.Worker
-
-	w = newTwitterDMWorker(data.twitterAPI, userID, time.Minute)
-	activateWorkerAndStart(
-		twitterDMRoutineKey,
-		data.workerChans,
-		data.statuses,
-		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
-	)
-
-	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
-	activateWorkerAndStart(
-		twitterUserRoutineKey,
-		data.workerChans,
-		data.statuses,
-		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
-	)
-
-	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-	w = newTwitterPeriodicWorker(r, data.cache, data.config, time.Minute, userID)
-	activateWorkerAndStart(
-		twitterPeriodicRoutineKey,
-		data.workerChans,
-		data.statuses,
-		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
-	)
-
-	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
-	activateWorkerAndStart(
-		slackRoutineKey,
-		data.workerChans,
-		data.statuses,
-		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
-	)
-}
-
-func initialStatuses() map[int]bool {
-	statuses := map[int]bool{}
-	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
-	for _, key := range keys {
-		statuses[key] = false
-	}
-	return statuses
-}
 
 func main() {
 	home, err := homedir.Dir()
@@ -201,146 +92,146 @@ func main() {
 	cacheDir := filepath.Join(home, ".cache", "mybot")
 
 	envFlag := cli.StringFlag{
-		Name:   "env",
+		Name:   envFlagName,
 		Value:  "",
 		Usage:  `Assign "production" for production environment`,
 		EnvVar: "MYBOT_ENV",
 	}
 
 	configFlag := cli.StringFlag{
-		Name:   "config",
+		Name:   configFlagName,
 		Value:  filepath.Join(configDir, "config"),
 		Usage:  "Config directory location",
 		EnvVar: "MYBOT_CONFIG_PATH",
 	}
 
 	cacheFlag := cli.StringFlag{
-		Name:   "cache",
+		Name:   cacheFlagName,
 		Value:  filepath.Join(cacheDir, "cache"),
 		Usage:  "Cache directory location",
 		EnvVar: "MYBOT_CACHE_PATH",
 	}
 
 	gcloudFlag := cli.StringFlag{
-		Name:   "gcloud",
+		Name:   gcloudFlagName,
 		Usage:  "Credential file for Google Cloud Platform",
 		EnvVar: "MYBOT_GCLOUD_CREDENTIAL",
 	}
 
 	twitterFlag := cli.StringFlag{
-		Name:   "twitter-auth",
+		Name:   twitterFlagName,
 		Value:  filepath.Join(configDir, "twitter_auth"),
 		Usage:  "Twitter credential directory",
 		EnvVar: "MYBOT_TWITTER_CREDENTIAL",
 	}
 
 	slackFlag := cli.StringFlag{
-		Name:   "slack-auth",
+		Name:   slackFlagName,
 		Value:  filepath.Join(configDir, "slack_auth"),
 		Usage:  "Slack credential directory",
 		EnvVar: "MYBOT_SLACK_CREDENTIAL",
 	}
 
 	certFlag := cli.StringFlag{
-		Name:   "cert",
+		Name:   certFlagName,
 		Value:  filepath.Join(configDir, "mybot.crt"),
 		Usage:  "Certification file for server",
 		EnvVar: "MYBOT_SSL_CERT",
 	}
 
 	keyFlag := cli.StringFlag{
-		Name:   "key",
+		Name:   keyFlagName,
 		Value:  filepath.Join(configDir, "mybot.key"),
 		Usage:  "Key file for server",
 		EnvVar: "MYBOT_SSL_KEY",
 	}
 
 	hostFlag := cli.StringFlag{
-		Name:   "host,H",
+		Name:   strings.Join([]string{hostFlagName, "H"}, ","),
 		Value:  "localhost",
 		Usage:  "Host this server listen on",
 		EnvVar: "MYBOT_HOST",
 	}
 
 	portFlag := cli.StringFlag{
-		Name:   "port,P",
+		Name:   strings.Join([]string{portFlagName, "P"}, ","),
 		Value:  "8080",
 		Usage:  "Port this server listen on",
 		EnvVar: "MYBOT_PORT",
 	}
 
 	dbAddrFlag := cli.StringFlag{
-		Name:   "db-addr",
+		Name:   dbAddrFlagName,
 		Value:  "",
 		Usage:  "DB address",
 		EnvVar: "MYBOT_DB_ADDRESS",
 	}
 
 	dbUserFlag := cli.StringFlag{
-		Name:   "db-user",
+		Name:   dbUserFlagName,
 		Value:  "",
 		Usage:  "DB user",
 		EnvVar: "MYBOT_DB_USER",
 	}
 
 	dbPassFlag := cli.StringFlag{
-		Name:   "db-passwd",
+		Name:   dbPassFlagName,
 		Value:  "",
 		Usage:  "DB password",
 		EnvVar: "MYBOT_DB_PASSWD",
 	}
 
 	dbNameFlag := cli.StringFlag{
-		Name:   "db-name",
+		Name:   dbNameFlagName,
 		Value:  "",
 		Usage:  "Target DB name",
 		EnvVar: "MYBOT_DB_NAME",
 	}
 
 	twitterConsumerKeyFlag := cli.StringFlag{
-		Name:   "twitter-consumer-key",
+		Name:   twitterConsumerKeyFlagName,
 		Value:  "",
 		Usage:  "Twitter consumer key",
 		EnvVar: "MYBOT_TWITTER_CONSUMER_KEY",
 	}
 
 	twitterConsumerSecretFlag := cli.StringFlag{
-		Name:   "twitter-consumer-secret",
+		Name:   twitterConsumerSecretFlagName,
 		Value:  "",
 		Usage:  "Twitter consumer secret",
 		EnvVar: "MYBOT_TWITTER_CONSUMER_SECRET",
 	}
 
 	twitterConsumerFileFlag := cli.StringFlag{
-		Name:   "twitter-app",
+		Name:   twitterConsumerFileFlagName,
 		Value:  filepath.Join(configDir, "twitter_app.toml"),
 		Usage:  "Twitter application directory",
 		EnvVar: "MYBOT_TWITTER_APP",
 	}
 
 	slackClientIDFlag := cli.StringFlag{
-		Name:   "slack-client-id",
+		Name:   slackClientIDFlagName,
 		Value:  "",
 		Usage:  "Slack client ID",
 		EnvVar: "MYBOT_SLACK_APP",
 	}
 
 	slackClientSecretFlag := cli.StringFlag{
-		Name:   "slack-client-secret",
+		Name:   slackClientSecretFlagName,
 		Value:  "",
 		Usage:  "Slack client secret",
 		EnvVar: "MYBOT_SLACK_CLIENT_SECRET",
 	}
 
 	slackClientFileFlag := cli.StringFlag{
-		Name:   "slack-app",
+		Name:   slackClientFileFlagName,
 		Value:  filepath.Join(configDir, "slack_app.toml"),
 		Usage:  "Slack application directory",
 		EnvVar: "MYBOT_SLACK_APP",
 	}
 
 	sessionDomainFlag := cli.StringFlag{
-		Name:        "session-domain",
+		Name:        sessionDomainFlagName,
 		Value:       "",
 		Usage:       "Session domain",
 		EnvVar:      "MYBOT_SESSION_DOMAIN",
@@ -348,12 +239,12 @@ func main() {
 	}
 
 	apiFlag := cli.BoolFlag{
-		Name:  "api",
+		Name:  apiFlagName,
 		Usage: "Use API to validate configuration",
 	}
 
 	accessControlAllowOriginFlag := cli.StringFlag{
-		Name:        "access-control-allow-origin",
+		Name:        accessControlAllowOriginFlagName,
 		Value:       "",
 		Usage:       "Access Control Allow Origin value for API endpoints",
 		EnvVar:      "MYBOT_ACCESS_CONTROL_ALLOW_ORIGIN",
@@ -451,6 +342,134 @@ func main() {
 	exitIfError(err)
 }
 
+type userSpecificData struct {
+	config      mybot.Config
+	cache       data.Cache
+	twitterAPI  *mybot.TwitterAPI
+	twitterAuth oauth.OAuthCreds
+	slackAPI    *mybot.SlackAPI
+	slackAuth   oauth.OAuthCreds
+	workerChans map[int]chan *worker.WorkerSignal
+	statuses    map[int]bool
+}
+
+func newUserSpecificData(c models.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
+	var err error
+	userData := &userSpecificData{}
+	userData.workerChans = map[int]chan *worker.WorkerSignal{}
+	userData.statuses = map[int]bool{}
+	userData.statuses = initialStatuses()
+	dbName := c.String(dbNameFlagName)
+
+	if session == nil {
+		dir, err := argValueWithMkdir(c, cacheFlagName)
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		userData.cache, err = data.NewFileCache(file)
+	} else {
+		col := session.DB(dbName).C("cache")
+		userData.cache, err = data.NewDBCache(col, userID)
+	}
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+
+	if session == nil {
+		dir, err := argValueWithMkdir(c, configFlagName)
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		userData.config, err = mybot.NewFileConfig(file)
+	} else {
+		col := session.DB(dbName).C("config")
+		userData.config, err = mybot.NewDBConfig(col, userID)
+	}
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+
+	if session == nil {
+		dir, err := argValueWithMkdir(c, twitterFlagName)
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		userData.twitterAuth, err = oauth.NewFileOAuthCreds(file)
+	} else {
+		col := session.DB(dbName).C("twitter-user-auth")
+		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
+	}
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+
+	if session == nil {
+		dir, err := argValueWithMkdir(c, slackFlagName)
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
+		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+		userData.slackAuth, err = oauth.NewFileOAuthCreds(file)
+	} else {
+		col := session.DB(dbName).C("slack-user-auth")
+		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
+	}
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+
+	userData.twitterAPI = mybot.NewTwitterAPIWithAuth(userData.twitterAuth, userData.config, userData.cache)
+
+	slackID, _ := userData.slackAuth.GetCreds()
+	userData.slackAPI = mybot.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
+
+	return userData, nil
+}
+
+func startUserSpecificData(userID string, data *userSpecificData) {
+	var w models.Worker
+
+	w = newTwitterDMWorker(data.twitterAPI, userID, time.Minute)
+	activateWorkerAndStart(
+		twitterDMRoutineKey,
+		data.workerChans,
+		data.statuses,
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+	)
+
+	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
+	activateWorkerAndStart(
+		twitterUserRoutineKey,
+		data.workerChans,
+		data.statuses,
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+	)
+
+	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
+	w = newTwitterPeriodicWorker(r, data.cache, data.config, time.Minute, userID)
+	activateWorkerAndStart(
+		twitterPeriodicRoutineKey,
+		data.workerChans,
+		data.statuses,
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+	)
+
+	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
+	activateWorkerAndStart(
+		slackRoutineKey,
+		data.workerChans,
+		data.statuses,
+		w,
+		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+	)
+}
+
 func run(c *cli.Context) {
 	for _, data := range userSpecificDataMap {
 		baseRunner := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
@@ -477,8 +496,8 @@ func validate(c *cli.Context) {
 	for _, data := range userSpecificDataMap {
 		err := data.config.Validate()
 		exitIfError(err)
-		if c.Bool("api") {
-			err := data.config.ValidateWithAPI(data.twitterAPI.API)
+		if c.Bool(apiFlagName) {
+			err := data.config.ValidateWithAPI(data.twitterAPI.BaseAPI())
 			exitIfError(err)
 		}
 	}
@@ -493,11 +512,11 @@ func restoreAssets(c *cli.Context) {
 
 func beforeRunning(c *cli.Context) error {
 	var err error
-	visionAPI, err = mybot.NewVisionMatcher(c.String("gcloud"))
+	visionAPI, err = mybot.NewVisionMatcher(c.String(gcloudFlagName))
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
-	languageAPI, err = mybot.NewLanguageMatcher(c.String("gcloud"))
+	languageAPI, err = mybot.NewLanguageMatcher(c.String(gcloudFlagName))
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
@@ -517,10 +536,10 @@ func beforeServing(c *cli.Context) error {
 
 func beforeValidating(c *cli.Context) error {
 	cliContext = c
-	dbAddress := c.String("db-addr")
-	dbUser := c.String("db-user")
-	dbPasswd := c.String("db-passwd")
-	dbName := c.String("db-name")
+	dbAddress := c.String(dbAddrFlagName)
+	dbUser := c.String(dbUserFlagName)
+	dbPasswd := c.String(dbPassFlagName)
+	dbName := c.String(dbNameFlagName)
 	var err error
 
 	if dbAddress != "" && dbName != "" {
@@ -557,10 +576,10 @@ func beforeValidating(c *cli.Context) error {
 		serverSession = sess
 	}
 
-	twitterCk := c.String("twitter-consumer-key")
-	twitterCs := c.String("twitter-consumer-secret")
+	twitterCk := c.String(twitterConsumerKeyFlagName)
+	twitterCs := c.String(twitterConsumerSecretFlagName)
 	if dbSession == nil {
-		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String("twitter-app"))
+		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String(twitterConsumerFileFlagName))
 	} else {
 		col := dbSession.DB(dbName).C("twitter-app-auth")
 		twitterApp, err = oauth.NewDBTwitterOAuthApp(col)
@@ -576,10 +595,10 @@ func beforeValidating(c *cli.Context) error {
 		}
 	}
 
-	slackCk := c.String("slack-client-id")
-	slackCs := c.String("slack-client-secret")
+	slackCk := c.String(slackClientIDFlagName)
+	slackCs := c.String(slackClientSecretFlagName)
 	if dbSession == nil {
-		slackApp, err = oauth.NewFileOAuthApp(c.String("slack-app"))
+		slackApp, err = oauth.NewFileOAuthApp(c.String(slackClientFileFlagName))
 	} else {
 		col := dbSession.DB(dbName).C("slack-app-auth")
 		slackApp, err = oauth.NewDBOAuthApp(col)
@@ -609,7 +628,7 @@ func beforeValidating(c *cli.Context) error {
 	return nil
 }
 
-func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) error {
+func initForUser(c models.Context, session *mgo.Session, dbName, userID string) error {
 	data, err := newUserSpecificData(c, session, userID)
 	if err != nil {
 		return utils.WithStack(err)
@@ -618,9 +637,9 @@ func initForUser(c *cli.Context, session *mgo.Session, dbName, userID string) er
 	return nil
 }
 
-func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, error) {
+func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string, error) {
 	if session == nil {
-		dir, err := argValueWithMkdir(c, "twitter-auth")
+		dir, err := argValueWithMkdir(c, twitterFlagName)
 		if err != nil {
 			return nil, utils.WithStack(err)
 		}
@@ -650,8 +669,8 @@ func getUserIDs(c *cli.Context, session *mgo.Session, dbName string) ([]string, 
 	return userIDs, nil
 }
 
-func httpServer(c *cli.Context) {
-	err := startServer(c.String("host"), c.String("port"), c.String("cert"), c.String("key"))
+func httpServer(c models.Context) {
+	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
 	exitIfError(err)
 }
 
@@ -662,11 +681,19 @@ func exitIfError(err error) {
 	}
 }
 
-func argValueWithMkdir(c *cli.Context, key string) (string, error) {
+func argValueWithMkdir(c models.Context, key string) (string, error) {
 	dir := c.String(key)
 	err := os.MkdirAll(dir, 0750)
 	if err != nil {
 		return "", utils.WithStack(err)
 	}
 	return dir, nil
+}
+func initialStatuses() map[int]bool {
+	statuses := map[int]bool{}
+	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
+	for _, key := range keys {
+		statuses[key] = false
+	}
+	return statuses
 }

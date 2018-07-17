@@ -1,138 +1,206 @@
-package mybot
+package mybot_test
 
 import (
+	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
+	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
+	. "github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/mocks"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	defaultTestConfigFilePath = "testdata/config.template.toml"
 )
 
 func TestNewConfig(t *testing.T) {
-	c, err := NewFileConfig("testdata/config.template.toml")
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
-	if c.GetPollingDuration() != "30m" {
-		t.Fatalf("%s expected but %s found", "30m", c.GetPollingDuration())
-	}
-	a := c.Twitter.Timelines[0]
-	if a.ScreenNames[0] != "golang" {
-		t.Fatalf("%s expected but %s found", "golang", a.ScreenNames[0])
-	}
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+
+	a := c.GetTwitterTimelines()[0]
+	require.Equal(t, "Golang Release", a.Name)
+	require.Equal(t, "golang", a.ScreenNames[0])
 	f := a.Filter
-	if f.Patterns[0] != "is released!" {
-		t.Fatalf("%s expected but %s found", "is released!", f.Patterns[0])
-	}
-	if *f.Retweeted != false {
-		t.Fatalf("%v expected but %v found", false, *f.Retweeted)
-	}
-	if f.Lang != "en" {
-		t.Fatalf("%s expected but %s found", "en", f.Lang)
-	}
-	if f.Vision.Label[0] != "cartoon|clip art|artwork" {
-		t.Fatalf("%s expected but %s found", "cartoon|clip art|artwork", f.Vision.Label[0])
-	}
-	if a.Action.Twitter.Retweet != true {
-		t.Fatalf("%v expected but %v found", true, a.Action.Twitter.Retweet)
-	}
-	if a.Action.Slack.Channels[0] != "foo" {
-		t.Fatalf("%v expected but %v found", "foo", a.Action.Slack.Channels[0])
-	}
-	s := c.Twitter.Searches[0]
-	if s.Queries[0] != "foo" {
-		t.Fatalf("%s expected but %s found", "foo", s.Queries[0])
-	}
-	if s.Queries[1] != "bar" {
-		t.Fatalf("%s expected but %s found", "bar", s.Queries[1])
-	}
-	if *s.Filter.RetweetedThreshold != 100 {
-		t.Fatalf("%d expected but %d found", 100, *s.Filter.RetweetedThreshold)
-	}
-	if s.Action.Twitter.Retweet != true {
-		t.Fatalf("%v expected but %v found", true, s.Action.Twitter.Retweet)
-	}
-	ch := c.Slack.Messages[0].Channels[0]
-	if ch != "foo" {
-		t.Fatalf("%s expected but %v found", "foo", ch)
-	}
+	require.Equal(t, "is released!", f.Patterns[0])
+	require.False(t, *f.Retweeted)
+	require.Equal(t, "en", f.Lang)
+	require.Equal(t, "cartoon|clip art|artwork", f.Vision.Label[0])
+	require.True(t, a.Action.Twitter.Retweet)
+	require.Equal(t, "foo", a.Action.Slack.Channels[0])
+
+	s := c.GetTwitterSearches()[0]
+	require.Equal(t, "foo bar", s.Name)
+	require.Equal(t, "foo", s.Queries[0])
+	require.Equal(t, "bar", s.Queries[1])
+	require.Equal(t, 100, *s.Filter.RetweetedThreshold)
+	require.True(t, s.Action.Twitter.Retweet)
+
+	msg := c.GetSlackMessages()[0]
+	require.Equal(t, "foo", msg.Name)
+	require.Equal(t, "foo", msg.Channels[0])
+
 	n := c.Twitter.Notification
-	if n.Place.TwitterAllowSelf != true {
-		t.Fatalf("%v expected but %v found", true, n.Place.TwitterAllowSelf)
-	}
-	if n.Place.TwitterUsers[0] != "foo" {
-		t.Fatalf("%s expected but %s found", "foo", n.Place.TwitterUsers[0])
-	}
-	if n.Place.SlackChannels[0] != "slack_chan" {
-		t.Fatalf("%s expected but %s found", "slack_chan", n.Place.SlackChannels[0])
-	}
+	require.True(t, n.Place.TwitterAllowSelf)
+	require.Equal(t, "foo", n.Place.TwitterUsers[0])
+	require.Equal(t, "slack_chan", n.Place.SlackChannels[0])
 
 	clone := *c
-	err = clone.Validate()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(&clone, c) {
-		t.Fatalf("%v expected but %v found", c, &clone)
-	}
+	require.NoError(t, clone.Validate())
+	require.Equal(t, &clone, c)
+}
+
+func TestConfigGetConfigProperties(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	require.Equal(t, c.ConfigProperties, c.GetProperties())
+}
+
+func TestConfigGetTwitterScreenNames(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	require.Equal(t, []string{"golang", "foo"}, c.GetTwitterScreenNames())
+}
+
+func TestAddTwitterTimeline(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	tc := TimelineConfig{}
+	c.AddTwitterTimeline(tc)
+	tcs := c.GetTwitterTimelines()
+	require.Equal(t, 3, len(tcs))
+	require.Equal(t, tc, tcs[2])
+}
+
+func TestAddTwitterFavorite(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	fav := FavoriteConfig{}
+	c.AddTwitterFavorite(fav)
+	favs := c.GetTwitterFavorites()
+	require.Equal(t, 1, len(favs))
+	require.Equal(t, fav, favs[0])
+}
+
+func TestAddTwitterSearch(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	s := SearchConfig{}
+	c.AddTwitterSearch(s)
+	ss := c.GetTwitterSearches()
+	require.Equal(t, 2, len(ss))
+	require.Equal(t, s, ss[1])
+}
+
+func TestAddSlackMessage(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	msg := MessageConfig{}
+	c.AddSlackMessage(msg)
+	msgs := c.GetSlackMessages()
+	require.Equal(t, 2, len(msgs))
+	require.Equal(t, msg, msgs[1])
 }
 
 func TestNewConfigWhenNotExist(t *testing.T) {
 	_, err := NewFileConfig("config_not_exist.toml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+}
+
+func TestNewConfigForInvalidFormatJSONFile(t *testing.T) {
+	fname := "testdata/invalidformat.json"
+	err := ioutil.WriteFile(fname, []byte("foo"), os.FileMode(0777))
+	require.NoError(t, err)
+	defer os.Remove(fname)
+	_, err = NewFileConfig(fname)
+	require.Error(t, err)
+}
+
+func TestNewConfigForInvalidFormatTomlFile(t *testing.T) {
+	fname := "testdata/invalidformat.toml"
+	err := ioutil.WriteFile(fname, []byte("[[[]]]"), os.FileMode(0777))
+	require.NoError(t, err)
+	defer os.Remove(fname)
+	_, err = NewFileConfig(fname)
+	require.Error(t, err)
+}
+
+func TestNewConfigForUnknownExtensionFile(t *testing.T) {
+	fname := "testdata/invalid.txt"
+	err := ioutil.WriteFile(fname, []byte(""), os.FileMode(0777))
+	require.NoError(t, err)
+	defer os.Remove(fname)
+	_, err = NewFileConfig(fname)
+	require.Error(t, err)
+}
+
+func TestNewConfigForInvalidDataFile(t *testing.T) {
+	c, err := NewFileConfig(defaultTestConfigFilePath)
+	c.GetTwitterTimelines()[0].ScreenNames = []string{}
+	bs, err := json.Marshal(c)
+	require.NoError(t, err)
+	fname := "testdata/invaliddata.json"
+	err = ioutil.WriteFile(fname, bs, os.FileMode(0777))
+	require.NoError(t, err)
+	defer os.Remove(fname)
+	_, err = NewFileConfig(fname)
+	require.Error(t, err)
+}
+
+func TestConfigValidate(t *testing.T) {
+	var c Config
+
+	c = NewTestFileConfig(defaultTestConfigFilePath, t)
+	c.GetTwitterSearches()[0].Queries = []string{}
+	require.Error(t, c.Validate())
+
+	c = NewTestFileConfig(defaultTestConfigFilePath, t)
+	c.GetSlackMessages()[0].Channels = []string{}
+	require.Error(t, c.Validate())
+}
+
+func TestValidateWithAPI(t *testing.T) {
+	c := NewTestFileConfig(defaultTestConfigFilePath, t)
+	var api *mocks.MockTwitterAPI
+	ctrl := gomock.NewController(t)
+
+	api = mocks.NewMockTwitterAPI(ctrl)
+	api.EXPECT().GetUsersShow("golang", gomock.Any()).Return(anaconda.User{}, errors.New("foo"))
+	require.Error(t, c.ValidateWithAPI(api))
+
+	api = mocks.NewMockTwitterAPI(ctrl)
+	api.EXPECT().GetUsersShow(gomock.Any(), gomock.Any()).AnyTimes().Return(anaconda.User{}, nil)
+	require.NoError(t, c.ValidateWithAPI(api))
 }
 
 func TestSaveLoad(t *testing.T) {
 	c, err := NewFileConfig("testdata/config.template.toml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	dir, err := ioutil.TempDir(os.TempDir(), "mybot_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	jsonCfg := *c
 	jsonCfg.File = filepath.Join(dir, "config.json")
 	err = jsonCfg.Save()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = jsonCfg.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	jsonCfg.File = c.File
-	if !reflect.DeepEqual(&jsonCfg, c) {
-		t.Fatalf("%v expected but %v found", c, jsonCfg)
-	}
+	require.Equal(t, &jsonCfg, c)
 
 	tomlCfg := *c
 	tomlCfg.File = filepath.Join(dir, "config.toml")
 	err = tomlCfg.Save()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = tomlCfg.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tomlCfg.File = c.File
-	if !reflect.DeepEqual(&tomlCfg, c) {
-		t.Fatalf("%v expected but %v found", c, tomlCfg)
-	}
+	require.Equal(t, &tomlCfg, c)
 }
 
 func TestFileConfigTwitterTimelines(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigTwitterTimelines(t, c)
 }
 
@@ -145,16 +213,12 @@ func testConfigTwitterTimelines(t *testing.T, c Config) {
 	timelines := []TimelineConfig{timeline}
 	c.SetTwitterTimelines(timelines)
 	ts := c.GetTwitterTimelines()
-	if !reflect.DeepEqual(timelines, ts) {
-		t.Fatalf("%v is not set properly", timelines)
-	}
+	require.Equal(t, timelines, ts)
 }
 
 func TestFileConfigTwitterFavorites(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigTwitterFavorites(t, c)
 }
 
@@ -167,16 +231,12 @@ func testConfigTwitterFavorites(t *testing.T, c Config) {
 	favorites := []FavoriteConfig{favorite}
 	c.SetTwitterFavorites(favorites)
 	fs := c.GetTwitterFavorites()
-	if !reflect.DeepEqual(favorites, fs) {
-		t.Fatalf("%v is not set properly", favorites)
-	}
+	require.Equal(t, favorites, fs)
 }
 
 func TestFileConfigTwitterSearches(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigTwitterSearches(t, c)
 }
 
@@ -189,16 +249,12 @@ func testConfigTwitterSearches(t *testing.T, c Config) {
 	searches := []SearchConfig{search}
 	c.SetTwitterSearches(searches)
 	ss := c.GetTwitterSearches()
-	if !reflect.DeepEqual(searches, ss) {
-		t.Fatalf("%v is not set properly", searches)
-	}
+	require.Equal(t, searches, ss)
 }
 
 func TestFileConfigTwitterNotification(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigTwitterNotification(t, c)
 }
 
@@ -210,16 +266,12 @@ func testConfigTwitterNotification(t *testing.T, c Config) {
 	}
 	c.SetTwitterNotification(notification)
 	n := c.GetTwitterNotification()
-	if !reflect.DeepEqual(notification, n) {
-		t.Fatalf("%v is not set properly", notification)
-	}
+	require.Equal(t, notification, n)
 }
 
 func TestFileConfigSlackMessages(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigSlackMessages(t, c)
 }
 
@@ -238,16 +290,12 @@ func testConfigSlackMessages(t *testing.T, c Config) {
 
 	c.SetSlackMessages(msgs)
 	ms := c.GetSlackMessages()
-	if !reflect.DeepEqual(msgs, ms) {
-		t.Fatalf("%v expected but %v found", msgs, ms)
-	}
+	require.Equal(t, msgs, ms)
 }
 
 func TestFileConfigInteraction(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigInteraction(t, c)
 }
 
@@ -256,16 +304,12 @@ func testConfigInteraction(t *testing.T, c Config) {
 	interaction.Users = []string{"foo"}
 	c.SetTwitterInteraction(interaction)
 	i := c.GetTwitterInteraction()
-	if !reflect.DeepEqual(interaction, i) {
-		t.Fatalf("%v is not set properly", interaction)
-	}
+	require.Equal(t, interaction, i)
 }
 
 func TestFileConfigTwitterDuration(t *testing.T) {
 	c, err := NewFileConfig("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	testConfigTwitterDuration(t, c)
 }
 
@@ -273,7 +317,32 @@ func testConfigTwitterDuration(t *testing.T, c Config) {
 	duration := "20m"
 	c.SetPollingDuration(duration)
 	dur := c.GetPollingDuration()
-	if duration != dur {
-		t.Fatalf("%v is not set properly", duration)
-	}
+	require.Equal(t, duration, dur)
+}
+
+func TestSourceValidate(t *testing.T) {
+	s := NewSource()
+	require.Error(t, s.Validate())
+	s.Name = "foo"
+	require.Error(t, s.Validate())
+}
+
+func TestTimelineConfigValidate(t *testing.T) {
+	tc := NewTimelineConfig()
+	require.Error(t, tc.Validate())
+}
+
+func TestFavoriteConfigValidate(t *testing.T) {
+	fav := NewFavoriteConfig()
+	require.Error(t, fav.Validate())
+}
+
+func TestSearchConfigValidate(t *testing.T) {
+	s := NewSearchConfig()
+	require.Error(t, s.Validate())
+}
+
+func TestMessageConfigValidate(t *testing.T) {
+	msg := NewMessageConfig()
+	require.Error(t, msg.Validate())
 }

@@ -8,14 +8,11 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 )
-
-type WorkerMessageHandler interface {
-	Handle(msg interface{}) error
-}
 
 type DefaultWorkerMessageHandler struct {
 	config     mybot.Config
@@ -47,8 +44,8 @@ func activateWorkerAndStart(
 	key int,
 	workerChans map[int]chan *worker.WorkerSignal,
 	statuses map[int]bool,
-	w worker.Worker,
-	msgHandler WorkerMessageHandler,
+	w models.Worker,
+	msgHandler models.WorkerMessageHandler,
 ) {
 	if ch, exists := workerChans[key]; exists {
 		close(ch)

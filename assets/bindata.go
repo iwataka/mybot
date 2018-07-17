@@ -196,7 +196,7 @@ func assetsTmplConfigGeneral_confTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/general_conf.tmpl", size: 1845, mode: os.FileMode(420), modTime: time.Unix(1531159705, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/general_conf.tmpl", size: 1845, mode: os.FileMode(420), modTime: time.Unix(1531228680, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -336,7 +336,7 @@ func assetsTmplSetupTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/setup.tmpl", size: 2813, mode: os.FileMode(420), modTime: time.Unix(1531149755, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/setup.tmpl", size: 2813, mode: os.FileMode(420), modTime: time.Unix(1531228680, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
