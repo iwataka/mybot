@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
@@ -84,6 +86,7 @@ func init() {
 }
 
 func TestTwitterColsPage(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testTwitterCols(t, testTwitterColsPage)
 }
 
@@ -313,6 +316,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 }
 
 func TestPostConfigWithoutModification(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigWithoutModification)
 }
 
@@ -340,6 +344,7 @@ func testPostConfigWithoutModification(
 }
 
 func TestPostConfigDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigDelete)
 }
 
@@ -366,6 +371,7 @@ func testPostConfigDelete(
 }
 
 func TestPostConfigSingleDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigSingleDelete)
 }
 
@@ -390,6 +396,7 @@ func testPostConfigSingleDelete(
 }
 
 func TestPostConfigDoubleDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigDoubleDelete)
 }
 
@@ -417,6 +424,7 @@ func testPostConfigDoubleDelete(
 }
 
 func TestPostConfigNameError(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigNameError)
 }
 
@@ -463,6 +471,7 @@ func testPostConfigNameError(
 }
 
 func TestPostConfigTagsInput(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigTagsInput)
 }
 
@@ -472,10 +481,6 @@ func testPostConfigTagsInput(
 	page *agouti.Page,
 	wg *sync.WaitGroup,
 ) {
-	// _, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com:https", 30*time.Second)
-	// if err != nil {
-	// 	t.Skip("Skip because network is unavailable: ", err)
-	// }
 	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
 
 	assert.NoError(t, page.Navigate(url))
@@ -556,6 +561,8 @@ func testPostConfigAdd(
 }
 
 func TestIndexPage(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
+
 	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
@@ -681,4 +688,12 @@ func testIfAssetsNotExist(t *testing.T, f func(t *testing.T)) {
 	defer os.Chdir(wd)
 
 	f(t)
+}
+
+// TODO: Show skip warning even when executing `go test` without `-v` argument
+func skipIfDialTimeout(t *testing.T, domain, protocol string, timeout time.Duration) {
+	_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", domain, protocol), timeout)
+	if err != nil {
+		t.Skip("Skip because network is unavailable: ", err)
+	}
 }
