@@ -57,10 +57,10 @@ var templateFuncMap = template.FuncMap{
 type Authenticator struct{}
 
 // SetProvider sets a specified provider name to the gothic module.
-func (a *Authenticator) SetProvider(name string) {
-	gothic.GetProviderName = func(req *http.Request) (string, error) {
-		return name, nil
-	}
+func (a *Authenticator) SetProvider(name string, r *http.Request) {
+	q := r.URL.Query()
+	q.Add("provider", name)
+	r.URL.RawQuery = q.Encode()
 }
 
 // InitProvider initializes a provider and makes it to be used.
@@ -106,7 +106,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 		}
 	}
 
-	a.SetProvider(provider)
+	a.SetProvider(provider, r)
 	q := r.URL.Query()
 	q.Add("state", "state")
 	r.URL.RawQuery = q.Encode()
@@ -134,7 +134,7 @@ func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.R
 		return utils.WithStack(err)
 	}
 
-	a.SetProvider(provider)
+	a.SetProvider(provider, r)
 	return gothic.Logout(w, r)
 }
 
@@ -1394,7 +1394,7 @@ func getAuthSlack(w http.ResponseWriter, r *http.Request) {
 
 func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
 	callback := r.URL.Query().Get("callback")
-	authenticator.SetProvider(provider)
+	authenticator.SetProvider(provider, r)
 	authenticator.InitProvider(r.Host, provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }

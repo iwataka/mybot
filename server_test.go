@@ -25,6 +25,7 @@ import (
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/sclevine/agouti"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,6 +84,24 @@ func init() {
 
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
+}
+
+func TestAuthenticator_SetProvider(t *testing.T) {
+	expectedProvider := "twitter"
+	auth := Authenticator{}
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	require.NoError(t, err)
+
+	auth.SetProvider(expectedProvider, req)
+	provider, err := gothic.GetProviderName(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedProvider, provider)
+
+	anotherProvider := "slack"
+	auth.SetProvider(anotherProvider, req)
+	unchangedProvider, err := gothic.GetProviderName(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedProvider, unchangedProvider)
 }
 
 func TestTwitterColsPage(t *testing.T) {
