@@ -97,3 +97,7 @@ func TestGenerateRandString(t *testing.T) {
 	assert.Len(t, GenerateRandString(1), 1)
 	assert.Len(t, GenerateRandString(10), 10)
 }
+
+func TestExitIfError_ErrorNotFound(t *testing.T) {
+	ExitIfError(nil)
+}
