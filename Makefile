@@ -17,6 +17,9 @@ test:
 deploy_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) up -d
 
+deploy_app_single:
+	$(DOCKER) run -d --name mybot -p 8080:8080 $(DOCKER_REPO)
+
 clean_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) stop
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) rm -f

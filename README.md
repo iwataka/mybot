@@ -25,10 +25,10 @@ mybot s(erve)
 or by using Docker:
 
 ```
-docker run -d --name mybot -p 8080:8080 iwataka/mybot
+make deploy_app_single
 ```
 
-or by using docker-compose:
+or by using docker-compose (this also runs MongoDB on Docker):
 
 ```
 go get -d github.com/iwataka/mybot
