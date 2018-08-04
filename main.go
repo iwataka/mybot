@@ -33,6 +33,8 @@ import (
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
 //go:generate mockgen -source=models/cli.go -destination=mocks/cli.go -package=mocks
+//go:generate mockgen -destination=mocks/cache.go -package=mocks github.com/iwataka/mybot/data Cache
+//TODO: When mockgen Config interface, cyclic dependencies happen.
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)

@@ -101,3 +101,21 @@ func TestGenerateRandString(t *testing.T) {
 func TestExitIfError_ErrorNotFound(t *testing.T) {
 	ExitIfError(nil)
 }
+
+func TestTruePtr(t *testing.T) {
+	require.True(t, *TruePtr())
+}
+
+func TestFalsePtr(t *testing.T) {
+	require.False(t, *FalsePtr())
+}
+
+func TestIntPtr(t *testing.T) {
+	n := 100
+	require.Equal(t, n, *IntPtr(n))
+}
+
+func TestFloat64Ptr(t *testing.T) {
+	var f float64 = 1.1
+	require.Equal(t, f, *Float64Ptr(f))
+}

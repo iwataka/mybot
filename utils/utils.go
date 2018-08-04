@@ -152,3 +152,21 @@ func ExitIfError(err error) {
 		os.Exit(1)
 	}
 }
+
+func TruePtr() *bool {
+	val := true
+	return &val
+}
+
+func FalsePtr() *bool {
+	val := false
+	return &val
+}
+
+func IntPtr(n int) *int {
+	return &n
+}
+
+func Float64Ptr(f float64) *float64 {
+	return &f
+}
