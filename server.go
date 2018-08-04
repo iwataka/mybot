@@ -31,6 +31,7 @@ const (
 	assetsDir           = "assets"
 	twitterUserIDPrefix = "twitter-"
 	sessNameForProvider = "mybot-%s-session"
+	trueValue           = "true"
 )
 
 var (
@@ -57,10 +58,10 @@ var templateFuncMap = template.FuncMap{
 type Authenticator struct{}
 
 // SetProvider sets a specified provider name to the gothic module.
-func (a *Authenticator) SetProvider(name string) {
-	gothic.GetProviderName = func(req *http.Request) (string, error) {
-		return name, nil
-	}
+func (a *Authenticator) SetProvider(name string, r *http.Request) {
+	q := r.URL.Query()
+	q.Add("provider", name)
+	r.URL.RawQuery = q.Encode()
 }
 
 // InitProvider initializes a provider and makes it to be used.
@@ -106,7 +107,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 		}
 	}
 
-	a.SetProvider(provider)
+	a.SetProvider(provider, r)
 	q := r.URL.Query()
 	q.Add("state", "state")
 	r.URL.RawQuery = q.Encode()
@@ -114,7 +115,7 @@ func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter,
 	if err == nil {
 		user.RawData = nil // RawData cannot be converted into session data currently
 		sess.Values[sessKey] = user
-		err := sess.Save(r, w)
+		err = sess.Save(r, w)
 		if err != nil {
 			return goth.User{}, utils.WithStack(err)
 		}
@@ -134,7 +135,7 @@ func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.R
 		return utils.WithStack(err)
 	}
 
-	a.SetProvider(provider)
+	a.SetProvider(provider, r)
 	return gothic.Logout(w, r)
 }
 
@@ -205,16 +206,12 @@ func startServer(host, port, cert, key string) error {
 	return nil
 }
 
-func HTMLTemplate() (*template.Template, error) {
+func generateHTMLTemplate() (*template.Template, error) {
 	var err error
 	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap).Delims("{{{", "}}}")
 
 	if info, _ := os.Stat(assetsDir); info != nil && info.IsDir() {
-		tmplFiles, err := zglob.Glob(filepath.Join(assetsDir, "**", "*.tmpl"))
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		htmlTemplate, err = tmpl.ParseFiles(tmplFiles...)
+		htmlTemplate, err = generateHTMLTemplateFromFiles(tmpl)
 	} else if htmlTemplate == nil {
 		tmplTexts := []string{}
 		for _, name := range assets.AssetNames() {
@@ -225,11 +222,23 @@ func HTMLTemplate() (*template.Template, error) {
 		}
 		htmlTemplate, err = tmpl.Parse(strings.Join(tmplTexts, "\n"))
 	}
-
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
+
 	return htmlTemplate, nil
+}
+
+func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template, error) {
+	tmplFiles, err := zglob.Glob(filepath.Join(htmlTemplateDir, "**", "*.tmpl"))
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	template, err := tmpl.ParseFiles(tmplFiles...)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	return template, nil
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +295,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 	}
 
 	buf := new(bytes.Buffer)
-	tmpl, err := HTMLTemplate()
+	tmpl, err := generateHTMLTemplate()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -296,7 +305,11 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	buf.WriteTo(w)
+	_, err = buf.WriteTo(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func twitterCollectionListByUserID(w http.ResponseWriter, r *http.Request) {
@@ -332,7 +345,11 @@ func getTwitterCollectionListByUserID(w http.ResponseWriter, r *http.Request, tw
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func settingHandler(w http.ResponseWriter, r *http.Request) {
@@ -363,7 +380,11 @@ func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.Twitte
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // SettingResponse is a container of fields required to render various pages.
@@ -497,7 +518,7 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 	}
 
 	buf := new(bytes.Buffer)
-	tmpl, err := HTMLTemplate()
+	tmpl, err := generateHTMLTemplate()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -507,7 +528,11 @@ func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.Slac
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	buf.WriteTo(w)
+	_, err = buf.WriteTo(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 type checkboxCounter struct {
@@ -520,7 +545,7 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bo
 	if len(vs) <= index {
 		return def
 	}
-	if val[c.name][index+c.extraCount] == "true" {
+	if val[c.name][index+c.extraCount] == trueValue {
 		c.extraCount++
 		return true
 	}
@@ -547,14 +572,14 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 
 func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twitterUser goth.User) {
 	var err error
-	valid := false
 
 	defer func() {
-		if valid {
+		if err == nil {
 			err = config.Save()
-			go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
+			if err != nil {
+				go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
+			}
 		} else {
-			// TODO: Needs a proper error handling
 			config.Load()
 		}
 
@@ -575,105 +600,27 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	}
 	val := r.MultipartForm.Value
 
-	prefix := "twitter.timelines"
-	deletedFlags := val[prefix+".deleted"]
-	timelines := []mybot.TimelineConfig{}
-	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	err = setTimelinesToConfig(config, val)
 	if err != nil {
 		return
 	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		timeline := mybot.NewTimelineConfig()
-		timeline.Name = val[prefix+".name"][i]
-		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
-		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
-		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
-		if timeline.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
-			return
-		}
-		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
-			return
-		}
-		timeline.Action = actions[i]
-		timelines = append(timelines, timeline)
-	}
-	config.SetTwitterTimelines(timelines)
 
-	prefix = "twitter.favorites"
-	deletedFlags = val[prefix+".deleted"]
-	favorites := []mybot.FavoriteConfig{}
-	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	err = setFavoritesToConfig(config, val)
 	if err != nil {
 		return
 	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		favorite := mybot.NewFavoriteConfig()
-		favorite.Name = val[prefix+".name"][i]
-		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
-		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
-			return
-		}
-		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
-			return
-		}
-		favorite.Action = actions[i]
-		favorites = append(favorites, favorite)
-	}
-	config.SetTwitterFavorites(favorites)
 
-	prefix = "twitter.searches"
-	deletedFlags = val[prefix+".deleted"]
-	searches := []mybot.SearchConfig{}
-	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	err = setSearchesToConfig(config, val)
 	if err != nil {
 		return
 	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		search := mybot.NewSearchConfig()
-		search.Name = val[prefix+".name"][i]
-		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
-		search.ResultType = val[prefix+".result_type"][i]
-		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
-			return
-		}
-		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
-			return
-		}
-		search.Action = actions[i]
-		searches = append(searches, search)
-	}
-	config.SetTwitterSearches(searches)
 
-	prefix = "slack.messages"
-	deletedFlags = val[prefix+".deleted"]
-	msgs := []mybot.MessageConfig{}
-	actions, err = postConfigForActions(val, prefix, deletedFlags)
+	err = setMessagesToConfig(config, val)
 	if err != nil {
 		return
 	}
-	for i := 0; i < len(deletedFlags); i++ {
-		if deletedFlags[i] == "true" {
-			continue
-		}
-		msg := mybot.NewMessageConfig()
-		msg.Name = val[prefix+".name"][i]
-		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
-		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
-			return
-		}
-		msg.Action = actions[i]
-		msgs = append(msgs, msg)
-	}
-	config.SetSlackMessages(msgs)
+
+	var prefix string
 
 	prefix = "log_notification"
 	config.SetLogNotification(getNotificationProperties(val, prefix))
@@ -692,11 +639,118 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	config.SetPollingDuration(val["duration"][0])
 
 	err = config.Validate()
-	if err == nil {
-		valid = true
-	} else {
-		return
+}
+
+func setTimelinesToConfig(config mybot.Config, val map[string][]string) error {
+	prefix := "twitter.timelines"
+	deletedFlags := val[prefix+".deleted"]
+	timelines := []mybot.TimelineConfig{}
+	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return err
 	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == trueValue {
+			continue
+		}
+		timeline := mybot.NewTimelineConfig()
+		timeline.Name = val[prefix+".name"][i]
+		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
+		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
+		if timeline.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
+			return err
+		}
+		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+			return err
+		}
+		timeline.Action = actions[i]
+		timelines = append(timelines, timeline)
+	}
+	config.SetTwitterTimelines(timelines)
+	return nil
+}
+
+func setFavoritesToConfig(config mybot.Config, val map[string][]string) error {
+	prefix := "twitter.favorites"
+	deletedFlags := val[prefix+".deleted"]
+	favorites := []mybot.FavoriteConfig{}
+	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == trueValue {
+			continue
+		}
+		favorite := mybot.NewFavoriteConfig()
+		favorite.Name = val[prefix+".name"][i]
+		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
+		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
+			return err
+		}
+		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+			return err
+		}
+		favorite.Action = actions[i]
+		favorites = append(favorites, favorite)
+	}
+	config.SetTwitterFavorites(favorites)
+	return nil
+}
+
+func setSearchesToConfig(config mybot.Config, val map[string][]string) error {
+	prefix := "twitter.searches"
+	deletedFlags := val[prefix+".deleted"]
+	searches := []mybot.SearchConfig{}
+	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == trueValue {
+			continue
+		}
+		search := mybot.NewSearchConfig()
+		search.Name = val[prefix+".name"][i]
+		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
+		search.ResultType = val[prefix+".result_type"][i]
+		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
+			return err
+		}
+		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+			return err
+		}
+		search.Action = actions[i]
+		searches = append(searches, search)
+	}
+	config.SetTwitterSearches(searches)
+	return nil
+}
+
+func setMessagesToConfig(config mybot.Config, val map[string][]string) error {
+	prefix := "slack.messages"
+	deletedFlags := val[prefix+".deleted"]
+	msgs := []mybot.MessageConfig{}
+	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(deletedFlags); i++ {
+		if deletedFlags[i] == trueValue {
+			continue
+		}
+		msg := mybot.NewMessageConfig()
+		msg.Name = val[prefix+".name"][i]
+		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
+		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+			return err
+		}
+		msg.Action = actions[i]
+		msgs = append(msgs, msg)
+	}
+	config.SetSlackMessages(msgs)
+	return nil
 }
 
 func getNotificationProperties(val map[string][]string, prefix string) mybot.NotificationProperties {
@@ -800,7 +854,11 @@ func getConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, slac
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Config) ([]byte, error) {
@@ -823,7 +881,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 	}
 
 	buf := new(bytes.Buffer)
-	tmpl, err := HTMLTemplate()
+	tmpl, err := generateHTMLTemplate()
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -1205,7 +1263,7 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buf := new(bytes.Buffer)
-	tmpl, err := HTMLTemplate()
+	tmpl, err := generateHTMLTemplate()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1215,7 +1273,11 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(buf.Bytes())
+	_, err = w.Write(buf.Bytes())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -1253,7 +1315,11 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *my
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func twitterFavoritesListHandler(w http.ResponseWriter, r *http.Request) {
@@ -1289,7 +1355,11 @@ func getTwitterFavoritesList(w http.ResponseWriter, r *http.Request, twitterAPI 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func twitterSearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -1327,7 +1397,11 @@ func getTwitterSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write(bs)
+	_, err = w.Write(bs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
@@ -1394,7 +1468,7 @@ func getAuthSlack(w http.ResponseWriter, r *http.Request) {
 
 func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
 	callback := r.URL.Query().Get("callback")
-	authenticator.SetProvider(provider)
+	authenticator.SetProvider(provider, r)
 	authenticator.InitProvider(r.Host, provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }
@@ -1409,7 +1483,11 @@ func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
-	authenticator.Logout("twitter", w, r)
+	err := authenticator.Logout("twitter", w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -1441,7 +1519,7 @@ func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {
 func setCORS(w http.ResponseWriter) {
 	if accessControlAllowOrigin != "" {
 		w.Header().Set("Access-Control-Allow-Origin", accessControlAllowOrigin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Credentials", trueValue)
 		w.Header().Set("Content-Type", "text/plain")
 	}
 }

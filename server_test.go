@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
@@ -23,6 +25,7 @@ import (
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/worker"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/sclevine/agouti"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +45,10 @@ var (
 func TestMain(m *testing.M) {
 	exitCode := m.Run()
 	if driver != nil {
-		driver.Stop()
+		err := driver.Stop()
+		if err != nil {
+			panic(err)
+		}
 	}
 	os.Exit(exitCode)
 }
@@ -61,6 +67,7 @@ func getDriver() *agouti.WebDriver {
 func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
+	// TODO: Mock config and other fields
 	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
 	if err != nil {
 		panic(err)
@@ -83,7 +90,26 @@ func init() {
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
 }
 
+func TestAuthenticator_SetProvider(t *testing.T) {
+	expectedProvider := "twitter"
+	auth := Authenticator{}
+	req, err := http.NewRequest("GET", "http://example.com", nil)
+	require.NoError(t, err)
+
+	auth.SetProvider(expectedProvider, req)
+	provider, err := gothic.GetProviderName(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedProvider, provider)
+
+	anotherProvider := "slack"
+	auth.SetProvider(anotherProvider, req)
+	unchangedProvider, err := gothic.GetProviderName(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedProvider, unchangedProvider)
+}
+
 func TestTwitterColsPage(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testTwitterCols(t, testTwitterColsPage)
 }
 
@@ -266,7 +292,8 @@ func testGet(url string) error {
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
 	assert.NoError(t, err)
-	checkHTTPResponse(res)
+	err = checkHTTPResponse(res)
+	require.NoError(t, err)
 }
 
 func checkHTTPResponse(res *http.Response) error {
@@ -313,6 +340,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 }
 
 func TestPostConfigWithoutModification(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigWithoutModification)
 }
 
@@ -326,11 +354,11 @@ func testPostConfigWithoutModification(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png")))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -340,6 +368,7 @@ func testPostConfigWithoutModification(
 }
 
 func TestPostConfigDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigDelete)
 }
 
@@ -351,13 +380,13 @@ func testPostConfigDelete(
 ) {
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").Click())
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png")))
 
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
@@ -366,6 +395,7 @@ func testPostConfigDelete(
 }
 
 func TestPostConfigSingleDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigSingleDelete)
 }
 
@@ -379,17 +409,18 @@ func testPostConfigSingleDelete(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").At(0).Click())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png")))
 
 	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 }
 
 func TestPostConfigDoubleDelete(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigDoubleDelete)
 }
 
@@ -403,12 +434,12 @@ func testPostConfigDoubleDelete(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").DoubleClick())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png")))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -417,6 +448,7 @@ func testPostConfigDoubleDelete(
 }
 
 func TestPostConfigNameError(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigNameError)
 }
 
@@ -429,29 +461,29 @@ func testPostConfigNameError(
 	c := serverTestUserSpecificData.config
 
 	timelines := c.GetTwitterTimelines()
-	for i, _ := range timelines {
+	for i := range timelines {
 		timelines[i].Name = ""
 	}
 	favorites := c.GetTwitterFavorites()
-	for i, _ := range favorites {
+	for i := range favorites {
 		favorites[i].Name = ""
 	}
 	searches := c.GetTwitterSearches()
-	for i, _ := range searches {
+	for i := range searches {
 		searches[i].Name = ""
 	}
 	msgs := c.GetSlackMessages()
-	for i, _ := range msgs {
+	for i := range msgs {
 		msgs[i].Name = ""
 	}
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png")))
 
 	msg, err := page.FindByID("error-message").Text()
 	assert.NoError(t, err)
@@ -463,6 +495,7 @@ func testPostConfigNameError(
 }
 
 func TestPostConfigTagsInput(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testPostConfig(t, testPostConfigTagsInput)
 }
 
@@ -472,19 +505,15 @@ func testPostConfigTagsInput(
 	page *agouti.Page,
 	wg *sync.WaitGroup,
 ) {
-	// _, err := net.DialTimeout("tcp", "cdnjs.cloudflare.com:https", 30*time.Second)
-	// if err != nil {
-	// 	t.Skip("Skip because network is unavailable: ", err)
-	// }
 	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png")))
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
 	assert.NoError(t, page.AllByName(name).SendKeys(keys))
-	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png")))
 }
 
 func TestPostConfigTimelineAdd(t *testing.T) {
@@ -556,6 +585,8 @@ func testPostConfigAdd(
 }
 
 func TestIndexPage(t *testing.T) {
+	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
+
 	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
@@ -583,7 +614,7 @@ func testIndexPage(url string) error {
 }
 
 func TestGetIndexWithoutTwitterAuthenticated(t *testing.T) {
-	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("Your Twitter account is not authenticated."))
+	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("your Twitter account is not authenticated"))
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
@@ -681,4 +712,12 @@ func testIfAssetsNotExist(t *testing.T, f func(t *testing.T)) {
 	defer os.Chdir(wd)
 
 	f(t)
+}
+
+// TODO: Show skip warning even when executing `go test` without `-v` argument
+func skipIfDialTimeout(t *testing.T, domain, protocol string, timeout time.Duration) {
+	_, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", domain, protocol), timeout)
+	if err != nil {
+		t.Skip("Skip because network is unavailable: ", err)
+	}
 }

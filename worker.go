@@ -225,7 +225,6 @@ func (w *twitterPeriodicWorker) Start() error {
 			return utils.NewStreamInterruptedError()
 		}
 	}
-	return nil
 }
 
 func (w *twitterPeriodicWorker) Stop() error {
@@ -233,7 +232,7 @@ func (w *twitterPeriodicWorker) Stop() error {
 	case w.innerChan <- true:
 		return nil
 	case <-time.After(w.timeout):
-		return fmt.Errorf("Faield to stop worker %s\n", w.Name())
+		return fmt.Errorf("faield to stop worker %s", w.Name())
 	}
 }
 
