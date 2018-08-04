@@ -45,7 +45,10 @@ var (
 func TestMain(m *testing.M) {
 	exitCode := m.Run()
 	if driver != nil {
-		driver.Stop()
+		err := driver.Stop()
+		if err != nil {
+			panic(err)
+		}
 	}
 	os.Exit(exitCode)
 }
@@ -64,6 +67,7 @@ func getDriver() *agouti.WebDriver {
 func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
+	// TODO: Mock config and other fields
 	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
 	if err != nil {
 		panic(err)
@@ -288,7 +292,8 @@ func testGet(url string) error {
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
 	assert.NoError(t, err)
-	checkHTTPResponse(res)
+	err = checkHTTPResponse(res)
+	require.NoError(t, err)
 }
 
 func checkHTTPResponse(res *http.Response) error {
@@ -349,11 +354,11 @@ func testPostConfigWithoutModification(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png")))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -375,13 +380,13 @@ func testPostConfigDelete(
 ) {
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").Click())
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png")))
 
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
 	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
@@ -404,12 +409,12 @@ func testPostConfigSingleDelete(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").At(0).Click())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png")))
 
 	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 }
@@ -429,12 +434,12 @@ func testPostConfigDoubleDelete(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png")))
 	assert.NoError(t, page.AllByClass("config-row-delete").DoubleClick())
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png")))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
@@ -456,29 +461,29 @@ func testPostConfigNameError(
 	c := serverTestUserSpecificData.config
 
 	timelines := c.GetTwitterTimelines()
-	for i, _ := range timelines {
+	for i := range timelines {
 		timelines[i].Name = ""
 	}
 	favorites := c.GetTwitterFavorites()
-	for i, _ := range favorites {
+	for i := range favorites {
 		favorites[i].Name = ""
 	}
 	searches := c.GetTwitterSearches()
-	for i, _ := range searches {
+	for i := range searches {
 		searches[i].Name = ""
 	}
 	msgs := c.GetSlackMessages()
-	for i, _ := range msgs {
+	for i := range msgs {
 		msgs[i].Name = ""
 	}
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png")))
 	wg.Add(1)
 	assert.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
-	page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png")))
 
 	msg, err := page.FindByID("error-message").Text()
 	assert.NoError(t, err)
@@ -504,11 +509,11 @@ func testPostConfigTagsInput(
 
 	assert.NoError(t, page.Navigate(url))
 
-	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png")))
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
 	assert.NoError(t, page.AllByName(name).SendKeys(keys))
-	page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png"))
+	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png")))
 }
 
 func TestPostConfigTimelineAdd(t *testing.T) {
@@ -609,7 +614,7 @@ func testIndexPage(url string) error {
 }
 
 func TestGetIndexWithoutTwitterAuthenticated(t *testing.T) {
-	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("Your Twitter account is not authenticated."))
+	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("your Twitter account is not authenticated"))
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)

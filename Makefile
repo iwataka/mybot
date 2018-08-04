@@ -1,5 +1,6 @@
 GO := go
 TEST_PACKAGES := . ./lib ./models ./worker ./utils ./oauth ./tmpl ./data ./runner
+GOLINT := gometalinter
 
 DOCKER_COMPOSE := docker-compose
 DOCKER_COMPOSE_SCRIPT := scripts/docker-compose.yml
@@ -13,6 +14,9 @@ build:
 
 test:
 	$(GO) test $(TEST_PACKAGES) -race $(args)
+
+lint:
+	$(GOLINT) --deadline=30s
 
 deploy_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) up -d

@@ -272,10 +272,7 @@ func main() {
 	runFlags := []cli.Flag{
 		gcloudFlag,
 	}
-
-	for _, f := range commonFlags {
-		runFlags = append(runFlags, f)
-	}
+	runFlags = append(runFlags, commonFlags...)
 
 	serveFlags := []cli.Flag{
 		certFlag,
@@ -285,18 +282,12 @@ func main() {
 		sessionDomainFlag,
 		accessControlAllowOriginFlag,
 	}
-
 	// All `run` flags should be `serve` flag
-	for _, f := range runFlags {
-		serveFlags = append(serveFlags, f)
-	}
+	serveFlags = append(serveFlags, runFlags...)
 
 	validateFlags := []cli.Flag{apiFlag}
-
 	// All `run` flags should be `validate` flag
-	for _, f := range commonFlags {
-		validateFlags = append(validateFlags, f)
-	}
+	validateFlags = append(validateFlags, commonFlags...)
 
 	app := cli.NewApp()
 	app.Name = "mybot"
@@ -362,12 +353,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	dbName := c.String(dbNameFlagName)
 
 	if session == nil {
-		dir, err := argValueWithMkdir(c, cacheFlagName)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.cache, err = data.NewFileCache(file)
+		userData.cache, err = newFileCache(c, userID)
 	} else {
 		col := session.DB(dbName).C("cache")
 		userData.cache, err = data.NewDBCache(col, userID)
@@ -377,12 +363,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	}
 
 	if session == nil {
-		dir, err := argValueWithMkdir(c, configFlagName)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.config, err = mybot.NewFileConfig(file)
+		userData.config, err = newFileConfig(c, userID)
 	} else {
 		col := session.DB(dbName).C("config")
 		userData.config, err = mybot.NewDBConfig(col, userID)
@@ -392,12 +373,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	}
 
 	if session == nil {
-		dir, err := argValueWithMkdir(c, twitterFlagName)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.twitterAuth, err = oauth.NewFileOAuthCreds(file)
+		userData.twitterAuth, err = newFileOAuthCreds(c, twitterFlagName, userID)
 	} else {
 		col := session.DB(dbName).C("twitter-user-auth")
 		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
@@ -407,12 +383,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	}
 
 	if session == nil {
-		dir, err := argValueWithMkdir(c, slackFlagName)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-		userData.slackAuth, err = oauth.NewFileOAuthCreds(file)
+		userData.slackAuth, err = newFileOAuthCreds(c, slackFlagName, userID)
 	} else {
 		col := session.DB(dbName).C("slack-user-auth")
 		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
@@ -427,6 +398,45 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	userData.slackAPI = mybot.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 
 	return userData, nil
+}
+
+func newFileCache(c models.Context, userID string) (data.Cache, error) {
+	dir, err := argValueWithMkdir(c, cacheFlagName)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+	cache, err := data.NewFileCache(file)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	return cache, nil
+}
+
+func newFileConfig(c models.Context, userID string) (mybot.Config, error) {
+	dir, err := argValueWithMkdir(c, configFlagName)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+	config, err := mybot.NewFileConfig(file)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCreds, error) {
+	dir, err := argValueWithMkdir(c, flagName)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
+	creds, err := oauth.NewFileOAuthCreds(file)
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
+	return creds, nil
 }
 
 func startUserSpecificData(userID string, data *userSpecificData) {
@@ -507,7 +517,8 @@ func restoreAssets(c *cli.Context) {
 	if info, _ := os.Stat(assetsDir); info != nil {
 		fmt.Printf("Directory `%s` already exists.\n", assetsDir)
 	}
-	assets.RestoreAssets(".", assetsDir)
+	err := assets.RestoreAssets(".", assetsDir)
+	exitIfError(err)
 }
 
 func beforeRunning(c *cli.Context) error {
@@ -548,13 +559,39 @@ func beforeValidating(c *cli.Context) error {
 		info.Username = dbUser
 		info.Password = dbPasswd
 		info.Database = dbName
-		var err error
 		dbSession, err = mgo.DialWithInfo(info)
+	}
+	if err != nil {
+		return utils.WithStack(err)
+	}
+
+	initSession(c, dbName)
+
+	err = initTwitterApp(c, dbName)
+	if err != nil {
+		return err
+	}
+
+	err = initSlackApp(c, dbName)
+	if err != nil {
+		return err
+	}
+
+	userIDs, err := getUserIDs(c, dbSession, dbName)
+	if err != nil {
+		return utils.WithStack(err)
+	}
+	for _, userID := range userIDs {
+		err := initForUser(c, dbSession, dbName, userID)
+		fmt.Printf("Initialize for user %s\n", userID)
 		if err != nil {
 			return utils.WithStack(err)
 		}
 	}
+	return nil
+}
 
+func initSession(c models.Context, dbName string) {
 	if dbSession == nil {
 		sess := sessions.NewCookieStore(
 			[]byte("mybot_session_key"),
@@ -575,6 +612,10 @@ func beforeValidating(c *cli.Context) error {
 		}
 		serverSession = sess
 	}
+}
+
+func initTwitterApp(c models.Context, dbName string) error {
+	var err error
 
 	twitterCk := c.String(twitterConsumerKeyFlagName)
 	twitterCs := c.String(twitterConsumerSecretFlagName)
@@ -587,13 +628,20 @@ func beforeValidating(c *cli.Context) error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
+
 	if twitterCk != "" && twitterCs != "" {
 		twitterApp.SetCreds(twitterCk, twitterCs)
-		err := twitterApp.Save()
+		err = twitterApp.Save()
 		if err != nil {
 			return utils.WithStack(err)
 		}
 	}
+
+	return nil
+}
+
+func initSlackApp(c models.Context, dbName string) error {
+	var err error
 
 	slackCk := c.String(slackClientIDFlagName)
 	slackCs := c.String(slackClientSecretFlagName)
@@ -606,25 +654,15 @@ func beforeValidating(c *cli.Context) error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
+
 	if slackCk != "" && slackCs != "" {
 		slackApp.SetCreds(slackCk, slackCs)
-		err := slackApp.Save()
+		err = slackApp.Save()
 		if err != nil {
 			return utils.WithStack(err)
 		}
 	}
 
-	userIDs, err := getUserIDs(c, dbSession, dbName)
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	for _, userID := range userIDs {
-		err := initForUser(c, dbSession, dbName, userID)
-		fmt.Printf("Initialize for user %s\n", userID)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
 	return nil
 }
 
@@ -644,6 +682,9 @@ func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string
 			return nil, utils.WithStack(err)
 		}
 		files, err := filepath.Glob(filepath.Join(dir, "*.toml"))
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
 		userIDs := []string{}
 		for _, file := range files {
 			base := filepath.Base(file)
@@ -683,7 +724,7 @@ func exitIfError(err error) {
 
 func argValueWithMkdir(c models.Context, key string) (string, error) {
 	dir := c.String(key)
-	err := os.MkdirAll(dir, 0750)
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return "", utils.WithStack(err)
 	}
