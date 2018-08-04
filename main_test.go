@@ -46,7 +46,3 @@ func TestArgValueWithMkdir_DirAlreadyExists(t *testing.T) {
 	_, err := argValueWithMkdir(context, key)
 	require.Error(t, err)
 }
-
-func TestExitIfError_ErrorNotFound(t *testing.T) {
-	exitIfError(nil)
-}
