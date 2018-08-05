@@ -2,6 +2,7 @@ package data_test
 
 import (
 	. "github.com/iwataka/mybot/data"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
@@ -18,24 +19,13 @@ func TestTwitterAction(t *testing.T) {
 	a2.Favorite = true
 
 	result1 := a1.Add(a2)
-	if result1.Retweet != true {
-		t.Fatalf("%v expected but %v found", false, result1.Retweet)
-	}
-	if result1.Favorite != true {
-		t.Fatalf("%v expected but %v found", true, result1.Favorite)
-	}
-	if len(result1.Collections) != 3 {
-		t.Fatalf("%d expected but %d found", 3, len(result1.Collections))
-	}
+
+	require.True(t, result1.Retweet)
+	require.True(t, result1.Favorite)
+	require.Len(t, result1.Collections, 3)
 
 	result2 := a1.Sub(a2)
-	if result2.Retweet != false {
-		t.Fatalf("%v expected but %v found", false, result2.Retweet)
-	}
-	if result2.Favorite != false {
-		t.Fatalf("%v expected but %v found", false, result2.Favorite)
-	}
-	if len(result2.Collections) != 1 {
-		t.Fatalf("%d expected but %d found", 1, len(result2.Collections))
-	}
+	require.False(t, result2.Retweet)
+	require.False(t, result2.Favorite)
+	require.Len(t, result2.Collections, 1)
 }

@@ -4,29 +4,23 @@ import (
 	"testing"
 
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/utils"
+	"github.com/stretchr/testify/require"
 )
 
-func TestLanguageConditionIsEmpty(t *testing.T) {
+func TestLanguageCondition_IsEmpty(t *testing.T) {
 	c := &models.LanguageCondition{}
-	if !c.IsEmpty() {
-		t.Fatalf("%v expected empty but not", c)
-	}
+	require.True(t, c.IsEmpty())
 }
 
-func TestLanguageConditionIsNotEmpty(t *testing.T) {
-	min := 0.2
-	max := 0.5
+func TestLanguageCondition_IsEmpty_ReturnsFalse(t *testing.T) {
 	c := &models.LanguageCondition{}
-	c.MinSentiment = &min
-	c.MaxSentiment = &max
-	if c.IsEmpty() {
-		t.Fatalf("%v expected not empty but empty", c)
-	}
+	c.MinSentiment = utils.Float64Ptr(0.2)
+	c.MaxSentiment = utils.Float64Ptr(0.5)
+	require.False(t, c.IsEmpty())
 }
 
-func TestLanguageAPIEnabled(t *testing.T) {
+func TestLanguageAPI_Enabled(t *testing.T) {
 	a := &LanguageAPI{}
-	if a.Enabled() {
-		t.Fatalf("%v expected to be enabled, but not", a)
-	}
+	require.False(t, a.Enabled())
 }

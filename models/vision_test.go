@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	. "github.com/iwataka/mybot/models"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestVisionFeatures(t *testing.T) {
+func TestVisionCondition_VisionFeatures(t *testing.T) {
 	cond := NewVisionCondition()
 	cond.Label = []string{"label"}
 	cond.Face.BlurredLikelihood = "VERY_LIKELY"
@@ -16,13 +16,13 @@ func TestVisionFeatures(t *testing.T) {
 	cond.Logo = []string{"logo"}
 
 	fs := cond.VisionFeatures()
-	assert.Len(t, fs, 5)
+	require.Len(t, fs, 5)
 }
 
-func TestVisionConditionIsEmpty(t *testing.T) {
+func TestVisionCondition_IsEmpty(t *testing.T) {
 	cond := NewVisionCondition()
 	cond.Label = []string{}
 	cond.Face.BlurredLikelihood = ""
 	cond.Text = []string{}
-	assert.True(t, cond.IsEmpty())
+	require.True(t, cond.IsEmpty())
 }

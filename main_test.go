@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestArgValueWithMkdir(t *testing.T) {
+func Test_argValueWithMkdir(t *testing.T) {
 	parent := "parent"
 	child := "child"
 	path := filepath.Join(parent, child)
@@ -34,7 +34,7 @@ func TestArgValueWithMkdir(t *testing.T) {
 	require.True(t, info.IsDir())
 }
 
-func TestArgValueWithMkdir_DirAlreadyExists(t *testing.T) {
+func Test_argValueWithMkdir_DirAlreadyExists(t *testing.T) {
 	path := "README.md"
 	key := "key"
 
@@ -45,8 +45,4 @@ func TestArgValueWithMkdir_DirAlreadyExists(t *testing.T) {
 
 	_, err := argValueWithMkdir(context, key)
 	require.Error(t, err)
-}
-
-func TestExitIfError_ErrorNotFound(t *testing.T) {
-	exitIfError(nil)
 }

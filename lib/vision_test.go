@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/iwataka/mybot/models"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/api/vision/v1"
 )
 
-func TestMatchEntity(t *testing.T) {
+func Test_matchEntity(t *testing.T) {
 	as := []*vision.EntityAnnotation{
 		&vision.EntityAnnotation{
 			Description: "foo",
@@ -20,16 +21,13 @@ func TestMatchEntity(t *testing.T) {
 		"foo",
 		"bar|any",
 	}
+
 	flag, err := matchEntity(as, ds)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !flag {
-		t.Fatalf("%v expected but %v found", true, flag)
-	}
+	require.NoError(t, err)
+	require.True(t, flag)
 }
 
-func TestMatchFace(t *testing.T) {
+func Test_matchFace(t *testing.T) {
 	as := []*vision.FaceAnnotation{
 		&vision.FaceAnnotation{
 			AngerLikelihood:   "LIKELY",
@@ -38,34 +36,26 @@ func TestMatchFace(t *testing.T) {
 	}
 	face := models.VisionFaceCondition{}
 	face.AngerLikelihood = "LIKELY|VERY_LIKELY"
+
 	flag, err := matchFace(as, face)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !flag {
-		t.Fatalf("%v expeted but %v found", true, flag)
-	}
+	require.NoError(t, err)
+	require.True(t, flag)
 }
 
-func TestVisionAPIEnabled(t *testing.T) {
+func TestVisionAPI_Enabled(t *testing.T) {
 	a := &VisionAPI{}
-	if a.Enabled() {
-		t.Fatalf("%v expected to be enabled, but not", a)
-	}
+	require.False(t, a.Enabled())
 }
 
-func TestRetrieveAnnotateImageResposes(t *testing.T) {
+func TestVisionAPI_retrieveAnnotateImageResposes(t *testing.T) {
 	a := &VisionAPI{}
 	urls := []string{"url"}
 	imgCache := models.ImageCacheData{}
 	imgCache.URL = "url"
 	imgCache.AnalysisResult = "{}"
 	imgCaches := []models.ImageCacheData{imgCache}
+
 	reses, err := a.retrieveaAnnotateImageResponses(urls, imgCaches, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(reses) != 1 {
-		t.Fatalf("Response array length should be 1 but %d", len(reses))
-	}
+	require.NoError(t, err)
+	require.Len(t, reses, 1)
 }

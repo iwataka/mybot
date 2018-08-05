@@ -2,11 +2,12 @@ package data_test
 
 import (
 	. "github.com/iwataka/mybot/data"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
 
-func TestSlackActionAdd(t *testing.T) {
+func TestSlackAction_Add(t *testing.T) {
 	a1 := SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
@@ -16,42 +17,32 @@ func TestSlackActionAdd(t *testing.T) {
 		Channels: []string{"foo", "fizz"},
 	}
 	a2.Reactions = []string{":smile:", ":plane:"}
+
 	result := a1.Add(a2)
 
-	if !result.Pin {
-		t.Fatalf("%v expected but %v found", true, result.Pin)
-	}
-	if result.Star {
-		t.Fatalf("%v expected but %v found", false, result.Star)
-	}
-	if len(result.Reactions) != 2 {
-		t.Fatalf("%v expected but %v found", 2, len(result.Reactions))
-	}
-	if len(result.Channels) != 3 {
-		t.Fatalf("%v expected but %v found", 3, len(result.Channels))
-	}
+	require.True(t, result.Pin)
+	require.False(t, result.Star)
+	require.Len(t, result.Reactions, 2)
+	require.Len(t, result.Channels, 3)
 }
 
-func TestSlackActionSub(t *testing.T) {
+func TestSlackAction_Sub(t *testing.T) {
 	a1 := SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
 	a2 := SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
+
 	result := a1.Sub(a2)
-	if len(result.Channels) != 1 {
-		t.Fatalf("%v expected but %v found", 1, len(result.Channels))
-	}
+
+	require.Len(t, result.Channels, 1)
 }
 
-func TestSlackActionIsEmpty(t *testing.T) {
+func TestSlackAction_IsEmpty(t *testing.T) {
 	a := NewSlackAction()
-	if !a.IsEmpty() {
-		t.Fatalf("%v should be empty", a)
-	}
+	require.True(t, a.IsEmpty())
+
 	a.Channels = []string{"foo"}
-	if a.IsEmpty() {
-		t.Fatalf("%v should not be empty", a)
-	}
+	require.False(t, a.IsEmpty())
 }

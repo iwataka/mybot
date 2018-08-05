@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestTwitterAPIIsAvailablt(t *testing.T) {
+func Test_TwitterAPIIsAvailablt(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var twitterAPIMock *mocks.MockTwitterAPI
 	var twitterAPI *mybot.TwitterAPI

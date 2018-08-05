@@ -27,7 +27,6 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/sclevine/agouti"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -171,7 +170,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetConfig(t *testing.T) {
@@ -186,7 +185,7 @@ func TestGetConfig(t *testing.T) {
 	defer s.Close()
 
 	err := testGet(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetConfigIfAssetsNotExist(t *testing.T) {
@@ -200,16 +199,16 @@ func TestGetSetupTwitter(t *testing.T) {
 	tmpTwitterApp := twitterApp
 	var err error
 	twitterApp, err = oauth.NewFileTwitterOAuthApp("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer func() { twitterApp = tmpTwitterApp }()
 
 	tmpSlackApp := slackApp
 	slackApp, err = oauth.NewFileOAuthApp("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer func() { slackApp = tmpSlackApp }()
 
 	err = testGet(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetSetupTwitterIfAssetsNotExist(t *testing.T) {
@@ -228,23 +227,23 @@ func TestGetConfigJSON(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = checkHTTPResponse(res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bs, err := ioutil.ReadAll(res.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cfg, err := mybot.NewFileConfig("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = cfg.Unmarshal(".json", bs)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cfgProps := cfg.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	assert.Nil(t, deep.Equal(cfgProps, configProps))
+	require.Nil(t, deep.Equal(cfgProps, configProps))
 }
 
 func TestGetConfigFile(t *testing.T) {
@@ -259,26 +258,26 @@ func TestGetConfigFile(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = checkHTTPResponse(res)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hasForceDownload := strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
-	assert.True(t, hasForceDownload)
+	require.True(t, hasForceDownload)
 
 	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), ".json")
-	assert.True(t, hasContentDisposition)
+	require.True(t, hasContentDisposition)
 
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	cfg, err := mybot.NewFileConfig("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = json.Unmarshal(bs, cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func testGet(url string) error {
@@ -291,7 +290,7 @@ func testGet(url string) error {
 
 func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
 	res, err := http.Post(url, bodyType, body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = checkHTTPResponse(res)
 	require.NoError(t, err)
 }
@@ -332,7 +331,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	defer s.Close()
 
 	page, err := getDriver().NewPage()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	curUserData := serverTestUserSpecificData.config
 	defer func() { serverTestUserSpecificData.config = curUserData }()
@@ -352,11 +351,11 @@ func testPostConfigWithoutModification(
 ) {
 	c := serverTestUserSpecificData.config
 
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_before_post_without_modification.png")))
 	wg.Add(1)
-	assert.NoError(t, page.FindByID("overwrite").Submit())
+	require.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "config_after_post_without_modification.png")))
 
@@ -364,7 +363,7 @@ func testPostConfigWithoutModification(
 	configProps := serverTestUserSpecificData.config.GetProperties()
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	assert.Nil(t, deep.Equal(cProps, configProps))
+	require.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigDelete(t *testing.T) {
@@ -378,20 +377,20 @@ func testPostConfigDelete(
 	page *agouti.Page,
 	wg *sync.WaitGroup,
 ) {
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_before_post.png")))
-	assert.NoError(t, page.AllByClass("config-row-delete").Click())
+	require.NoError(t, page.AllByClass("config-row-delete").Click())
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_click_delete_buttons.png")))
 	wg.Add(1)
-	assert.NoError(t, page.FindByID("overwrite").Submit())
+	require.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "delete_config_after_post.png")))
 
-	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
-	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
-	assert.Empty(t, serverTestUserSpecificData.config.GetTwitterSearches())
-	assert.Empty(t, serverTestUserSpecificData.config.GetSlackMessages())
+	require.Empty(t, serverTestUserSpecificData.config.GetTwitterTimelines())
+	require.Empty(t, serverTestUserSpecificData.config.GetTwitterFavorites())
+	require.Empty(t, serverTestUserSpecificData.config.GetTwitterSearches())
+	require.Empty(t, serverTestUserSpecificData.config.GetSlackMessages())
 }
 
 func TestPostConfigSingleDelete(t *testing.T) {
@@ -407,16 +406,16 @@ func testPostConfigSingleDelete(
 ) {
 	c := serverTestUserSpecificData.config
 
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_before_post.png")))
-	assert.NoError(t, page.AllByClass("config-row-delete").At(0).Click())
+	require.NoError(t, page.AllByClass("config-row-delete").At(0).Click())
 	wg.Add(1)
-	assert.NoError(t, page.FindByID("overwrite").Submit())
+	require.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "single_delete_config_after_post.png")))
 
-	assert.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
+	require.Equal(t, len(serverTestUserSpecificData.config.GetTwitterTimelines()), len(c.GetTwitterTimelines())-1)
 }
 
 func TestPostConfigDoubleDelete(t *testing.T) {
@@ -432,19 +431,19 @@ func testPostConfigDoubleDelete(
 ) {
 	c := serverTestUserSpecificData.config
 
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_before_post.png")))
-	assert.NoError(t, page.AllByClass("config-row-delete").DoubleClick())
+	require.NoError(t, page.AllByClass("config-row-delete").DoubleClick())
 	wg.Add(1)
-	assert.NoError(t, page.FindByID("overwrite").Submit())
+	require.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "double_delete_config_after_post.png")))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	assert.Nil(t, deep.Equal(cProps.Slack, configProps.Slack))
-	assert.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
+	require.Nil(t, deep.Equal(cProps.Slack, configProps.Slack))
+	require.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
 }
 
 func TestPostConfigNameError(t *testing.T) {
@@ -477,21 +476,21 @@ func testPostConfigNameError(
 		msgs[i].Name = ""
 	}
 
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_before_post.png")))
 	wg.Add(1)
-	assert.NoError(t, page.FindByID("overwrite").Submit())
+	require.NoError(t, page.FindByID("overwrite").Submit())
 	wg.Wait()
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "name_error_config_after_post.png")))
 
 	msg, err := page.FindByID("error-message").Text()
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(msg, "No name"))
+	require.NoError(t, err)
+	require.True(t, strings.Contains(msg, "No name"))
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	assert.Nil(t, deep.Equal(cProps, configProps))
+	require.Nil(t, deep.Equal(cProps, configProps))
 }
 
 func TestPostConfigTagsInput(t *testing.T) {
@@ -507,12 +506,12 @@ func testPostConfigTagsInput(
 ) {
 	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
 
-	assert.NoError(t, page.Navigate(url))
+	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png")))
 	name := "twitter.timelines.screen_names"
 	keys := "foo,bar"
-	assert.NoError(t, page.AllByName(name).SendKeys(keys))
+	require.NoError(t, page.AllByName(name).SendKeys(keys))
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_after_post.png")))
 }
 
@@ -578,9 +577,9 @@ func testPostConfigAdd(
 		},
 	}
 	res, err := client.Post(s.URL, "", nil)
-	assert.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
+	require.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
 	cur := length()
-	assert.Equal(t, prev+1, cur)
+	require.Equal(t, prev+1, cur)
 	testResponseIsRedirect(t, res, "/config")
 }
 
@@ -660,7 +659,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	defer s.Close()
 
 	err := f(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetTwitterUserSearch(t *testing.T) {
@@ -684,21 +683,21 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	us := []anaconda.User{}
 	err = json.Unmarshal(bs, &us)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Nil(t, deep.Equal(users, us))
+	require.Nil(t, deep.Equal(users, us))
 }
 
 func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) {
-	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+	require.Equal(t, http.StatusSeeOther, res.StatusCode)
 	loc := res.Header.Get("Location")
-	assert.True(t, strings.HasPrefix(loc, locPrefix))
+	require.True(t, strings.HasPrefix(loc, locPrefix))
 }
 
 func testIfAssetsNotExist(t *testing.T, f func(t *testing.T)) {

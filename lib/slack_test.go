@@ -3,15 +3,15 @@ package mybot
 import (
 	"container/list"
 	"errors"
-	"reflect"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/stretchr/testify/require"
 )
 
-func TestSlackConvertFromTweet(t *testing.T) {
+func Test_convertFromTweetToSlackMsg(t *testing.T) {
 	tweet := anaconda.Tweet{
 		IdStr: "1",
 		User: anaconda.User{
@@ -19,48 +19,39 @@ func TestSlackConvertFromTweet(t *testing.T) {
 		},
 	}
 	text, params := convertFromTweetToSlackMsg(tweet)
-	if text != TwitterStatusURL(tweet) {
-		t.Fatal("Text is invalid")
-	}
-	if !params.UnfurlLinks || !params.UnfurlMedia {
-		t.Fatal("Should unfurl all kinds of things")
-	}
+
+	require.Equal(t, TwitterStatusURL(tweet), text)
+	require.True(t, params.UnfurlLinks)
+	require.True(t, params.UnfurlMedia)
 }
 
-func TestNewSlackAPI(t *testing.T) {
+func Test_NewSlackAPIWithAuth(t *testing.T) {
 	api := NewSlackAPIWithAuth("", nil, nil)
-	if api.Enabled() {
-		t.Fatalf("%v is expected to be disabled but not", api)
-	}
+	require.False(t, api.Enabled())
 }
 
-func TestSlackAPIDequeueMsg(t *testing.T) {
+func TestSlackAPI_dequeueMsg(t *testing.T) {
 	api := NewSlackAPIWithAuth("", nil, nil)
 	msg := api.dequeueMsg("channel")
-	if msg != nil {
-		t.Fatalf("%s expected but %s found", nil, msg)
-	}
+	require.Nil(t, msg)
 }
 
-func TestSlackAPIEnqueueMsg(t *testing.T) {
+func TestSlackAPI_enqueueMsg(t *testing.T) {
 	api := NewSlackAPIWithAuth("", nil, nil)
 	ch := "channel"
 	msg := &SlackMsg{"text", nil}
 	api.enqueueMsg(ch, msg.text, msg.params)
 	m := api.dequeueMsg(ch)
-	if !reflect.DeepEqual(msg, m) {
-		t.Fatalf("%s expected but %s found", msg, m)
-	}
-	if api.dequeueMsg(ch) != nil {
-		t.Fatal("dequeueMsg not working properly")
-	}
+
+	require.Equal(t, msg, m)
+	require.Nil(t, api.dequeueMsg(ch))
 }
 
-func TestSlackAPIPostMessage(t *testing.T) {
+func TestSlackAPI_PostMessage(t *testing.T) {
 	testSlackAPIPostMessage(t, true)
 }
 
-func TestSlackAPIPostMessageWithPrivateChannel(t *testing.T) {
+func TestSlackAPI_PostMessage_WithPrivateChannel(t *testing.T) {
 	testSlackAPIPostMessage(t, false)
 }
 
@@ -84,22 +75,17 @@ func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 	slackAPI.PostMessage(ch, text, nil, channelIsOpen)
 	m := slackAPI.dequeueMsg(ch)
 
-	if !reflect.DeepEqual(msg, m) {
-		t.Fatalf("%s expected but %s found", msg, m)
-	}
+	require.Equal(t, msg, m)
 }
 
-func TestSlackAPISendMsgQueues(t *testing.T) {
+func TestSlackAPI_sendMsgQueues(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
-
 	ch := "channel"
 
 	err := slackAPI.sendMsgQueues(ch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
 
@@ -107,11 +93,7 @@ func TestSlackAPISendMsgQueues(t *testing.T) {
 	slackAPI.enqueueMsg(ch, text, nil)
 
 	err = slackAPI.sendMsgQueues(ch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = slackAPI.sendMsgQueues(ch)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }

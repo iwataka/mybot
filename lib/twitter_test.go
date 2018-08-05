@@ -9,9 +9,10 @@ import (
 	"github.com/iwataka/deep"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPostProcessorEach(t *testing.T) {
+func TestTwitterPostProcessorEach(t *testing.T) {
 	action := data.Action{
 		Twitter: data.TwitterAction{
 			Collections: []string{"foo"},
@@ -23,21 +24,15 @@ func TestPostProcessorEach(t *testing.T) {
 	}
 	action.Twitter.Retweet = true
 	cache, err := data.NewFileCache("")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	tweet := anaconda.Tweet{}
 	tweet.IdStr = "000"
 	pp := TwitterPostProcessorEach{action, cache}
 
 	err = pp.Process(tweet, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ac := cache.GetTweetAction(tweet.Id)
-	if diff := deep.Equal(ac, action); diff != nil {
-		t.Fatal(diff)
-	}
+	require.Nil(t, deep.Equal(ac, action))
 
 	action2 := data.Action{
 		Twitter: data.NewTwitterAction(),
@@ -47,16 +42,12 @@ func TestPostProcessorEach(t *testing.T) {
 	pp2 := TwitterPostProcessorEach{action2, cache}
 
 	err = pp2.Process(tweet, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	ac2 := cache.GetTweetAction(tweet.Id)
-	if !ac2.Twitter.Favorite {
-		t.Fatalf("%v is not cached properly", action2)
-	}
+	require.True(t, ac2.Twitter.Favorite)
 }
 
-func TestCheckTwitterError(t *testing.T) {
+func Test_CheckTwitterError(t *testing.T) {
 	err130 := anaconda.TwitterError{Code: 130}
 	testCheckTwitterError(t, err130)
 	err131 := anaconda.TwitterError{Code: 131}
@@ -85,9 +76,7 @@ func testCheckTwitterError(t *testing.T, err error) {
 	case anaconda.ApiError:
 		msg = fmt.Sprintf("API Error %d should be ignored", e.StatusCode)
 	}
-	if CheckTwitterError(err) {
-		t.Fatal(msg)
-	}
+	require.False(t, CheckTwitterError(err), msg)
 }
 
 func TestTwitterAPI_NotifyToAll(t *testing.T) {
@@ -95,9 +84,7 @@ func TestTwitterAPI_NotifyToAll(t *testing.T) {
 	defer ctrl.Finish()
 
 	config, err := NewFileConfig("testdata/config.template.toml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().PostDMToScreenName(gomock.Any(), gomock.Any()).Return(anaconda.DirectMessage{}, nil)
@@ -113,7 +100,5 @@ func TestTwitterAPI_NotifyToAll(t *testing.T) {
 		Coordinates: &anaconda.Coordinates{Type: "Point"},
 		Place:       anaconda.Place{Country: "japan"},
 	}
-	if err := twitterAPI.NotifyToAll(slackAPI, tweet); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, twitterAPI.NotifyToAll(slackAPI, tweet))
 }

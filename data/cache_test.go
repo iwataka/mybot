@@ -3,7 +3,6 @@ package data_test
 import (
 	. "github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"os"
@@ -14,10 +13,10 @@ import (
 
 func TestNewFileCache_TakesInvalidJson(t *testing.T) {
 	_, err := NewFileCache("testdata/cache_invalid.json")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
-func TestFileCacheSave(t *testing.T) {
+func TestFileCache_Save(t *testing.T) {
 	var err error
 	var path string
 	var c Cache
@@ -27,17 +26,17 @@ func TestFileCacheSave(t *testing.T) {
 	fname = "cache.json"
 	path = filepath.Join(dir, fname)
 	c, err = NewFileCache(path)
-	assert.NoError(t, err)
-	assert.NoError(t, c.Save())
+	require.NoError(t, err)
+	require.NoError(t, c.Save())
 	defer os.Remove(path)
 	_, err = os.Stat(path)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Invalid path
 	path = filepath.Join(path, fname)
 	c, err = NewFileCache(path)
-	assert.NoError(t, err)
-	assert.Error(t, c.Save())
+	require.NoError(t, err)
+	require.Error(t, c.Save())
 	defer os.Remove(path)
 
 	// Unwritable file
@@ -49,11 +48,11 @@ func TestFileCacheSave(t *testing.T) {
 	require.NoError(t, os.Chmod(path, 0555))
 	defer os.Chmod(path, 0755)
 	c, err = NewFileCache(path)
-	assert.NoError(t, err)
-	assert.Error(t, c.Save())
+	require.NoError(t, err)
+	require.Error(t, c.Save())
 }
 
-func TestFileCacheLatestTweetID(t *testing.T) {
+func TestFileCache_LatestTweetID(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +60,7 @@ func TestFileCacheLatestTweetID(t *testing.T) {
 	testCacheLatestTweetID(t, c)
 }
 
-func TestDBCacheLatestTweetID(t *testing.T) {
+func TestDBCache_LatestTweetID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
 	c, err := NewDBCache(nil, "")
 	if err != nil {
@@ -76,11 +75,11 @@ func testCacheLatestTweetID(t *testing.T, c Cache) {
 	var tweetID int64
 	tweetID = 1
 	c.SetLatestTweetID(name, tweetID)
-	assert.Equal(t, tweetID, c.GetLatestTweetID(name))
-	assert.EqualValues(t, 0, c.GetLatestTweetID("bar"))
+	require.Equal(t, tweetID, c.GetLatestTweetID(name))
+	require.EqualValues(t, 0, c.GetLatestTweetID("bar"))
 }
 
-func TestFileCacheLatestFavoriteID(t *testing.T) {
+func TestFileCache_LatestFavoriteID(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +87,7 @@ func TestFileCacheLatestFavoriteID(t *testing.T) {
 	testCacheLatestFavoriteID(t, c)
 }
 
-func TestDBCacheLatestFavoriteID(t *testing.T) {
+func TestDBCache_LatestFavoriteID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
 	c, err := NewDBCache(nil, "")
 	if err != nil {
@@ -103,11 +102,11 @@ func testCacheLatestFavoriteID(t *testing.T, c Cache) {
 	var favoriteID int64
 	favoriteID = 1
 	c.SetLatestFavoriteID(name, favoriteID)
-	assert.Equal(t, favoriteID, c.GetLatestFavoriteID(name))
-	assert.EqualValues(t, 0, c.GetLatestFavoriteID("bar"))
+	require.Equal(t, favoriteID, c.GetLatestFavoriteID(name))
+	require.EqualValues(t, 0, c.GetLatestFavoriteID("bar"))
 }
 
-func TestFileCacheLatestDMID(t *testing.T) {
+func TestFileCache_LatestDMID(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +114,7 @@ func TestFileCacheLatestDMID(t *testing.T) {
 	testCacheLatestDMID(t, c)
 }
 
-func TestDBCacheLatestDMID(t *testing.T) {
+func TestDBCache_LatestDMID(t *testing.T) {
 	t.Skip("You must write mocking test for this")
 	c, err := NewDBCache(nil, "")
 	if err != nil {
@@ -135,7 +134,7 @@ func testCacheLatestDMID(t *testing.T, c Cache) {
 	}
 }
 
-func TestFileCacheTweetAction(t *testing.T) {
+func TestFileCache_TweetAction(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +142,7 @@ func TestFileCacheTweetAction(t *testing.T) {
 	testCacheTweetAction(t, c)
 }
 
-func TestDBCacheTweetAction(t *testing.T) {
+func TestDBCache_TweetAction(t *testing.T) {
 	t.Skip("You must write mocking test for this")
 	c, err := NewDBCache(nil, "")
 	if err != nil {
@@ -176,7 +175,7 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 	}
 }
 
-func TestFileCacheImage(t *testing.T) {
+func TestFileCache_Image(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +183,7 @@ func TestFileCacheImage(t *testing.T) {
 	testCacheImage(t, c)
 }
 
-func TestDBCacheImage(t *testing.T) {
+func TestDBCache_Image(t *testing.T) {
 	t.Skip("You must write mocking test for this")
 	c, err := NewDBCache(nil, "")
 	if err != nil {
@@ -198,6 +197,6 @@ func testCacheImage(t *testing.T, c Cache) {
 	img := models.ImageCacheData{}
 	c.SetImage(img)
 	expected := []models.ImageCacheData{img}
-	assert.True(t, reflect.DeepEqual(expected, c.GetLatestImages(1)))
-	assert.True(t, reflect.DeepEqual(expected, c.GetLatestImages(2)))
+	require.True(t, reflect.DeepEqual(expected, c.GetLatestImages(1)))
+	require.True(t, reflect.DeepEqual(expected, c.GetLatestImages(2)))
 }

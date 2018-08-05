@@ -8,22 +8,22 @@ import (
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"fmt"
 	"testing"
 	"time"
 )
 
-func TestTwitterPeriodicWorkerStart(t *testing.T) {
+func TestTwitterPeriodicWorker_Start(t *testing.T) {
 	errMsg := "expected error"
 	times := 50
 	duration := "0.01s"
 	id := "id"
 	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
 	err := worker.Start()
-	assert.Error(t, err)
-	assert.Equal(t, errMsg, err.Error())
+	require.Error(t, err)
+	require.Equal(t, errMsg, err.Error())
 }
 
 func TestManageTwitterPeriodicWorker(t *testing.T) {
@@ -69,8 +69,8 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	err := w.Start()
-	assert.Error(t, err)
-	assert.Equal(t, errMsg, err.Error())
+	require.Error(t, err)
+	require.Equal(t, errMsg, err.Error())
 }
 
 // TODO: Call gomocl.Controlller#Finish to ensure all stub methods are called.

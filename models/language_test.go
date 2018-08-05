@@ -2,7 +2,8 @@ package models_test
 
 import (
 	. "github.com/iwataka/mybot/models"
-	"github.com/stretchr/testify/assert"
+	"github.com/iwataka/mybot/utils"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
@@ -11,21 +12,25 @@ func TestLanguageCondition_IsEmpty(t *testing.T) {
 	var c LanguageCondition
 
 	c = LanguageCondition{}
-	assert.True(t, c.IsEmpty())
+	require.True(t, c.IsEmpty())
 
-	min, max := 0.2, 0.8
-	c = LanguageCondition{&min, &max}
-	assert.False(t, c.IsEmpty())
+	c = LanguageCondition{
+		MinSentiment: utils.Float64Ptr(0.2),
+		MaxSentiment: utils.Float64Ptr(0.8),
+	}
+	require.False(t, c.IsEmpty())
 }
 
 func TestLanguageCondition_LanguageFeatures(t *testing.T) {
 	var c LanguageCondition
 
 	c = LanguageCondition{}
-	assert.False(t, c.LanguageFeatures().ExtractDocumentSentiment)
+	require.False(t, c.LanguageFeatures().ExtractDocumentSentiment)
 
-	min, max := 0.2, 0.8
-	c = LanguageCondition{&min, &max}
-	assert.True(t, c.LanguageFeatures().ExtractDocumentSentiment)
+	c = LanguageCondition{
+		MinSentiment: utils.Float64Ptr(0.2),
+		MaxSentiment: utils.Float64Ptr(0.8),
+	}
+	require.True(t, c.LanguageFeatures().ExtractDocumentSentiment)
 
 }

@@ -33,6 +33,8 @@ import (
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
 //go:generate mockgen -source=models/cli.go -destination=mocks/cli.go -package=mocks
+//go:generate mockgen -destination=mocks/cache.go -package=mocks github.com/iwataka/mybot/data Cache
+//TODO: When mockgen Config interface, cyclic dependencies happen.
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
@@ -84,7 +86,7 @@ const (
 
 func main() {
 	home, err := homedir.Dir()
-	exitIfError(err)
+	utils.ExitIfError(err)
 
 	log.SetFlags(0)
 
@@ -330,7 +332,7 @@ func main() {
 
 	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd, restoreAssetsCmd}
 	err = app.Run(os.Args)
-	exitIfError(err)
+	utils.ExitIfError(err)
 }
 
 type userSpecificData struct {
@@ -505,10 +507,10 @@ func serve(c *cli.Context) error {
 func validate(c *cli.Context) {
 	for _, data := range userSpecificDataMap {
 		err := data.config.Validate()
-		exitIfError(err)
+		utils.ExitIfError(err)
 		if c.Bool(apiFlagName) {
 			err := data.config.ValidateWithAPI(data.twitterAPI.BaseAPI())
-			exitIfError(err)
+			utils.ExitIfError(err)
 		}
 	}
 }
@@ -518,7 +520,7 @@ func restoreAssets(c *cli.Context) {
 		fmt.Printf("Directory `%s` already exists.\n", assetsDir)
 	}
 	err := assets.RestoreAssets(".", assetsDir)
-	exitIfError(err)
+	utils.ExitIfError(err)
 }
 
 func beforeRunning(c *cli.Context) error {
@@ -532,13 +534,13 @@ func beforeRunning(c *cli.Context) error {
 		fmt.Printf("%+v\n", err)
 	}
 	err = beforeValidating(c)
-	exitIfError(err)
+	utils.ExitIfError(err)
 	return nil
 }
 
 func beforeServing(c *cli.Context) error {
 	err := beforeRunning(c)
-	exitIfError(err)
+	utils.ExitIfError(err)
 	for userID, data := range userSpecificDataMap {
 		startUserSpecificData(userID, data)
 	}
@@ -712,14 +714,7 @@ func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string
 
 func httpServer(c models.Context) {
 	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
-	exitIfError(err)
-}
-
-func exitIfError(err error) {
-	if err != nil {
-		log.Printf("%+v\n", err)
-		os.Exit(1)
-	}
+	utils.ExitIfError(err)
 }
 
 func argValueWithMkdir(c models.Context, key string) (string, error) {
@@ -730,6 +725,7 @@ func argValueWithMkdir(c models.Context, key string) (string, error) {
 	}
 	return dir, nil
 }
+
 func initialStatuses() map[int]bool {
 	statuses := map[int]bool{}
 	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}

@@ -10,7 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/mocks"
 	. "github.com/iwataka/mybot/worker"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -61,12 +61,12 @@ func TestKeepSingleWorkerProcessAsItIsWhenMultipleStartSignalSent(t *testing.T) 
 	for i := 0; i < 5; i++ {
 		inChan <- NewWorkerSignal(StartSignal)
 		if i == 0 {
-			assert.Equal(t, StatusStarted, <-outChan)
+			require.Equal(t, StatusStarted, <-outChan)
 			<-w.outChan
 		}
 	}
-	assert.EqualValues(t, 1, *w.count)
-	assert.EqualValues(t, 1, *w.totalCount)
+	require.EqualValues(t, 1, *w.count)
+	require.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestStopAndStartSignalSentAlternately(t *testing.T) {
@@ -77,29 +77,29 @@ func TestStopAndStartSignalSentAlternately(t *testing.T) {
 	for ; i < totalCount*2; i++ {
 		if i%2 == 0 {
 			inChan <- NewWorkerSignal(StartSignal)
-			assert.Equal(t, StatusStarted, <-outChan)
+			require.Equal(t, StatusStarted, <-outChan)
 			<-w.outChan
 		} else {
 			inChan <- NewWorkerSignal(StopSignal)
-			assert.Equal(t, StatusStopped, <-outChan)
+			require.Equal(t, StatusStopped, <-outChan)
 		}
 	}
 	inChan <- NewWorkerSignal(KillSignal)
-	assert.EqualValues(t, 0, *w.count)
-	assert.EqualValues(t, totalCount, *w.totalCount)
+	require.EqualValues(t, 0, *w.count)
+	require.EqualValues(t, totalCount, *w.totalCount)
 }
 
 func TestStopSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assert.Equal(t, StatusStarted, <-outChan)
+	require.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	inChan <- NewWorkerSignal(StopSignal)
-	assert.Equal(t, StatusStopped, <-outChan)
+	require.Equal(t, StatusStopped, <-outChan)
 	inChan <- NewWorkerSignal(KillSignal)
-	assert.EqualValues(t, 0, *w.count)
-	assert.EqualValues(t, 1, *w.totalCount)
+	require.EqualValues(t, 0, *w.count)
+	require.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestRestartSignalForWorker(t *testing.T) {
@@ -108,33 +108,33 @@ func TestRestartSignalForWorker(t *testing.T) {
 	var totalCount int32 = 5
 	var i int32 = 0
 	inChan <- NewWorkerSignal(StartSignal)
-	assert.Equal(t, StatusStarted, <-outChan)
+	require.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	for ; i < totalCount; i++ {
 		inChan <- NewWorkerSignal(RestartSignal)
-		assert.Equal(t, StatusStopped, <-outChan)
-		assert.Equal(t, StatusStarted, <-outChan)
+		require.Equal(t, StatusStopped, <-outChan)
+		require.Equal(t, StatusStarted, <-outChan)
 		<-w.outChan
 	}
-	assert.EqualValues(t, 1, *w.count)
-	assert.EqualValues(t, totalCount+1, *w.totalCount)
+	require.EqualValues(t, 1, *w.count)
+	require.EqualValues(t, totalCount+1, *w.totalCount)
 }
 
 func TestKillSignalForWorker(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assert.Equal(t, StatusStarted, <-outChan)
+	require.Equal(t, StatusStarted, <-outChan)
 	<-w.outChan
 	inChan <- NewWorkerSignal(KillSignal)
-	assert.Equal(t, StatusStopped, <-outChan)
+	require.Equal(t, StatusStopped, <-outChan)
 	select {
 	case inChan <- NewWorkerSignal(KillSignal):
 		t.Fatal("Sent kill signal but worker manager process still wait for signals")
 	case <-time.After(time.Second):
 	}
-	assert.EqualValues(t, 0, *w.count)
-	assert.EqualValues(t, 1, *w.totalCount)
+	require.EqualValues(t, 0, *w.count)
+	require.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestWorkerWithoutOutChannel(t *testing.T) {
@@ -146,8 +146,8 @@ func TestWorkerWithoutOutChannel(t *testing.T) {
 	<-w.outChan
 	inChan <- NewWorkerSignal(StopSignal)
 	inChan <- NewWorkerSignal(KillSignal)
-	assert.EqualValues(t, 0, *w.count)
-	assert.EqualValues(t, 2, *w.totalCount)
+	require.EqualValues(t, 0, *w.count)
+	require.EqualValues(t, 2, *w.totalCount)
 }
 
 func TestWorkerSignalWithOldTimestamp(t *testing.T) {
@@ -159,8 +159,8 @@ func TestWorkerSignalWithOldTimestamp(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		inChan <- oldRestartSignal
 	}
-	assert.EqualValues(t, 1, *w.count)
-	assert.EqualValues(t, 1, *w.totalCount)
+	require.EqualValues(t, 1, *w.count)
+	require.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestMultipleRandomWorkerSignals(t *testing.T) {
@@ -182,16 +182,16 @@ func TestPingSignal(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(PingSignal)
-	assert.Equal(t, StatusActive, <-outChan)
-	assert.EqualValues(t, 0, *w.count)
-	assert.EqualValues(t, 0, *w.totalCount)
+	require.Equal(t, StatusActive, <-outChan)
+	require.EqualValues(t, 0, *w.count)
+	require.EqualValues(t, 0, *w.totalCount)
 }
 
 func TestWorkerFinished(t *testing.T) {
 	w := newTestWorker()
 	inChan, outChan := ActivateWorker(w, timeout)
 	close(inChan)
-	assert.EqualValues(t, StatusFinished, <-outChan)
+	require.EqualValues(t, StatusFinished, <-outChan)
 }
 
 func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
@@ -201,7 +201,7 @@ func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
 	w.EXPECT().Start().Return(err)
 	inChan, outChan := ActivateWorker(w, timeout)
 	inChan <- NewWorkerSignal(StartSignal)
-	assert.Equal(t, StatusStarted, <-outChan)
-	assert.Equal(t, err, <-outChan)
-	assert.Equal(t, StatusStopped, <-outChan)
+	require.Equal(t, StatusStarted, <-outChan)
+	require.Equal(t, err, <-outChan)
+	require.Equal(t, StatusStopped, <-outChan)
 }

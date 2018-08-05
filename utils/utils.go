@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -142,4 +144,29 @@ func GenerateRandString(n int) string {
 		b[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(b)
+}
+
+func ExitIfError(err error) {
+	if err != nil {
+		log.Printf("%+v\n", err)
+		os.Exit(1)
+	}
+}
+
+func TruePtr() *bool {
+	val := true
+	return &val
+}
+
+func FalsePtr() *bool {
+	val := false
+	return &val
+}
+
+func IntPtr(n int) *int {
+	return &n
+}
+
+func Float64Ptr(f float64) *float64 {
+	return &f
 }
