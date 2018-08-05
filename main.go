@@ -52,7 +52,6 @@ var (
 )
 
 const (
-	envFlagName                      = "env"
 	configFlagName                   = "config"
 	cacheFlagName                    = "cache"
 	gcloudFlagName                   = "gcloud"
@@ -92,13 +91,6 @@ func main() {
 
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
-
-	envFlag := cli.StringFlag{
-		Name:   envFlagName,
-		Value:  "",
-		Usage:  `Assign "production" for production environment`,
-		EnvVar: "MYBOT_ENV",
-	}
 
 	configFlag := cli.StringFlag{
 		Name:   configFlagName,
@@ -254,7 +246,6 @@ func main() {
 	}
 
 	commonFlags := []cli.Flag{
-		envFlag,
 		configFlag,
 		cacheFlag,
 		twitterFlag,
