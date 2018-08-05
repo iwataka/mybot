@@ -620,13 +620,6 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 		return
 	}
 
-	var prefix string
-
-	prefix = "twitter.notification.place"
-	notif := config.GetTwitterNotification()
-	notif.Place = getNotificationProperties(val, prefix)
-	config.SetTwitterNotification(notif)
-
 	config.SetPollingDuration(val["duration"][0])
 
 	err = config.Validate()
@@ -742,14 +735,6 @@ func setMessagesToConfig(config mybot.Config, val map[string][]string) error {
 	}
 	config.SetSlackMessages(msgs)
 	return nil
-}
-
-func getNotificationProperties(val map[string][]string, prefix string) mybot.NotificationProperties {
-	props := mybot.NotificationProperties{}
-	props.TwitterAllowSelf = len(val[prefix+".twitter_allow_self"]) > 1
-	props.TwitterUsers = tmpl.GetListTextboxValue(val, 0, prefix+".twitter_users")
-	props.SlackChannels = tmpl.GetListTextboxValue(val, 0, prefix+".slack_channels")
-	return props
 }
 
 func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {

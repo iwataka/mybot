@@ -54,12 +54,6 @@ pin = false
 star = false
 channels = ["foo"]
 
-[twitter.notification]
-[twitter.notification.Place]
-twitter_allow_self = true
-twitter_users = ["foo"]
-slack_channels = ["slack_chan"]
-
 [slack]
 [[slack.messages]]
 name = "foo"

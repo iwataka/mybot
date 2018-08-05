@@ -32,8 +32,6 @@ type Config interface {
 	GetTwitterSearches() []SearchConfig
 	SetTwitterSearches(searches []SearchConfig)
 	AddTwitterSearch(search SearchConfig)
-	GetTwitterNotification() TwitterNotification
-	SetTwitterNotification(notification TwitterNotification)
 	GetPollingDuration() string
 	SetPollingDuration(dur string)
 	GetSlackMessages() []MessageConfig
@@ -113,14 +111,6 @@ func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
 
 func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
 	c.Twitter.Searches = append(c.Twitter.Searches, search)
-}
-
-func (c *ConfigProperties) GetTwitterNotification() TwitterNotification {
-	return c.Twitter.Notification
-}
-
-func (c *ConfigProperties) SetTwitterNotification(notification TwitterNotification) {
-	c.Twitter.Notification = notification
 }
 
 func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
@@ -326,11 +316,6 @@ type TwitterConfig struct {
 	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines"`
 	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites"`
 	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches"`
-	// Notification is a configuration related to notification for users.
-	// Currently only place notification is supported, which means that
-	// when a tweet with place information is detected, it is notified to
-	// the specified users.
-	Notification TwitterNotification `json:"notification" toml:"notification" bson:"notification"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
 	Debug bool `json:"debug" toml:"debug" bson:"debug"`
@@ -338,9 +323,9 @@ type TwitterConfig struct {
 
 func NewTwitterConfig() TwitterConfig {
 	return TwitterConfig{
-		Timelines:    []TimelineConfig{},
-		Searches:     []SearchConfig{},
-		Notification: NewTwitterNotification(),
+		Timelines: []TimelineConfig{},
+		Favorites: []FavoriteConfig{},
+		Searches:  []SearchConfig{},
 	}
 }
 

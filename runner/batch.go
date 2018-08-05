@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/utils"
 
@@ -43,7 +42,6 @@ func NewBatchRunnerUsedWithStream(
 // Run processes Twitter search/favorite API result and then makes notifications
 // of it based on r.config.
 func (r BatchRunnerUsedWithStream) Run() error {
-	tweets := []anaconda.Tweet{}
 	for _, a := range r.config.GetTwitterSearches() {
 		v := url.Values{}
 		if a.Count != nil {
@@ -53,7 +51,7 @@ func (r BatchRunnerUsedWithStream) Run() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			ts, err := r.twitterAPI.ProcessSearch(
+			_, err := r.twitterAPI.ProcessSearch(
 				query,
 				v,
 				a.Filter,
@@ -65,16 +63,16 @@ func (r BatchRunnerUsedWithStream) Run() error {
 			if err != nil {
 				return utils.WithStack(err)
 			}
-			tweets = append(tweets, ts...)
 		}
 	}
+
 	for _, a := range r.config.GetTwitterFavorites() {
 		v := url.Values{}
 		if a.Count != nil {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := r.twitterAPI.ProcessFavorites(
+			_, err := r.twitterAPI.ProcessFavorites(
 				name,
 				v,
 				a.Filter,
@@ -83,18 +81,12 @@ func (r BatchRunnerUsedWithStream) Run() error {
 				r.slackAPI,
 				a.Action,
 			)
-			tweets = append(tweets, ts...)
 			if err != nil {
 				return utils.WithStack(err)
 			}
 		}
 	}
-	for _, t := range tweets {
-		err := r.twitterAPI.NotifyToAll(r.slackAPI, &t)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
+
 	return nil
 }
 
@@ -129,7 +121,7 @@ func (r BatchRunnerUsedWithoutStream) Run() error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	tweets := []anaconda.Tweet{}
+
 	for _, a := range r.baseRunner.config.GetTwitterTimelines() {
 		v := url.Values{}
 		if a.Count != nil {
@@ -142,7 +134,7 @@ func (r BatchRunnerUsedWithoutStream) Run() error {
 			v.Set("include_rts", fmt.Sprintf("%v", *a.IncludeRts))
 		}
 		for _, name := range a.ScreenNames {
-			ts, err := r.baseRunner.twitterAPI.ProcessTimeline(
+			_, err := r.baseRunner.twitterAPI.ProcessTimeline(
 				name,
 				v,
 				a.Filter,
@@ -151,18 +143,12 @@ func (r BatchRunnerUsedWithoutStream) Run() error {
 				r.baseRunner.slackAPI,
 				a.Action,
 			)
-			tweets = append(tweets, ts...)
 			if err != nil {
 				return utils.WithStack(err)
 			}
 		}
 	}
-	for _, t := range tweets {
-		err := r.baseRunner.twitterAPI.NotifyToAll(r.baseRunner.slackAPI, &t)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
+
 	return nil
 }
 
