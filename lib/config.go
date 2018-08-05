@@ -34,8 +34,6 @@ type Config interface {
 	AddTwitterSearch(search SearchConfig)
 	GetTwitterNotification() TwitterNotification
 	SetTwitterNotification(notification TwitterNotification)
-	GetTwitterInteraction() InteractionConfig
-	SetTwitterInteraction(interaction InteractionConfig)
 	GetPollingDuration() string
 	SetPollingDuration(dur string)
 	GetSlackMessages() []MessageConfig
@@ -123,14 +121,6 @@ func (c *ConfigProperties) GetTwitterNotification() TwitterNotification {
 
 func (c *ConfigProperties) SetTwitterNotification(notification TwitterNotification) {
 	c.Twitter.Notification = notification
-}
-
-func (c *ConfigProperties) GetTwitterInteraction() InteractionConfig {
-	return c.Twitter.Interaction
-}
-
-func (c *ConfigProperties) SetTwitterInteraction(interaction InteractionConfig) {
-	c.Twitter.Interaction = interaction
 }
 
 func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
@@ -341,9 +331,6 @@ type TwitterConfig struct {
 	// when a tweet with place information is detected, it is notified to
 	// the specified users.
 	Notification TwitterNotification `json:"notification" toml:"notification" bson:"notification"`
-	// Interaction is a configuration related to interaction with users
-	// such as Twitter's direct message exchange.
-	Interaction InteractionConfig `json:"interaction" toml:"interaction" bson:"interaction"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
 	Debug bool `json:"debug" toml:"debug" bson:"debug"`
@@ -353,7 +340,6 @@ func NewTwitterConfig() TwitterConfig {
 	return TwitterConfig{
 		Timelines:    []TimelineConfig{},
 		Searches:     []SearchConfig{},
-		Interaction:  InteractionConfig{},
 		Notification: NewTwitterNotification(),
 	}
 }
@@ -451,12 +437,6 @@ func (c *SearchConfig) Validate() error {
 	return c.Filter.Validate()
 }
 
-// InteractionConfig is a configuration for interaction through Twitter direct
-// message
-type InteractionConfig struct {
-	AllowSelf bool     `json:"allow_self" toml:"allow_self" bson:"allow_self"`
-	Users     []string `json:"users,omitempty" toml:"users,omitempty" bson:"users,omitempty"`
-}
 type SlackConfig struct {
 	Messages []MessageConfig `json:"messages" toml:"messages" bson:"messages"`
 }

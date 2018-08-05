@@ -15,8 +15,9 @@ build:
 test:
 	$(GO) test $(TEST_PACKAGES) -race $(args)
 
+# TODO: Check details about gotype
 lint:
-	$(GOLINT) --deadline=30s
+	$(GOLINT) --deadline=30s --disable=gotype
 
 deploy_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) up -d

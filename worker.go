@@ -103,8 +103,7 @@ func (w *twitterDMWorker) Start() error {
 	}
 
 	var err error
-	r := w.twitterAPI.DefaultDirectMessageReceiver
-	w.listener, err = w.twitterAPI.ListenMyself(nil, r, w.timeout)
+	w.listener, err = w.twitterAPI.ListenMyself(nil, w.timeout)
 	if err != nil {
 		return utils.WithStack(err)
 	}

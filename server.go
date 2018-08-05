@@ -627,12 +627,6 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	notif.Place = getNotificationProperties(val, prefix)
 	config.SetTwitterNotification(notif)
 
-	prefix = "twitter.interaction"
-	intr := config.GetTwitterInteraction()
-	intr.AllowSelf = len(val[prefix+".allow_self"]) > 1
-	intr.Users = tmpl.GetListTextboxValue(val, 0, prefix+".users")
-	config.SetTwitterInteraction(intr)
-
 	config.SetPollingDuration(val["duration"][0])
 
 	err = config.Validate()

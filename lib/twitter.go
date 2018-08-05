@@ -3,7 +3,6 @@ package mybot
 import (
 	"errors"
 	"fmt"
-	"html"
 	"net/url"
 	"strings"
 	"time"
@@ -458,7 +457,6 @@ func (a *TwitterAPI) ListenUsers(v url.Values, timeout time.Duration) (*TwitterU
 type TwitterDMListener struct {
 	stream    *anaconda.Stream
 	api       *TwitterAPI
-	receiver  DirectMessageReceiver
 	innerChan chan bool
 	timeout   time.Duration
 }
@@ -471,22 +469,12 @@ func (l *TwitterDMListener) Listen() error {
 			case anaconda.DirectMessage:
 				fmt.Printf("DM[%s] created by %s at %s\n", c.IdStr, c.Sender.ScreenName, c.CreatedAt)
 
-				conf := l.api.config.GetTwitterInteraction()
-				match, err := l.api.CheckUser(c.SenderScreenName, conf.AllowSelf, conf.Users)
-				if err != nil {
-					return utils.WithStack(err)
+				// TODO: Handle direct messages in the same way as the other sources
+				id := l.api.cache.GetLatestDMID()
+				if id < c.Id {
+					l.api.cache.SetLatestDMID(c.Id)
 				}
-				if match {
-					id := l.api.cache.GetLatestDMID()
-					if id < c.Id {
-						l.api.cache.SetLatestDMID(c.Id)
-					}
-					err = l.api.responseForDirectMessage(c, l.receiver)
-					if err != nil {
-						return utils.WithStack(err)
-					}
-				}
-				err = l.api.cache.Save()
+				err := l.api.cache.Save()
 				if err != nil {
 					return utils.WithStack(err)
 				}
@@ -509,7 +497,7 @@ func (l *TwitterDMListener) Stop() error {
 
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, timeout time.Duration) (*TwitterDMListener, error) {
+func (a *TwitterAPI) ListenMyself(v url.Values, timeout time.Duration) (*TwitterDMListener, error) {
 	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -517,34 +505,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, receiver DirectMessageReceiver, 
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	return &TwitterDMListener{stream, a, receiver, make(chan bool), timeout}, nil
-}
-
-func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receiver DirectMessageReceiver) error {
-	interaction := a.config.GetTwitterInteraction()
-	allowSelf := interaction.AllowSelf
-	users := interaction.Users
-	if strings.HasPrefix(html.UnescapeString(dm.Text), msgPrefix) {
-		return nil
-	}
-	sender := dm.Sender.ScreenName
-	allowed, err := a.CheckUser(sender, allowSelf, users)
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	if allowed {
-		text, err := receiver(dm)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-		if text != "" {
-			_, err := a.api.PostDMToScreenName(text, sender)
-			if err != nil {
-				return utils.WithStack(err)
-			}
-		}
-	}
-	return nil
+	return &TwitterDMListener{stream, a, make(chan bool), timeout}, nil
 }
 
 // TweetChecker function checks if the specified tweet is acceptable, which means it
@@ -552,125 +513,6 @@ func (a *TwitterAPI) responseForDirectMessage(dm anaconda.DirectMessage, receive
 type TweetChecker interface {
 	CheckTweet(t anaconda.Tweet, v VisionMatcher, l LanguageMatcher, c data.Cache) (bool, error)
 	ShouldRepeat() bool
-}
-
-// DirectMessageReceiver function receives the specified direct message and
-// does something according to the received message.
-// This returns a text and it is a reply for the above message's sender.
-// Returning an empty string means this function does nothing.
-type DirectMessageReceiver func(anaconda.DirectMessage) (string, error)
-
-type DirectMessageCommand struct {
-	Name        string
-	Description string
-	Exec        func(*TwitterAPI, []string, []*DirectMessageCommand) (string, error)
-}
-
-var collectionsCommand = &DirectMessageCommand{
-	Name:        "collections,cols",
-	Description: "Shows a list of Twitter collections.",
-	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
-		if len(args) != 0 {
-			return "This command can't accept any arguments", nil
-		}
-
-		self, err := a.GetSelf()
-		if err != nil {
-			return "", utils.WithStack(err)
-		}
-		res, err := a.api.GetCollectionListByUserId(self.Id, nil)
-		if err != nil {
-			return "", utils.WithStack(err)
-		}
-		timelines := res.Objects.Timelines
-		lines := []string{}
-		for _, col := range timelines {
-			line := fmt.Sprintf("%s: %s", col.Name, col.CollectionUrl)
-			lines = append(lines, line)
-		}
-		return strings.Join(lines, "\n"), nil
-	},
-}
-
-var retweetCommand = &DirectMessageCommand{
-	Name:        "retweet",
-	Description: "Add configuration to retweet all tweet of the specified users",
-	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
-		timeline := NewTimelineConfig()
-		timeline.ScreenNames = args
-		timeline.Action.Twitter.Retweet = true
-		a.config.AddTwitterTimeline(timeline)
-		err := a.config.Save()
-		if err != nil {
-			return "", utils.WithStack(err)
-		}
-		return "Add configuration successfully", nil
-	},
-}
-
-var favoriteCommand = &DirectMessageCommand{
-	Name:        "favorite",
-	Description: "Add configuration to favorite all favorites of the specified users",
-	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
-		favorite := NewFavoriteConfig()
-		favorite.ScreenNames = args
-		favorite.Action.Twitter.Favorite = true
-		a.config.AddTwitterFavorite(favorite)
-		err := a.config.Save()
-		if err != nil {
-			return "", utils.WithStack(err)
-		}
-		return "Add configuration successfully", nil
-	},
-}
-
-var helpCommand = &DirectMessageCommand{
-	Name:        "help,h",
-	Description: "Shows the help text",
-	Exec: func(a *TwitterAPI, args []string, cmds []*DirectMessageCommand) (string, error) {
-		// If only slash is given, shows the help text.
-		reply := "Use these commands with / at the head."
-		for _, cmd := range cmds {
-			reply += "\n"
-			reply += fmt.Sprintf("  [%s]: %s", cmd.Name, cmd.Description)
-		}
-		return reply, nil
-	},
-}
-
-var directMessageCommandList = []*DirectMessageCommand{
-	collectionsCommand,
-	helpCommand,
-	retweetCommand,
-	favoriteCommand,
-}
-
-// DefaultDirectMessageReceiver returns a reply from the specified direct
-// message.
-func (a *TwitterAPI) DefaultDirectMessageReceiver(m anaconda.DirectMessage) (string, error) {
-	fields := strings.Fields(html.UnescapeString(m.Text))
-	cmd := fields[0]
-	args := []string{}
-	if len(fields) > 1 {
-		args = fields[1:]
-	}
-	// If the given command doesn't start with slash, ignore it.
-	if !strings.HasPrefix(cmd, "/") {
-		return "", nil
-	} else if len(cmd) < 2 {
-		return helpCommand.Exec(a, args, directMessageCommandList)
-	}
-	cmd = cmd[1:]
-
-	for _, c := range directMessageCommandList {
-		names := strings.Split(c.Name, ",")
-		for _, name := range names {
-			if cmd == name {
-				return c.Exec(a, args, directMessageCommandList)
-			}
-		}
-	}
-	return "", nil
 }
 
 func CheckTwitterError(err error) bool {

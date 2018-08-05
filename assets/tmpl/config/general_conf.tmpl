@@ -24,19 +24,6 @@
 <div class="table-responsive">
     <table class="table">
         <tbody>
-            <tr>
-                <td rowspan="2">Twitter Interaction</td>
-                <td>myself</td>
-                <td>
-                    {{{checkbox .Twitter.Interaction.AllowSelf "twitter.interaction.allow_self"}}}
-                </td>
-            </tr>
-            <tr>
-                <td>other users</td>
-                <td>
-                    {{{listTextbox .Twitter.Interaction.Users "twitter.interaction.users" "typeahead-tagsinput"}}}
-                </td>
-            </tr>
             {{{template "notification_conf" (newMap "Title" "Twitter Place Notification" "Data" .Twitter.Notification.Place "NamePrefix" "twitter.notification.place")}}}
             <tr>
                 <td colspan="2">Polling Duration</td>

@@ -293,20 +293,6 @@ func testConfigSlackMessages(t *testing.T, c Config) {
 	require.Equal(t, msgs, ms)
 }
 
-func TestFileConfig_Interaction(t *testing.T) {
-	c, err := NewFileConfig("")
-	require.NoError(t, err)
-	testConfigInteraction(t, c)
-}
-
-func testConfigInteraction(t *testing.T, c Config) {
-	interaction := InteractionConfig{}
-	interaction.Users = []string{"foo"}
-	c.SetTwitterInteraction(interaction)
-	i := c.GetTwitterInteraction()
-	require.Equal(t, interaction, i)
-}
-
 func TestFileConfig_TwitterDuration(t *testing.T) {
 	c, err := NewFileConfig("")
 	require.NoError(t, err)

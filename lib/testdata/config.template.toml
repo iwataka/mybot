@@ -59,9 +59,6 @@ channels = ["foo"]
 twitter_allow_self = true
 twitter_users = ["foo"]
 slack_channels = ["slack_chan"]
-[twitter.interaction]
-allow_self = false
-users = ["foo", "bar"]
 
 [slack]
 [[slack.messages]]
