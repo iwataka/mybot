@@ -4,7 +4,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
-	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
@@ -31,13 +30,12 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, nil, nil)
-	h := generateWorkerMessageHandler(t, -1)
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
 	statuses := make(map[int]bool)
 	statuses[key] = false
-	activateWorkerAndStart(key, workerChans, statuses, w, h)
+	activateWorkerAndStart(key, workerChans, statuses, w, nil)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
@@ -49,13 +47,12 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
-	h := generateWorkerMessageHandler(t, -1)
 
 	key := 0
 	workerChans := make(map[int]chan *worker.WorkerSignal)
 	statuses := make(map[int]bool)
 	statuses[key] = false
-	activateWorkerAndStart(key, workerChans, statuses, w, h)
+	activateWorkerAndStart(key, workerChans, statuses, w, nil)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
 	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
@@ -113,15 +110,4 @@ func generateConfig(t *testing.T, duration string) mybot.Config {
 	config := mybot.NewTestFileConfig("", t)
 	config.SetPollingDuration(duration)
 	return config
-}
-
-func generateWorkerMessageHandler(t *testing.T, times int) models.WorkerMessageHandler {
-	ctrl := gomock.NewController(t)
-	h := mocks.NewMockWorkerMessageHandler(ctrl)
-	if times < 0 {
-		h.EXPECT().Handle(gomock.Any()).AnyTimes().Return(nil)
-	} else {
-		h.EXPECT().Handle(gomock.Any()).Times(times).Return(nil)
-	}
-	return h
 }

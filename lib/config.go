@@ -22,8 +22,6 @@ type Config interface {
 	utils.Savable
 	utils.Loadable
 	GetProperties() *ConfigProperties
-	GetLogNotification() NotificationProperties
-	SetLogNotification(notification NotificationProperties)
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
 	SetTwitterTimelines(timelines []TimelineConfig)
@@ -64,29 +62,19 @@ type ConfigProperties struct {
 	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
-	Duration        string                 `json:"duration" toml:"duration" bson:"duration"`
-	LogNotification NotificationProperties `json:"log_notification" toml:"log_notification"  bson:"log_notification"`
+	Duration string `json:"duration" toml:"duration" bson:"duration"`
 }
 
 func newConfigProperties() *ConfigProperties {
 	return &ConfigProperties{
-		Twitter:         NewTwitterConfig(),
-		Slack:           NewSlackConfig(),
-		Duration:        "10m",
-		LogNotification: NotificationProperties{},
+		Twitter:  NewTwitterConfig(),
+		Slack:    NewSlackConfig(),
+		Duration: "10m",
 	}
 }
 
 func (c *ConfigProperties) GetProperties() *ConfigProperties {
 	return c
-}
-
-func (c *ConfigProperties) GetLogNotification() NotificationProperties {
-	return c.LogNotification
-}
-
-func (c *ConfigProperties) SetLogNotification(notification NotificationProperties) {
-	c.LogNotification = notification
 }
 
 func (c *ConfigProperties) GetTwitterScreenNames() []string {

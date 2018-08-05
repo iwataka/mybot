@@ -450,7 +450,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+		WorkerMessageLogger{w.Name()},
 	)
 
 	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
@@ -459,7 +459,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+		WorkerMessageLogger{w.Name()},
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
@@ -469,7 +469,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+		WorkerMessageLogger{w.Name()},
 	)
 
 	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
@@ -478,7 +478,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		DefaultWorkerMessageHandler{data.config, data.twitterAPI, data.slackAPI, w.Name()},
+		WorkerMessageLogger{w.Name()},
 	)
 }
 

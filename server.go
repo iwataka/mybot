@@ -622,9 +622,6 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 
 	var prefix string
 
-	prefix = "log_notification"
-	config.SetLogNotification(getNotificationProperties(val, prefix))
-
 	prefix = "twitter.notification.place"
 	notif := config.GetTwitterNotification()
 	notif.Place = getNotificationProperties(val, prefix)

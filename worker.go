@@ -14,14 +14,11 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
-type DefaultWorkerMessageHandler struct {
-	config     mybot.Config
-	twitterAPI *mybot.TwitterAPI
-	slackAPI   *mybot.SlackAPI
-	workerID   string
+type WorkerMessageLogger struct {
+	workerID string
 }
 
-func (h DefaultWorkerMessageHandler) Handle(msg interface{}) error {
+func (h WorkerMessageLogger) Handle(msg interface{}) error {
 	logMessage := ""
 	switch m := msg.(type) {
 	case worker.WorkerStatus:
@@ -29,13 +26,7 @@ func (h DefaultWorkerMessageHandler) Handle(msg interface{}) error {
 	case error:
 		logMessage = m.Error()
 	}
-	sendsSomeone, err := h.config.GetLogNotification().Notify(h.twitterAPI, h.slackAPI, logMessage)
-	if err != nil {
-		return err
-	}
-	if !sendsSomeone {
-		log.Println(logMessage)
-	}
+	log.Println(logMessage)
 	return nil
 }
 
@@ -65,7 +56,9 @@ func activateWorkerAndStart(
 					statuses[key] = false
 				}
 			}
-			msgHandler.Handle(msg)
+			if msgHandler != nil {
+				msgHandler.Handle(msg)
+			}
 		}
 	}()
 	// Process sending ping to worker manager priodically
