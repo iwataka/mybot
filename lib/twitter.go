@@ -88,43 +88,6 @@ func (a *TwitterAPI) CheckUser(user string, allowSelf bool, users []string) (boo
 	return false, nil
 }
 
-// ProcessTimeline gets tweets from the specified user's timeline and do action
-// for tweets filtered by c.
-func (a *TwitterAPI) ProcessTimeline(
-	name string,
-	v url.Values,
-	c TweetChecker,
-	vision VisionMatcher,
-	lang LanguageMatcher,
-	slack *SlackAPI,
-	action data.Action,
-) ([]anaconda.Tweet, error) {
-	latestID := a.cache.GetLatestTweetID(name)
-	v.Set("screen_name", name)
-	if latestID > 0 {
-		v.Set("since_id", fmt.Sprintf("%d", latestID))
-	} else {
-		// If the latest tweet ID doesn't exist, this fetches just the
-		// latest tweet and store that ID.
-		v.Set("count", "1")
-	}
-	tweets, err := a.api.GetUserTimeline(v)
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-	var pp TwitterPostProcessor
-	if c.ShouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache}
-	} else {
-		pp = &TwitterPostProcessorTop{action, name, a.cache}
-	}
-	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-	return result, nil
-}
-
 // ProcessFavorites gets tweets from the specified user's favorite list and do
 // action for tweets filtered by c.
 func (a *TwitterAPI) ProcessFavorites(

@@ -271,12 +271,8 @@ func main() {
 		slackClientFileFlag,
 	}
 
-	runFlags := []cli.Flag{
-		gcloudFlag,
-	}
-	runFlags = append(runFlags, commonFlags...)
-
 	serveFlags := []cli.Flag{
+		gcloudFlag,
 		certFlag,
 		keyFlag,
 		hostFlag,
@@ -285,7 +281,7 @@ func main() {
 		accessControlAllowOriginFlag,
 	}
 	// All `run` flags should be `serve` flag
-	serveFlags = append(serveFlags, runFlags...)
+	serveFlags = append(serveFlags, commonFlags...)
 
 	validateFlags := []cli.Flag{apiFlag}
 	// All `run` flags should be `validate` flag
@@ -296,15 +292,6 @@ func main() {
 	app.Version = "0.1"
 	app.Usage = "Automatically collect and broadcast information based on your configuration"
 	app.Author = "iwataka"
-
-	runCmd := cli.Command{
-		Name:    "run",
-		Aliases: []string{"r"},
-		Usage:   "Runs the non-interactive functions only one time (almost for test usage)",
-		Flags:   runFlags,
-		Before:  beforeRunning,
-		Action:  run,
-	}
 
 	serveCmd := cli.Command{
 		Name:    "serve",
@@ -330,7 +317,7 @@ func main() {
 		Action: restoreAssets,
 	}
 
-	app.Commands = []cli.Command{runCmd, serveCmd, validateCmd, restoreAssetsCmd}
+	app.Commands = []cli.Command{serveCmd, validateCmd, restoreAssetsCmd}
 	err = app.Run(os.Args)
 	utils.ExitIfError(err)
 }
@@ -482,21 +469,6 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 	)
 }
 
-func run(c *cli.Context) {
-	for _, data := range userSpecificDataMap {
-		baseRunner := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-		r := runner.NewBatchRunnerUsedWithoutStream(baseRunner)
-		if err := r.Run(); err != nil {
-			log.Printf("%+v\n", err)
-			return
-		}
-		if err := data.cache.Save(); err != nil {
-			log.Printf("%+v\n", err)
-			return
-		}
-	}
-}
-
 func serve(c *cli.Context) error {
 	go httpServer(c)
 	ch := make(chan bool)
@@ -523,23 +495,11 @@ func restoreAssets(c *cli.Context) {
 	utils.ExitIfError(err)
 }
 
-func beforeRunning(c *cli.Context) error {
-	var err error
-	visionAPI, err = mybot.NewVisionMatcher(c.String(gcloudFlagName))
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-	}
-	languageAPI, err = mybot.NewLanguageMatcher(c.String(gcloudFlagName))
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-	}
-	err = beforeValidating(c)
-	utils.ExitIfError(err)
-	return nil
-}
-
 func beforeServing(c *cli.Context) error {
-	err := beforeRunning(c)
+	visionAPI, _ = mybot.NewVisionMatcher(c.String(gcloudFlagName))
+	languageAPI, _ = mybot.NewLanguageMatcher(c.String(gcloudFlagName))
+
+	err := beforeValidating(c)
 	utils.ExitIfError(err)
 	for userID, data := range userSpecificDataMap {
 		startUserSpecificData(userID, data)

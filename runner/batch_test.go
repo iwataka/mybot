@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func Test_TwitterAPIIsAvailablt(t *testing.T) {
+func Test_TwitterAPIIsAvailable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var twitterAPIMock *mocks.MockTwitterAPI
 	var twitterAPI *mybot.TwitterAPI
@@ -43,24 +43,10 @@ func TestBatchRunnerUsedWithStream_IsAvailable(t *testing.T) {
 	require.NoError(t, r.IsAvailable())
 }
 
-func TestBatchRunnerUsedWithoutStream_IsAvailable(t *testing.T) {
-	twitterAPI := generateVerifiedTwitterAPI(t)
-	baseRunner := NewBatchRunnerUsedWithStream(twitterAPI, nil, nil, nil, nil)
-	r := NewBatchRunnerUsedWithoutStream(baseRunner)
-	require.NoError(t, r.IsAvailable())
-}
-
 func TestBatchRunnerUsedWithStream_Run(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	r := generateBatchRunnerUsedWithStream(t, ctrl)
-	require.NoError(t, r.Run())
-}
-
-func TestBatchRunnerUsedWithoutStream_Run(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	r := generateBatchRunnerUsedWithoutStream(t, ctrl)
 	require.NoError(t, r.Run())
 }
 
@@ -69,15 +55,6 @@ func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *B
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	registerProcessSearch(twitterAPIMock, slackAPIMock)
 	return generateBaseRunner(t, twitterAPIMock, slackAPIMock)
-}
-
-func generateBatchRunnerUsedWithoutStream(t *testing.T, ctrl *gomock.Controller) *BatchRunnerUsedWithoutStream {
-	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
-	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
-	registerProcessSearch(twitterAPIMock, slackAPIMock)
-	registerProcessTimeline(twitterAPIMock, slackAPIMock)
-	baseRunner := generateBaseRunner(t, twitterAPIMock, slackAPIMock)
-	return NewBatchRunnerUsedWithoutStream(baseRunner)
 }
 
 func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPIMock models.SlackAPI) *BatchRunnerUsedWithStream {
@@ -127,19 +104,6 @@ func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *m
 		twitterAPIMock.EXPECT().CreateCollection(gomock.Any(), gomock.Any()).Return(anaconda.CollectionShowResult{}, nil),
 		twitterAPIMock.EXPECT().AddEntryToCollection(gomock.Any(), gomock.Any(), gomock.Any()).Return(anaconda.CollectionEntryAddResult{}, nil),
 		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil),
-	)
-}
-
-func registerProcessTimeline(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *mocks.MockSlackAPI) {
-	tweet := anaconda.Tweet{
-		Text: "foo",
-		Id:   2,
-	}
-
-	gomock.InOrder(
-		twitterAPIMock.EXPECT().GetUserTimeline(gomock.Any()).Return([]anaconda.Tweet{tweet}, nil),
-		twitterAPIMock.EXPECT().GetUserTimeline(gomock.Any()).Return([]anaconda.Tweet{tweet}, nil),
-		twitterAPIMock.EXPECT().Retweet(gomock.Any(), gomock.Any()).Return(tweet, nil),
 	)
 }
 
