@@ -4,7 +4,7 @@
         <tbody>
             <tr>
                 {{{if eq .Type "twitter"}}}
-                <td rowspan="7" colspan="2">General</td>
+                <td rowspan="6" colspan="2">General</td>
                 {{{else if eq .Type "slack"}}}
                 <td rowspan="2" colspan="2">General</td>
                 {{{end}}}
@@ -24,12 +24,6 @@
                 <td>url patterns</td>
                 <td>
                     {{{listTextbox .Filter.URLPatterns (printf "%s%s" .Prefix ".filter.url_patterns") ""}}}
-                </td>
-            </tr>
-            <tr>
-                <td>retweeted ?</td>
-                <td>
-                    {{{boolSelectbox .Filter.Retweeted (printf "%s%s" .Prefix ".filter.retweeted")}}}
                 </td>
             </tr>
             <tr>
@@ -67,25 +61,25 @@
                 <td rowspan="4">Face</td>
                 <td>anger likelihood</td>
                 <td>
-                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.anger_likelihood`}}}" value="{{{.Filter.Vision.Face.AngerLikelihood}}}">
+                    {{{likelihoodMultiSelect .Filter.Vision.Face.AngerLikelihood (printf `%s%s` .Prefix `.filter.vision.face.anger_likelihood`) .Index}}}
                 </td>
             </tr>
             <tr>
                 <td>blurred likelihood</td>
                 <td>
-                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.blurred_likelihood`}}}"` value="{{{.Filter.Vision.Face.BlurredLikelihood}}}">
+                    {{{likelihoodMultiSelect .Filter.Vision.Face.BlurredLikelihood (printf `%s%s` .Prefix `.filter.vision.face.blurred_likelihood`) .Index}}}
                 </td>
             </tr>
             <tr>
                 <td>headwear likelihood</td>
                 <td>
-                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.headwear_likelihood`}}}" value="{{{.Filter.Vision.Face.HeadwearLikelihood}}}">
+                    {{{likelihoodMultiSelect .Filter.Vision.Face.HeadwearLikelihood (printf `%s%s` .Prefix `.filter.vision.face.headwear_likelihood`) .Index}}}
                 </td>
             </tr>
             <tr>
                 <td>joy likelihood</td>
                 <td>
-                    <input class="form-control" form="overwrite" type="text" name="{{{printf `%s%s` .Prefix `.filter.vision.face.joy_likelihood`}}}" value="{{{.Filter.Vision.Face.JoyLikelihood}}}">
+                    {{{likelihoodMultiSelect .Filter.Vision.Face.JoyLikelihood (printf `%s%s` .Prefix `.filter.vision.face.joy_likelihood`) .Index}}}
                 </td>
             </tr>
             <tr>

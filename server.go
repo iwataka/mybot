@@ -41,16 +41,17 @@ var (
 )
 
 var templateFuncMap = template.FuncMap{
-	"checkbox":            tmpl.Checkbox,
-	"boolSelectbox":       tmpl.BoolSelectbox,
-	"selectbox":           tmpl.Selectbox,
-	"listTextbox":         tmpl.ListTextbox,
-	"textboxOfFloat64Ptr": tmpl.TextboxOfFloat64Ptr,
-	"textboxOfIntPtr":     tmpl.TextboxOfIntPtr,
-	"newMap":              tmpl.NewMap,
-	"add":                 func(i1, i2 int) int { return i1 + i2 },
-	"replace":             func(s, old, new string) string { return strings.Replace(s, old, new, -1) },
-	"title":               func(s string) string { return strings.Title(s) },
+	"checkbox":              tmpl.Checkbox,
+	"boolSelectbox":         tmpl.BoolSelectbox,
+	"selectbox":             tmpl.Selectbox,
+	"listTextbox":           tmpl.ListTextbox,
+	"textboxOfFloat64Ptr":   tmpl.TextboxOfFloat64Ptr,
+	"textboxOfIntPtr":       tmpl.TextboxOfIntPtr,
+	"likelihoodMultiSelect": tmpl.LikelihoodMultiSelect,
+	"newMap":                tmpl.NewMap,
+	"add":                   func(i1, i2 int) int { return i1 + i2 },
+	"replace":               func(s, old, new string) string { return strings.Replace(s, old, new, -1) },
+	"title":                 func(s string) string { return strings.Title(s) },
 }
 
 // Authenticator is an implementation of models.Authenticator and provides some
@@ -410,6 +411,10 @@ type checkboxCounter struct {
 	extraCount int
 }
 
+func newCheckboxCounter(name string) checkboxCounter {
+	return checkboxCounter{name, 0}
+}
+
 func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bool) bool {
 	vs := val[c.name]
 	if len(vs) <= index {
@@ -468,38 +473,41 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	if err != nil {
 		return
 	}
-	val := r.MultipartForm.Value
 
-	err = setTimelinesToConfig(config, val)
+	err = setTimelinesToConfig(config, r)
 	if err != nil {
 		return
 	}
 
-	err = setFavoritesToConfig(config, val)
+	err = setFavoritesToConfig(config, r)
 	if err != nil {
 		return
 	}
 
-	err = setSearchesToConfig(config, val)
+	err = setSearchesToConfig(config, r)
 	if err != nil {
 		return
 	}
 
-	err = setMessagesToConfig(config, val)
+	err = setMessagesToConfig(config, r)
 	if err != nil {
 		return
 	}
 
-	config.SetPollingDuration(val["duration"][0])
+	config.SetPollingDuration(r.Form["duration"][0])
 
 	err = config.Validate()
 }
 
-func setTimelinesToConfig(config mybot.Config, val map[string][]string) error {
+func setTimelinesToConfig(config mybot.Config, r *http.Request) error {
+	val := r.MultipartForm.Value
+
 	prefix := "twitter.timelines"
 	deletedFlags := val[prefix+".deleted"]
 	timelines := []mybot.TimelineConfig{}
 	actions, err := postConfigForActions(val, prefix, deletedFlags)
+	excludeRepliesCounter := newCheckboxCounter(prefix + ".exclude_replies")
+	includeRtsCounter := newCheckboxCounter(prefix + ".include_rts")
 	if err != nil {
 		return err
 	}
@@ -510,12 +518,12 @@ func setTimelinesToConfig(config mybot.Config, val map[string][]string) error {
 		timeline := mybot.NewTimelineConfig()
 		timeline.Name = val[prefix+".name"][i]
 		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
-		timeline.ExcludeReplies = tmpl.GetBoolSelectboxValue(val, i, prefix+".exclude_replies")
-		timeline.IncludeRts = tmpl.GetBoolSelectboxValue(val, i, prefix+".include_rts")
+		timeline.ExcludeReplies = excludeRepliesCounter.returnValue(i, val, false)
+		timeline.IncludeRts = includeRtsCounter.returnValue(i, val, false)
 		if timeline.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return err
 		}
-		if timeline.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+		if timeline.Filter, err = postConfigForFilter(r, i, prefix); err != nil {
 			return err
 		}
 		timeline.Action = actions[i]
@@ -525,7 +533,9 @@ func setTimelinesToConfig(config mybot.Config, val map[string][]string) error {
 	return nil
 }
 
-func setFavoritesToConfig(config mybot.Config, val map[string][]string) error {
+func setFavoritesToConfig(config mybot.Config, r *http.Request) error {
+	val := r.MultipartForm.Value
+
 	prefix := "twitter.favorites"
 	deletedFlags := val[prefix+".deleted"]
 	favorites := []mybot.FavoriteConfig{}
@@ -543,7 +553,7 @@ func setFavoritesToConfig(config mybot.Config, val map[string][]string) error {
 		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return err
 		}
-		if favorite.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+		if favorite.Filter, err = postConfigForFilter(r, i, prefix); err != nil {
 			return err
 		}
 		favorite.Action = actions[i]
@@ -553,7 +563,9 @@ func setFavoritesToConfig(config mybot.Config, val map[string][]string) error {
 	return nil
 }
 
-func setSearchesToConfig(config mybot.Config, val map[string][]string) error {
+func setSearchesToConfig(config mybot.Config, r *http.Request) error {
+	val := r.MultipartForm.Value
+
 	prefix := "twitter.searches"
 	deletedFlags := val[prefix+".deleted"]
 	searches := []mybot.SearchConfig{}
@@ -572,7 +584,7 @@ func setSearchesToConfig(config mybot.Config, val map[string][]string) error {
 		if search.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
 			return err
 		}
-		if search.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+		if search.Filter, err = postConfigForFilter(r, i, prefix); err != nil {
 			return err
 		}
 		search.Action = actions[i]
@@ -582,7 +594,9 @@ func setSearchesToConfig(config mybot.Config, val map[string][]string) error {
 	return nil
 }
 
-func setMessagesToConfig(config mybot.Config, val map[string][]string) error {
+func setMessagesToConfig(config mybot.Config, r *http.Request) error {
+	val := r.MultipartForm.Value
+
 	prefix := "slack.messages"
 	deletedFlags := val[prefix+".deleted"]
 	msgs := []mybot.MessageConfig{}
@@ -597,7 +611,7 @@ func setMessagesToConfig(config mybot.Config, val map[string][]string) error {
 		msg := mybot.NewMessageConfig()
 		msg.Name = val[prefix+".name"][i]
 		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
-		if msg.Filter, err = postConfigForFilter(val, i, prefix); err != nil {
+		if msg.Filter, err = postConfigForFilter(r, i, prefix); err != nil {
 			return err
 		}
 		msg.Action = actions[i]
@@ -607,13 +621,14 @@ func setMessagesToConfig(config mybot.Config, val map[string][]string) error {
 	return nil
 }
 
-func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.Filter, error) {
+func postConfigForFilter(r *http.Request, i int, prefix string) (mybot.Filter, error) {
+	val := r.MultipartForm.Value
+
 	prefix = prefix + ".filter."
 	filter := mybot.NewFilter()
 	filter.Patterns = tmpl.GetListTextboxValue(val, i, prefix+"patterns")
 	filter.URLPatterns = tmpl.GetListTextboxValue(val, i, prefix+"url_patterns")
 	filter.HasMedia = tmpl.GetBoolSelectboxValue(val, i, prefix+"has_media")
-	filter.Retweeted = tmpl.GetBoolSelectboxValue(val, i, prefix+"retweeted")
 	fThreshold, err := tmpl.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
 		return mybot.NewFilter(), utils.WithStack(err)
@@ -626,10 +641,10 @@ func postConfigForFilter(val map[string][]string, i int, prefix string) (mybot.F
 	filter.RetweetedThreshold = rThreshold
 	filter.Lang = tmpl.GetString(val, prefix+"lang", i, "")
 	filter.Vision.Label = tmpl.GetListTextboxValue(val, i, prefix+"vision.label")
-	filter.Vision.Face.AngerLikelihood = tmpl.GetString(val, prefix+"vision.face.anger_likelihood", i, "")
-	filter.Vision.Face.BlurredLikelihood = tmpl.GetString(val, prefix+"vision.face.blurred_likelihood", i, "")
-	filter.Vision.Face.HeadwearLikelihood = tmpl.GetString(val, prefix+"vision.face.headwear_likelihood", i, "")
-	filter.Vision.Face.JoyLikelihood = tmpl.GetString(val, prefix+"vision.face.joy_likelihood", i, "")
+	filter.Vision.Face.AngerLikelihood = tmpl.GetLikelihood(r, prefix+"vision.face.anger_likelihood", i, "")
+	filter.Vision.Face.BlurredLikelihood = tmpl.GetLikelihood(r, prefix+"vision.face.blurred_likelihood", i, "")
+	filter.Vision.Face.HeadwearLikelihood = tmpl.GetLikelihood(r, prefix+"vision.face.headwear_likelihood", i, "")
+	filter.Vision.Face.JoyLikelihood = tmpl.GetLikelihood(r, prefix+"vision.face.joy_likelihood", i, "")
 	filter.Vision.Text = tmpl.GetListTextboxValue(val, i, prefix+"vision.text")
 	filter.Vision.Landmark = tmpl.GetListTextboxValue(val, i, prefix+"vision.landmark")
 	filter.Vision.Logo = tmpl.GetListTextboxValue(val, i, prefix+"vision.logo")
@@ -652,11 +667,11 @@ func postConfigForActions(
 	deletedFlags []string,
 ) ([]data.Action, error) {
 	prefix = prefix + ".action."
-	tweetCounter := checkboxCounter{prefix + "twitter.tweet", 0}
-	retweetCounter := checkboxCounter{prefix + "twitter.retweet", 0}
-	favoriteCounter := checkboxCounter{prefix + "twitter.favorite", 0}
-	pinCounter := checkboxCounter{prefix + "slack.pin", 0}
-	starCounter := checkboxCounter{prefix + "slack.star", 0}
+	tweetCounter := newCheckboxCounter(prefix + "twitter.tweet")
+	retweetCounter := newCheckboxCounter(prefix + "twitter.retweet")
+	favoriteCounter := newCheckboxCounter(prefix + "twitter.favorite")
+	pinCounter := newCheckboxCounter(prefix + "slack.pin")
+	starCounter := newCheckboxCounter(prefix + "slack.star")
 	results := []data.Action{}
 	for i := 0; i < len(deletedFlags); i++ {
 		a, err := postConfigForAction(val, i, prefix)

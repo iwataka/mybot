@@ -339,10 +339,10 @@ func (l *TwitterUserListener) Listen(
 				}
 
 				for _, timeline := range timelines {
-					if timeline.ExcludeReplies != nil && *timeline.ExcludeReplies && c.InReplyToScreenName != "" {
+					if timeline.ExcludeReplies && c.InReplyToScreenName != "" {
 						continue
 					}
-					if timeline.IncludeRts != nil && !*timeline.IncludeRts && c.RetweetedStatus != nil {
+					if timeline.IncludeRts && c.RetweetedStatus != nil {
 						continue
 					}
 					match, err := timeline.Filter.CheckTweet(c, vis, lang, cache)

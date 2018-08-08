@@ -73,9 +73,6 @@ func (c Filter) CheckTweet(
 	if c.HasMedia != nil && *c.HasMedia != (len(t.Entities.Media) != 0) {
 		return false, nil
 	}
-	if c.Retweeted != nil && *c.Retweeted != (t.RetweetedStatus != nil) {
-		return false, nil
-	}
 	if c.FavoriteThreshold != nil && *c.FavoriteThreshold > t.FavoriteCount {
 		return false, nil
 	}

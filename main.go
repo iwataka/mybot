@@ -23,7 +23,7 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-//go:generate go-bindata -o ./assets/bindata.go -pkg assets assets/js/... assets/css/... assets/tmpl/...
+//go:generate go-bindata -nometadata -o ./assets/bindata.go -pkg assets assets/js/... assets/css/... assets/tmpl/...
 //go:generate mockgen -source=models/slack.go -destination=mocks/slack.go -package=mocks
 //go:generate mockgen -source=models/twitter.go -destination=mocks/twitter.go -package=mocks
 //go:generate mockgen -source=models/auth.go -destination=mocks/auth.go -package=mocks

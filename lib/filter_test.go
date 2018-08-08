@@ -141,20 +141,6 @@ func TestFilter_CheckTweet_NotHasMedia(t *testing.T) {
 	require.False(t, match)
 }
 
-func TestFilter_CheckTweet_NotRetweeted(t *testing.T) {
-	tweet := anaconda.Tweet{}
-	filter := &Filter{}
-	filter.Retweeted = utils.TruePtr()
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	cache := mocks.NewMockCache(ctrl)
-
-	match, err := filter.CheckTweet(tweet, nil, nil, cache)
-	require.NoError(t, err)
-	require.False(t, match)
-}
-
 func TestFilter_CheckTweet_FavoriteThresholdExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		FavoriteCount: 100,

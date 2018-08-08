@@ -7,7 +7,6 @@ debug = false
 name = "Golang Release"
 screen_names = ["golang"]
 [twitter.timelines.filter]
-retweeted = false
 lang = "en"
 patterns = ["is released!", "#golang"]
 [twitter.timelines.filter.vision]
@@ -40,6 +39,7 @@ retweet = true
 [[twitter.searches]]
 name = "foo bar"
 queries = ["foo", "bar"]
+result_type = "recent"
 [twitter.searches.filter]
 patterns = ["foo"]
 retweeted_threshold = 100

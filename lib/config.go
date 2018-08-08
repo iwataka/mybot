@@ -354,7 +354,8 @@ type TimelineConfig struct {
 // non-nil filter and action.
 func NewTimelineConfig() TimelineConfig {
 	return TimelineConfig{
-		Source: NewSource(),
+		Source:             NewSource(),
+		TimelineProperties: models.NewTimelineProperties(),
 	}
 }
 
@@ -381,7 +382,8 @@ type FavoriteConfig struct {
 // non-nil filter and action.
 func NewFavoriteConfig() FavoriteConfig {
 	return FavoriteConfig{
-		Source: NewSource(),
+		Source:             NewSource(),
+		FavoriteProperties: models.NewFavoriteProperties(),
 	}
 }
 
@@ -407,7 +409,8 @@ type SearchConfig struct {
 // non-nil filter and action.
 func NewSearchConfig() SearchConfig {
 	return SearchConfig{
-		Source: NewSource(),
+		Source:           NewSource(),
+		SearchProperties: models.NewSearchProperties(),
 	}
 }
 

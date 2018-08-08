@@ -28,3 +28,11 @@ var typeaheadSettings = {
 }
 
 $('input.typeahead-tagsinput').tagsinput({typeaheadjs: typeaheadSettings});
+
+$(document).ready(function() {
+  $('select.bootstrap-multiselect').multiselect({
+    includeSelectAllOption: true,
+    enableFiltering: true,
+    enableCaseInsensitiveFiltering: true
+  });
+});

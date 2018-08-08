@@ -28,7 +28,6 @@ func Test_NewConfig(t *testing.T) {
 	require.Equal(t, "golang", a.ScreenNames[0])
 	f := a.Filter
 	require.Equal(t, "is released!", f.Patterns[0])
-	require.False(t, *f.Retweeted)
 	require.Equal(t, "en", f.Lang)
 	require.Equal(t, "cartoon|clip art|artwork", f.Vision.Label[0])
 	require.True(t, a.Action.Twitter.Retweet)

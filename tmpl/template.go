@@ -8,6 +8,7 @@ import (
 
 	"fmt"
 	"html/template"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -33,8 +34,8 @@ func Checkbox(checked bool, name string) template.HTML {
 // nil, undefined should be selected by default.
 func BoolSelectbox(selected *bool, name string) template.HTML {
 	format := `<select form="overwrite" name="%s">` +
-		`<option value="true" %s>true</option>` +
-		`<option value="false" %s>false</option>` +
+		`<option value="true" %s>yes</option>` +
+		`<option value="false" %s>no</option>` +
 		`<option value="undefined" %s>undefined</option>` +
 		`</select>`
 	if selected == nil {
@@ -179,6 +180,38 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	}
 	result := int(i)
 	return &result, nil
+}
+
+func LikelihoodMultiSelect(val string, name string, index int) template.HTML {
+	result := fmt.Sprintf(`<select form="overwrite" class="bootstrap-multiselect" name="%s%d[]" multiple>`, name, index)
+	likelihoods := []string{
+		"VERY_LIKELY",
+		"LIKELY",
+		"POSSIBLE",
+		"UNLIKELY",
+		"VERY_UNLIKELY",
+		"UNKNOWN",
+	}
+	vs := strings.Split(val, "|")
+	for _, likelihood := range likelihoods {
+		selected := ""
+		for _, v := range vs {
+			if likelihood == v {
+				selected = "selected"
+			}
+		}
+		result += fmt.Sprintf(`<option value="%s" %s>%s</option>`, likelihood, selected, likelihood)
+	}
+	result += "</select>"
+	return template.HTML(result)
+}
+
+func GetLikelihood(r *http.Request, name string, index int, def string) string {
+	vs, exists := r.Form[name+strconv.Itoa(index)+"[]"]
+	if !exists || index >= len(vs) {
+		return def
+	}
+	return strings.Join(vs, "|")
 }
 
 // GetString just returns a string value from specified user html form input.

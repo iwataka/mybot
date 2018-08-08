@@ -13,7 +13,7 @@
                     <h3>Source</h3>
                     {{{template "source_config" (newMap "Type" .Type "Source" .ConfigItem "Prefix" .Prefix)}}}
                     <h3>Filter</h3>
-                    {{{template "filter_config" (newMap "Type" .Type "Filter" .ConfigItem.Filter "Prefix" .Prefix)}}}
+                    {{{template "filter_config" (newMap "Type" .Type "Filter" .ConfigItem.Filter "Prefix" .Prefix "Index" .Index)}}}
                     <h3>Action</h3>
                     {{{template "action_config" (newMap "Type" .Type "Action" .ConfigItem.Action "Prefix" .Prefix)}}}
                 </div>

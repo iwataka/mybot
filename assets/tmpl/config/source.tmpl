@@ -23,13 +23,13 @@
                     <tr>
                         <td>exclude replies ?</td>
                         <td>
-                            {{{boolSelectbox .Source.ExcludeReplies (printf "%s%s" .Prefix ".exclude_replies")}}}
+                            {{{checkbox .Source.ExcludeReplies (printf "%s%s" .Prefix ".exclude_replies")}}}
                         </td>
                     </tr>
                     <tr>
                         <td>include retweets ?</td>
                         <td>
-                            {{{boolSelectbox .Source.IncludeRts (printf "%s%s" .Prefix ".include_rts")}}}
+                            {{{checkbox .Source.IncludeRts (printf "%s%s" .Prefix ".include_rts")}}}
                         </td>
                     </tr>
                 {{{end}}}
@@ -37,7 +37,7 @@
                     <tr>
                         <td>result type</td>
                         <td>
-                            {{{selectbox .Source.ResultType (printf "%s%s" .Prefix ".result_type") "" "recent" "mixed" "popular"}}}
+                            {{{selectbox .Source.ResultType (printf "%s%s" .Prefix ".result_type") "recent" "mixed" "popular"}}}
                         </td>
                     </tr>
                 {{{end}}}
