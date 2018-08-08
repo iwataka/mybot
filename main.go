@@ -40,40 +40,38 @@ var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
 
 	// Global-scope data
-	twitterApp               oauth.OAuthApp
-	slackApp                 oauth.OAuthApp
-	visionAPI                mybot.VisionMatcher
-	languageAPI              mybot.LanguageMatcher
-	cliContext               *cli.Context
-	dbSession                *mgo.Session
-	serverSession            sessions.Store
-	sessionDomain            string
-	accessControlAllowOrigin string
+	twitterApp    oauth.OAuthApp
+	slackApp      oauth.OAuthApp
+	visionAPI     mybot.VisionMatcher
+	languageAPI   mybot.LanguageMatcher
+	cliContext    *cli.Context
+	dbSession     *mgo.Session
+	serverSession sessions.Store
+	sessionDomain string
 )
 
 const (
-	configFlagName                   = "config"
-	cacheFlagName                    = "cache"
-	gcloudFlagName                   = "gcloud"
-	twitterFlagName                  = "twitter-auth"
-	slackFlagName                    = "slack-auth"
-	certFlagName                     = "cert"
-	keyFlagName                      = "key"
-	hostFlagName                     = "host"
-	portFlagName                     = "port"
-	dbAddrFlagName                   = "db-addr"
-	dbUserFlagName                   = "db-user"
-	dbPassFlagName                   = "db-passwd"
-	dbNameFlagName                   = "db-name"
-	twitterConsumerKeyFlagName       = "twitter-consumer-key"
-	twitterConsumerSecretFlagName    = "twitter-consumer-secret"
-	twitterConsumerFileFlagName      = "twitter-app"
-	slackClientIDFlagName            = "slack-client-id"
-	slackClientSecretFlagName        = "slack-client-secret"
-	slackClientFileFlagName          = "slack-app"
-	sessionDomainFlagName            = "session-domain"
-	apiFlagName                      = "api"
-	accessControlAllowOriginFlagName = "access-control-allow-origin"
+	configFlagName                = "config"
+	cacheFlagName                 = "cache"
+	gcloudFlagName                = "gcloud"
+	twitterFlagName               = "twitter-auth"
+	slackFlagName                 = "slack-auth"
+	certFlagName                  = "cert"
+	keyFlagName                   = "key"
+	hostFlagName                  = "host"
+	portFlagName                  = "port"
+	dbAddrFlagName                = "db-addr"
+	dbUserFlagName                = "db-user"
+	dbPassFlagName                = "db-passwd"
+	dbNameFlagName                = "db-name"
+	twitterConsumerKeyFlagName    = "twitter-consumer-key"
+	twitterConsumerSecretFlagName = "twitter-consumer-secret"
+	twitterConsumerFileFlagName   = "twitter-app"
+	slackClientIDFlagName         = "slack-client-id"
+	slackClientSecretFlagName     = "slack-client-secret"
+	slackClientFileFlagName       = "slack-app"
+	sessionDomainFlagName         = "session-domain"
+	apiFlagName                   = "api"
 )
 
 const (
@@ -237,14 +235,6 @@ func main() {
 		Usage: "Use API to validate configuration",
 	}
 
-	accessControlAllowOriginFlag := cli.StringFlag{
-		Name:        accessControlAllowOriginFlagName,
-		Value:       "",
-		Usage:       "Access Control Allow Origin value for API endpoints",
-		EnvVar:      "MYBOT_ACCESS_CONTROL_ALLOW_ORIGIN",
-		Destination: &accessControlAllowOrigin,
-	}
-
 	commonFlags := []cli.Flag{
 		configFlag,
 		cacheFlag,
@@ -269,7 +259,6 @@ func main() {
 		hostFlag,
 		portFlag,
 		sessionDomainFlag,
-		accessControlAllowOriginFlag,
 	}
 	// All `run` flags should be `serve` flag
 	serveFlags = append(serveFlags, commonFlags...)
@@ -428,7 +417,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		WorkerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name()},
 	)
 
 	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
@@ -437,7 +426,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		WorkerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name()},
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
@@ -447,7 +436,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		WorkerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name()},
 	)
 
 	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
@@ -456,7 +445,7 @@ func startUserSpecificData(userID string, data *userSpecificData) {
 		data.workerChans,
 		data.statuses,
 		w,
-		WorkerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name()},
 	)
 }
 

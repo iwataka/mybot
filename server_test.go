@@ -215,37 +215,6 @@ func TestGetSetupTwitterIfAssetsNotExist(t *testing.T) {
 	testIfAssetsNotExist(t, TestGetSetupTwitter)
 }
 
-func TestGetConfigJSON(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
-	tmpAuth := authenticator
-	defer func() { authenticator = tmpAuth }()
-	authenticator = authMock
-
-	s := httptest.NewServer(http.HandlerFunc(configJSONHandler))
-	defer s.Close()
-
-	res, err := http.Get(s.URL)
-	require.NoError(t, err)
-
-	err = checkHTTPResponse(res)
-	require.NoError(t, err)
-
-	bs, err := ioutil.ReadAll(res.Body)
-	require.NoError(t, err)
-
-	cfg, err := mybot.NewFileConfig("")
-	require.NoError(t, err)
-
-	err = cfg.Unmarshal(".json", bs)
-	require.NoError(t, err)
-
-	cfgProps := cfg.GetProperties()
-	configProps := serverTestUserSpecificData.config.GetProperties()
-	require.Nil(t, deep.Equal(cfgProps, configProps))
-}
-
 func TestGetConfigFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)

@@ -181,14 +181,8 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/auth/slack/callback", getAuthSlackCallback)
 	http.HandleFunc("/setup/", setupHandler)
 	http.HandleFunc("/logout/twitter/", twitterLogoutHandler)
-
-	// API endpoints
-	http.HandleFunc("/config/json/", wrapHandler(configJSONHandler))
-	http.HandleFunc("/setting/", wrapHandler(settingHandler))
+	// For Twitter user auto-completion usage
 	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler))
-	http.HandleFunc("/twitter/favorites/list", wrapHandler(twitterFavoritesListHandler))
-	http.HandleFunc("/twitter/search", wrapHandler(twitterSearchHandler))
-	http.HandleFunc("/twitter/collections/list/", wrapHandler(twitterCollectionListByUserID))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -251,18 +245,23 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, data.statuses)
+		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, twitterUser, data.statuses)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, statuses map[int]bool) {
-	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func getIndex(
+	w http.ResponseWriter,
+	r *http.Request,
+	cache data.Cache,
+	twitterAPI *mybot.TwitterAPI,
+	slackAPI *mybot.SlackAPI,
+	twitterUser goth.User,
+	statuses map[int]bool,
+) {
+	slackTeam, slackURL := getSlackInfo(slackAPI)
+	imgURL, imgSrc, imgAnalysisResult, imgAnalysisDate := imageAnalysis(cache)
 
 	data := &struct {
 		NavbarName               string
@@ -280,18 +279,18 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 		SlackListenerStatus      bool
 	}{
 		"",
-		setting.TwitterName,
-		setting.SlackTeam,
-		setting.SlackURL,
-		setting.GoogleEnabled,
-		setting.Image.URL,
-		setting.Image.Src,
-		setting.Image.AnalysisResult,
-		setting.Image.AnalysisDate,
-		setting.Status.TwitterDMListener,
-		setting.Status.TwitterUserListener,
-		setting.Status.TwitterPeriodicJob,
-		setting.Status.SlackListener,
+		twitterUser.NickName,
+		slackTeam,
+		slackURL,
+		googleEnabled(),
+		imgURL,
+		imgSrc,
+		imgAnalysisResult,
+		imgAnalysisDate,
+		statuses[twitterDMRoutineKey],
+		statuses[twitterUserRoutineKey],
+		statuses[twitterPeriodicRoutineKey],
+		statuses[slackRoutineKey],
 	}
 
 	buf := new(bytes.Buffer)
@@ -312,122 +311,7 @@ func getIndex(w http.ResponseWriter, r *http.Request, cache data.Cache, twitterA
 	}
 }
 
-func twitterCollectionListByUserID(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Redirect(w, r, "/setup/", http.StatusSeeOther)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	switch r.Method {
-	case http.MethodGet:
-		getTwitterCollectionListByUserID(w, r, data.twitterAPI)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func getTwitterCollectionListByUserID(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
-	user, err := twitterAPI.GetSelf()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	res, err := twitterAPI.BaseAPI().GetCollectionListByUserId(user.Id, nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bs, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func settingHandler(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	switch r.Method {
-	case http.MethodGet:
-		getSetting(w, r, data.twitterAPI, data.slackAPI, data.cache, data.statuses)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func getSetting(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) {
-	setting, err := generateSetting(twitterAPI, slackAPI, cache, statuses)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bs, err := json.Marshal(setting)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-// SettingResponse is a container of fields required to render various pages.
-type SettingResponse struct {
-	TwitterName   string         `json:"twitter_name" toml:"twitter_name" bson:"twitter_name"`
-	SlackTeam     string         `json:"slack_team" toml:"slack_team" bson:"slack_team"`
-	SlackURL      string         `json:"slack_url" toml:"slack_url" bson:"slack_url"`
-	GoogleEnabled bool           `json:"google_enabled" toml:"google_enabled" bson:"google_enabled"`
-	Status        StatusResponse `json:"status" toml:"status" bson:"status"`
-	Image         ImageResponse  `json:"image" toml:"image" bson:"image"`
-}
-
-// StatusResponse is a container of worker statuses to be rendered to web pages.
-type StatusResponse struct {
-	TwitterDMListener   bool `json:"twitter_dm_listener" toml:"twitter_dm_listener" bson:"twitter_dm_listener"`
-	TwitterUserListener bool `json:"twitter_user_listener" toml:"twitter_user_listener" bson:"twitter_user_listener"`
-	TwitterPeriodicJob  bool `json:"twitter_periodic_job" toml:"twitter_periodic_job" bson:"twitter_periodic_job"`
-	SlackListener       bool `json:"slack_listener" toml:"slack_listener" bson:"slack_listener"`
-}
-
-// ImageResponse is a container of image caches to be rendered to web pages.
-type ImageResponse struct {
-	URL            string `json:"url" toml:"url" bson:"url"`
-	Src            string `json:"src" toml:"src" bson:"src"`
-	AnalysisResult string `json:"analysis_result" toml:"analysis_result" bson:"analysis_result"`
-	AnalysisDate   string `json:"analysis_date" toml:"analysis_date" bson:"analysis_date"`
-}
-
-func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cache data.Cache, statuses map[int]bool) (*SettingResponse, error) {
-	twitterScreenName := ""
-	twitterUser, err := twitterAPI.GetSelf()
-	if err == nil {
-		twitterScreenName = twitterUser.ScreenName
-	}
-	slackTeam, slackURL := getSlackInfo(slackAPI)
-
-	status := StatusResponse{
-		TwitterDMListener:   statuses[twitterDMRoutineKey],
-		TwitterUserListener: statuses[twitterUserRoutineKey],
-		TwitterPeriodicJob:  statuses[twitterPeriodicRoutineKey],
-		SlackListener:       statuses[slackRoutineKey],
-	}
-
+func imageAnalysis(cache data.Cache) (string, string, string, string) {
 	imageSource := ""
 	imageURL := ""
 	imageAnalysisResult := ""
@@ -445,21 +329,7 @@ func generateSetting(twitterAPI *mybot.TwitterAPI, slackAPI *mybot.SlackAPI, cac
 		}
 		imageAnalysisDate = imgCache.AnalysisDate
 	}
-	img := ImageResponse{
-		URL:            imageURL,
-		Src:            imageSource,
-		AnalysisResult: imageAnalysisResult,
-		AnalysisDate:   imageAnalysisDate,
-	}
-
-	return &SettingResponse{
-		TwitterName:   twitterScreenName,
-		SlackTeam:     slackTeam,
-		SlackURL:      slackURL,
-		GoogleEnabled: googleEnabled(),
-		Status:        status,
-		Image:         img,
-	}, nil
+	return imageURL, imageSource, imageAnalysisResult, imageAnalysisDate
 }
 
 func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
@@ -958,78 +828,6 @@ func addMessageConfig(config mybot.Config) {
 	config.AddSlackMessage(mybot.NewMessageConfig())
 }
 
-func configJSONHandler(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	switch r.Method {
-	case http.MethodPost:
-		postConfigJSON(w, r, data.config)
-	case http.MethodGet:
-		getConfigJSON(w, r, data.config)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func postConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
-	var err error
-	defer func() {
-		r.Body.Close()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}()
-
-	var bs []byte
-	bs, err = ioutil.ReadAll(r.Body)
-	if err != nil {
-		return
-	}
-	err = config.Unmarshal(".json", bs)
-	if err != nil {
-		return
-	}
-	err = config.Validate()
-	if err != nil {
-		config.Load()
-		return
-	}
-	err = config.Save()
-	if err != nil {
-		return
-	}
-}
-
-func getConfigJSON(w http.ResponseWriter, r *http.Request, config mybot.Config) {
-	var err error
-	defer func() {
-		r.Body.Close()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-	}()
-
-	var bs []byte
-	bs, err = config.Marshal("  ", ".json")
-	if err != nil {
-		return
-	}
-	_, err = w.Write(bs)
-	if err != nil {
-		return
-	}
-}
-
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
@@ -1257,7 +1055,6 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 }
 
 func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
 	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1282,88 +1079,6 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *my
 	searchTerm := vals.Get("q")
 	vals.Del("q")
 	res, err := twitterAPI.GetUserSearch(searchTerm, vals)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bs, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func twitterFavoritesListHandler(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	switch r.Method {
-	case http.MethodGet:
-		getTwitterFavoritesList(w, r, data.twitterAPI)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func getTwitterFavoritesList(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
-	vals, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	res, err := twitterAPI.GetFavorites(vals)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bs, err := json.Marshal(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bs)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func twitterSearchHandler(w http.ResponseWriter, r *http.Request) {
-	setCORS(w)
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
-	switch r.Method {
-	case http.MethodGet:
-		getTwitterSearch(w, r, data.twitterAPI)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func getTwitterSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
-	vals, err := url.ParseQuery(r.URL.RawQuery)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	searchTerm := vals.Get("q")
-	vals.Del("q")
-	res, err := twitterAPI.GetSearch(searchTerm, vals)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1490,14 +1205,6 @@ func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {
 		}
 	}
 	return "", ""
-}
-
-func setCORS(w http.ResponseWriter) {
-	if accessControlAllowOrigin != "" {
-		w.Header().Set("Access-Control-Allow-Origin", accessControlAllowOrigin)
-		w.Header().Set("Access-Control-Allow-Credentials", trueValue)
-		w.Header().Set("Content-Type", "text/plain")
-	}
 }
 
 func googleEnabled() bool {

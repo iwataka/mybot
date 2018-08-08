@@ -14,11 +14,11 @@ import (
 	"github.com/iwataka/mybot/worker"
 )
 
-type WorkerMessageLogger struct {
+type workerMessageLogger struct {
 	workerID string
 }
 
-func (h WorkerMessageLogger) Handle(msg interface{}) error {
+func (h workerMessageLogger) Handle(msg interface{}) error {
 	logMessage := ""
 	switch m := msg.(type) {
 	case worker.WorkerStatus:
@@ -44,35 +44,55 @@ func activateWorkerAndStart(
 	// Worker manager process
 	ch, outChan := worker.ActivateWorker(w, time.Minute)
 	workerChans[key] = ch
+
 	// Process handling logs from the above worker manager
 	go func() {
 		for msg := range outChan {
-			switch m := msg.(type) {
-			case worker.WorkerStatus:
-				switch m {
-				case worker.StatusStarted:
-					statuses[key] = true
-				case worker.StatusStopped:
-					statuses[key] = false
-				}
-			}
-			if msgHandler != nil {
-				msgHandler.Handle(msg)
-			}
+			handleWorkerMessage(msg, statuses, key, msgHandler)
 		}
 	}()
+
 	// Process sending ping to worker manager priodically
 	go func() {
-		ticker := time.NewTicker(time.Minute * 10)
+		timeout := time.Minute
+		ticker := time.NewTicker(timeout * 10)
 		for range ticker.C {
 			select {
 			case ch <- worker.NewWorkerSignal(worker.PingSignal):
-			case <-time.After(time.Minute):
-				log.Printf("Failed to ping worker manager process (timeout: 1m)\n")
+			case <-time.After(timeout):
+				msg := fmt.Sprintf("Failed to ping worker manager process (timeout: %s)", timeout)
+				select {
+				case outChan <- msg:
+				case <-time.After(timeout):
+				}
 			}
 		}
 	}()
+
 	ch <- worker.NewWorkerSignal(worker.StartSignal)
+}
+
+func handleWorkerMessage(
+	msg interface{},
+	statuses map[int]bool,
+	key int,
+	msgHandler models.WorkerMessageHandler,
+) {
+	switch m := msg.(type) {
+	case worker.WorkerStatus:
+		switch m {
+		case worker.StatusStarted:
+			statuses[key] = true
+		case worker.StatusStopped:
+			statuses[key] = false
+		}
+	}
+	if msgHandler != nil {
+		err := msgHandler.Handle(msg)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func reloadWorkers(userID string) {

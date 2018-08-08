@@ -96,7 +96,7 @@ func assetsJsConfig_afterJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/js/config_after.js", size: 846, mode: os.FileMode(420), modTime: time.Unix(1530108596, 0)}
+	info := bindataFileInfo{name: "assets/js/config_after.js", size: 846, mode: os.FileMode(420), modTime: time.Unix(1533735954, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -176,7 +176,7 @@ func assetsTmplConfigFilterTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5615, mode: os.FileMode(420), modTime: time.Unix(1530371125, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/filter.tmpl", size: 5615, mode: os.FileMode(420), modTime: time.Unix(1533735954, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -216,7 +216,7 @@ func assetsTmplConfigModalTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/modal.tmpl", size: 2391, mode: os.FileMode(420), modTime: time.Unix(1530370861, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/modal.tmpl", size: 2391, mode: os.FileMode(420), modTime: time.Unix(1533735954, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -236,7 +236,7 @@ func assetsTmplConfigSourceTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/config/source.tmpl", size: 2458, mode: os.FileMode(420), modTime: time.Unix(1530370965, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/config/source.tmpl", size: 2458, mode: os.FileMode(420), modTime: time.Unix(1533735954, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -276,7 +276,7 @@ func assetsTmplHeaderTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1600, mode: os.FileMode(420), modTime: time.Unix(1529763681, 0)}
+	info := bindataFileInfo{name: "assets/tmpl/header.tmpl", size: 1600, mode: os.FileMode(420), modTime: time.Unix(1533735954, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
