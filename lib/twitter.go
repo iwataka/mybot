@@ -99,26 +99,12 @@ func (a *TwitterAPI) ProcessFavorites(
 	slack *SlackAPI,
 	action data.Action,
 ) ([]anaconda.Tweet, error) {
-	latestID := a.cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
-	if latestID > 0 {
-		v.Set("since_id", fmt.Sprintf("%d", latestID))
-	} else {
-		// If the latest favorite ID doesn't exist, this fetches just
-		// the latest tweet and store that ID.
-		v.Set("count", "1")
-	}
 	tweets, err := a.api.GetFavorites(v)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
-	var pp TwitterPostProcessor
-	if c.ShouldRepeat() {
-		pp = &TwitterPostProcessorEach{action, a.cache}
-	} else {
-		pp = &TwitterPostProcessorTop{action, name, a.cache}
-	}
-	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
+	result, err := a.processTweets(tweets, c, vision, lang, slack, action, a.cache)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -140,47 +126,11 @@ func (a *TwitterAPI) ProcessSearch(
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
-	pp := &TwitterPostProcessorEach{action, a.cache}
-	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
+	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, a.cache)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
 	return result, utils.WithStack(err)
-}
-
-type (
-	TwitterPostProcessor interface {
-		Process(anaconda.Tweet, bool) error
-	}
-	TwitterPostProcessorTop struct {
-		action     data.Action
-		screenName string
-		cache      data.Cache
-	}
-	TwitterPostProcessorEach struct {
-		action data.Action
-		cache  data.Cache
-	}
-)
-
-func (p *TwitterPostProcessorTop) Process(t anaconda.Tweet, match bool) error {
-	id := p.cache.GetLatestTweetID(p.screenName)
-	if t.Id > id {
-		p.cache.SetLatestTweetID(p.screenName, t.Id)
-	}
-	if match {
-		ac := p.cache.GetTweetAction(t.Id)
-		p.cache.SetTweetAction(t.Id, ac.Add(p.action))
-	}
-	return nil
-}
-
-func (p *TwitterPostProcessorEach) Process(t anaconda.Tweet, match bool) error {
-	if match {
-		ac := p.cache.GetTweetAction(t.Id)
-		p.cache.SetTweetAction(t.Id, ac.Add(p.action))
-	}
-	return nil
 }
 
 func (a *TwitterAPI) processTweets(
@@ -190,7 +140,7 @@ func (a *TwitterAPI) processTweets(
 	l LanguageMatcher,
 	slack *SlackAPI,
 	action data.Action,
-	pp TwitterPostProcessor,
+	cache data.Cache,
 ) ([]anaconda.Tweet, error) {
 	result := []anaconda.Tweet{}
 	// From the oldest to the newest
@@ -208,7 +158,10 @@ func (a *TwitterAPI) processTweets(
 			}
 			result = append(result, t)
 		}
-		err = pp.Process(t, match)
+		if match {
+			ac := cache.GetTweetAction(t.Id)
+			cache.SetTweetAction(t.Id, ac.Add(action))
+		}
 		if err != nil {
 			return nil, utils.WithStack(err)
 		}
@@ -355,7 +308,6 @@ func (l *TwitterUserListener) Listen(
 						if err != nil {
 							return utils.WithStack(err)
 						}
-						l.api.cache.SetLatestTweetID(name, c.Id)
 					}
 				}
 				err := l.api.cache.Save()

@@ -52,33 +52,6 @@ func TestFileCache_Save(t *testing.T) {
 	require.Error(t, c.Save())
 }
 
-func TestFileCache_LatestTweetID(t *testing.T) {
-	c, err := NewFileCache("cache.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	testCacheLatestTweetID(t, c)
-}
-
-func TestDBCache_LatestTweetID(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheLatestTweetID(t, c)
-}
-
-func testCacheLatestTweetID(t *testing.T, c Cache) {
-	name := "foo"
-	var tweetID int64
-	tweetID = 1
-	c.SetLatestTweetID(name, tweetID)
-	require.Equal(t, tweetID, c.GetLatestTweetID(name))
-	require.EqualValues(t, 0, c.GetLatestTweetID("bar"))
-}
-
 func TestFileCache_LatestFavoriteID(t *testing.T) {
 	c, err := NewFileCache("cache.json")
 	if err != nil {

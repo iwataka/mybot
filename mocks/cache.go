@@ -60,16 +60,6 @@ func (_mr *_MockCacheRecorder) GetLatestImages(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetLatestImages", arg0)
 }
 
-func (_m *MockCache) GetLatestTweetID(_param0 string) int64 {
-	ret := _m.ctrl.Call(_m, "GetLatestTweetID", _param0)
-	ret0, _ := ret[0].(int64)
-	return ret0
-}
-
-func (_mr *_MockCacheRecorder) GetLatestTweetID(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "GetLatestTweetID", arg0)
-}
-
 func (_m *MockCache) GetTweetAction(_param0 int64) data.Action {
 	ret := _m.ctrl.Call(_m, "GetTweetAction", _param0)
 	ret0, _ := ret[0].(data.Action)
@@ -112,14 +102,6 @@ func (_m *MockCache) SetLatestFavoriteID(_param0 string, _param1 int64) {
 
 func (_mr *_MockCacheRecorder) SetLatestFavoriteID(arg0, arg1 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetLatestFavoriteID", arg0, arg1)
-}
-
-func (_m *MockCache) SetLatestTweetID(_param0 string, _param1 int64) {
-	_m.ctrl.Call(_m, "SetLatestTweetID", _param0, _param1)
-}
-
-func (_mr *_MockCacheRecorder) SetLatestTweetID(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetLatestTweetID", arg0, arg1)
 }
 
 func (_m *MockCache) SetTweetAction(_param0 int64, _param1 data.Action) {

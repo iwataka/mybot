@@ -15,8 +15,6 @@ import (
 // processing.
 type Cache interface {
 	utils.Savable
-	GetLatestTweetID(screenName string) int64
-	SetLatestTweetID(screenName string, id int64)
 	GetLatestFavoriteID(screenName string) int64
 	SetLatestFavoriteID(screenName string, id int64)
 	GetLatestDMID() int64
@@ -30,9 +28,6 @@ type Cache interface {
 // CacheProperties contains common actual cache variables and is intended to be
 // embedded into other structs.
 type CacheProperties struct {
-	// LatestTweetID associates Twitter screen name with the latest tweet
-	// ID in timeline.
-	LatestTweetID map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id"`
 	// LatestFavoriteID associates Twitter screen name with the latest
 	// tweet ID in favorite list.
 	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id"`
@@ -49,7 +44,6 @@ type CacheProperties struct {
 
 func newCacheProperties() CacheProperties {
 	return CacheProperties{
-		make(map[string]int64),
 		make(map[string]int64),
 		0,
 		make(map[string]Action),
@@ -80,23 +74,6 @@ func NewFileCache(path string) (*FileCache, error) {
 		}
 	}
 	return c, nil
-}
-
-// GetLatestTweetID returns the latest tweet ID associated with screenName in
-// timeline. If there is no ID of screenName in c , this returns 0 (tweet ID
-// can't be 0, which is known by Twitter API specification).
-func (c *CacheProperties) GetLatestTweetID(screenName string) int64 {
-	id, exists := c.LatestTweetID[screenName]
-	if exists {
-		return id
-	}
-	return 0
-}
-
-// SetLatestTweetID stores id as the latest tweet ID and associates it with
-// screenName.
-func (c *CacheProperties) SetLatestTweetID(screenName string, id int64) {
-	c.LatestTweetID[screenName] = id
 }
 
 // GetLatestFavoriteID returns the latest favorite tweet ID of screenName.
