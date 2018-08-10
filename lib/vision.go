@@ -3,6 +3,7 @@ package mybot
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -140,7 +141,8 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 						return nil, utils.WithStack(err)
 					}
 					exists = true
-					continue
+					url2res[url] = res
+					break
 				}
 			}
 			if !exists {
@@ -158,7 +160,11 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 	}
 
 	for _, url := range urls {
-		reses = append(reses, url2res[url])
+		if res, exists := url2res[url]; exists {
+			reses = append(reses, res)
+		} else {
+			return nil, errors.New("unexpected result")
+		}
 	}
 
 	return reses, nil
