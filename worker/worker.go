@@ -121,11 +121,7 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 				if err != nil {
 					sendNonBlockingly(outChan, err, timeout)
 				}
-				select {
-				case <-ch:
-				case <-time.After(timeout):
-					sendNonBlockingly(outChan, StatusInactive, timeout)
-				}
+				<-ch
 				status = false
 			}
 			if signal == KillSignal {
@@ -143,7 +139,7 @@ func activateWorker(inChan chan *WorkerSignal, outChan chan interface{}, worker 
 		}
 		if signal == PingSignal {
 			if outChan != nil {
-				outChan <- StatusActive
+				sendNonBlockingly(outChan, StatusActive, timeout)
 			}
 		}
 	}
