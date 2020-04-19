@@ -1,27 +1,24 @@
 language: go
 go:
   - 1.14.x
-  - 1.9.x
-  - 1.8.x
+  - 1.13.x
 os:
   - linux
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y sqlite3
-  - sudo apt-get install phantomjs
-  - go get -u github.com/golang/dep/cmd/dep
-  - dep ensure
-
+  - sudo apt-get install -y sqlite3 phantomjs
+  - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
+  - go mod download
 script:
-  - make test
+  - make lint test
 
 jobs:
   include:
     - stage: publish test coverage to coveralls.io
       script:
-      - go get github.com/mattn/goveralls
-      - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,assets/bindata.go
+        - go get github.com/mattn/goveralls
+        - $HOME/gopath/bin/goveralls -service=travis-ci -ignore=mocks/*.go,assets/bindata.go
     - stage: release to dockerhub
       if: branch = master
       sudo: required
@@ -30,10 +27,10 @@ jobs:
       before_install: []
       install: []
       script:
-      - make create_image
-      - docker login -u $DOCKER_USER -p $DOCKER_PASS
-      - docker push $DOCKER_REPO
+        - make create_image
+        - docker login -u $DOCKER_USER -p $DOCKER_PASS
+        - docker push $DOCKER_REPO
 
 notifications:
   slack:
-    secure: UmB6p8yymczQIsctVuqP6fsJjtgm6ADH2BPP7NY9lKAbJ28zxf46LBPo4h9U/31xnFuq/GM7BB46t3E/sLxD6tHYMEyX6RYVWjm3k06LnDmG1dLRFOw0QL6MXpfTEMqPSehuSij/ib9gw2QNockzgJKi8PpA3iLxcgb3tVPnxbkj8jPBtR2IIoZRLQYQ66QwLaPZx36Y0JbyB3E65/AIQ9qNrJMQ9Q3Bd6nNeEVIyfotqjIRTMaufZ6+4+j81GazeGbujpaXi8dJ6PMSGcakSN7wdZKxKHEapieojg/C6dYyPJlqEZ7zUsq/JZgb72u4gdG9H7G+vmHrdFMEEaTueQ6ERWCf1oF1wFeNwhaVMkFi5nFI8QUiDs2M6fI51g8gnx+f8SyOQveq8jXq+CaVgoajOiWFT4JBLTlTKlnvw7lC0Pnem41cvmY6t0cuDClx7ioT0mM1/b2q6JhpawmTuRLmD0AfvobalLkXffNrRpJd3iKKBwinKwVT6ivau9vlWWdrazgLYPwOgIDMTU3XgGf/NEl03GMFMtrJpRn1V/93lW3cPhIWzSWDknVznYBX+uFatQUoF0dJ1Xzr/Dv8jua9tdw5d2zYTkfneu4y7SLkProPp3e/LKmIj3xiFuwRK70N/CNqCyP3YLRgyvJILhE5y4xeJnT02J2MhJOTpjg=
+    secure: WMwdjMgYRtLlbZMmj+Eo75o7Hpb5+MN1hId+EhX0iMN839As0q9N39o/RUJrHCUcrioMvUJptTUpo1BKRb6kIu0GlOJHJPPykMQTc/lHKLe6xgj/0PtSOKmOvctbr2cptgoB9vagZPx69QdKFDlgQT2AGYJtsgbGnU7ipZDApynYJ+C6Wox1xSBUebhbDP+y6q/aH5hH6B51hU7HWW9fdHl+cYYb4CozsA2zT0v+Lv73F456kCR/sND3LN5585r7CbtVeJ4UpzjrFLEGl8pA7FKCi85mkdpxELbUT+aaYCyHhaQZaNf+ql74oOvt8N0vSXZ5xsBXpqDqr5iphtZb9lPh/HL5xc3K87sVM922WZWhFhB8h6O2B/ba9qvwds2w9DWm4RpSUGsGesvqAqzaQmmzwHbSZFMEFBJVEbCgnO8Mo5faHG92R9/c1JNRT4WVrfox9apG3UUO/ScJ9yJzAb7KVkfmjhhV0kf5huqMB9fRszHmeaIiUc5KUrLJDWd0nKeJ6DQXy+u9/Gmz0BJOw+bch53rOCpHp7LJ5SofAk+kp/CXe9hHGVVUE+aQgGCDo9IIxiTFgdRc5H8oOeSuNPYuX8bNNzTvaq8skZPyGIpfA2nTslyE68RheFWtEJQ9Lj9pK6xh9hkDH+rrz3tCuCJNAtE7Bjtbmuo5uV+eHeQ=
