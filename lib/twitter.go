@@ -15,10 +15,6 @@ import (
 	"github.com/iwataka/slack"
 )
 
-// msgPrefix is placed at the head of bot messages and indicates that messages
-// are sent by bot. This prevents infinite-loop bot-to-bot communication.
-const msgPrefix = "<bot message>\n"
-
 // TwitterAPI is a wrapper of anaconda.TwitterApi.
 type TwitterAPI struct {
 	api    models.TwitterAPI
@@ -269,6 +265,9 @@ func (a *TwitterAPI) collectTweet(tweet anaconda.Tweet, collection string) error
 		return utils.WithStack(err)
 	}
 	list, err := a.api.GetCollectionListByUserId(self.Id, nil)
+	if err != nil {
+		return utils.WithStack(err)
+	}
 	exists := false
 	var id string
 	for i, t := range list.Objects.Timelines {

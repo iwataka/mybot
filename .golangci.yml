@@ -2,3 +2,11 @@ linters:
   disable-all: true
   enable:
     - govet
+    - errcheck
+    - unused
+    - gosimple
+    - structcheck
+    - varcheck
+    - ineffassign
+    - deadcode
+    - typecheck

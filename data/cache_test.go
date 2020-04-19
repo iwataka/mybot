@@ -46,7 +46,7 @@ func TestFileCache_Save(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(path)
 	require.NoError(t, os.Chmod(path, 0555))
-	defer os.Chmod(path, 0755)
+	defer func() { _ = os.Chmod(path, 0755) }()
 	c, err = NewFileCache(path)
 	require.NoError(t, err)
 	require.Error(t, c.Save())
@@ -72,8 +72,7 @@ func TestDBCache_LatestTweetID(t *testing.T) {
 
 func testCacheLatestTweetID(t *testing.T, c Cache) {
 	name := "foo"
-	var tweetID int64
-	tweetID = 1
+	var tweetID int64 = 1
 	c.SetLatestTweetID(name, tweetID)
 	require.Equal(t, tweetID, c.GetLatestTweetID(name))
 	require.EqualValues(t, 0, c.GetLatestTweetID("bar"))
@@ -99,8 +98,7 @@ func TestDBCache_LatestFavoriteID(t *testing.T) {
 
 func testCacheLatestFavoriteID(t *testing.T, c Cache) {
 	name := "foo"
-	var favoriteID int64
-	favoriteID = 1
+	var favoriteID int64 = 1
 	c.SetLatestFavoriteID(name, favoriteID)
 	require.Equal(t, favoriteID, c.GetLatestFavoriteID(name))
 	require.EqualValues(t, 0, c.GetLatestFavoriteID("bar"))
@@ -125,8 +123,7 @@ func TestDBCache_LatestDMID(t *testing.T) {
 }
 
 func testCacheLatestDMID(t *testing.T, c Cache) {
-	var dmID int64
-	dmID = 1
+	var dmID int64 = 1
 	c.SetLatestDMID(dmID)
 	id := c.GetLatestDMID()
 	if id != dmID {

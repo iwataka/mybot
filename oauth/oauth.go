@@ -226,10 +226,13 @@ func (a *DBOAuthApp) Load() error {
 		return utils.WithStack(err)
 	}
 	if count > 0 {
-		query.One(tmp)
+		err = query.One(tmp)
+		if err != nil {
+			return utils.WithStack(err)
+		}
 	}
 	a.SetCreds(tmp.ConsumerKey, tmp.ConsumerSecret)
-	return utils.WithStack(err)
+	return nil
 }
 
 // Save saves the credential information to a specified database.

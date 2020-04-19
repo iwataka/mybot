@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -243,13 +242,6 @@ func testGet(url string) error {
 		return err
 	}
 	return checkHTTPResponse(res)
-}
-
-func testPost(t *testing.T, url string, bodyType string, body io.Reader, msg string) {
-	res, err := http.Post(url, bodyType, body)
-	require.NoError(t, err)
-	err = checkHTTPResponse(res)
-	require.NoError(t, err)
 }
 
 func checkHTTPResponse(res *http.Response) error {

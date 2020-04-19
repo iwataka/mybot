@@ -201,8 +201,13 @@ func startServer(host, port, cert, key string) error {
 }
 
 func generateHTMLTemplate() (*template.Template, error) {
+	if htmlTemplate != nil {
+		return htmlTemplate, nil
+	}
 	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap).Delims("{{{", "}}}")
-	return generateHTMLTemplateFromFiles(tmpl)
+	var err error
+	htmlTemplate, err = generateHTMLTemplateFromFiles(tmpl)
+	return htmlTemplate, err
 }
 
 func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template, error) {
@@ -436,7 +441,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 				go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
 			}
 		} else {
-			config.Load()
+			_ = config.Load()
 		}
 
 		if err != nil {

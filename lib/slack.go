@@ -247,7 +247,7 @@ func (l *SlackListener) Start(
 ) error {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
-	defer func() { rtm.Disconnect() }()
+	defer func() { _ = rtm.Disconnect() }()
 
 	for {
 		select {
@@ -270,7 +270,7 @@ func (l *SlackListener) Start(
 				if err != nil {
 					return utils.WithStack(err)
 				}
-				if time.Now().Sub(*t)-time.Minute > 0 {
+				if time.Since(*t)-time.Minute > 0 {
 					continue
 				}
 				ch := ""

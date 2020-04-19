@@ -18,12 +18,10 @@ func NewMyWorker(name string) *MyWorker {
 }
 
 func (w *MyWorker) Start() error {
-	for {
-		select {
-		case <-w.ch:
-			return nil
-		}
+	for range w.ch {
+		return nil
 	}
+	return nil
 }
 
 func (w *MyWorker) Stop() error {

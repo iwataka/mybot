@@ -60,9 +60,9 @@ func (a *VisionAPI) MatchImages(
 
 	features := cond.VisionFeatures()
 	if len(features) == 0 {
-		results := make([]string, len(urls), len(urls))
+		results := make([]string, len(urls))
 		matches := []bool{}
-		for i, _ := range matches {
+		for i := range matches {
 			matches[i] = true
 		}
 		return results, matches, nil
@@ -243,33 +243,73 @@ func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
 }
 
 func matchFace(as []*vision.FaceAnnotation, face models.VisionFaceCondition) (bool, error) {
-	for _, a := range as {
-		match := false
-		var err error
-
-		match, err = regexp.MatchString(face.AngerLikelihood, a.AngerLikelihood)
-		if err != nil {
-			return false, utils.WithStack(err)
+	if len(face.AngerLikelihood) > 0 {
+		var match bool
+		for _, a := range as {
+			m, err := regexp.MatchString(face.AngerLikelihood, a.AngerLikelihood)
+			if err != nil {
+				return false, utils.WithStack(err)
+			}
+			if m {
+				match = true
+				break
+			}
 		}
-
-		match, err = regexp.MatchString(face.BlurredLikelihood, a.BlurredLikelihood)
-		if err != nil {
-			return false, utils.WithStack(err)
-		}
-
-		match, err = regexp.MatchString(face.HeadwearLikelihood, a.HeadwearLikelihood)
-		if err != nil {
-			return false, utils.WithStack(err)
-		}
-
-		match, err = regexp.MatchString(face.JoyLikelihood, a.JoyLikelihood)
-		if err != nil {
-			return false, utils.WithStack(err)
-		}
-
 		if !match {
 			return false, nil
 		}
 	}
+
+	if len(face.BlurredLikelihood) > 0 {
+		var match bool
+		for _, a := range as {
+			m, err := regexp.MatchString(face.BlurredLikelihood, a.BlurredLikelihood)
+			if err != nil {
+				return false, utils.WithStack(err)
+			}
+			if m {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
+	if len(face.HeadwearLikelihood) > 0 {
+		var match bool
+		for _, a := range as {
+			m, err := regexp.MatchString(face.HeadwearLikelihood, a.HeadwearLikelihood)
+			if err != nil {
+				return false, utils.WithStack(err)
+			}
+			if m {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
+	if len(face.JoyLikelihood) > 0 {
+		var match bool
+		for _, a := range as {
+			m, err := regexp.MatchString(face.JoyLikelihood, a.JoyLikelihood)
+			if err != nil {
+				return false, utils.WithStack(err)
+			}
+			if m {
+				match = true
+				break
+			}
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
 	return true, nil
 }

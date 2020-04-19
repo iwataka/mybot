@@ -129,6 +129,7 @@ func Test_NewConfig_ForUnknownExtensionFile(t *testing.T) {
 
 func Test_NewConfig_ForInvalidDataFile(t *testing.T) {
 	c, err := NewFileConfig(defaultTestConfigFilePath)
+	require.NoError(t, err)
 	c.GetTwitterTimelines()[0].ScreenNames = []string{}
 	bs, err := json.Marshal(c)
 	require.NoError(t, err)

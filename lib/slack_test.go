@@ -70,9 +70,9 @@ func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 
 	ch := "channel"
 	text := "text"
-	var msg *SlackMsg
-	msg = &SlackMsg{text, nil}
-	slackAPI.PostMessage(ch, text, nil, channelIsOpen)
+	msg := &SlackMsg{text, nil}
+	err := slackAPI.PostMessage(ch, text, nil, channelIsOpen)
+	require.NoError(t, err)
 	m := slackAPI.dequeueMsg(ch)
 
 	require.Equal(t, msg, m)

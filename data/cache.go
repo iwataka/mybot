@@ -132,7 +132,7 @@ func (c *CacheProperties) GetTweetAction(tweetID int64) Action {
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is too large
 	key := strconv.FormatInt(tweetID, 10)
-	action, _ := c.Tweet2Action[key]
+	action := c.Tweet2Action[key]
 	return action
 }
 
