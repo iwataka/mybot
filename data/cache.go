@@ -175,8 +175,8 @@ func (c *FileCache) Save() error {
 
 type DBCache struct {
 	CacheProperties
-	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
-	ID  string          `json:"id" toml:"id" bson:"id"`
+	col *mgo.Collection
+	ID  string `json:"id" toml:"id" bson:"id"`
 }
 
 func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {

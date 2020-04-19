@@ -318,7 +318,6 @@ func (l *SlackListener) Start(
 			return utils.NewStreamInterruptedError()
 		}
 	}
-	return nil
 }
 
 func (l *SlackListener) Stop() error {

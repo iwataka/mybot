@@ -1,6 +1,6 @@
 GO := go
 TEST_PACKAGES := . ./lib ./models ./worker ./utils ./oauth ./tmpl ./data ./runner
-GOLINT := gometalinter
+GOLINT := golangci-lint
 
 DOCKER_COMPOSE := docker-compose
 DOCKER_COMPOSE_SCRIPT := scripts/docker-compose.yml
@@ -17,7 +17,7 @@ test:
 
 # TODO: Check details about gotype
 lint:
-	$(GOLINT) --deadline=30s --disable=gotype
+	$(GOLINT) run $(TEST_PACKAGES)
 
 deploy_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) up -d

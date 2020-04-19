@@ -512,8 +512,8 @@ func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAP
 
 type DBConfig struct {
 	*ConfigProperties
-	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
-	ID  string          `json:"id" toml:"id" bson:"id"`
+	col *mgo.Collection
+	ID  string `json:"id" toml:"id" bson:"id"`
 }
 
 func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {

@@ -50,8 +50,8 @@ func NewFileOAuthCreds(file string) (*FileOAuthCreds, error) {
 // a specified database (currently only MongoDB supported).
 type DBOAuthCreds struct {
 	*OAuthCredsProps
-	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
-	ID  string          `json:"id" toml:"id" bson:"id"`
+	col *mgo.Collection
+	ID  string `json:"id" toml:"id" bson:"id"`
 }
 
 // NewDBOAuthCreds returns a new DBOAuthCreds with specified arguments.
@@ -197,7 +197,7 @@ func (a *FileOAuthApp) Save() error {
 // DBOAuthApp is OAuthApp associated with a specified database.
 type DBOAuthApp struct {
 	OAuthAppProps
-	col *mgo.Collection `json:"-" toml:"-" bson:"-"`
+	col *mgo.Collection
 }
 
 // NewDBOAuthApp returns a new DBOAuthApp with a specified MongoDB collection.

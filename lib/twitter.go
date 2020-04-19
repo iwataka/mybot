@@ -240,7 +240,7 @@ func (a *TwitterAPI) processTweet(
 		if err != nil {
 			return utils.WithStack(err)
 		}
-		fmt.Println("Favorite the tweet[%d]", id)
+		fmt.Printf("Favorite the tweet[%d]\n", id)
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
