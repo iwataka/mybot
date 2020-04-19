@@ -11,7 +11,7 @@ require (
 	github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc
 	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad
 	github.com/garyburd/go-oauth v0.0.0-20171004151416-4cff9ef7b700
-	github.com/golang/mock v1.0.0
+	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f
 	github.com/gorilla/mux v1.6.0
@@ -30,9 +30,11 @@ require (
 	github.com/sclevine/agouti v0.0.0-20171003013254-8cf0313221cb
 	github.com/stretchr/testify v1.2.1
 	github.com/urfave/cli v1.20.0
-	golang.org/x/net v0.0.0-20171212005608-d866cfc389ce
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
 	golang.org/x/oauth2 v0.0.0-20171219020721-0448841f0cbe
+	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/api v0.0.0-20171220000333-cf39d2072c48
 	google.golang.org/appengine v1.0.0
 	gopkg.in/mgo.v2 v2.0.0-20160818020120-3f83fa500528
+	rsc.io/sampler v1.99.99 // indirect
 )

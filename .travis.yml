@@ -11,7 +11,7 @@ before_install:
   - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
   - go mod download
 script:
-  - make lint test
+  - make
 
 jobs:
   include:
@@ -27,7 +27,7 @@ jobs:
       before_install: []
       install: []
       script:
-        - make create_image
+        - docker build -t $DOCKER_REPO .
         - docker login -u $DOCKER_USER -p $DOCKER_PASS
         - docker push $DOCKER_REPO
 
