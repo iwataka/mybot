@@ -14,9 +14,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
-	"github.com/iwataka/mybot/lib"
+	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/tmpl"
 	"github.com/iwataka/mybot/utils"
@@ -202,26 +201,8 @@ func startServer(host, port, cert, key string) error {
 }
 
 func generateHTMLTemplate() (*template.Template, error) {
-	var err error
 	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap).Delims("{{{", "}}}")
-
-	if info, _ := os.Stat(assetsDir); info != nil && info.IsDir() {
-		htmlTemplate, err = generateHTMLTemplateFromFiles(tmpl)
-	} else if htmlTemplate == nil {
-		tmplTexts := []string{}
-		for _, name := range assets.AssetNames() {
-			if filepath.Ext(name) == ".tmpl" {
-				tmplBytes := assets.MustAsset(name)
-				tmplTexts = append(tmplTexts, string(tmplBytes))
-			}
-		}
-		htmlTemplate, err = tmpl.Parse(strings.Join(tmplTexts, "\n"))
-	}
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-
-	return htmlTemplate, nil
+	return generateHTMLTemplateFromFiles(tmpl)
 }
 
 func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template, error) {
@@ -933,7 +914,7 @@ func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
 
 func getAssets(w http.ResponseWriter, r *http.Request, contentType string) {
 	path := r.URL.Path[len("/"):]
-	data, err := readFile(path)
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1195,21 +1176,6 @@ func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func readFile(path string) ([]byte, error) {
-	if info, err := os.Stat(path); err == nil && !info.IsDir() {
-		data, err := ioutil.ReadFile(path)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		return data, nil
-	}
-	data, err := assets.Asset(path)
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-	return data, nil
 }
 
 func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {

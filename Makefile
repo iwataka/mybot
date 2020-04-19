@@ -1,5 +1,4 @@
 GO := go
-TEST_PACKAGES := . ./lib ./models ./worker ./utils ./oauth ./tmpl ./data ./runner
 GOLINT := golangci-lint
 
 DOCKER_COMPOSE := docker-compose
@@ -13,11 +12,10 @@ build:
 	$(GO) build
 
 test:
-	$(GO) test $(TEST_PACKAGES) -race $(args)
+	$(GO) test -race ./... $(args)
 
-# TODO: Check details about gotype
 lint:
-	$(GOLINT) run $(TEST_PACKAGES)
+	$(GOLINT) run ./...
 
 deploy_app:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_SCRIPT) up -d

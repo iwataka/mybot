@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
-	"github.com/iwataka/mybot/assets"
 	"github.com/iwataka/mybot/data"
-	"github.com/iwataka/mybot/lib"
+	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/runner"
@@ -23,7 +22,6 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-//go:generate go-bindata -nometadata -o ./assets/bindata.go -pkg assets assets/js/... assets/css/... assets/tmpl/...
 //go:generate mockgen -source=models/slack.go -destination=mocks/slack.go -package=mocks
 //go:generate mockgen -source=models/twitter.go -destination=mocks/twitter.go -package=mocks
 //go:generate mockgen -source=models/auth.go -destination=mocks/auth.go -package=mocks
@@ -291,13 +289,7 @@ func main() {
 		Action:  validate,
 	}
 
-	restoreAssetsCmd := cli.Command{
-		Name:   "restoreAssets",
-		Usage:  "Restore assets to the current directory. You can edit restored assets if you want.",
-		Action: restoreAssets,
-	}
-
-	app.Commands = []cli.Command{serveCmd, validateCmd, restoreAssetsCmd}
+	app.Commands = []cli.Command{serveCmd, validateCmd}
 	err = app.Run(os.Args)
 	utils.ExitIfError(err)
 }
@@ -465,14 +457,6 @@ func validate(c *cli.Context) {
 			utils.ExitIfError(err)
 		}
 	}
-}
-
-func restoreAssets(c *cli.Context) {
-	if info, _ := os.Stat(assetsDir); info != nil {
-		fmt.Printf("Directory `%s` already exists.\n", assetsDir)
-	}
-	err := assets.RestoreAssets(".", assetsDir)
-	utils.ExitIfError(err)
 }
 
 func beforeServing(c *cli.Context) error {

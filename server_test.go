@@ -19,7 +19,7 @@ import (
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
 	"github.com/iwataka/mybot/data"
-	"github.com/iwataka/mybot/lib"
+	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
@@ -134,10 +134,6 @@ func TestGetTwitterCols(t *testing.T) {
 	testTwitterCols(t, testGet)
 }
 
-func TestGetTwitterColsIfAssetsNotExist(t *testing.T) {
-	testIfAssetsNotExist(t, TestGetTwitterCols)
-}
-
 func testTwitterCols(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 
@@ -188,10 +184,6 @@ func TestGetConfig(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestGetConfigIfAssetsNotExist(t *testing.T) {
-	testIfAssetsNotExist(t, TestGetConfig)
-}
-
 func TestGetSetupTwitter(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(getSetup))
 	defer s.Close()
@@ -209,10 +201,6 @@ func TestGetSetupTwitter(t *testing.T) {
 
 	err = testGet(s.URL)
 	require.NoError(t, err)
-}
-
-func TestGetSetupTwitterIfAssetsNotExist(t *testing.T) {
-	testIfAssetsNotExist(t, TestGetSetupTwitter)
 }
 
 func TestGetConfigFile(t *testing.T) {
@@ -606,10 +594,6 @@ func generateTwitterAPIMock(t *testing.T, user anaconda.User, userErr error) *mo
 	return twitterAPIMock
 }
 
-func TestGetIndexIfAssetsNotExist(t *testing.T) {
-	testIfAssetsNotExist(t, TestGetIndexWithTwitterAuthenticated)
-}
-
 func testIndex(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
@@ -667,19 +651,6 @@ func testResponseIsRedirect(t *testing.T, res *http.Response, locPrefix string) 
 	require.Equal(t, http.StatusSeeOther, res.StatusCode)
 	loc := res.Header.Get("Location")
 	require.True(t, strings.HasPrefix(loc, locPrefix))
-}
-
-func testIfAssetsNotExist(t *testing.T, f func(t *testing.T)) {
-	tmpdir := "tmp"
-	require.NoError(t, os.Mkdir(tmpdir, os.FileMode(0777)))
-	defer os.Remove(tmpdir)
-
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(tmpdir))
-	defer os.Chdir(wd)
-
-	f(t)
 }
 
 // TODO: Show skip warning even when executing `go test` without `-v` argument

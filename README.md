@@ -17,22 +17,24 @@ Firstly, make sure you've already created the following things:
 
 To get started, just run the below command:
 
-```
-go get -u github.com/iwataka/mybot
-mybot s(erve)
-```
-
-or by using Docker:
-
-```
-make deploy_app_single
+```sh
+$ docker run -d -p 8080:8080 iwataka/mybot
 ```
 
-or by using docker-compose (this also runs MongoDB on Docker):
+or by using docker-compose:
 
+```sh
+$ curl -fLO https://raw.githubusercontent.com/iwataka/mybot/master/scripts/docker-compose.yml
+$ docker-compose up -d
 ```
-go get -d github.com/iwataka/mybot
-cd $GOPATH/src/github.com/iwataka/mybot
-make deploy_app
-# To clean app, run `make clean_app`
+
+## Building from source
+
+```sh
+$ go get -d github.com/iwataka/mybot
+$ cd $GOPATH/src/github.com/iwataka/mybot
+$ go mod download
+$ go build
+# Run the below command to serve
+# ./mybot s(erve)
 ```

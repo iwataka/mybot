@@ -10,7 +10,7 @@ COPY go.* ./
 RUN go mod download
 
 COPY . .
-RUN go build && cp mybot /usr/local/bin
+RUN go build
 
-CMD mybot serve -H 0.0.0.0
+CMD ./mybot serve -H 0.0.0.0
 EXPOSE 8080
