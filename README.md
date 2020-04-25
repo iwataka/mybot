@@ -8,33 +8,61 @@
 
 Mybot is a bot server to collect and broadcast information via social network.
 
-## Getting Started
+## Prerequisites
 
-Firstly, make sure you've already created the following things:
+Make sure you've already created the following things:
 
 - Twitter account
 - Slack account
 
-To get started, just run the below command:
+and you've installed Go 1.13.x or 1.14.x.
 
-```sh
-$ docker run -d -p 8080:8080 iwataka/mybot
-```
+## Running from source
 
-or by using docker-compose:
-
-```sh
-$ curl -fLO https://raw.githubusercontent.com/iwataka/mybot/master/scripts/docker-compose.yml
-$ docker-compose up -d
-```
-
-## Building from source
+Run the below commands:
 
 ```sh
 $ go get -d github.com/iwataka/mybot
 $ cd $GOPATH/src/github.com/iwataka/mybot
 $ go mod download
 $ go build
-# Run the below command to serve
-# ./mybot s(erve)
+$ ./mybot s(erve)
+```
+
+## Running by using Docker
+
+1. simplest way
+
+    ```sh
+    $ docker run -d -p 8080:8080 iwataka/mybot
+    ```
+
+1. docker with mounting volumes
+
+    ```sh
+    $ docker run -d -p 8080:8080 \
+        -v ~/.cache/mybot:/root/.cache/mybot \
+        -v ~/.config/mybot:/root/.config/mybot \
+        -v ~/.config/gcloud:/root/.config/gcloud \
+        iwataka/mybot
+    ```
+
+1. docker-compose
+
+    ```sh
+    $ curl -fLO https://raw.githubusercontent.com/iwataka/mybot/master/docker-compose.yml
+    $ docker-compose up -d
+    ```
+
+## To use Google Cloud APIs
+
+Mybot uses the following Google Cloud API:
+
+- [Vision API](https://cloud.google.com/vision/docs) to analyze images attached to tweets and messages.
+- [Natural Language API](https://cloud.google.com/natural-language) to analyze texts in tweets and messages.
+
+To get authorized, run the following commands:
+
+```sh
+$ gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/cloud-vision,https://www.googleapis.com/auth/cloud-language
 ```

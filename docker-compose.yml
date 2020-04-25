@@ -5,14 +5,11 @@ services:
     container_name: mongo
     volumes:
       - ./mongodb:/data/db
-
-  mybot_with_mongo:
+  mybot:
     image: iwataka/mybot
-    container_name: mybot_with_mongo
-    # volumes:
-    #   - ~/.cache/mybot:/root/.cache/mybot
-    #   - ~/.config/mybot:/root/.config/mybot
-    #   - ~/.config/gcloud:/root/.config/gcloud
+    container_name: mybot
+    volumes:
+      - ~/.config/gcloud:/root/.config/gcloud
     environment:
       - MYBOT_DB_ADDRESS=mongo:27017
       - MYBOT_DB_NAME=mybot
