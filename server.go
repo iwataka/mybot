@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
-	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/tmpl"
 	"github.com/iwataka/mybot/utils"
@@ -242,8 +242,8 @@ func getIndex(
 	w http.ResponseWriter,
 	r *http.Request,
 	cache data.Cache,
-	twitterAPI *mybot.TwitterAPI,
-	slackAPI *mybot.SlackAPI,
+	twitterAPI *core.TwitterAPI,
+	slackAPI *core.SlackAPI,
 	twitterUser goth.User,
 	statuses map[int]bool,
 ) {
@@ -335,7 +335,7 @@ func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *mybot.SlackAPI, twitterAPI *mybot.TwitterAPI, twitterUser goth.User) {
+func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI, twitterUser goth.User) {
 	colMap := make(map[string]string)
 	activeCol := ""
 	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
@@ -431,7 +431,7 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twitterUser goth.User) {
+func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twitterUser goth.User) {
 	var err error
 
 	defer func() {
@@ -485,12 +485,12 @@ func postConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, twi
 	err = config.Validate()
 }
 
-func setTimelinesToConfig(config mybot.Config, r *http.Request) error {
+func setTimelinesToConfig(config core.Config, r *http.Request) error {
 	val := r.MultipartForm.Value
 
 	prefix := "twitter.timelines"
 	deletedFlags := val[prefix+".deleted"]
-	timelines := []mybot.TimelineConfig{}
+	timelines := []core.TimelineConfig{}
 	actions, err := postConfigForActions(val, prefix, deletedFlags)
 	excludeRepliesCounter := newCheckboxCounter(prefix + ".exclude_replies")
 	includeRtsCounter := newCheckboxCounter(prefix + ".include_rts")
@@ -501,7 +501,7 @@ func setTimelinesToConfig(config mybot.Config, r *http.Request) error {
 		if deletedFlags[i] == trueValue {
 			continue
 		}
-		timeline := mybot.NewTimelineConfig()
+		timeline := core.NewTimelineConfig()
 		timeline.Name = val[prefix+".name"][i]
 		timeline.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
 		timeline.ExcludeReplies = excludeRepliesCounter.returnValue(i, val, false)
@@ -519,12 +519,12 @@ func setTimelinesToConfig(config mybot.Config, r *http.Request) error {
 	return nil
 }
 
-func setFavoritesToConfig(config mybot.Config, r *http.Request) error {
+func setFavoritesToConfig(config core.Config, r *http.Request) error {
 	val := r.MultipartForm.Value
 
 	prefix := "twitter.favorites"
 	deletedFlags := val[prefix+".deleted"]
-	favorites := []mybot.FavoriteConfig{}
+	favorites := []core.FavoriteConfig{}
 	actions, err := postConfigForActions(val, prefix, deletedFlags)
 	if err != nil {
 		return err
@@ -533,7 +533,7 @@ func setFavoritesToConfig(config mybot.Config, r *http.Request) error {
 		if deletedFlags[i] == trueValue {
 			continue
 		}
-		favorite := mybot.NewFavoriteConfig()
+		favorite := core.NewFavoriteConfig()
 		favorite.Name = val[prefix+".name"][i]
 		favorite.ScreenNames = tmpl.GetListTextboxValue(val, i, prefix+".screen_names")
 		if favorite.Count, err = tmpl.GetIntPtr(val, i, prefix+".count"); err != nil {
@@ -549,12 +549,12 @@ func setFavoritesToConfig(config mybot.Config, r *http.Request) error {
 	return nil
 }
 
-func setSearchesToConfig(config mybot.Config, r *http.Request) error {
+func setSearchesToConfig(config core.Config, r *http.Request) error {
 	val := r.MultipartForm.Value
 
 	prefix := "twitter.searches"
 	deletedFlags := val[prefix+".deleted"]
-	searches := []mybot.SearchConfig{}
+	searches := []core.SearchConfig{}
 	actions, err := postConfigForActions(val, prefix, deletedFlags)
 	if err != nil {
 		return err
@@ -563,7 +563,7 @@ func setSearchesToConfig(config mybot.Config, r *http.Request) error {
 		if deletedFlags[i] == trueValue {
 			continue
 		}
-		search := mybot.NewSearchConfig()
+		search := core.NewSearchConfig()
 		search.Name = val[prefix+".name"][i]
 		search.Queries = tmpl.GetListTextboxValue(val, i, prefix+".queries")
 		search.ResultType = val[prefix+".result_type"][i]
@@ -580,12 +580,12 @@ func setSearchesToConfig(config mybot.Config, r *http.Request) error {
 	return nil
 }
 
-func setMessagesToConfig(config mybot.Config, r *http.Request) error {
+func setMessagesToConfig(config core.Config, r *http.Request) error {
 	val := r.MultipartForm.Value
 
 	prefix := "slack.messages"
 	deletedFlags := val[prefix+".deleted"]
-	msgs := []mybot.MessageConfig{}
+	msgs := []core.MessageConfig{}
 	actions, err := postConfigForActions(val, prefix, deletedFlags)
 	if err != nil {
 		return err
@@ -594,7 +594,7 @@ func setMessagesToConfig(config mybot.Config, r *http.Request) error {
 		if deletedFlags[i] == trueValue {
 			continue
 		}
-		msg := mybot.NewMessageConfig()
+		msg := core.NewMessageConfig()
 		msg.Name = val[prefix+".name"][i]
 		msg.Channels = tmpl.GetListTextboxValue(val, i, prefix+".channels")
 		if msg.Filter, err = postConfigForFilter(r, i, prefix); err != nil {
@@ -607,22 +607,22 @@ func setMessagesToConfig(config mybot.Config, r *http.Request) error {
 	return nil
 }
 
-func postConfigForFilter(r *http.Request, i int, prefix string) (mybot.Filter, error) {
+func postConfigForFilter(r *http.Request, i int, prefix string) (core.Filter, error) {
 	val := r.MultipartForm.Value
 
 	prefix = prefix + ".filter."
-	filter := mybot.NewFilter()
+	filter := core.NewFilter()
 	filter.Patterns = tmpl.GetListTextboxValue(val, i, prefix+"patterns")
 	filter.URLPatterns = tmpl.GetListTextboxValue(val, i, prefix+"url_patterns")
 	filter.HasMedia = tmpl.GetBoolSelectboxValue(val, i, prefix+"has_media")
 	fThreshold, err := tmpl.GetIntPtr(val, i, prefix+"favorite_threshold")
 	if err != nil {
-		return mybot.NewFilter(), utils.WithStack(err)
+		return core.NewFilter(), utils.WithStack(err)
 	}
 	filter.FavoriteThreshold = fThreshold
 	rThreshold, err := tmpl.GetIntPtr(val, i, prefix+"retweeted_threshold")
 	if err != nil {
-		return mybot.NewFilter(), utils.WithStack(err)
+		return core.NewFilter(), utils.WithStack(err)
 	}
 	filter.RetweetedThreshold = rThreshold
 	filter.Lang = tmpl.GetString(val, prefix+"lang", i, "")
@@ -636,12 +636,12 @@ func postConfigForFilter(r *http.Request, i int, prefix string) (mybot.Filter, e
 	filter.Vision.Logo = tmpl.GetListTextboxValue(val, i, prefix+"vision.logo")
 	minSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.min_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), utils.WithStack(err)
+		return core.NewFilter(), utils.WithStack(err)
 	}
 	filter.Language.MinSentiment = minSentiment
 	maxSentiment, err := tmpl.GetFloat64Ptr(val, i, prefix+"language.max_sentiment")
 	if err != nil {
-		return mybot.NewFilter(), utils.WithStack(err)
+		return core.NewFilter(), utils.WithStack(err)
 	}
 	filter.Language.MaxSentiment = maxSentiment
 	return filter, nil
@@ -682,7 +682,7 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (data.Ac
 	return action, nil
 }
 
-func getConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, slackAPI *mybot.SlackAPI, twitterUser goth.User) {
+func getConfig(w http.ResponseWriter, r *http.Request, config core.Config, slackAPI *core.SlackAPI, twitterUser goth.User) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -708,7 +708,7 @@ func getConfig(w http.ResponseWriter, r *http.Request, config mybot.Config, slac
 	}
 }
 
-func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Config) ([]byte, error) {
+func configPage(twitterName, slackTeam, slackURL, msg string, config core.Config) ([]byte, error) {
 	data := &struct {
 		NavbarName    string
 		TwitterName   string
@@ -716,7 +716,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config mybot.Confi
 		SlackURL      string
 		GoogleEnabled bool
 		Message       string
-		Config        mybot.ConfigProperties
+		Config        core.ConfigProperties
 	}{
 		"Config",
 		twitterName,
@@ -752,13 +752,13 @@ func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addTimelineConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
-func addTimelineConfig(config mybot.Config) {
-	config.AddTwitterTimeline(mybot.NewTimelineConfig())
+func addTimelineConfig(config core.Config) {
+	config.AddTwitterTimeline(core.NewTimelineConfig())
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -774,13 +774,13 @@ func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addFavoriteConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
-func addFavoriteConfig(config mybot.Config) {
-	config.AddTwitterFavorite(mybot.NewFavoriteConfig())
+func addFavoriteConfig(config core.Config) {
+	config.AddTwitterFavorite(core.NewFavoriteConfig())
 }
 
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -798,13 +798,13 @@ func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfigSearchAdd(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigSearchAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addSearchConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
-func addSearchConfig(config mybot.Config) {
-	config.AddTwitterSearch(mybot.NewSearchConfig())
+func addSearchConfig(config core.Config) {
+	config.AddTwitterSearch(core.NewSearchConfig())
 }
 
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
@@ -820,13 +820,13 @@ func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c mybot.Config) {
+func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c core.Config) {
 	addMessageConfig(c)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
 
-func addMessageConfig(config mybot.Config) {
-	config.AddSlackMessage(mybot.NewMessageConfig())
+func addMessageConfig(config core.Config) {
+	config.AddSlackMessage(core.NewMessageConfig())
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -847,7 +847,7 @@ func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func postConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func postConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -892,7 +892,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config)
 	}
 }
 
-func getConfigFile(w http.ResponseWriter, r *http.Request, config mybot.Config) {
+func getConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) {
 	ext := ".json"
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config`+ext+`"`)
@@ -1071,7 +1071,7 @@ func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *mybot.TwitterAPI) {
+func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *core.TwitterAPI) {
 	vals, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1120,7 +1120,7 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*data.twitterAPI = *mybot.NewTwitterAPIWithAuth(data.twitterAuth, data.config, data.cache)
+	*data.twitterAPI = *core.NewTwitterAPIWithAuth(data.twitterAuth, data.config, data.cache)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -1145,7 +1145,7 @@ func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	*data.slackAPI = *mybot.NewSlackAPIWithAuth(user.AccessToken, data.config, data.cache)
+	*data.slackAPI = *core.NewSlackAPIWithAuth(user.AccessToken, data.config, data.cache)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -1183,7 +1183,7 @@ func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func getSlackInfo(slackAPI *mybot.SlackAPI) (string, string) {
+func getSlackInfo(slackAPI *core.SlackAPI) (string, string) {
 	if slackAPI != nil {
 		user, err := slackAPI.AuthTest()
 		if err == nil {

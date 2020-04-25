@@ -1,7 +1,6 @@
-package oauth_test
+package oauth
 
 import (
-	. "github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
 	"github.com/stretchr/testify/require"
 

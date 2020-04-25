@@ -1,7 +1,6 @@
-package models_test
+package models
 
 import (
-	. "github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"github.com/stretchr/testify/require"
 

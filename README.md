@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/iwataka/mybot.svg?branch=master)](https://travis-ci.org/iwataka/mybot)
 [![Coverage Status](https://img.shields.io/coveralls/github/iwataka/mybot/master.svg)](https://coveralls.io/github/iwataka/mybot?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/iwataka/mybot)](https://goreportcard.com/report/github.com/iwataka/mybot)
+[![GoDoc](https://godoc.org/github.com/iwataka/mybot?status.svg)](https://godoc.org/github.com/iwataka/mybot)
 
 ## Introduction
 

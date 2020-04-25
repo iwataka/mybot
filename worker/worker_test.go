@@ -1,4 +1,4 @@
-package worker_test
+package worker
 
 import (
 	"errors"
@@ -9,7 +9,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/mocks"
-	. "github.com/iwataka/mybot/worker"
 	"github.com/stretchr/testify/require"
 )
 

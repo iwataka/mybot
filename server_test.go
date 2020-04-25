@@ -17,8 +17,8 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
-	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
@@ -66,14 +66,14 @@ func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
 	// TODO: Mock config and other fields
-	serverTestUserSpecificData.config, err = mybot.NewFileConfig("lib/testdata/config.template.toml")
+	serverTestUserSpecificData.config, err = core.NewFileConfig("core/testdata/config.template.toml")
 	if err != nil {
 		panic(err)
 	}
 	serverTestUserSpecificData.statuses = map[int]bool{}
 	serverTestUserSpecificData.statuses = initialStatuses()
 	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
-	serverTestUserSpecificData.slackAPI = mybot.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
+	serverTestUserSpecificData.slackAPI = core.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 
 	if _, err := os.Stat(screenshotsDir); err != nil {
@@ -159,7 +159,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Times(2).Return(listResult, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
 	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
 	defer s.Close()
@@ -229,7 +229,7 @@ func TestGetConfigFile(t *testing.T) {
 	bs, err := ioutil.ReadAll(res.Body)
 	require.NoError(t, err)
 
-	cfg, err := mybot.NewFileConfig("")
+	cfg, err := core.NewFileConfig("")
 	require.NoError(t, err)
 
 	err = json.Unmarshal(bs, cfg)
@@ -267,7 +267,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 			getAssetsJS(w, r)
 		} else {
 			if r.Method == http.MethodPost {
-				serverTestUserSpecificData.config = mybot.NewTestFileConfig("", t)
+				serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
 				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
 				wg.Done()
 			} else if r.Method == http.MethodGet {
@@ -538,7 +538,7 @@ func TestIndexPage(t *testing.T) {
 	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
 	testIndex(t, testIndexPage)
 }
@@ -565,7 +565,7 @@ func TestGetIndexWithoutTwitterAuthenticated(t *testing.T) {
 	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{}, fmt.Errorf("your Twitter account is not authenticated"))
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
 	testIndex(t, testGet)
 }
@@ -574,7 +574,7 @@ func TestGetIndexWithTwitterAuthenticated(t *testing.T) {
 	twitterAPIMock := generateTwitterAPIMock(t, anaconda.User{ScreenName: "foo"}, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
 	testIndex(t, testGet)
 }
@@ -622,7 +622,7 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	twitterAPIMock.EXPECT().GetUserSearch(gomock.Any(), gomock.Any()).Return(users, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
-	serverTestUserSpecificData.twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
 	s := httptest.NewServer(http.HandlerFunc(twitterUserSearchHandler))
 	defer s.Close()

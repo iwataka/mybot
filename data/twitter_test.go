@@ -1,7 +1,6 @@
-package data_test
+package data
 
 import (
-	. "github.com/iwataka/mybot/data"
 	"github.com/stretchr/testify/require"
 
 	"testing"

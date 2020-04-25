@@ -1,8 +1,7 @@
-package utils_test
+package utils
 
 import (
 	"github.com/BurntSushi/toml"
-	. "github.com/iwataka/mybot/utils"
 
 	"fmt"
 )

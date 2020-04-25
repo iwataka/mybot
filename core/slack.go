@@ -1,4 +1,4 @@
-package mybot
+package core
 
 import (
 	"github.com/iwataka/anaconda"

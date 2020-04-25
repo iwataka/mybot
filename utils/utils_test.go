@@ -1,7 +1,6 @@
-package utils_test
+package utils
 
 import (
-	. "github.com/iwataka/mybot/utils"
 	"github.com/stretchr/testify/require"
 
 	"os"

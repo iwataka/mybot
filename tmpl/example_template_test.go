@@ -1,9 +1,7 @@
-package tmpl_test
+package tmpl
 
 import (
 	"fmt"
-
-	. "github.com/iwataka/mybot/tmpl"
 )
 
 func ExampleNewMap() {

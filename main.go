@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
-	mybot "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/runner"
@@ -25,8 +25,8 @@ import (
 //go:generate mockgen -source=models/slack.go -destination=mocks/slack.go -package=mocks
 //go:generate mockgen -source=models/twitter.go -destination=mocks/twitter.go -package=mocks
 //go:generate mockgen -source=models/auth.go -destination=mocks/auth.go -package=mocks
-//go:generate mockgen -source=lib/vision.go -destination=mocks/vision.go -package=mocks
-//go:generate mockgen -source=lib/language.go -destination=mocks/language.go -package=mocks
+//go:generate mockgen -source=core/vision.go -destination=mocks/vision.go -package=mocks
+//go:generate mockgen -source=core/language.go -destination=mocks/language.go -package=mocks
 //go:generate mockgen -source=utils/utils.go -destination=mocks/utils.go -package=mocks
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
@@ -40,8 +40,8 @@ var (
 	// Global-scope data
 	twitterApp    oauth.OAuthApp
 	slackApp      oauth.OAuthApp
-	visionAPI     mybot.VisionMatcher
-	languageAPI   mybot.LanguageMatcher
+	visionAPI     core.VisionMatcher
+	languageAPI   core.LanguageMatcher
 	cliContext    *cli.Context
 	dbSession     *mgo.Session
 	serverSession sessions.Store
@@ -295,11 +295,11 @@ func main() {
 }
 
 type userSpecificData struct {
-	config      mybot.Config
+	config      core.Config
 	cache       data.Cache
-	twitterAPI  *mybot.TwitterAPI
+	twitterAPI  *core.TwitterAPI
 	twitterAuth oauth.OAuthCreds
-	slackAPI    *mybot.SlackAPI
+	slackAPI    *core.SlackAPI
 	slackAuth   oauth.OAuthCreds
 	workerChans map[int]chan *worker.WorkerSignal
 	statuses    map[int]bool
@@ -327,7 +327,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 		userData.config, err = newFileConfig(c, userID)
 	} else {
 		col := session.DB(dbName).C("config")
-		userData.config, err = mybot.NewDBConfig(col, userID)
+		userData.config, err = core.NewDBConfig(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -353,10 +353,10 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 		return nil, utils.WithStack(err)
 	}
 
-	userData.twitterAPI = mybot.NewTwitterAPIWithAuth(userData.twitterAuth, userData.config, userData.cache)
+	userData.twitterAPI = core.NewTwitterAPIWithAuth(userData.twitterAuth, userData.config, userData.cache)
 
 	slackID, _ := userData.slackAuth.GetCreds()
-	userData.slackAPI = mybot.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
+	userData.slackAPI = core.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 
 	return userData, nil
 }
@@ -374,13 +374,13 @@ func newFileCache(c models.Context, userID string) (data.Cache, error) {
 	return cache, nil
 }
 
-func newFileConfig(c models.Context, userID string) (mybot.Config, error) {
+func newFileConfig(c models.Context, userID string) (core.Config, error) {
 	dir, err := argValueWithMkdir(c, configFlagName)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
 	file := filepath.Join(dir, fmt.Sprintf("%s.toml", userID))
-	config, err := mybot.NewFileConfig(file)
+	config, err := core.NewFileConfig(file)
 	if err != nil {
 		return nil, err
 	}
@@ -460,8 +460,8 @@ func validate(c *cli.Context) {
 }
 
 func beforeServing(c *cli.Context) error {
-	visionAPI, _ = mybot.NewVisionMatcher(c.String(gcloudFlagName))
-	languageAPI, _ = mybot.NewLanguageMatcher(c.String(gcloudFlagName))
+	visionAPI, _ = core.NewVisionMatcher(c.String(gcloudFlagName))
+	languageAPI, _ = core.NewLanguageMatcher(c.String(gcloudFlagName))
 
 	err := beforeValidating(c)
 	utils.ExitIfError(err)

@@ -1,4 +1,4 @@
-package mybot_test
+package core
 
 import (
 	"encoding/json"
@@ -11,7 +11,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
-	. "github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/stretchr/testify/require"
 )

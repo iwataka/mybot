@@ -1,7 +1,6 @@
-package tmpl_test
+package tmpl
 
 import (
-	. "github.com/iwataka/mybot/tmpl"
 	"github.com/stretchr/testify/require"
 
 	"fmt"

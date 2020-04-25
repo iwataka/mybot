@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
-	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
@@ -107,13 +107,13 @@ func reloadWorkers(userID string) {
 }
 
 type twitterDMWorker struct {
-	twitterAPI *mybot.TwitterAPI
+	twitterAPI *core.TwitterAPI
 	id         string
-	listener   *mybot.TwitterDMListener
+	listener   *core.TwitterDMListener
 	timeout    time.Duration
 }
 
-func newTwitterDMWorker(twitterAPI *mybot.TwitterAPI, id string, timeout time.Duration) *twitterDMWorker {
+func newTwitterDMWorker(twitterAPI *core.TwitterAPI, id string, timeout time.Duration) *twitterDMWorker {
 	return &twitterDMWorker{twitterAPI, id, nil, timeout}
 }
 
@@ -145,21 +145,21 @@ func (w *twitterDMWorker) Name() string {
 }
 
 type twitterUserWorker struct {
-	twitterAPI  *mybot.TwitterAPI
-	slackAPI    *mybot.SlackAPI
-	visionAPI   mybot.VisionMatcher
-	languageAPI mybot.LanguageMatcher
+	twitterAPI  *core.TwitterAPI
+	slackAPI    *core.SlackAPI
+	visionAPI   core.VisionMatcher
+	languageAPI core.LanguageMatcher
 	cache       data.Cache
 	id          string
-	listener    *mybot.TwitterUserListener
+	listener    *core.TwitterUserListener
 	timeout     time.Duration
 }
 
 func newTwitterUserWorker(
-	twitterAPI *mybot.TwitterAPI,
-	slackAPI *mybot.SlackAPI,
-	visionAPI mybot.VisionMatcher,
-	languageAPI mybot.LanguageMatcher,
+	twitterAPI *core.TwitterAPI,
+	slackAPI *core.SlackAPI,
+	visionAPI core.VisionMatcher,
+	languageAPI core.LanguageMatcher,
 	cache data.Cache,
 	id string,
 	timeout time.Duration,
@@ -197,7 +197,7 @@ func (w *twitterUserWorker) Name() string {
 type twitterPeriodicWorker struct {
 	runner    runner.BatchRunner
 	cache     utils.Savable
-	config    mybot.Config
+	config    core.Config
 	timeout   time.Duration
 	id        string
 	stream    *anaconda.Stream
@@ -207,7 +207,7 @@ type twitterPeriodicWorker struct {
 func newTwitterPeriodicWorker(
 	runner runner.BatchRunner,
 	cache utils.Savable,
-	config mybot.Config,
+	config core.Config,
 	timeout time.Duration,
 	id string,
 ) *twitterPeriodicWorker {
@@ -253,19 +253,19 @@ func (w *twitterPeriodicWorker) Name() string {
 }
 
 type slackWorker struct {
-	slackAPI    *mybot.SlackAPI
-	twitterAPI  *mybot.TwitterAPI
-	visionAPI   mybot.VisionMatcher
-	languageAPI mybot.LanguageMatcher
+	slackAPI    *core.SlackAPI
+	twitterAPI  *core.TwitterAPI
+	visionAPI   core.VisionMatcher
+	languageAPI core.LanguageMatcher
 	id          string
-	listener    *mybot.SlackListener
+	listener    *core.SlackListener
 }
 
 func newSlackWorker(
-	slackAPI *mybot.SlackAPI,
-	twitterAPI *mybot.TwitterAPI,
-	visionAPI mybot.VisionMatcher,
-	languageAPI mybot.LanguageMatcher,
+	slackAPI *core.SlackAPI,
+	twitterAPI *core.TwitterAPI,
+	visionAPI core.VisionMatcher,
+	languageAPI core.LanguageMatcher,
 	id string,
 ) *slackWorker {
 	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}

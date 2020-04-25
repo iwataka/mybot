@@ -1,8 +1,6 @@
-package utils_test
+package utils
 
 import (
-	. "github.com/iwataka/mybot/utils"
-
 	"fmt"
 )
 

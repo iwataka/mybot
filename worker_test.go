@@ -2,7 +2,7 @@ package main
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	"github.com/iwataka/mybot/lib"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/runner"
 	"github.com/iwataka/mybot/utils"
@@ -106,8 +106,8 @@ func generateCache(ctrl *gomock.Controller, times int) utils.Savable {
 	return cache
 }
 
-func generateConfig(t *testing.T, duration string) mybot.Config {
-	config := mybot.NewTestFileConfig("", t)
+func generateConfig(t *testing.T, duration string) core.Config {
+	config := core.NewTestFileConfig("", t)
 	config.SetPollingDuration(duration)
 	return config
 }

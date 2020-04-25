@@ -1,11 +1,9 @@
-package worker_test
+package worker
 
 import (
 	"fmt"
 	"log"
 	"time"
-
-	"github.com/iwataka/mybot/worker"
 )
 
 type MyWorker struct {
@@ -35,7 +33,7 @@ func (w *MyWorker) Name() string {
 
 func Example() {
 	w := NewMyWorker("foo")
-	inChan, outChan := worker.ActivateWorker(w, time.Minute)
+	inChan, outChan := ActivateWorker(w, time.Minute)
 
 	// ch is a channel to wait until the below goroutine processing
 	// finishes (not used in actual codes)
@@ -44,7 +42,7 @@ func Example() {
 	go func() {
 		for msg := range outChan {
 			switch m := msg.(type) {
-			case worker.WorkerStatus:
+			case WorkerStatus:
 				fmt.Printf("Worker %s\n", m)
 			case error:
 				log.Printf("%+v\n", m)
@@ -53,9 +51,9 @@ func Example() {
 		}
 	}()
 
-	inChan <- worker.NewWorkerSignal(worker.StartSignal)
+	inChan <- NewWorkerSignal(StartSignal)
 	<-ch
-	inChan <- worker.NewWorkerSignal(worker.StopSignal)
+	inChan <- NewWorkerSignal(StopSignal)
 	<-ch
 	// Output: Worker Started
 	// Worker Stopped

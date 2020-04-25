@@ -1,13 +1,12 @@
-package runner_test
+package runner
 
 import (
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
-	"github.com/iwataka/mybot/lib"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
-	. "github.com/iwataka/mybot/runner"
 	"github.com/stretchr/testify/require"
 
 	"errors"
@@ -17,23 +16,23 @@ import (
 func Test_TwitterAPIIsAvailable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	var twitterAPIMock *mocks.MockTwitterAPI
-	var twitterAPI *mybot.TwitterAPI
+	var twitterAPI *core.TwitterAPI
 
 	require.Error(t, TwitterAPIIsAvailable(nil))
 
 	twitterAPI = generateVerifiedTwitterAPI(t)
 	require.NoError(t, TwitterAPIIsAvailable(twitterAPI))
 
-	require.Error(t, TwitterAPIIsAvailable(&mybot.TwitterAPI{}))
+	require.Error(t, TwitterAPIIsAvailable(&core.TwitterAPI{}))
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, nil)
-	twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 	require.Error(t, TwitterAPIIsAvailable(twitterAPI))
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, errors.New(""))
-	twitterAPI = mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 	require.Error(t, TwitterAPIIsAvailable(twitterAPI))
 }
 
@@ -60,12 +59,12 @@ func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *B
 func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPIMock models.SlackAPI) *BatchRunnerUsedWithStream {
 	cache, err := data.NewFileCache("")
 	require.NoError(t, err)
-	config, err := mybot.NewFileConfig("../lib/testdata/config.template.toml")
+	config, err := core.NewFileConfig("../core/testdata/config.template.toml")
 	require.NoError(t, err)
-	twitterAPI := mybot.NewTwitterAPI(twitterAPIMock, config, cache)
-	slackAPI := mybot.NewSlackAPI(slackAPIMock, config, cache)
-	var visionAPI mybot.VisionMatcher
-	var languageAPI mybot.LanguageMatcher
+	twitterAPI := core.NewTwitterAPI(twitterAPIMock, config, cache)
+	slackAPI := core.NewSlackAPI(slackAPIMock, config, cache)
+	var visionAPI core.VisionMatcher
+	var languageAPI core.LanguageMatcher
 	return NewBatchRunnerUsedWithStream(twitterAPI, slackAPI, visionAPI, languageAPI, config)
 }
 
@@ -107,9 +106,9 @@ func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *m
 	)
 }
 
-func generateVerifiedTwitterAPI(t *testing.T) *mybot.TwitterAPI {
+func generateVerifiedTwitterAPI(t *testing.T) *core.TwitterAPI {
 	ctrl := gomock.NewController(t)
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(true, nil)
-	return mybot.NewTwitterAPI(twitterAPIMock, nil, nil)
+	return core.NewTwitterAPI(twitterAPIMock, nil, nil)
 }
