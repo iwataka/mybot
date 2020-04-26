@@ -59,7 +59,7 @@ func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *B
 func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPIMock models.SlackAPI) *BatchRunnerUsedWithStream {
 	cache, err := data.NewFileCache("")
 	require.NoError(t, err)
-	config, err := core.NewFileConfig("../core/testdata/config.template.toml")
+	config, err := core.NewFileConfig("../core/testdata/config.yaml")
 	require.NoError(t, err)
 	twitterAPI := core.NewTwitterAPI(twitterAPIMock, config, cache)
 	slackAPI := core.NewSlackAPI(slackAPIMock, config, cache)
@@ -103,6 +103,8 @@ func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *m
 		twitterAPIMock.EXPECT().CreateCollection(gomock.Any(), gomock.Any()).Return(anaconda.CollectionShowResult{}, nil),
 		twitterAPIMock.EXPECT().AddEntryToCollection(gomock.Any(), gomock.Any(), gomock.Any()).Return(anaconda.CollectionEntryAddResult{}, nil),
 		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil),
+
+		twitterAPIMock.EXPECT().GetFavorites(gomock.Any()).Return([]anaconda.Tweet{}, nil),
 	)
 }
 

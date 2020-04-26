@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultTestConfigFilePath = "testdata/config.template.toml"
+	defaultTestConfigFilePath = "testdata/config.yaml"
 )
 
 func Test_NewConfig(t *testing.T) {
@@ -50,7 +50,7 @@ func Test_NewConfig(t *testing.T) {
 
 func TestConfig_GetConfigProperties(t *testing.T) {
 	c := NewTestFileConfig(defaultTestConfigFilePath, t)
-	require.Equal(t, c.ConfigProperties, c.GetProperties())
+	require.Equal(t, c.ConfigProperties, *c.GetProperties())
 }
 
 func TestConfig_GetTwitterScreenNames(t *testing.T) {
@@ -72,8 +72,8 @@ func TestConfig_AddTwitterFavorite(t *testing.T) {
 	fav := FavoriteConfig{}
 	c.AddTwitterFavorite(fav)
 	favs := c.GetTwitterFavorites()
-	require.Equal(t, 1, len(favs))
-	require.Equal(t, fav, favs[0])
+	require.Equal(t, 2, len(favs))
+	require.Equal(t, fav, favs[1])
 }
 
 func TestConfig_AddTwitterSearch(t *testing.T) {
@@ -167,7 +167,7 @@ func TestConfig_ValidateWithAPI(t *testing.T) {
 }
 
 func TestConfig_SaveLoad(t *testing.T) {
-	c, err := NewFileConfig("testdata/config.template.toml")
+	c, err := NewFileConfig(defaultTestConfigFilePath)
 	require.NoError(t, err)
 	dir, err := ioutil.TempDir(os.TempDir(), "mybot_")
 	require.NoError(t, err)

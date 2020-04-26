@@ -14,11 +14,11 @@ import (
 
 // Filter is a configuration to filter out tweets
 type Filter struct {
-	models.FilterProperties
-	Patterns    []string                 `json:"patterns,omitempty" toml:"patterns,omitempty" bson:"patterns,omitempty"`
-	URLPatterns []string                 `json:"url_patterns,omitempty" toml:"url_patterns,omitempty" bson:"url_patterns,omitempty"`
-	Vision      models.VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty" bson:"vision,omitempty"`
-	Language    models.LanguageCondition `json:"language,omitempty" toml:"language,omitempty" bson:"language,omitempty"`
+	models.FilterProperties `yaml:",inline"`
+	Patterns                []string                 `json:"patterns,omitempty" toml:"patterns,omitempty" bson:"patterns,omitempty" yaml:"patterns,omitempty"`
+	URLPatterns             []string                 `json:"url_patterns,omitempty" toml:"url_patterns,omitempty" bson:"url_patterns,omitempty" yaml:"url_patterns,omitempty"`
+	Vision                  models.VisionCondition   `json:"vision,omitempty" toml:"vision,omitempty" bson:"vision,omitempty" yaml:"vision,omitempty"`
+	Language                models.LanguageCondition `json:"language,omitempty" toml:"language,omitempty" bson:"language,omitempty" yaml:"language,omitempty"`
 }
 
 func NewFilter() Filter {

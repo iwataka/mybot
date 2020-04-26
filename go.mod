@@ -36,5 +36,6 @@ require (
 	google.golang.org/api v0.0.0-20171220000333-cf39d2072c48
 	google.golang.org/appengine v1.0.0
 	gopkg.in/mgo.v2 v2.0.0-20160818020120-3f83fa500528
+	gopkg.in/yaml.v2 v2.2.8
 	rsc.io/sampler v1.99.99 // indirect
 )

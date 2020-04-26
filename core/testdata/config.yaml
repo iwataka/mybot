@@ -1,0 +1,96 @@
+duration: 30m
+twitter:
+  debug: false
+  timelines:
+    - name: Golang Release
+      screen_names:
+        - golang
+      filter:
+        lang: en
+        patterns:
+          - is released!
+          - '#golang'
+        vision:
+          label:
+            - cartoon|clip art|artwork
+          text:
+            - foo
+          landmark:
+            - statue of liberty
+          logo:
+            - google
+          face:
+            anger_likelihood: LIKELY
+            blurred_likelihood: LIKELY
+            headwear_likelihood: LIKELY
+            joy_likelihood: LIKELY
+      action:
+        twitter:
+          retweet: true
+          favorite: false
+          collections:
+            - foo
+        slack:
+          pin: false
+          star: false
+          channels:
+            - foo
+    - name: foo
+      screen_names:
+        - foo
+      action:
+        twitter:
+          retweet: true
+  favorites:
+    - name: foo
+      screen_names:
+        - foo
+      filter:
+        language:
+          min_sentiment: 0
+          max_sentiment: 1
+      action:
+        twitter:
+          collections:
+            - favorites
+  searches:
+    - name: foo bar
+      queries:
+        - foo
+        - bar
+      result_type: recent
+      filter:
+        patterns:
+          - foo
+        retweeted_threshold: 100
+      action:
+        twitter:
+          tweet: false
+          retweet: true
+          favorite: false
+          collections:
+            - foo
+        slack:
+          pin: false
+          star: false
+          channels:
+            - foo
+slack:
+  messages:
+    - name: foo
+      channels:
+        - foo
+      filter:
+        patterns:
+          - foo
+      action:
+        twitter:
+          tweet: true
+          collections: []
+        slack:
+          pin: true
+          star: true
+          channels:
+            - bar
+          reactions:
+            - smile

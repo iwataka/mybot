@@ -31,6 +31,7 @@ const (
 	twitterUserIDPrefix = "twitter-"
 	sessNameForProvider = "mybot-%s-session"
 	trueValue           = "true"
+	defaultConfigFormat = ".json"
 )
 
 var (
@@ -871,7 +872,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) 
 		msg = err.Error()
 		return
 	}
-	err = config.Unmarshal(".json", bytes)
+	err = config.Unmarshal(defaultConfigFormat, bytes)
 	if err != nil {
 		msg = err.Error()
 		return
@@ -893,10 +894,10 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) 
 }
 
 func getConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) {
-	ext := ".json"
+	ext := defaultConfigFormat
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config`+ext+`"`)
-	bytes, err := config.Marshal(strings.Repeat(" ", 4), ext)
+	bytes, err := config.Marshal(ext)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -1,15 +1,12 @@
 package core
 
 import (
-	"github.com/BurntSushi/toml"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -40,29 +37,29 @@ type Config interface {
 	Validate() error
 	ValidateWithAPI(api models.TwitterAPI) error
 	Unmarshal(ext string, bytes []byte) error
-	Marshal(indent, ext string) ([]byte, error)
+	Marshal(ext string) ([]byte, error)
 }
 
 // FileConfig is a root of the all configurations of this applciation.
 type FileConfig struct {
-	*ConfigProperties
+	ConfigProperties `yaml:",inline"`
 	// source is a configuration file from which this was loaded. This is
 	// needed to save the content to the same file.
-	File string `json:"-" toml:"-" bson:"-"`
+	File string `json:"-" toml:"-" bson:"-" yaml:"-"`
 }
 
 type ConfigProperties struct {
 	// Twitter is a configuration related to Twitter.
-	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter"`
+	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter" yaml:"twitter"`
 	// Slack is a configuration related to Slack
-	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack"`
+	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack" yaml:"slack"`
 	// Duration is a duration for some periodic jobs such as fetching
 	// users' favorites and searching by the specified condition.
-	Duration string `json:"duration" toml:"duration" bson:"duration"`
+	Duration string `json:"duration" toml:"duration" bson:"duration" yaml:"duration"`
 }
 
-func newConfigProperties() *ConfigProperties {
-	return &ConfigProperties{
+func newConfigProperties() ConfigProperties {
+	return ConfigProperties{
 		Twitter:  NewTwitterConfig(),
 		Slack:    NewSlackConfig(),
 		Duration: "10m",
@@ -196,50 +193,13 @@ func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
 // Marshal returns a configuration content as a toml text. If error occurs while
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
-func (c *ConfigProperties) Marshal(indent, ext string) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	switch ext {
-	case ".json":
-		b := new(bytes.Buffer)
-		enc := json.NewEncoder(b)
-		err := enc.Encode(c)
-		if err != nil {
-			return []byte{}, utils.WithStack(err)
-		}
-		// go1.6 or lower doesn't support json.Encoder#SetIndent.
-		err = json.Indent(buf, b.Bytes(), "", indent)
-		if err != nil {
-			return []byte{}, utils.WithStack(err)
-		}
-	case ".toml":
-		enc := toml.NewEncoder(buf)
-		enc.Indent = indent
-		err := enc.Encode(c)
-		if err != nil {
-			return []byte{}, utils.WithStack(err)
-		}
-	}
-	return buf.Bytes(), nil
+func (c *ConfigProperties) Marshal(ext string) ([]byte, error) {
+	return utils.Encode(ext, c)
 }
 
 // TODO: Make error message clearer
 func (c *ConfigProperties) Unmarshal(ext string, bytes []byte) error {
-	switch ext {
-	case ".json":
-		err := json.Unmarshal(bytes, c)
-		if err != nil {
-			return err
-		}
-	case ".toml":
-		_, err := toml.Decode(string(bytes), c)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("Configuration must be written in either json or toml format")
-	}
-
-	return nil
+	return utils.Decode(ext, bytes, c)
 }
 
 // Save saves the specified configuration to the source file.
@@ -250,7 +210,7 @@ func (c *FileConfig) Save() error {
 		return utils.WithStack(err)
 	}
 	if c != nil {
-		bs, err := c.Marshal("", filepath.Ext(c.File))
+		bs, err := c.Marshal(filepath.Ext(c.File))
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -282,11 +242,11 @@ func (c *FileConfig) Load() error {
 // timelines, favorites and searches. Sources should have filters and actions.
 type Source struct {
 	// Name is a label to identify each source
-	Name string `json:"name,omitempty" toml:"name,omitempty" bson:"name,omitempty"`
+	Name string `json:"name,omitempty" toml:"name,omitempty" bson:"name,omitempty" yaml:"name,omitempty"`
 	// Filter filters out incoming data from sources.
-	Filter Filter `json:"filter" toml:"filter" bson:"filter"`
+	Filter Filter `json:"filter" toml:"filter" bson:"filter" yaml:"filter"`
 	// Action defines actions for data passing through filters.
-	Action data.Action `json:"action" toml:"action" bson:"action"`
+	Action data.Action `json:"action" toml:"action" bson:"action" yaml:"action"`
 }
 
 func NewSource() Source {
@@ -313,12 +273,12 @@ func (c *Source) String() string {
 
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
-	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines"`
-	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites"`
-	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches"`
+	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines" yaml:"timelines"`
+	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites" yaml:"favorites"`
+	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches" yaml:"searches"`
 	// Debug is a flag for debugging, if it is true, additional information
 	// is outputted.
-	Debug bool `json:"debug" toml:"debug" bson:"debug"`
+	Debug bool `json:"debug" toml:"debug" bson:"debug" yaml:"debug"`
 }
 
 func NewTwitterConfig() TwitterConfig {
@@ -339,15 +299,15 @@ func (tc TwitterConfig) GetScreenNames() []string {
 	for _, f := range tc.Favorites {
 		result = append(result, f.ScreenNames...)
 	}
-	return result
+	return utils.UniqStrSlice(result)
 }
 
 // TimelineConfig is a configuration for Twitter timelines
 type TimelineConfig struct {
-	Source
-	models.SourceProperties
-	models.AccountProperties
-	models.TimelineProperties
+	Source                    `yaml:",inline"`
+	models.SourceProperties   `yaml:",inline"`
+	models.AccountProperties  `yaml:",inline"`
+	models.TimelineProperties `yaml:",inline"`
 }
 
 // NewTimelineConfig returns TimelineConfig instance, which is empty but has a
@@ -372,10 +332,10 @@ func (c *TimelineConfig) Validate() error {
 
 // FavoriteConfig is a configuration for Twitter favorites
 type FavoriteConfig struct {
-	Source
-	models.SourceProperties
-	models.AccountProperties
-	models.FavoriteProperties
+	Source                    `yaml:",inline"`
+	models.SourceProperties   `yaml:",inline"`
+	models.AccountProperties  `yaml:",inline"`
+	models.FavoriteProperties `yaml:",inline"`
 }
 
 // NewFavoriteCnfig returns FavoriteConfig instance, which is empty but has a
@@ -400,9 +360,9 @@ func (c *FavoriteConfig) Validate() error {
 
 // SearchConfig is a configuration for Twitter searches
 type SearchConfig struct {
-	Source
-	models.SourceProperties
-	models.SearchProperties
+	Source                  `yaml:",inline"`
+	models.SourceProperties `yaml:",inline"`
+	models.SearchProperties `yaml:",inline"`
 }
 
 // NewSearchConfig returns SearchConfig instance, which is empty but has a
@@ -426,7 +386,7 @@ func (c *SearchConfig) Validate() error {
 }
 
 type SlackConfig struct {
-	Messages []MessageConfig `json:"messages" toml:"messages" bson:"messages"`
+	Messages []MessageConfig `json:"messages" toml:"messages" bson:"messages" yaml:"messages"`
 }
 
 func NewSlackConfig() SlackConfig {
@@ -436,8 +396,8 @@ func NewSlackConfig() SlackConfig {
 }
 
 type MessageConfig struct {
-	Source
-	Channels []string `json:"channels" toml:"channels" bson:"channels"`
+	Source   `yaml:",inline"`
+	Channels []string `json:"channels" toml:"channels" bson:"channels" yaml:"channels"`
 }
 
 func (c MessageConfig) Validate() error {
@@ -470,9 +430,9 @@ func NewTwitterNotification() TwitterNotification {
 }
 
 type NotificationProperties struct {
-	TwitterAllowSelf bool     `json:"twitter_allow_self" toml:"twitter_allow_self" bson:"twitter_allow_self"`
-	TwitterUsers     []string `json:"twitter_users,omitempty" toml:"twitter_users,omitempty" bson:"twitter_users,omitempty"`
-	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty"`
+	TwitterAllowSelf bool     `json:"twitter_allow_self" toml:"twitter_allow_self" bson:"twitter_allow_self" yaml:"twitter_allow_self"`
+	TwitterUsers     []string `json:"twitter_users,omitempty" toml:"twitter_users,omitempty" bson:"twitter_users,omitempty" yaml:"twitter_users,omitempty"`
+	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty" yaml:"slack_channels,omitempty"`
 }
 
 // Notify sends a specified messages to certain users according to properties p.
@@ -511,9 +471,9 @@ func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAP
 }
 
 type DBConfig struct {
-	*ConfigProperties
-	col *mgo.Collection
-	ID  string `json:"id" toml:"id" bson:"id"`
+	ConfigProperties `yaml:",inline"`
+	col              *mgo.Collection
+	ID               string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
 func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {

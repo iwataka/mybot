@@ -6,9 +6,9 @@ import (
 )
 
 type SlackAction struct {
-	models.SlackActionProperties
-	Reactions []string `json:"reactions,omitempty" toml:"reactions,omitempty" bson:"reactions,omitempty"`
-	Channels  []string `json:"channels,omitempty" toml:"channels,omitempty" bson:"channels,omitempty"`
+	models.SlackActionProperties `yaml:",inline"`
+	Reactions                    []string `json:"reactions,omitempty" toml:"reactions,omitempty" bson:"reactions,omitempty" yaml:"reactions,omitempty"`
+	Channels                     []string `json:"channels,omitempty" toml:"channels,omitempty" bson:"channels,omitempty" yaml:"channels,omitempty"`
 }
 
 func NewSlackAction() SlackAction {

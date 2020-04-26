@@ -66,7 +66,7 @@ func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
 	// TODO: Mock config and other fields
-	serverTestUserSpecificData.config, err = core.NewFileConfig("core/testdata/config.template.toml")
+	serverTestUserSpecificData.config, err = core.NewFileConfig("core/testdata/config.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -222,7 +222,7 @@ func TestGetConfigFile(t *testing.T) {
 	hasForceDownload := strings.Contains(res.Header.Get("Content-Type"), "application/force-download")
 	require.True(t, hasForceDownload)
 
-	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), ".json")
+	hasContentDisposition := strings.Contains(res.Header.Get("Content-Disposition"), defaultConfigFormat)
 	require.True(t, hasContentDisposition)
 
 	defer res.Body.Close()

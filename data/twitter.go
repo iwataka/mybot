@@ -7,8 +7,8 @@ import (
 
 // TwitterAction can indicate for various actions for Twitter's tweets.
 type TwitterAction struct {
-	models.TwitterActionProperties
-	Collections []string `json:"collections" toml:"collections" bson:"collections"`
+	models.TwitterActionProperties `yaml:",inline"`
+	Collections                    []string `json:"collections" toml:"collections" bson:"collections" yaml:"collections"`
 }
 
 func NewTwitterAction() TwitterAction {

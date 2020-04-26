@@ -28,7 +28,7 @@ type TwitterAPI interface {
 }
 
 type TwitterActionProperties struct {
-	Tweet    bool `json:"tweet" toml:"tweet" bson:"tweet"`
-	Retweet  bool `json:"retweet" toml:"retweet" bson:"retweet"`
-	Favorite bool `json:"favorite" toml:"favorite" bson:"favorite"`
+	Tweet    bool `json:"tweet" toml:"tweet" bson:"tweet" yaml:"tweet"`
+	Retweet  bool `json:"retweet" toml:"retweet" bson:"retweet" yaml:"retweet"`
+	Favorite bool `json:"favorite" toml:"favorite" bson:"favorite" yaml:"favorite"`
 }

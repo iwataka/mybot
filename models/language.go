@@ -5,8 +5,8 @@ import (
 )
 
 type LanguageCondition struct {
-	MinSentiment *float64 `json:"min_sentiment,omitempty" toml:"min_sentiment,omitempty" bson:"min_sentiment,omitempty"`
-	MaxSentiment *float64 `json:"max_sentiment,omitempty" toml:"max_sentiment,omitempty" bson:"max_sentiment,omitempty"`
+	MinSentiment *float64 `json:"min_sentiment,omitempty" toml:"min_sentiment,omitempty" bson:"min_sentiment,omitempty" yaml:"min_sentiment,omitempty"`
+	MaxSentiment *float64 `json:"max_sentiment,omitempty" toml:"max_sentiment,omitempty" bson:"max_sentiment,omitempty" yaml:"max_sentiment,omitempty"`
 }
 
 func (c *LanguageCondition) IsEmpty() bool {

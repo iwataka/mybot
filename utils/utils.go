@@ -6,6 +6,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v2"
 )
 
 func init() {
@@ -31,6 +33,32 @@ type Loadable interface {
 	Load() error
 }
 
+func Decode(ext string, bs []byte, v interface{}) error {
+	switch ext {
+	case ".toml":
+		md, err := toml.Decode(string(bs), v)
+		if err != nil {
+			return WithStack(err)
+		}
+		if len(md.Undecoded()) != 0 {
+			return &TomlUndecodedKeysError{md.Undecoded(), ""}
+		}
+	case ".json":
+		err := json.Unmarshal(bs, v)
+		if err != nil {
+			return WithStack(err)
+		}
+	case ".yml", ".yaml":
+		err := yaml.UnmarshalStrict(bs, v)
+		if err != nil {
+			return WithStack(err)
+		}
+	default:
+		return fmt.Errorf("Unsupported file extension: %s", ext)
+	}
+	return nil
+}
+
 // DecodeFile decodes file and write the content to v.
 // This method selects a proper decoder by the file extension (json decoder by
 // default).
@@ -43,23 +71,30 @@ func DecodeFile(file string, v interface{}) error {
 	if len(bs) == 0 {
 		return nil
 	}
+	err = Decode(ext, bs, v)
+	if e, ok := err.(*TomlUndecodedKeysError); ok {
+		e.File = file
+	}
+	return err
+}
 
+func Encode(ext string, v interface{}) ([]byte, error) {
 	switch ext {
 	case ".toml":
-		md, err := toml.Decode(string(bs), v)
+		buf := new(bytes.Buffer)
+		enc := toml.NewEncoder(buf)
+		err := enc.Encode(v)
 		if err != nil {
-			return WithStack(err)
+			return nil, WithStack(err)
 		}
-		if len(md.Undecoded()) != 0 {
-			return &TomlUndecodedKeysError{md.Undecoded(), file}
-		}
+		return buf.Bytes(), nil
+	case ".json":
+		return json.Marshal(v)
+	case ".yml", ".yaml":
+		return yaml.Marshal(v)
 	default:
-		err = json.Unmarshal(bs, v)
-		if err != nil {
-			return WithStack(err)
-		}
+		return nil, fmt.Errorf("Unsupported file extension: %s", ext)
 	}
-	return nil
 }
 
 // EncodeFile encodes v into file.
@@ -67,22 +102,9 @@ func DecodeFile(file string, v interface{}) error {
 // default).
 func EncodeFile(file string, v interface{}) error {
 	ext := filepath.Ext(file)
-	var bs []byte
-	var err error
-	switch ext {
-	case ".toml":
-		buf := new(bytes.Buffer)
-		enc := toml.NewEncoder(buf)
-		err = enc.Encode(v)
-		if err != nil {
-			return WithStack(err)
-		}
-		bs = buf.Bytes()
-	default:
-		bs, err = json.Marshal(v)
-		if err != nil {
-			return WithStack(err)
-		}
+	bs, err := Encode(ext, v)
+	if err != nil {
+		return WithStack(err)
 	}
 	err = ioutil.WriteFile(file, bs, 0640)
 	if err != nil {
@@ -146,6 +168,7 @@ func GenerateRandString(n int) string {
 	return string(b)
 }
 
+// ExitIfError prints error message and exits with error code 1 if error exists.
 func ExitIfError(err error) {
 	if err != nil {
 		log.Printf("%+v\n", err)
@@ -153,20 +176,39 @@ func ExitIfError(err error) {
 	}
 }
 
+// TruePtr returns a pointer of true value.
 func TruePtr() *bool {
 	val := true
 	return &val
 }
 
+// FalsePtr returns a pointer of false value.
 func FalsePtr() *bool {
 	val := false
 	return &val
 }
 
+// IntPtr returns a pointer of n.
 func IntPtr(n int) *int {
 	return &n
 }
 
+// Float64Ptr returns a pointer of f.
 func Float64Ptr(f float64) *float64 {
 	return &f
+}
+
+// UniqStrSlice returns a slice contains only unique elements of ss.
+// This keeps order of the original slice ss.
+func UniqStrSlice(ss []string) []string {
+	m := map[string]bool{}
+	result := []string{}
+	for _, s := range ss {
+		if _, exists := m[s]; exists {
+			continue
+		}
+		result = append(result, s)
+		m[s] = true
+	}
+	return result
 }

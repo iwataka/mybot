@@ -1,8 +1,8 @@
 package models
 
 type TimelineProperties struct {
-	ExcludeReplies bool `json:"exclude_replies" toml:"exclude_replies" bson:"exclude_replies"`
-	IncludeRts     bool `json:"include_rts" toml:"include_rts" bson:"include_rts"`
+	ExcludeReplies bool `json:"exclude_replies" toml:"exclude_replies" bson:"exclude_replies" yaml:"exclude_replies"`
+	IncludeRts     bool `json:"include_rts" toml:"include_rts" bson:"include_rts" yaml:"include_rts"`
 }
 
 func NewTimelineProperties() TimelineProperties {
@@ -21,8 +21,8 @@ func NewFavoriteProperties() FavoriteProperties {
 }
 
 type SearchProperties struct {
-	Queries    []string `json:"queries" toml:"queries" bson:"queries"`
-	ResultType string   `json:"result_type,omitempty" toml:"result_type,omitempty" bson:"result_type,omitempty"`
+	Queries    []string `json:"queries" toml:"queries" bson:"queries" yaml:"queries"`
+	ResultType string   `json:"result_type,omitempty" toml:"result_type,omitempty" bson:"result_type,omitempty" yaml:"result_type,omitempty"`
 }
 
 func NewSearchProperties() SearchProperties {
@@ -34,9 +34,9 @@ func NewSearchProperties() SearchProperties {
 }
 
 type AccountProperties struct {
-	ScreenNames []string `json:"screen_names" toml:"screen_names" bson:"screen_names"`
+	ScreenNames []string `json:"screen_names" toml:"screen_names" bson:"screen_names" yaml:"screen_names"`
 }
 
 type SourceProperties struct {
-	Count *int `json:"count,omitempty" toml:"count,omitempty" bson:"count,omitempty"`
+	Count *int `json:"count,omitempty" toml:"count,omitempty" bson:"count,omitempty" yaml:"count,omitempty"`
 }

@@ -1,8 +1,8 @@
 package data
 
 type Action struct {
-	Twitter TwitterAction `json:"twitter" toml:"twitter" bson:"twitter"`
-	Slack   SlackAction   `json:"slack" toml:"slack" bson:"slack"`
+	Twitter TwitterAction `json:"twitter" toml:"twitter" bson:"twitter" yaml:"twitter"`
+	Slack   SlackAction   `json:"slack" toml:"slack" bson:"slack" yaml:"slack"`
 }
 
 func NewAction() Action {

@@ -32,19 +32,19 @@ type Cache interface {
 type CacheProperties struct {
 	// LatestTweetID associates Twitter screen name with the latest tweet
 	// ID in timeline.
-	LatestTweetID map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id"`
+	LatestTweetID map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id" yaml:"latest_tweet_id"`
 	// LatestFavoriteID associates Twitter screen name with the latest
 	// tweet ID in favorite list.
-	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id"`
+	LatestFavoriteID map[string]int64 `json:"latest_favorite_id" toml:"lates_favorite_id" bson:"latest_favorite_id" yaml:"latest_favorite_id"`
 	// LatestDMID is latest direct message ID of the authenticated user
 	// with the latest direct message ID.
-	LatestDMID int64 `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id"`
+	LatestDMID int64 `json:"latest_dm_id" toml:"latest_dm_id" bson:"latest_dm_id" yaml:"latest_dm_id"`
 	// Tweet2Action associates tweet ID with Mybot action.
 	// This is not an instance of map[int64]Action because it can't be
 	// converted to json when Go Runtime is v1.6 or older
-	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action"`
+	Tweet2Action map[string]Action `json:"tweet_to_action" toml:"tweet_to_action" bson:"tweet_to_action" yaml:"tweet_to_action"`
 	// Images is cache data of images analyzed by some API or method.
-	Images []models.ImageCacheData `json:"images" toml:"images" bson:"images"`
+	Images []models.ImageCacheData `json:"images" toml:"images" bson:"images" yaml:"images"`
 }
 
 func newCacheProperties() CacheProperties {
@@ -59,8 +59,8 @@ func newCacheProperties() CacheProperties {
 
 // FileCache is a cache data associated with a specified file.
 type FileCache struct {
-	CacheProperties
-	File string `json:"-" toml:"-" bson:"-"`
+	CacheProperties `yaml:",inline"`
+	File            string `json:"-" toml:"-" bson:"-" yaml:"-"`
 }
 
 // NewFileCache returns a new FileCache.
@@ -174,9 +174,9 @@ func (c *FileCache) Save() error {
 }
 
 type DBCache struct {
-	CacheProperties
-	col *mgo.Collection
-	ID  string `json:"id" toml:"id" bson:"id"`
+	CacheProperties `yaml:",inline"`
+	col             *mgo.Collection
+	ID              string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
 func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {

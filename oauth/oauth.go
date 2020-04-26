@@ -24,8 +24,8 @@ type OAuthCreds interface {
 // FileOAuthCreds is a user credential container for OAuth and associated with
 // a specified file.
 type FileOAuthCreds struct {
-	*OAuthCredsProps
-	File string `json:"-" toml:"-" bson:"-"`
+	OAuthCredsProps `yaml:",inline"`
+	File            string `json:"-" toml:"-" bson:"-" yaml:"-"`
 }
 
 // Load retrieves credential information from a specified file and stores it.
@@ -49,9 +49,9 @@ func NewFileOAuthCreds(file string) (*FileOAuthCreds, error) {
 // DBOAuthCreds is a user credential container for OAuth and associated with
 // a specified database (currently only MongoDB supported).
 type DBOAuthCreds struct {
-	*OAuthCredsProps
-	col *mgo.Collection
-	ID  string `json:"id" toml:"id" bson:"id"`
+	OAuthCredsProps `yaml:",inline"`
+	col             *mgo.Collection
+	ID              string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
 // NewDBOAuthCreds returns a new DBOAuthCreds with specified arguments.
@@ -86,12 +86,12 @@ func (a *DBOAuthCreds) Save() error {
 
 // OAuthCredsProps contains actual variables for user credential information.
 type OAuthCredsProps struct {
-	AccessToken       string `json:"access_token" toml:"access_token" bson:"access_token"`
-	AccessTokenSecret string `json:"access_token_secret" toml:"access_token_secret" bson:"access_token_secret"`
+	AccessToken       string `json:"access_token" toml:"access_token" bson:"access_token" yaml:"access_token"`
+	AccessTokenSecret string `json:"access_token_secret" toml:"access_token_secret" bson:"access_token_secret" yaml:"access_token_secret"`
 }
 
-func newOAuthCredsProps() *OAuthCredsProps {
-	return &OAuthCredsProps{"", ""}
+func newOAuthCredsProps() OAuthCredsProps {
+	return OAuthCredsProps{"", ""}
 }
 
 // SetCreds sets user credential information to a.
@@ -132,8 +132,8 @@ type OAuthAppProps interface {
 
 // DefaultOAuthAppProps contains variables for general OAuth application usage.
 type DefaultOAuthAppProps struct {
-	ConsumerKey    string `json:"consumer_key" toml:"consumer_key" bson:"consumer_key"`
-	ConsumerSecret string `json:"consumer_secret" toml:"consumer_secret" bson:"consumer_secret"`
+	ConsumerKey    string `json:"consumer_key" toml:"consumer_key" bson:"consumer_key" yaml:"consumer_key"`
+	ConsumerSecret string `json:"consumer_secret" toml:"consumer_secret" bson:"consumer_secret" yaml:"consumer_secret"`
 }
 
 // SetCreds sets application credential information to a.
@@ -161,7 +161,7 @@ func (a *TwitterOAuthAppProps) GetCreds() (string, string) {
 // FileOAuthApp is OAuthApp associated with a specified file.
 type FileOAuthApp struct {
 	OAuthAppProps
-	File string `json:"-" toml:"-" bson:"-"`
+	File string `json:"-" toml:"-" bson:"-" yaml:"-"`
 }
 
 // NewFileOAuthApp returns a new FileOAuthApp with file.

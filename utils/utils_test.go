@@ -29,8 +29,19 @@ func Test_DecodeFile_TakesTomlFile(t *testing.T) {
 	require.Error(t, DecodeFile("testdata/invalid.toml", &foo))
 	err := DecodeFile("testdata/array.toml", &struct{}{})
 	require.Error(t, err)
-	_, ok := err.(*TomlUndecodedKeysError)
+	e, ok := err.(*TomlUndecodedKeysError)
+	require.Equal(t, e.File, "testdata/array.toml")
 	require.True(t, ok)
+}
+
+func Test_DecodeFile_TakesYamlFile(t *testing.T) {
+	foo := struct {
+		Parent struct {
+			Child1 int `yaml:"child1"`
+			Child2 int `yaml:"child2"`
+		} `yaml:"parent"`
+	}{}
+	require.NoError(t, DecodeFile("testdata/map.yaml", &foo))
 }
 
 func Test_EncodeFile_TakesJsonFile(t *testing.T) {
@@ -64,6 +75,16 @@ func Test_EncodeFile_TakesTomlFile(t *testing.T) {
 	arr := []int{1, 2, 3}
 	arrayToml := filepath.Join(tmp, "array.toml")
 	require.Error(t, EncodeFile(arrayToml, arr))
+}
+
+func Test_EncodeFile_TakesYamlFile(t *testing.T) {
+	tmp := "tmp"
+	require.NoError(t, os.Mkdir(tmp, os.FileMode(0777)))
+	defer os.RemoveAll(tmp)
+
+	m := map[string]int{"foo": 0}
+	mapYaml := filepath.Join(tmp, "map.yaml")
+	require.NoError(t, EncodeFile(mapYaml, m))
 }
 
 func Test_CalcStringSlices(t *testing.T) {
@@ -116,4 +137,11 @@ func Test_IntPtr(t *testing.T) {
 func Test_Float64Ptr(t *testing.T) {
 	var f float64 = 1.1
 	require.Equal(t, f, *Float64Ptr(f))
+}
+
+func Test_UniqStrSlice(t *testing.T) {
+	s1 := []string{"foo", "foo"}
+	require.Equal(t, []string{"foo"}, UniqStrSlice(s1))
+	s2 := []string{"foo", "bar"}
+	require.Equal(t, s2, UniqStrSlice(s2))
 }

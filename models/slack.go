@@ -18,6 +18,6 @@ type SlackAPI interface {
 }
 
 type SlackActionProperties struct {
-	Pin  bool `json:"pin" toml:"pin" bson:"pin"`
-	Star bool `json:"star" toml:"star" bson:"star"`
+	Pin  bool `json:"pin" toml:"pin" bson:"pin" yaml:"pin"`
+	Star bool `json:"star" toml:"star" bson:"star" yaml:"star"`
 }
