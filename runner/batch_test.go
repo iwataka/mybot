@@ -71,7 +71,7 @@ func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPI
 func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *mocks.MockSlackAPI) {
 	fooSearchRes := anaconda.SearchResponse{
 		Statuses: []anaconda.Tweet{
-			anaconda.Tweet{
+			{
 				Text:         "foo",
 				RetweetCount: 100,
 				Id:           0,
@@ -80,7 +80,7 @@ func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *m
 	}
 	barSearchRes := anaconda.SearchResponse{
 		Statuses: []anaconda.Tweet{
-			anaconda.Tweet{
+			{
 				Text:         "foo bar",
 				RetweetCount: 100,
 				Id:           1,

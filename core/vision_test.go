@@ -10,10 +10,10 @@ import (
 
 func Test_matchEntity(t *testing.T) {
 	as := []*vision.EntityAnnotation{
-		&vision.EntityAnnotation{
+		{
 			Description: "foo",
 		},
-		&vision.EntityAnnotation{
+		{
 			Description: "bar",
 		},
 	}
@@ -29,7 +29,7 @@ func Test_matchEntity(t *testing.T) {
 
 func Test_matchFace(t *testing.T) {
 	as := []*vision.FaceAnnotation{
-		&vision.FaceAnnotation{
+		{
 			AngerLikelihood:   "LIKELY",
 			BlurredLikelihood: "VERY_UNLIKELY",
 		},

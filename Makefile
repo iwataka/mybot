@@ -4,7 +4,7 @@ GOLINT := golangci-lint
 all: fmt lint test
 
 fmt:
-	$(GO) fmt ./...
+	gofmt -s -w .
 
 lint:
 	$(GOLINT) run ./...
