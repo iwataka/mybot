@@ -70,9 +70,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	serverTestUserSpecificData.statuses = map[int]bool{}
-	serverTestUserSpecificData.statuses = initialStatuses()
-	serverTestUserSpecificData.workerChans = map[int]chan *worker.WorkerSignal{}
+	serverTestUserSpecificData.workerMgrs = map[int]*worker.WorkerManager{}
 	serverTestUserSpecificData.slackAPI = core.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
 	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
 

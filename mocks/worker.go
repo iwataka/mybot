@@ -9,43 +9,6 @@ import (
 	reflect "reflect"
 )
 
-// MockWorkerMessageHandler is a mock of WorkerMessageHandler interface
-type MockWorkerMessageHandler struct {
-	ctrl     *gomock.Controller
-	recorder *MockWorkerMessageHandlerMockRecorder
-}
-
-// MockWorkerMessageHandlerMockRecorder is the mock recorder for MockWorkerMessageHandler
-type MockWorkerMessageHandlerMockRecorder struct {
-	mock *MockWorkerMessageHandler
-}
-
-// NewMockWorkerMessageHandler creates a new mock instance
-func NewMockWorkerMessageHandler(ctrl *gomock.Controller) *MockWorkerMessageHandler {
-	mock := &MockWorkerMessageHandler{ctrl: ctrl}
-	mock.recorder = &MockWorkerMessageHandlerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockWorkerMessageHandler) EXPECT() *MockWorkerMessageHandlerMockRecorder {
-	return m.recorder
-}
-
-// Handle mocks base method
-func (m *MockWorkerMessageHandler) Handle(msg interface{}) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Handle", msg)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Handle indicates an expected call of Handle
-func (mr *MockWorkerMessageHandlerMockRecorder) Handle(msg interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Handle", reflect.TypeOf((*MockWorkerMessageHandler)(nil).Handle), msg)
-}
-
 // MockWorker is a mock of Worker interface
 type MockWorker struct {
 	ctrl     *gomock.Controller
@@ -70,31 +33,17 @@ func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 }
 
 // Start mocks base method
-func (m *MockWorker) Start() error {
+func (m *MockWorker) Start(arg0 <-chan interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start")
+	ret := m.ctrl.Call(m, "Start", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (mr *MockWorkerMockRecorder) Start() *gomock.Call {
+func (mr *MockWorkerMockRecorder) Start(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start))
-}
-
-// Stop mocks base method
-func (m *MockWorker) Stop() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Stop")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Stop indicates an expected call of Stop
-func (mr *MockWorkerMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockWorker)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), arg0)
 }
 
 // Name mocks base method

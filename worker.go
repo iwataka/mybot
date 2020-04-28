@@ -18,91 +18,38 @@ type workerMessageLogger struct {
 	workerID string
 }
 
-func (h workerMessageLogger) Handle(msg interface{}) error {
-	logMessage := ""
-	switch m := msg.(type) {
-	case worker.WorkerStatus:
-		logMessage = fmt.Sprintf("Worker %s: %s", m, h.workerID)
-	case error:
-		logMessage = m.Error()
-	}
-	log.Println(logMessage)
-	return nil
+func (h workerMessageLogger) HandleError(err error) {
+	log.Println(err)
 }
 
-// TODO: Test statuses are changed correctly.
+func (h workerMessageLogger) HandleWorkerStatus(s worker.WorkerStatus) {
+	fmt.Printf("Worker %s: %s\n", s, h.workerID)
+}
+
 func activateWorkerAndStart(
 	key int,
-	workerChans map[int]chan *worker.WorkerSignal,
-	statuses map[int]bool,
+	workerMgrs map[int]*worker.WorkerManager,
 	w models.Worker,
-	msgHandler models.WorkerMessageHandler,
+	whandler worker.WorkerManagerOutHandler,
+	bufSize int,
+	layers ...worker.WorkerChannelLayer,
 ) {
-	if ch, exists := workerChans[key]; exists {
-		close(ch)
+	if wm, exists := workerMgrs[key]; exists {
+		wm.Close()
 	}
 	// Worker manager process
-	ch, outChan := worker.ActivateWorker(w, time.Minute)
-	workerChans[key] = ch
+	wm := worker.NewWorkerManager(w, bufSize, layers...)
+	workerMgrs[key] = wm
 
-	// Process handling logs from the above worker manager
-	go func() {
-		for msg := range outChan {
-			handleWorkerMessage(msg, statuses, key, msgHandler)
-		}
-	}()
-
-	// Process sending ping to worker manager priodically
-	go func() {
-		timeout := time.Minute
-		ticker := time.NewTicker(timeout * 10)
-		for range ticker.C {
-			select {
-			case ch <- worker.NewWorkerSignal(worker.PingSignal):
-			case <-time.After(timeout):
-				msg := fmt.Sprintf("Failed to ping worker manager process (timeout: %s)", timeout)
-				select {
-				case outChan <- msg:
-				case <-time.After(timeout):
-				}
-			}
-		}
-	}()
-
-	ch <- worker.NewWorkerSignal(worker.StartSignal)
+	go wm.HandleOutput(whandler)
+	wm.Send(worker.StartSignal)
 }
 
-func handleWorkerMessage(
-	msg interface{},
-	statuses map[int]bool,
-	key int,
-	msgHandler models.WorkerMessageHandler,
-) {
-	switch m := msg.(type) {
-	case worker.WorkerStatus:
-		switch m {
-		case worker.StatusStarted:
-			statuses[key] = true
-		case worker.StatusStopped:
-			statuses[key] = false
-		}
-	}
-	if msgHandler != nil {
-		err := msgHandler.Handle(msg)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-func reloadWorkers(userID string) {
+// TODO: implement this to userSpecificDataMap struct
+func restartWorkers(userID string) {
 	data := userSpecificDataMap[userID]
-	for _, ch := range data.workerChans {
-		select {
-		case ch <- worker.NewWorkerSignal(worker.RestartSignal):
-		case <-time.After(time.Minute):
-			log.Println("Failed to reload worker (timeout: 1m)")
-		}
+	for _, ch := range data.workerMgrs {
+		ch.Send(worker.RestartSignal)
 	}
 }
 
@@ -110,32 +57,24 @@ type twitterDMWorker struct {
 	twitterAPI *core.TwitterAPI
 	id         string
 	listener   *core.TwitterDMListener
-	timeout    time.Duration
 }
 
-func newTwitterDMWorker(twitterAPI *core.TwitterAPI, id string, timeout time.Duration) *twitterDMWorker {
-	return &twitterDMWorker{twitterAPI, id, nil, timeout}
+func newTwitterDMWorker(twitterAPI *core.TwitterAPI, id string) *twitterDMWorker {
+	return &twitterDMWorker{twitterAPI, id, nil}
 }
 
-func (w *twitterDMWorker) Start() error {
+func (w *twitterDMWorker) Start(ch <-chan interface{}) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 
 	var err error
-	w.listener, err = w.twitterAPI.ListenMyself(nil, w.timeout)
+	w.listener, err = w.twitterAPI.ListenMyself(nil)
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(); err != nil {
+	if err := w.listener.Listen(ch); err != nil {
 		return utils.WithStack(err)
-	}
-	return nil
-}
-
-func (w *twitterDMWorker) Stop() error {
-	if w.listener != nil {
-		return w.listener.Stop()
 	}
 	return nil
 }
@@ -152,7 +91,6 @@ type twitterUserWorker struct {
 	cache       data.Cache
 	id          string
 	listener    *core.TwitterUserListener
-	timeout     time.Duration
 }
 
 func newTwitterUserWorker(
@@ -162,30 +100,22 @@ func newTwitterUserWorker(
 	languageAPI core.LanguageMatcher,
 	cache data.Cache,
 	id string,
-	timeout time.Duration,
 ) *twitterUserWorker {
-	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil, timeout}
+	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil}
 }
 
-func (w *twitterUserWorker) Start() error {
+func (w *twitterUserWorker) Start(ch <-chan interface{}) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 
 	var err error
-	w.listener, err = w.twitterAPI.ListenUsers(nil, w.timeout)
+	w.listener, err = w.twitterAPI.ListenUsers(nil)
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
+	if err := w.listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache, ch); err != nil {
 		return utils.WithStack(err)
-	}
-	return nil
-}
-
-func (w *twitterUserWorker) Stop() error {
-	if w.listener != nil {
-		return w.listener.Stop()
 	}
 	return nil
 }
@@ -195,26 +125,23 @@ func (w *twitterUserWorker) Name() string {
 }
 
 type twitterPeriodicWorker struct {
-	runner    runner.BatchRunner
-	cache     utils.Savable
-	config    core.Config
-	timeout   time.Duration
-	id        string
-	stream    *anaconda.Stream
-	innerChan chan bool
+	runner runner.BatchRunner
+	cache  utils.Savable
+	config core.Config
+	id     string
+	stream *anaconda.Stream
 }
 
 func newTwitterPeriodicWorker(
 	runner runner.BatchRunner,
 	cache utils.Savable,
 	config core.Config,
-	timeout time.Duration,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{runner, cache, config, timeout, id, nil, make(chan bool)}
+	return &twitterPeriodicWorker{runner, cache, config, id, nil}
 }
 
-func (w *twitterPeriodicWorker) Start() error {
+func (w *twitterPeriodicWorker) Start(ch <-chan interface{}) error {
 	if err := w.runner.IsAvailable(); err != nil {
 		return utils.WithStack(err)
 	}
@@ -233,18 +160,9 @@ func (w *twitterPeriodicWorker) Start() error {
 			if err := w.cache.Save(); err != nil {
 				return utils.WithStack(err)
 			}
-		case <-w.innerChan:
+		case <-ch:
 			return utils.NewStreamInterruptedError()
 		}
-	}
-}
-
-func (w *twitterPeriodicWorker) Stop() error {
-	select {
-	case w.innerChan <- true:
-		return nil
-	case <-time.After(w.timeout):
-		return fmt.Errorf("faield to stop worker %s", w.Name())
 	}
 }
 
@@ -271,7 +189,7 @@ func newSlackWorker(
 	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}
 }
 
-func (w *slackWorker) Start() error {
+func (w *slackWorker) Start(ch <-chan interface{}) error {
 	if w.slackAPI == nil {
 		return fmt.Errorf("Slack API is nil")
 	}
@@ -280,15 +198,8 @@ func (w *slackWorker) Start() error {
 	}
 
 	w.listener = w.slackAPI.Listen()
-	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
+	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI, ch); err != nil {
 		return utils.WithStack(err)
-	}
-	return nil
-}
-
-func (w *slackWorker) Stop() error {
-	if w.listener != nil {
-		return w.listener.Stop()
 	}
 	return nil
 }

@@ -11,7 +11,6 @@ import (
 
 	"fmt"
 	"testing"
-	"time"
 )
 
 func TestTwitterPeriodicWorker_Start(t *testing.T) {
@@ -20,7 +19,9 @@ func TestTwitterPeriodicWorker_Start(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
-	err := worker.Start()
+	ch := make(chan interface{})
+	defer close(ch)
+	err := worker.Start(ch)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }
@@ -32,13 +33,11 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 	w := generatePeriodicWorker(t, times, duration, id, nil, nil)
 
 	key := 0
-	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]bool)
-	statuses[key] = false
-	activateWorkerAndStart(key, workerChans, statuses, w, nil)
-	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
-	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
-	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
+	workerMgrs := make(map[int]*worker.WorkerManager)
+	activateWorkerAndStart(key, workerMgrs, w, nil, defaultWorkerBufSize)
+	defer workerMgrs[key].Close()
+	workerMgrs[key].Send(worker.RestartSignal)
+	workerMgrs[key].Send(worker.RestartSignal)
 }
 
 func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
@@ -49,13 +48,11 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
 	key := 0
-	workerChans := make(map[int]chan *worker.WorkerSignal)
-	statuses := make(map[int]bool)
-	statuses[key] = false
-	activateWorkerAndStart(key, workerChans, statuses, w, nil)
-	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
-	workerChans[key] <- worker.NewWorkerSignal(worker.RestartSignal)
-	workerChans[key] <- worker.NewWorkerSignal(worker.KillSignal)
+	workerMgrs := make(map[int]*worker.WorkerManager)
+	activateWorkerAndStart(key, workerMgrs, w, nil, defaultWorkerBufSize)
+	defer workerMgrs[key].Close()
+	workerMgrs[key].Send(worker.RestartSignal)
+	workerMgrs[key].Send(worker.RestartSignal)
 }
 
 func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
@@ -65,7 +62,9 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
-	err := w.Start()
+	ch := make(chan interface{})
+	defer close(ch)
+	err := w.Start(ch)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }
@@ -76,7 +75,7 @@ func generatePeriodicWorker(t *testing.T, times int, duration string, id string,
 	runner := generateRunner(ctrl, times, runErr, verifyErr)
 	cache := generateCache(ctrl, times)
 	config := generateConfig(t, duration)
-	return newTwitterPeriodicWorker(runner, cache, config, time.Second, id)
+	return newTwitterPeriodicWorker(runner, cache, config, id)
 }
 
 func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr error) runner.BatchRunner {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
@@ -304,10 +303,8 @@ func (a *TwitterAPI) GetFavorites(vals url.Values) ([]anaconda.Tweet, error) {
 }
 
 type TwitterUserListener struct {
-	stream    *anaconda.Stream
-	api       *TwitterAPI
-	innerChan chan bool
-	timeout   time.Duration
+	stream *anaconda.Stream
+	api    *TwitterAPI
 }
 
 func (l *TwitterUserListener) Listen(
@@ -315,6 +312,7 @@ func (l *TwitterUserListener) Listen(
 	lang LanguageMatcher,
 	slack *SlackAPI,
 	cache data.Cache,
+	ch <-chan interface{},
 ) error {
 	for {
 		select {
@@ -362,24 +360,14 @@ func (l *TwitterUserListener) Listen(
 					return utils.WithStack(err)
 				}
 			}
-		case <-l.innerChan:
+		case <-ch:
 			return utils.NewStreamInterruptedError()
 		}
 	}
 }
 
-func (l *TwitterUserListener) Stop() error {
-	l.stream.Stop()
-	select {
-	case l.innerChan <- true:
-		return nil
-	case <-time.After(l.timeout):
-		return fmt.Errorf("Failed to stop twitter DM listener")
-	}
-}
-
 // ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(v url.Values, timeout time.Duration) (*TwitterUserListener, error) {
+func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
@@ -398,18 +386,16 @@ func (a *TwitterAPI) ListenUsers(v url.Values, timeout time.Duration) (*TwitterU
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.api.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a, make(chan bool), timeout}, nil
+		return &TwitterUserListener{stream, a}, nil
 	}
 }
 
 type TwitterDMListener struct {
-	stream    *anaconda.Stream
-	api       *TwitterAPI
-	innerChan chan bool
-	timeout   time.Duration
+	stream *anaconda.Stream
+	api    *TwitterAPI
 }
 
-func (l *TwitterDMListener) Listen() error {
+func (l *TwitterDMListener) Listen(ch <-chan interface{}) error {
 	for {
 		select {
 		case msg := <-l.stream.C:
@@ -427,25 +413,15 @@ func (l *TwitterDMListener) Listen() error {
 					return utils.WithStack(err)
 				}
 			}
-		case <-l.innerChan:
+		case <-ch:
 			return utils.NewStreamInterruptedError()
 		}
 	}
 }
 
-func (l *TwitterDMListener) Stop() error {
-	l.stream.Stop()
-	select {
-	case l.innerChan <- true:
-		return nil
-	case <-time.After(l.timeout):
-		return fmt.Errorf("Failed to stop twitter DM listener")
-	}
-}
-
 // ListenMyself listens to the authenticated user by Twitter's User Streaming
 // API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values, timeout time.Duration) (*TwitterDMListener, error) {
+func (a *TwitterAPI) ListenMyself(v url.Values) (*TwitterDMListener, error) {
 	ok, err := a.VerifyCredentials()
 	if err != nil {
 		return nil, utils.WithStack(err)
@@ -453,7 +429,7 @@ func (a *TwitterAPI) ListenMyself(v url.Values, timeout time.Duration) (*Twitter
 		return nil, errors.New("Twitter Account Verification failed")
 	}
 	stream := a.api.UserStream(v)
-	return &TwitterDMListener{stream, a, make(chan bool), timeout}, nil
+	return &TwitterDMListener{stream, a}, nil
 }
 
 // TweetChecker function checks if the specified tweet is acceptable, which means it

@@ -233,7 +233,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, twitterUser, data.statuses)
+		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, twitterUser, data.statuses())
 	default:
 		http.NotFound(w, r)
 	}
@@ -439,7 +439,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twit
 		if err == nil {
 			err = config.Save()
 			if err != nil {
-				go reloadWorkers(twitterUserIDPrefix + twitterUser.UserID)
+				go restartWorkers(twitterUserIDPrefix + twitterUser.UserID)
 			}
 		} else {
 			_ = config.Load()

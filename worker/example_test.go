@@ -2,28 +2,18 @@ package worker
 
 import (
 	"fmt"
-	"log"
-	"time"
 )
 
 type MyWorker struct {
 	name string
-	ch   chan bool
 }
 
 func NewMyWorker(name string) *MyWorker {
-	return &MyWorker{name, make(chan bool)}
+	return &MyWorker{name}
 }
 
-func (w *MyWorker) Start() error {
-	for range w.ch {
-		return nil
-	}
-	return nil
-}
-
-func (w *MyWorker) Stop() error {
-	w.ch <- false
+func (w *MyWorker) Start(ch <-chan interface{}) error {
+	<-ch
 	return nil
 }
 
@@ -33,28 +23,17 @@ func (w *MyWorker) Name() string {
 
 func Example() {
 	w := NewMyWorker("foo")
-	inChan, outChan := ActivateWorker(w, time.Minute)
+	wm := NewWorkerManager(w, 0)
+	defer wm.Close()
 
-	// ch is a channel to wait until the below goroutine processing
-	// finishes (not used in actual codes)
-	ch := make(chan bool)
-	// Goroutine for capturing outputs
-	go func() {
-		for msg := range outChan {
-			switch m := msg.(type) {
-			case WorkerStatus:
-				fmt.Printf("Worker %s\n", m)
-			case error:
-				log.Printf("%+v\n", m)
-			}
-			ch <- true
-		}
-	}()
+	// Start worker
+	wm.Send(StartSignal)
+	fmt.Printf("Worker Status: %s\n", wm.Receive())
 
-	inChan <- NewWorkerSignal(StartSignal)
-	<-ch
-	inChan <- NewWorkerSignal(StopSignal)
-	<-ch
-	// Output: Worker Started
-	// Worker Stopped
+	// Stop worker
+	wm.Send(StopSignal)
+	fmt.Printf("Worker Status: %s\n", wm.Receive())
+
+	// Output: Worker Status: Started
+	// Worker Status: Stopped
 }

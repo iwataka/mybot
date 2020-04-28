@@ -70,6 +70,9 @@ const (
 	slackClientFileFlagName       = "slack-app"
 	sessionDomainFlagName         = "session-domain"
 	apiFlagName                   = "api"
+	workerBufSizeFlagName         = "worker-buffer-size"
+	workerRestartDurationFlagName = "worker-restart-duration"
+	workerRestartLimitFlagName    = "worker-restart-limit"
 )
 
 const (
@@ -78,6 +81,14 @@ const (
 	slackRoutineKey
 	twitterPeriodicRoutineKey
 )
+
+const (
+	defaultWorkerBufSize = 10
+)
+
+func workerKeys() []int {
+	return []int{twitterDMRoutineKey, twitterUserRoutineKey, slackRoutineKey, twitterPeriodicRoutineKey}
+}
 
 func main() {
 	home, err := homedir.Dir()
@@ -233,6 +244,27 @@ func main() {
 		Usage: "Use API to validate configuration",
 	}
 
+	workerBufSizeFlag := cli.IntFlag{
+		Name:   workerBufSizeFlagName,
+		Value:  defaultWorkerBufSize,
+		Usage:  "Worker channel buffer size",
+		EnvVar: "MYBOT_WORKER_BUFFER_SIZE",
+	}
+
+	workerRestartDurationFlag := cli.StringFlag{
+		Name:   workerRestartDurationFlagName,
+		Value:  "15m",
+		Usage:  "Worker restart duration",
+		EnvVar: "MYBOT_WORKER_RESTART_DURATION",
+	}
+
+	workerRestartLimitFlag := cli.IntFlag{
+		Name:   workerRestartLimitFlagName,
+		Value:  5,
+		Usage:  "Worker restart limit",
+		EnvVar: "MYBOT_WORKER_RESTART_LIMIT",
+	}
+
 	commonFlags := []cli.Flag{
 		configFlag,
 		cacheFlag,
@@ -257,6 +289,9 @@ func main() {
 		hostFlag,
 		portFlag,
 		sessionDomainFlag,
+		workerBufSizeFlag,
+		workerRestartDurationFlag,
+		workerRestartLimitFlag,
 	}
 	// All `run` flags should be `serve` flag
 	serveFlags = append(serveFlags, commonFlags...)
@@ -301,16 +336,26 @@ type userSpecificData struct {
 	twitterAuth oauth.OAuthCreds
 	slackAPI    *core.SlackAPI
 	slackAuth   oauth.OAuthCreds
-	workerChans map[int]chan *worker.WorkerSignal
-	statuses    map[int]bool
+	workerMgrs  map[int]*worker.WorkerManager
+}
+
+func (d *userSpecificData) statuses() map[int]bool {
+	s := map[int]bool{}
+	for _, key := range workerKeys() {
+		wm := d.workerMgrs[key]
+		if wm == nil {
+			s[key] = false
+		} else {
+			s[key] = wm.Status() == worker.StatusStarted
+		}
+	}
+	return s
 }
 
 func newUserSpecificData(c models.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
-	userData.workerChans = map[int]chan *worker.WorkerSignal{}
-	userData.statuses = map[int]bool{}
-	userData.statuses = initialStatuses()
+	userData.workerMgrs = map[int]*worker.WorkerManager{}
 	dbName := c.String(dbNameFlagName)
 
 	if session == nil {
@@ -400,50 +445,54 @@ func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCr
 	return creds, nil
 }
 
-func startUserSpecificData(userID string, data *userSpecificData) {
+func startUserSpecificData(userID string, data *userSpecificData, bufSize int, layers ...worker.WorkerChannelLayer) {
 	var w models.Worker
 
-	w = newTwitterDMWorker(data.twitterAPI, userID, time.Minute)
+	w = newTwitterDMWorker(data.twitterAPI, userID)
 	activateWorkerAndStart(
 		twitterDMRoutineKey,
-		data.workerChans,
-		data.statuses,
+		data.workerMgrs,
 		w,
 		workerMessageLogger{w.Name()},
+		bufSize,
+		layers...,
 	)
 
-	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID, time.Minute)
+	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID)
 	activateWorkerAndStart(
 		twitterUserRoutineKey,
-		data.workerChans,
-		data.statuses,
+		data.workerMgrs,
 		w,
 		workerMessageLogger{w.Name()},
+		bufSize,
+		layers...,
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-	w = newTwitterPeriodicWorker(r, data.cache, data.config, time.Minute, userID)
+	w = newTwitterPeriodicWorker(r, data.cache, data.config, userID)
 	activateWorkerAndStart(
 		twitterPeriodicRoutineKey,
-		data.workerChans,
-		data.statuses,
+		data.workerMgrs,
 		w,
 		workerMessageLogger{w.Name()},
+		bufSize,
+		layers...,
 	)
 
 	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
 	activateWorkerAndStart(
 		slackRoutineKey,
-		data.workerChans,
-		data.statuses,
+		data.workerMgrs,
 		w,
 		workerMessageLogger{w.Name()},
+		bufSize,
+		layers...,
 	)
 }
 
 func serve(c *cli.Context) error {
 	go httpServer(c)
-	ch := make(chan bool)
+	var ch chan interface{}
 	<-ch
 	return nil
 }
@@ -465,8 +514,12 @@ func beforeServing(c *cli.Context) error {
 
 	err := beforeValidating(c)
 	utils.ExitIfError(err)
+	restartDuration, err := time.ParseDuration(c.String(workerRestartDurationFlagName))
+	utils.ExitIfError(err)
+	restartLimit := c.Int(workerRestartLimitFlagName)
+	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, true)
 	for userID, data := range userSpecificDataMap {
-		startUserSpecificData(userID, data)
+		startUserSpecificData(userID, data, c.Int(workerBufSizeFlagName), restarter)
 	}
 	return nil
 }
@@ -648,13 +701,4 @@ func argValueWithMkdir(c models.Context, key string) (string, error) {
 		return "", utils.WithStack(err)
 	}
 	return dir, nil
-}
-
-func initialStatuses() map[int]bool {
-	statuses := map[int]bool{}
-	keys := []int{twitterDMRoutineKey, twitterUserRoutineKey, twitterPeriodicRoutineKey, slackRoutineKey}
-	for _, key := range keys {
-		statuses[key] = false
-	}
-	return statuses
 }

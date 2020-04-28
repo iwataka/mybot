@@ -232,18 +232,18 @@ func (a *SlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
 }
 
 func (a *SlackAPI) Listen() *SlackListener {
-	return &SlackListener{a, make(chan bool)}
+	return &SlackListener{a}
 }
 
 type SlackListener struct {
-	api       *SlackAPI
-	innerChan chan bool
+	api *SlackAPI
 }
 
 func (l *SlackListener) Start(
 	vis VisionMatcher,
 	lang LanguageMatcher,
 	twitterAPI *TwitterAPI,
+	ch <-chan interface{},
 ) error {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
@@ -314,18 +314,9 @@ func (l *SlackListener) Start(
 			case *slack.InvalidAuthEvent:
 				return fmt.Errorf("Invalid slack authentication")
 			}
-		case <-l.innerChan:
+		case <-ch:
 			return utils.NewStreamInterruptedError()
 		}
-	}
-}
-
-func (l *SlackListener) Stop() error {
-	select {
-	case l.innerChan <- true:
-		return nil
-	case <-time.After(time.Minute):
-		return fmt.Errorf("Faield to stop slack listener (timeout: 1m)")
 	}
 }
 
