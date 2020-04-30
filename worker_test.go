@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/mocks"
@@ -19,9 +21,9 @@ func TestTwitterPeriodicWorker_Start(t *testing.T) {
 	duration := "0.01s"
 	id := "id"
 	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
-	ch := make(chan interface{})
-	defer close(ch)
-	err := worker.Start(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err := worker.Start(ctx)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }
@@ -62,9 +64,9 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
-	ch := make(chan interface{})
-	defer close(ch)
-	err := w.Start(ch)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err := w.Start(ctx)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }

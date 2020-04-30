@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -308,11 +309,11 @@ type TwitterUserListener struct {
 }
 
 func (l *TwitterUserListener) Listen(
+	ctx context.Context,
 	vis VisionMatcher,
 	lang LanguageMatcher,
 	slack *SlackAPI,
 	cache data.Cache,
-	ch <-chan interface{},
 ) error {
 	for {
 		select {
@@ -347,7 +348,7 @@ func (l *TwitterUserListener) Listen(
 					return utils.WithStack(err)
 				}
 			}
-		case <-ch:
+		case <-ctx.Done():
 			return utils.NewStreamInterruptedError()
 		}
 	}
@@ -392,7 +393,7 @@ type TwitterDMListener struct {
 	api    *TwitterAPI
 }
 
-func (l *TwitterDMListener) Listen(ch <-chan interface{}) error {
+func (l *TwitterDMListener) Listen(ctx context.Context) error {
 	for {
 		select {
 		case msg := <-l.stream.C:
@@ -410,7 +411,7 @@ func (l *TwitterDMListener) Listen(ch <-chan interface{}) error {
 					return utils.WithStack(err)
 				}
 			}
-		case <-ch:
+		case <-ctx.Done():
 			return utils.NewStreamInterruptedError()
 		}
 	}

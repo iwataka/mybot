@@ -6,6 +6,7 @@ thread-safe by using Go channel feature.
 package worker
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -67,7 +68,7 @@ func (s WorkerStatus) String() string {
 // them.
 type WorkerChannelLayer interface {
 	// Apply applies this layer to inChan and outChan asynchronously.
-	Apply(inChan chan<- WorkerSignal, outChan <-chan interface{}, bufSize int, stopChan <-chan interface{}, wg *sync.WaitGroup) (chan<- WorkerSignal, <-chan interface{})
+	Apply(ctx context.Context, inChan chan<- WorkerSignal, outChan <-chan interface{}, bufSize int, wg *sync.WaitGroup) (chan<- WorkerSignal, <-chan interface{})
 }
 
 // StrategicRestarter is a channel layer applied to restart a worker
@@ -84,7 +85,7 @@ func NewStrategicRestarter(interval time.Duration, count int, suppressError bool
 	return StrategicRestarter{interval, count, suppressError}
 }
 
-func (sr StrategicRestarter) Apply(inChan chan<- WorkerSignal, outChan <-chan interface{}, bufSize int, stopChan <-chan interface{}, wg *sync.WaitGroup) (chan<- WorkerSignal, <-chan interface{}) {
+func (sr StrategicRestarter) Apply(ctx context.Context, inChan chan<- WorkerSignal, outChan <-chan interface{}, bufSize int, wg *sync.WaitGroup) (chan<- WorkerSignal, <-chan interface{}) {
 	oc := make(chan interface{}, bufSize)
 	go func() {
 		_wg := &sync.WaitGroup{}
@@ -111,7 +112,7 @@ func (sr StrategicRestarter) Apply(inChan chan<- WorkerSignal, outChan <-chan in
 					}
 				}
 				oc <- msg
-			case <-stopChan:
+			case <-ctx.Done():
 				go func() {
 					defer close(oc)
 					for msg := range outChan {
@@ -129,20 +130,21 @@ func (sr StrategicRestarter) Apply(inChan chan<- WorkerSignal, outChan <-chan in
 }
 
 type WorkerManager struct {
-	inChan   chan<- WorkerSignal
-	outChan  <-chan interface{}
-	stopChan chan<- interface{}
-	wg       *sync.WaitGroup
-	status   WorkerStatus
+	inChan  chan<- WorkerSignal
+	outChan <-chan interface{}
+	cancel  context.CancelFunc
+	wg      *sync.WaitGroup
+	status  WorkerStatus
 }
 
 func NewWorkerManager(worker models.Worker, bufSize int, layers ...WorkerChannelLayer) *WorkerManager {
-	inChan, outChan, stopChan, wg := activateWorkerWithBuffer(worker, bufSize, layers...)
-	return &WorkerManager{inChan, outChan, stopChan, wg, StatusStopped}
+	ctx, cancel := context.WithCancel(context.Background())
+	inChan, outChan, wg := activateWorkerWithBuffer(ctx, worker, bufSize, layers...)
+	return &WorkerManager{inChan, outChan, cancel, wg, StatusStopped}
 }
 
 func (wm *WorkerManager) Close() {
-	close(wm.stopChan)
+	wm.cancel()
 	wm.wg.Wait()
 	close(wm.inChan)
 }
@@ -191,15 +193,14 @@ type WorkerManagerOutHandler interface {
 // When worker receives WorkerSignal and changes its status, then return
 // corresponded WorkerStatus or error via outChan.
 // inChan and outChan are created with a given buffer size
-func activateWorkerWithBuffer(worker models.Worker, bufSize int, layers ...WorkerChannelLayer) (chan<- WorkerSignal, <-chan interface{}, chan<- interface{}, *sync.WaitGroup) {
+func activateWorkerWithBuffer(ctx context.Context, worker models.Worker, bufSize int, layers ...WorkerChannelLayer) (chan<- WorkerSignal, <-chan interface{}, *sync.WaitGroup) {
 	inChan, outChan := activateWorker(worker, bufSize)
-	stopChan := make(chan interface{})
 	wg := &sync.WaitGroup{}
 	for _, layer := range layers {
 		wg.Add(1)
-		inChan, outChan = layer.Apply(inChan, outChan, bufSize, stopChan, wg)
+		inChan, outChan = layer.Apply(ctx, inChan, outChan, bufSize, wg)
 	}
-	return inChan, outChan, stopChan, wg
+	return inChan, outChan, wg
 }
 
 func activateWorker(worker models.Worker, bufSize int) (chan<- WorkerSignal, <-chan interface{}) {
@@ -208,44 +209,46 @@ func activateWorker(worker models.Worker, bufSize int) (chan<- WorkerSignal, <-c
 
 	go func() {
 		defer close(outChan)
-		waitStopChan := make(chan bool)
-		defer close(waitStopChan)
-		var stopChan chan interface{}
+		wg := &sync.WaitGroup{}
+		var cancel context.CancelFunc
 		stop := func() {
-			if stopChan != nil {
-				close(stopChan)
-				stopChan = nil
-				<-waitStopChan
+			if cancel != nil {
+				cancel()
+				cancel = nil
+				wg.Wait()
 			}
 		}
 		defer stop()
+		start := func() {
+			if cancel == nil {
+				var ctx context.Context
+				ctx, cancel = context.WithCancel(context.Background())
+				wg.Add(1)
+				go func(ctx context.Context) {
+					startWorkerAndNotify(ctx, worker, outChan)
+					wg.Done()
+				}(ctx)
+			}
+		}
 		for signal := range inChan {
 			// Stop worker
 			if signal == RestartSignal || signal == StopSignal {
 				stop()
 			}
-
 			// Start worker
 			if signal == StartSignal || signal == RestartSignal {
-				if stopChan == nil {
-					stopChan = make(chan interface{})
-					go func(stopChan <-chan interface{}) {
-						startWorkerAndNotify(worker, stopChan, outChan)
-						waitStopChan <- true
-					}(stopChan)
-				}
+				start()
 			}
 		}
-
 		outChan <- StatusFinished
 	}()
 
 	return inChan, outChan
 }
 
-func startWorkerAndNotify(w models.Worker, stopChan <-chan interface{}, outChan chan<- interface{}) {
+func startWorkerAndNotify(ctx context.Context, w models.Worker, outChan chan<- interface{}) {
 	outChan <- StatusStarted
-	err := w.Start(stopChan)
+	err := w.Start(ctx)
 	if err != nil {
 		outChan <- err
 	}

@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
@@ -240,10 +242,10 @@ type SlackListener struct {
 }
 
 func (l *SlackListener) Start(
+	ctx context.Context,
 	vis VisionMatcher,
 	lang LanguageMatcher,
 	twitterAPI *TwitterAPI,
-	ch <-chan interface{},
 ) error {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
@@ -293,7 +295,7 @@ func (l *SlackListener) Start(
 			case *slack.InvalidAuthEvent:
 				return fmt.Errorf("Invalid slack authentication")
 			}
-		case <-ch:
+		case <-ctx.Done():
 			return utils.NewStreamInterruptedError()
 		}
 	}

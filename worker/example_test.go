@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -12,8 +13,8 @@ func NewMyWorker(name string) *MyWorker {
 	return &MyWorker{name}
 }
 
-func (w *MyWorker) Start(ch <-chan interface{}) error {
-	<-ch
+func (w *MyWorker) Start(ctx context.Context) error {
+	<-ctx.Done()
 	return nil
 }
 

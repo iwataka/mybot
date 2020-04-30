@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -33,17 +34,17 @@ func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 }
 
 // Start mocks base method
-func (m *MockWorker) Start(arg0 <-chan interface{}) error {
+func (m *MockWorker) Start(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Start", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (mr *MockWorkerMockRecorder) Start(arg0 interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) Start(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), ctx)
 }
 
 // Name mocks base method

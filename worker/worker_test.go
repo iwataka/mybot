@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"errors"
 	"math/rand"
 	"sync/atomic"
@@ -28,13 +29,13 @@ func newTestWorker() *testWorker {
 	return &testWorker{&count, &totalCount, make(chan bool)}
 }
 
-func (w *testWorker) Start(ch <-chan interface{}) error {
+func (w *testWorker) Start(ctx context.Context) error {
 	atomic.AddInt32(w.count, 1)
 	atomic.AddInt32(w.totalCount, 1)
 	defer func() { atomic.AddInt32(w.count, -1) }()
 	// To notify Start() processing is finished.
 	w.outChan <- true
-	<-ch
+	<-ctx.Done()
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -63,7 +64,7 @@ func newTwitterDMWorker(twitterAPI *core.TwitterAPI, id string) *twitterDMWorker
 	return &twitterDMWorker{twitterAPI, id, nil}
 }
 
-func (w *twitterDMWorker) Start(ch <-chan interface{}) error {
+func (w *twitterDMWorker) Start(ctx context.Context) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
@@ -73,7 +74,7 @@ func (w *twitterDMWorker) Start(ch <-chan interface{}) error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(ch); err != nil {
+	if err := w.listener.Listen(ctx); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil
@@ -104,7 +105,7 @@ func newTwitterUserWorker(
 	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil}
 }
 
-func (w *twitterUserWorker) Start(ch <-chan interface{}) error {
+func (w *twitterUserWorker) Start(ctx context.Context) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
@@ -114,7 +115,7 @@ func (w *twitterUserWorker) Start(ch <-chan interface{}) error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(w.visionAPI, w.languageAPI, w.slackAPI, w.cache, ch); err != nil {
+	if err := w.listener.Listen(ctx, w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil
@@ -141,7 +142,7 @@ func newTwitterPeriodicWorker(
 	return &twitterPeriodicWorker{runner, cache, config, id, nil}
 }
 
-func (w *twitterPeriodicWorker) Start(ch <-chan interface{}) error {
+func (w *twitterPeriodicWorker) Start(ctx context.Context) error {
 	if err := w.runner.IsAvailable(); err != nil {
 		return utils.WithStack(err)
 	}
@@ -160,7 +161,7 @@ func (w *twitterPeriodicWorker) Start(ch <-chan interface{}) error {
 			if err := w.cache.Save(); err != nil {
 				return utils.WithStack(err)
 			}
-		case <-ch:
+		case <-ctx.Done():
 			return utils.NewStreamInterruptedError()
 		}
 	}
@@ -189,7 +190,7 @@ func newSlackWorker(
 	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}
 }
 
-func (w *slackWorker) Start(ch <-chan interface{}) error {
+func (w *slackWorker) Start(ctx context.Context) error {
 	if w.slackAPI == nil {
 		return fmt.Errorf("Slack API is nil")
 	}
@@ -198,7 +199,7 @@ func (w *slackWorker) Start(ch <-chan interface{}) error {
 	}
 
 	w.listener = w.slackAPI.Listen()
-	if err := w.listener.Start(w.visionAPI, w.languageAPI, w.twitterAPI, ch); err != nil {
+	if err := w.listener.Start(ctx, w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil
