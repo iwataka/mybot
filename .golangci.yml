@@ -1,12 +1,17 @@
+issues:
+  exclude-rules:
+    - linters:
+        - unparam
+      text: always receives|always nil
+
 linters:
-  disable-all: true
   enable:
-    - govet
-    - errcheck
-    - unused
-    - gosimple
-    - structcheck
-    - varcheck
-    - ineffassign
-    - deadcode
-    - typecheck
+    - bodyclose
+    - interfacer
+    - unconvert
+    - dupl
+    - gocyclo
+    - gocognit
+    - misspell
+    - unparam
+    - scopelint

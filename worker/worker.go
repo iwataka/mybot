@@ -71,7 +71,7 @@ type WorkerChannelLayer interface {
 }
 
 // StrategicRestarter is a channel layer applied to restart a worker
-// automatically. This restarts a worker when some error happenes.
+// automatically. This restarts a worker when some error happens.
 // If error happens more than `count` times in `interval` duration, this stops.
 type StrategicRestarter struct {
 	interval      time.Duration

@@ -21,6 +21,7 @@ type Config interface {
 	GetProperties() *ConfigProperties
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
+	GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig
 	SetTwitterTimelines(timelines []TimelineConfig)
 	AddTwitterTimeline(timeline TimelineConfig)
 	GetTwitterFavorites() []FavoriteConfig
@@ -76,6 +77,18 @@ func (c *ConfigProperties) GetTwitterScreenNames() []string {
 
 func (c *ConfigProperties) GetTwitterTimelines() []TimelineConfig {
 	return c.Twitter.Timelines
+}
+
+func (c *ConfigProperties) GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig {
+	result := []TimelineConfig{}
+	for _, t := range c.GetTwitterTimelines() {
+		for _, n := range t.ScreenNames {
+			if n == screenName {
+				result = append(result, t)
+			}
+		}
+	}
+	return result
 }
 
 func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {

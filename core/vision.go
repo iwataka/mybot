@@ -81,46 +81,57 @@ func (a *VisionAPI) MatchImages(
 			return nil, nil, utils.WithStack(err)
 		}
 		results = append(results, string(result))
-
-		match := true
-		if match && r.LabelAnnotations != nil && len(r.LabelAnnotations) != 0 {
-			m, err := matchEntity(r.LabelAnnotations, cond.Label)
-			if err != nil {
-				return nil, nil, utils.WithStack(err)
-			}
-			match = match && m
-		}
-		if match && r.FaceAnnotations != nil && len(r.FaceAnnotations) != 0 {
-			m, err := matchFace(r.FaceAnnotations, cond.Face)
-			if err != nil {
-				return nil, nil, utils.WithStack(err)
-			}
-			match = match && m
-		}
-		if match && r.TextAnnotations != nil && len(r.TextAnnotations) != 0 {
-			m, err := matchEntity(r.TextAnnotations, cond.Text)
-			if err != nil {
-				return nil, nil, utils.WithStack(err)
-			}
-			match = match && m
-		}
-		if match && r.LandmarkAnnotations != nil && len(r.LandmarkAnnotations) != 0 {
-			m, err := matchEntity(r.LandmarkAnnotations, cond.Landmark)
-			if err != nil {
-				return nil, nil, utils.WithStack(err)
-			}
-			match = match && m
-		}
-		if match && r.LogoAnnotations != nil && len(r.LogoAnnotations) != 0 {
-			m, err := matchEntity(r.LogoAnnotations, cond.Logo)
-			if err != nil {
-				return nil, nil, utils.WithStack(err)
-			}
-			match = match && m
+		match, err := matchImage(r, cond)
+		if err != nil {
+			return nil, nil, utils.WithStack(err)
 		}
 		matches = append(matches, match)
 	}
 	return results, matches, nil
+}
+
+func matchImage(r *vision.AnnotateImageResponse, cond models.VisionCondition) (bool, error) {
+	matchLabel, err := matchEntity(r.LabelAnnotations, cond.Label)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !matchLabel {
+		return false, nil
+	}
+
+	matchFace, err := matchFace(r.FaceAnnotations, cond.Face)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !matchFace {
+		return false, nil
+	}
+
+	matchText, err := matchEntity(r.TextAnnotations, cond.Text)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !matchText {
+		return false, nil
+	}
+
+	matchLandmark, err := matchEntity(r.LandmarkAnnotations, cond.Landmark)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !matchLandmark {
+		return false, nil
+	}
+
+	matchLogo, err := matchEntity(r.LogoAnnotations, cond.Logo)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !matchLogo {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []models.ImageCacheData, features []*vision.Feature) ([]*vision.AnnotateImageResponse, error) {
@@ -132,20 +143,13 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 		uncachedUrls = urls
 	} else {
 		for _, url := range urls {
-			var exists bool
-			for _, cache := range caches {
-				if cache.URL == url {
-					res := &vision.AnnotateImageResponse{}
-					err := json.Unmarshal([]byte(cache.AnalysisResult), res)
-					if err != nil {
-						return nil, utils.WithStack(err)
-					}
-					exists = true
-					url2res[url] = res
-					break
-				}
+			res, err := getAnnotateImageResponseFromCache(url, caches)
+			if err != nil {
+				return nil, err
 			}
-			if !exists {
+			if res != nil {
+				url2res[url] = res
+			} else {
 				uncachedUrls = append(uncachedUrls, url)
 			}
 		}
@@ -168,6 +172,20 @@ func (a *VisionAPI) retrieveaAnnotateImageResponses(urls []string, caches []mode
 	}
 
 	return reses, nil
+}
+
+func getAnnotateImageResponseFromCache(url string, caches []models.ImageCacheData) (*vision.AnnotateImageResponse, error) {
+	for _, cache := range caches {
+		if cache.URL == url {
+			res := &vision.AnnotateImageResponse{}
+			err := json.Unmarshal([]byte(cache.AnalysisResult), res)
+			if err != nil {
+				return nil, utils.WithStack(err)
+			}
+			return res, nil
+		}
+	}
+	return nil, nil
 }
 
 func (a *VisionAPI) retrieveaAnnotateImageResponsesThroughAPI(urls []string, features []*vision.Feature) ([]*vision.AnnotateImageResponse, error) {
@@ -223,93 +241,88 @@ func (a *VisionAPI) Enabled() bool {
 }
 
 func matchEntity(as []*vision.EntityAnnotation, ds []string) (bool, error) {
+	if len(as) == 0 {
+		return true, nil
+	}
+
 	for _, d := range ds {
-		match := false
-		for _, a := range as {
-			m, err := regexp.MatchString(d, a.Description)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if m {
-				match = true
-				break
-			}
+		m, err := matchEntityAnnotationBySinglePattern(as, d)
+		if err != nil {
+			return false, utils.WithStack(err)
 		}
-		if !match {
+		if !m {
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
+func matchEntityAnnotationBySinglePattern(as []*vision.EntityAnnotation, d string) (bool, error) {
+	for _, a := range as {
+		m, err := regexp.MatchString(d, a.Description)
+		if err != nil {
+			return false, utils.WithStack(err)
+		}
+		if m {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func matchFace(as []*vision.FaceAnnotation, face models.VisionFaceCondition) (bool, error) {
-	if len(face.AngerLikelihood) > 0 {
-		var match bool
-		for _, a := range as {
-			m, err := regexp.MatchString(face.AngerLikelihood, a.AngerLikelihood)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if m {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false, nil
-		}
+	if len(as) == 0 {
+		return true, nil
 	}
 
-	if len(face.BlurredLikelihood) > 0 {
-		var match bool
-		for _, a := range as {
-			m, err := regexp.MatchString(face.BlurredLikelihood, a.BlurredLikelihood)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if m {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false, nil
-		}
+	getAnger := func(a *vision.FaceAnnotation) string { return a.AngerLikelihood }
+	matchAnger, err := matchEachFaceAnnotation(as, face.AngerLikelihood, getAnger)
+	if err != nil {
+		return false, err
+	}
+	if !matchAnger {
+		return false, nil
 	}
 
-	if len(face.HeadwearLikelihood) > 0 {
-		var match bool
-		for _, a := range as {
-			m, err := regexp.MatchString(face.HeadwearLikelihood, a.HeadwearLikelihood)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if m {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false, nil
-		}
+	getBlurred := func(a *vision.FaceAnnotation) string { return a.BlurredLikelihood }
+	matchBlurred, err := matchEachFaceAnnotation(as, face.BlurredLikelihood, getBlurred)
+	if err != nil {
+		return false, err
+	}
+	if !matchBlurred {
+		return false, nil
 	}
 
-	if len(face.JoyLikelihood) > 0 {
-		var match bool
-		for _, a := range as {
-			m, err := regexp.MatchString(face.JoyLikelihood, a.JoyLikelihood)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if m {
-				match = true
-				break
-			}
-		}
-		if !match {
-			return false, nil
-		}
+	getHeadwear := func(a *vision.FaceAnnotation) string { return a.HeadwearLikelihood }
+	matchHeadwear, err := matchEachFaceAnnotation(as, face.HeadwearLikelihood, getHeadwear)
+	if err != nil {
+		return false, err
+	}
+	if !matchHeadwear {
+		return false, nil
+	}
+
+	getJoy := func(a *vision.FaceAnnotation) string { return a.JoyLikelihood }
+	matchJoy, err := matchEachFaceAnnotation(as, face.JoyLikelihood, getJoy)
+	if err != nil {
+		return false, err
+	}
+	if !matchJoy {
+		return false, nil
 	}
 
 	return true, nil
+}
+
+func matchEachFaceAnnotation(as []*vision.FaceAnnotation, pattern string, toText func(*vision.FaceAnnotation) string) (bool, error) {
+	for _, a := range as {
+		m, err := regexp.MatchString(pattern, toText(a))
+		if err != nil {
+			return false, utils.WithStack(err)
+		}
+		if m {
+			return true, nil
+		}
+	}
+	return false, nil
 }

@@ -317,43 +317,30 @@ func (l *TwitterUserListener) Listen(
 	for {
 		select {
 		case msg := <-l.stream.C:
-			switch c := msg.(type) {
+			switch m := msg.(type) {
 			case anaconda.Tweet:
-				name := c.User.ScreenName
-				timelines := []TimelineConfig{}
-				ts := l.api.config.GetTwitterTimelines()
-				for _, t := range ts {
-					for _, n := range t.ScreenNames {
-						if n == name {
-							timelines = append(timelines, t)
-							break
-						}
-					}
-				}
-
+				name := m.User.ScreenName
+				timelines := l.api.config.GetTwitterTimelinesByScreenName(name)
 				if len(timelines) != 0 {
-					fmt.Printf("Tweet[%s] created by %s at %s\n", c.IdStr, name, c.CreatedAt)
+					fmt.Printf("Tweet[%s] created by %s at %s\n", m.IdStr, name, m.CreatedAt)
 				}
 
 				for _, timeline := range timelines {
-					if timeline.ExcludeReplies && c.InReplyToScreenName != "" {
+					if checkTweetByTimelineConfig(m, timeline) {
 						continue
 					}
-					if timeline.IncludeRts && c.RetweetedStatus != nil {
-						continue
-					}
-					match, err := timeline.Filter.CheckTweet(c, vis, lang, cache)
+					match, err := timeline.Filter.CheckTweet(m, vis, lang, cache)
 					if err != nil {
 						return utils.WithStack(err)
 					}
-					if match {
-						done := l.api.cache.GetTweetAction(c.Id)
-						err = l.api.processTweet(c, timeline.Action.Sub(done), slack)
-						if err != nil {
-							return utils.WithStack(err)
-						}
-						l.api.cache.SetLatestTweetID(name, c.Id)
+					if !match {
+						continue
 					}
+					done := l.api.cache.GetTweetAction(m.Id)
+					if err := l.api.processTweet(m, timeline.Action.Sub(done), slack); err != nil {
+						return utils.WithStack(err)
+					}
+					l.api.cache.SetLatestTweetID(name, m.Id)
 				}
 				err := l.api.cache.Save()
 				if err != nil {
@@ -364,6 +351,16 @@ func (l *TwitterUserListener) Listen(
 			return utils.NewStreamInterruptedError()
 		}
 	}
+}
+
+func checkTweetByTimelineConfig(t anaconda.Tweet, c TimelineConfig) bool {
+	if c.ExcludeReplies && t.InReplyToScreenName != "" {
+		return false
+	}
+	if c.IncludeRts && t.RetweetedStatus != nil {
+		return false
+	}
+	return true
 }
 
 // ListenUsers listens timelines of the friends

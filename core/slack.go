@@ -273,32 +273,11 @@ func (l *SlackListener) Start(
 				if time.Since(*t)-time.Minute > 0 {
 					continue
 				}
-				ch := ""
-				if ch == "" {
-					chs, err := l.api.api.GetChannels(true)
-					if err != nil {
-						return utils.WithStack(err)
-					}
-					for _, c := range chs {
-						if c.ID == ev.Channel {
-							ch = c.Name
-							break
-						}
-					}
+				ch, err := getChannelNameByID(l.api.api, ev.Channel)
+				if err != nil {
+					return utils.WithStack(err)
 				}
-				if ch == "" {
-					grps, err := l.api.api.GetGroups(true)
-					if err != nil {
-						return utils.WithStack(err)
-					}
-					for _, g := range grps {
-						if g.ID == ev.Channel {
-							ch = g.Name
-							break
-						}
-					}
-				}
-				if ch != "" {
+				if len(ch) > 0 {
 					fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
 					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
 					if err != nil {
@@ -318,6 +297,28 @@ func (l *SlackListener) Start(
 			return utils.NewStreamInterruptedError()
 		}
 	}
+}
+
+func getChannelNameByID(api models.SlackAPI, id string) (string, error) {
+	chs, err := api.GetChannels(true)
+	if err != nil {
+		return "", utils.WithStack(err)
+	}
+	for _, c := range chs {
+		if c.ID == id {
+			return c.Name, nil
+		}
+	}
+	grps, err := api.GetGroups(true)
+	if err != nil {
+		return "", utils.WithStack(err)
+	}
+	for _, g := range grps {
+		if g.ID == id {
+			return g.Name, nil
+		}
+	}
+	return "", nil
 }
 
 func CheckSlackError(err error) bool {

@@ -178,7 +178,7 @@ func GetIntPtr(val map[string][]string, index int, name string) (*int, error) {
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
-	result := int(i)
+	result := i
 	return &result, nil
 }
 

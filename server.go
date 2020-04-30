@@ -233,7 +233,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		getIndex(w, r, data.cache, data.twitterAPI, data.slackAPI, twitterUser, data.statuses())
+		getIndex(w, data.cache, data.slackAPI, twitterUser, data.statuses())
 	default:
 		http.NotFound(w, r)
 	}
@@ -241,9 +241,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func getIndex(
 	w http.ResponseWriter,
-	r *http.Request,
 	cache data.Cache,
-	twitterAPI *core.TwitterAPI,
 	slackAPI *core.SlackAPI,
 	twitterUser goth.User,
 	statuses map[int]bool,
@@ -330,13 +328,13 @@ func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		getTwitterCols(w, r, data.slackAPI, data.twitterAPI, twitterUser)
+		getTwitterCols(w, data.slackAPI, data.twitterAPI, twitterUser)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCols(w http.ResponseWriter, r *http.Request, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI, twitterUser goth.User) {
+func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI, twitterUser goth.User) {
 	colMap := make(map[string]string)
 	activeCol := ""
 	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
@@ -842,7 +840,7 @@ func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		postConfigFile(w, r, data.config)
 	case http.MethodGet:
-		getConfigFile(w, r, data.config)
+		getConfigFile(w, data.config)
 	default:
 		http.NotFound(w, r)
 	}
@@ -893,7 +891,7 @@ func postConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) 
 	}
 }
 
-func getConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) {
+func getConfigFile(w http.ResponseWriter, config core.Config) {
 	ext := defaultConfigFormat
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config`+ext+`"`)
@@ -1002,7 +1000,7 @@ func postSetup(w http.ResponseWriter, r *http.Request) {
 func getSetup(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.setup.message")
-	if msgCookie != nil {
+	if err == nil && msgCookie != nil {
 		msg = msgCookie.Value
 	}
 

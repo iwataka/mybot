@@ -64,7 +64,7 @@ type FileCache struct {
 }
 
 // NewFileCache returns a new FileCache.
-// If no file specified, this returns an emtpy Cache instance, which has no
+// If no file specified, this returns an empty Cache instance, which has no
 // data and can't save the content to any file.
 func NewFileCache(path string) (*FileCache, error) {
 	c := &FileCache{

@@ -22,7 +22,7 @@ func TestDBOAuth_SetGetCreds(t *testing.T) {
 	testOAuthSetGetCreds(t, a)
 }
 
-func testOAuthSetGetCreds(t *testing.T, a OAuthCreds) {
+func testOAuthSetGetCreds(t *testing.T, a OAuthAppProps) {
 	at := "foo"
 	ats := "bar"
 	a.SetCreds(at, ats)

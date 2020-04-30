@@ -41,6 +41,10 @@ func (a *LanguageAPI) MatchText(
 	text string,
 	cond models.LanguageCondition,
 ) (string, bool, error) {
+	if cond.IsEmpty() {
+		return "", true, nil
+	}
+
 	f := cond.LanguageFeatures()
 	// This means that nothing to do with language API.
 	if !f.ExtractDocumentSentiment && !f.ExtractEntities && !f.ExtractSyntax {

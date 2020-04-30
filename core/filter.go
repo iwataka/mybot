@@ -44,6 +44,43 @@ func (c Filter) CheckTweet(
 	l LanguageMatcher,
 	cache data.Cache,
 ) (bool, error) {
+	match, err := c.checkTweetWithoutWebAPI(t)
+	if err != nil {
+		return false, utils.WithStack(err)
+	}
+	if !match {
+		return false, nil
+	}
+
+	// If the Vision condition is empty or Vision API is not available,
+	// skip this check. Otherwise if there is at least one media to satisfy
+	// condition, the tweet will pass this check.
+	if v != nil && v.Enabled() {
+		match, err := c.matchTweetImages(t, v, cache)
+		if err != nil {
+			return false, utils.WithStack(err)
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
+	// If the Language condition is empty or Language API is not available,
+	// skip this check.
+	if l != nil && l.Enabled() {
+		_, match, err := l.MatchText(t.Text, c.Language)
+		if err != nil {
+			return false, utils.WithStack(err)
+		}
+		if !match {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func (c Filter) checkTweetWithoutWebAPI(t anaconda.Tweet) (bool, error) {
 	for _, p := range c.Patterns {
 		match, err := regexp.MatchString(p, t.Text)
 		if err != nil {
@@ -53,17 +90,11 @@ func (c Filter) CheckTweet(
 			return false, nil
 		}
 	}
+
 	for _, url := range c.URLPatterns {
-		match := false
-		var err error
-		for _, u := range t.Entities.Urls {
-			match, err = regexp.MatchString(url, u.Display_url)
-			if err != nil {
-				return false, utils.WithStack(err)
-			}
-			if match {
-				break
-			}
+		match, err := checkTweetMatchesURLPattern(t, url)
+		if err != nil {
+			return false, utils.WithStack(err)
 		}
 		if !match {
 			return false, nil
@@ -83,32 +114,20 @@ func (c Filter) CheckTweet(
 		return false, nil
 	}
 
-	// If the Vision condition is empty or Vision API is not available,
-	// skip this check. Otherwise if there is at least one media to satisfy
-	// condition, the tweet will pass this check.
-	if !c.Vision.IsEmpty() && v != nil && v.Enabled() {
-		match, err := c.matchTweetImages(t, v, cache)
-		if err != nil {
-			return false, utils.WithStack(err)
-		}
-		if !match {
-			return false, nil
-		}
-	}
-
-	// If the Language condition is empty or Language API is not available,
-	// skip this check.
-	if !c.Language.IsEmpty() && l != nil && l.Enabled() {
-		_, match, err := l.MatchText(t.Text, c.Language)
-		if err != nil {
-			return false, utils.WithStack(err)
-		}
-		if !match {
-			return false, nil
-		}
-	}
-
 	return true, nil
+}
+
+func checkTweetMatchesURLPattern(t anaconda.Tweet, pattern string) (bool, error) {
+	for _, u := range t.Entities.Urls {
+		match, err := regexp.MatchString(pattern, u.Display_url)
+		if err != nil {
+			return false, utils.WithStack(err)
+		}
+		if match {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c Filter) CheckSlackMsg(
@@ -128,14 +147,11 @@ func (c Filter) CheckSlackMsg(
 	}
 
 	if c.HasMedia != nil {
-		hasMedia := false
-		for _, a := range ev.Attachments {
-			if a.ImageURL != "" {
-				hasMedia = true
-				break
-			}
+		hasMedia, err := checkSlackMsgHasMedia(ev)
+		if err != nil {
+			return false, utils.WithStack(err)
 		}
-		if *c.HasMedia != hasMedia {
+		if !hasMedia {
 			return false, nil
 		}
 	}
@@ -143,7 +159,7 @@ func (c Filter) CheckSlackMsg(
 	// If the Vision condition is empty or Vision API is not available,
 	// skip this check. Otherwise if there is at least one media to satisfy
 	// condition, the tweet will pass this check.
-	if !c.Vision.IsEmpty() && v != nil && v.Enabled() {
+	if v != nil && v.Enabled() {
 		match, err := c.matchSlackImages(ev.Attachments, v, cache)
 		if err != nil {
 			return false, utils.WithStack(err)
@@ -155,7 +171,7 @@ func (c Filter) CheckSlackMsg(
 
 	// If the Language condition is empty or Language API is not available,
 	// skip this check.
-	if !c.Language.IsEmpty() && l != nil && l.Enabled() {
+	if l != nil && l.Enabled() {
 		_, match, err := l.MatchText(ev.Text, c.Language)
 		if err != nil {
 			return false, utils.WithStack(err)
@@ -166,6 +182,15 @@ func (c Filter) CheckSlackMsg(
 	}
 
 	return true, nil
+}
+
+func checkSlackMsgHasMedia(ev *slack.MessageEvent) (bool, error) {
+	for _, a := range ev.Attachments {
+		if a.ImageURL != "" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c Filter) matchTweetImages(t anaconda.Tweet, v VisionMatcher, cache data.Cache) (bool, error) {
@@ -188,6 +213,10 @@ func (c Filter) matchSlackImages(atts []slack.Attachment, v VisionMatcher, cache
 }
 
 func (c Filter) matchImageURLs(src string, urls []string, v VisionMatcher, cache data.Cache) (bool, error) {
+	if c.Vision.IsEmpty() {
+		return true, nil
+	}
+
 	results, matches, err := v.MatchImages(urls, c.Vision, cache.GetLatestImages(-1))
 	if err != nil {
 		return false, utils.WithStack(err)

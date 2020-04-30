@@ -544,7 +544,7 @@ func beforeValidating(c *cli.Context) error {
 		return utils.WithStack(err)
 	}
 
-	initSession(c, dbName)
+	initSession(dbName)
 
 	err = initTwitterApp(c, dbName)
 	if err != nil {
@@ -561,7 +561,7 @@ func beforeValidating(c *cli.Context) error {
 		return utils.WithStack(err)
 	}
 	for _, userID := range userIDs {
-		err := initForUser(c, dbSession, dbName, userID)
+		err := initForUser(c, dbSession, userID)
 		fmt.Printf("Initialize for user %s\n", userID)
 		if err != nil {
 			return utils.WithStack(err)
@@ -570,7 +570,7 @@ func beforeValidating(c *cli.Context) error {
 	return nil
 }
 
-func initSession(c models.Context, dbName string) {
+func initSession(dbName string) {
 	if dbSession == nil {
 		sess := sessions.NewCookieStore(
 			[]byte("mybot_session_key"),
@@ -645,7 +645,7 @@ func initSlackApp(c models.Context, dbName string) error {
 	return nil
 }
 
-func initForUser(c models.Context, session *mgo.Session, dbName, userID string) error {
+func initForUser(c models.Context, session *mgo.Session, userID string) error {
 	data, err := newUserSpecificData(c, session, userID)
 	if err != nil {
 		return utils.WithStack(err)
