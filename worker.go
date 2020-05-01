@@ -16,34 +16,32 @@ import (
 )
 
 type workerMessageLogger struct {
-	workerID string
+	workerID  string
+	logger    *log.Logger
+	errLogger *log.Logger
 }
 
-func (h workerMessageLogger) HandleError(err error) {
-	log.Println(err)
-}
-
-func (h workerMessageLogger) HandleWorkerStatus(s worker.WorkerStatus) {
-	fmt.Printf("Worker %s: %s\n", s, h.workerID)
+func (h workerMessageLogger) Handle(out interface{}) {
+	switch out.(type) {
+	case error:
+		h.errLogger.Printf("Worker[%s]: %#v\n", h.workerID, out)
+	case worker.WorkerStatus:
+		h.logger.Printf("Worker %s: %s\n", out, h.workerID)
+	case fmt.Stringer:
+		h.logger.Printf("Worker[%s]: %s\n", h.workerID, out)
+	}
 }
 
 func activateWorkerAndStart(
-	key int,
-	workerMgrs map[int]*worker.WorkerManager,
 	w models.Worker,
 	whandler worker.WorkerManagerOutHandler,
 	bufSize int,
 	layers ...worker.WorkerChannelLayer,
-) {
-	if wm, exists := workerMgrs[key]; exists {
-		wm.Close()
-	}
-	// Worker manager process
+) *worker.WorkerManager {
 	wm := worker.NewWorkerManager(w, bufSize, layers...)
-	workerMgrs[key] = wm
-
 	go wm.HandleOutput(whandler)
 	wm.Send(worker.StartSignal)
+	return wm
 }
 
 // TODO: implement this to userSpecificDataMap struct
@@ -64,7 +62,7 @@ func newTwitterDMWorker(twitterAPI *core.TwitterAPI, id string) *twitterDMWorker
 	return &twitterDMWorker{twitterAPI, id, nil}
 }
 
-func (w *twitterDMWorker) Start(ctx context.Context) error {
+func (w *twitterDMWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
@@ -74,7 +72,7 @@ func (w *twitterDMWorker) Start(ctx context.Context) error {
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(ctx); err != nil {
+	if err := w.listener.Listen(ctx, outChan); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil
@@ -105,17 +103,17 @@ func newTwitterUserWorker(
 	return &twitterUserWorker{twitterAPI, slackAPI, visionAPI, languageAPI, cache, id, nil}
 }
 
-func (w *twitterUserWorker) Start(ctx context.Context) error {
+func (w *twitterUserWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	if err := runner.TwitterAPIIsAvailable(w.twitterAPI); err != nil {
 		return utils.WithStack(err)
 	}
 
 	var err error
-	w.listener, err = w.twitterAPI.ListenUsers(nil)
+	w.listener, err = w.twitterAPI.ListenUsers(nil, w.visionAPI, w.languageAPI, w.slackAPI, w.cache)
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	if err := w.listener.Listen(ctx, w.visionAPI, w.languageAPI, w.slackAPI, w.cache); err != nil {
+	if err := w.listener.Listen(ctx, outChan); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil
@@ -142,7 +140,7 @@ func newTwitterPeriodicWorker(
 	return &twitterPeriodicWorker{runner, cache, config, id, nil}
 }
 
-func (w *twitterPeriodicWorker) Start(ctx context.Context) error {
+func (w *twitterPeriodicWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	if err := w.runner.IsAvailable(); err != nil {
 		return utils.WithStack(err)
 	}
@@ -155,8 +153,13 @@ func (w *twitterPeriodicWorker) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			if err := w.runner.Run(); err != nil {
+			outChan <- core.NewReceivedEvent(core.TwitterEventType, "periodic", nil)
+			processedTweets, processedActions, err := w.runner.Run()
+			if err != nil {
 				return utils.WithStack(err)
+			}
+			for i := 0; i < len(processedTweets); i++ {
+				outChan <- core.NewActionEvent(processedActions[i], processedTweets[i])
 			}
 			if err := w.cache.Save(); err != nil {
 				return utils.WithStack(err)
@@ -190,7 +193,7 @@ func newSlackWorker(
 	return &slackWorker{slackAPI, twitterAPI, visionAPI, languageAPI, id, nil}
 }
 
-func (w *slackWorker) Start(ctx context.Context) error {
+func (w *slackWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	if w.slackAPI == nil {
 		return fmt.Errorf("Slack API is nil")
 	}
@@ -198,8 +201,8 @@ func (w *slackWorker) Start(ctx context.Context) error {
 		return fmt.Errorf("Slack API is disabled")
 	}
 
-	w.listener = w.slackAPI.Listen()
-	if err := w.listener.Start(ctx, w.visionAPI, w.languageAPI, w.twitterAPI); err != nil {
+	w.listener = w.slackAPI.Listen(w.visionAPI, w.languageAPI, w.twitterAPI)
+	if err := w.listener.Start(ctx, outChan); err != nil {
 		return utils.WithStack(err)
 	}
 	return nil

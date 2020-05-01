@@ -338,7 +338,7 @@ func (c *TimelineConfig) Validate() error {
 		return utils.WithStack(err)
 	}
 	if len(c.ScreenNames) == 0 {
-		return fmt.Errorf("%v has no screen names", c)
+		return fmt.Errorf("No screen names: %#v", c)
 	}
 	return c.Filter.Validate()
 }
@@ -366,7 +366,7 @@ func (c *FavoriteConfig) Validate() error {
 		return utils.WithStack(err)
 	}
 	if len(c.ScreenNames) == 0 {
-		return fmt.Errorf("%v has no screen names", c)
+		return fmt.Errorf("No screen names: %#v", c)
 	}
 	return c.Filter.Validate()
 }
@@ -393,7 +393,7 @@ func (c *SearchConfig) Validate() error {
 		return utils.WithStack(err)
 	}
 	if len(c.Queries) == 0 {
-		return fmt.Errorf("%v has no queries", c)
+		return fmt.Errorf("No queries: %#v", c)
 	}
 	return c.Filter.Validate()
 }

@@ -94,7 +94,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	lang LanguageMatcher,
 	slack *SlackAPI,
 	action data.Action,
-) ([]anaconda.Tweet, error) {
+) ([]anaconda.Tweet, []data.Action, error) {
 	latestID := a.cache.GetLatestFavoriteID(name)
 	v.Set("screen_name", name)
 	if latestID > 0 {
@@ -106,7 +106,7 @@ func (a *TwitterAPI) ProcessFavorites(
 	}
 	tweets, err := a.api.GetFavorites(v)
 	if err != nil {
-		return nil, utils.WithStack(err)
+		return nil, nil, utils.WithStack(err)
 	}
 	var pp TwitterPostProcessor
 	if c.ShouldRepeat() {
@@ -114,11 +114,11 @@ func (a *TwitterAPI) ProcessFavorites(
 	} else {
 		pp = &TwitterPostProcessorTop{action, name, a.cache}
 	}
-	result, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
+	processedTweets, processedActions, err := a.processTweets(tweets, c, vision, lang, slack, action, pp)
 	if err != nil {
-		return nil, utils.WithStack(err)
+		return nil, nil, utils.WithStack(err)
 	}
-	return result, nil
+	return processedTweets, processedActions, nil
 }
 
 // ProcessSearch gets tweets from search result by the specified query and do
@@ -131,17 +131,17 @@ func (a *TwitterAPI) ProcessSearch(
 	lang LanguageMatcher,
 	slack *SlackAPI,
 	action data.Action,
-) ([]anaconda.Tweet, error) {
+) ([]anaconda.Tweet, []data.Action, error) {
 	res, err := a.GetSearch(query, v)
 	if err != nil {
-		return nil, utils.WithStack(err)
+		return nil, nil, utils.WithStack(err)
 	}
 	pp := &TwitterPostProcessorEach{action, a.cache}
-	result, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
+	processedTweets, processedActions, err := a.processTweets(res.Statuses, c, vision, lang, slack, action, pp)
 	if err != nil {
-		return nil, utils.WithStack(err)
+		return nil, nil, utils.WithStack(err)
 	}
-	return result, utils.WithStack(err)
+	return processedTweets, processedActions, utils.WithStack(err)
 }
 
 type (
@@ -187,29 +187,32 @@ func (a *TwitterAPI) processTweets(
 	slack *SlackAPI,
 	action data.Action,
 	pp TwitterPostProcessor,
-) ([]anaconda.Tweet, error) {
-	result := []anaconda.Tweet{}
+) ([]anaconda.Tweet, []data.Action, error) {
+	processedTweets := []anaconda.Tweet{}
+	processedActions := []data.Action{}
 	// From the oldest to the newest
 	for i := len(tweets) - 1; i >= 0; i-- {
 		t := tweets[i]
 		match, err := c.CheckTweet(t, v, l, a.cache)
 		if err != nil {
-			return nil, utils.WithStack(err)
+			return nil, nil, utils.WithStack(err)
 		}
 		if match {
 			done := a.cache.GetTweetAction(t.Id)
-			err = a.processTweet(t, action.Sub(done), slack)
+			undone := action.Sub(done)
+			err = a.processTweet(t, undone, slack)
 			if err != nil {
-				return nil, utils.WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
-			result = append(result, t)
+			processedTweets = append(processedTweets, t)
+			processedActions = append(processedActions, undone)
 		}
 		err = pp.Process(t, match)
 		if err != nil {
-			return nil, utils.WithStack(err)
+			return nil, nil, utils.WithStack(err)
 		}
 	}
-	return result, nil
+	return processedTweets, processedActions, nil
 }
 
 func (a *TwitterAPI) processTweet(
@@ -228,31 +231,27 @@ func (a *TwitterAPI) processTweet(
 		if CheckTwitterError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Printf("Retweet the tweet[%d]\n", id)
 	}
 	if action.Twitter.Favorite && !t.Favorited {
 		id := t.Id
 		_, err := a.api.Favorite(id)
-		if err != nil {
+		if CheckTwitterError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Printf("Favorite the tweet[%d]\n", id)
 	}
 	for _, col := range action.Twitter.Collections {
 		err := a.collectTweet(t, col)
-		if err != nil {
+		if CheckTwitterError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Printf("Collect the tweet[%s] to %s\n", t.IdStr, col)
 	}
 
 	if slack.Enabled() {
 		for _, ch := range action.Slack.Channels {
 			err := slack.PostTweet(ch, t)
-			if err != nil {
+			if CheckSlackError(err) {
 				return utils.WithStack(err)
 			}
-			fmt.Printf("Send the tweet[%s] to #%s\n", t.IdStr, ch)
 		}
 	}
 
@@ -306,15 +305,13 @@ func (a *TwitterAPI) GetFavorites(vals url.Values) ([]anaconda.Tweet, error) {
 type TwitterUserListener struct {
 	stream *anaconda.Stream
 	api    *TwitterAPI
+	vis    VisionMatcher
+	lang   LanguageMatcher
+	slack  *SlackAPI
+	cache  data.Cache
 }
 
-func (l *TwitterUserListener) Listen(
-	ctx context.Context,
-	vis VisionMatcher,
-	lang LanguageMatcher,
-	slack *SlackAPI,
-	cache data.Cache,
-) error {
+func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
 	for {
 		select {
 		case msg := <-l.stream.C:
@@ -323,14 +320,14 @@ func (l *TwitterUserListener) Listen(
 				name := m.User.ScreenName
 				timelines := l.api.config.GetTwitterTimelinesByScreenName(name)
 				if len(timelines) != 0 {
-					fmt.Printf("Tweet[%s] created by %s at %s\n", m.IdStr, name, m.CreatedAt)
+					outChan <- NewReceivedEvent(TwitterEventType, "tweet", m)
 				}
 
 				for _, timeline := range timelines {
 					if checkTweetByTimelineConfig(m, timeline) {
 						continue
 					}
-					match, err := timeline.Filter.CheckTweet(m, vis, lang, cache)
+					match, err := timeline.Filter.CheckTweet(m, l.vis, l.lang, l.cache)
 					if err != nil {
 						return utils.WithStack(err)
 					}
@@ -338,9 +335,11 @@ func (l *TwitterUserListener) Listen(
 						continue
 					}
 					done := l.api.cache.GetTweetAction(m.Id)
-					if err := l.api.processTweet(m, timeline.Action.Sub(done), slack); err != nil {
+					undone := timeline.Action.Sub(done)
+					if err := l.api.processTweet(m, undone, l.slack); err != nil {
 						return utils.WithStack(err)
 					}
+					outChan <- NewActionEvent(undone, m)
 					l.api.cache.SetLatestTweetID(name, m.Id)
 				}
 				err := l.api.cache.Save()
@@ -365,7 +364,13 @@ func checkTweetByTimelineConfig(t anaconda.Tweet, c TimelineConfig) bool {
 }
 
 // ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
+func (a *TwitterAPI) ListenUsers(
+	v url.Values,
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	slack *SlackAPI,
+	cache data.Cache,
+) (*TwitterUserListener, error) {
 	if v == nil {
 		v = url.Values{}
 	}
@@ -384,7 +389,7 @@ func (a *TwitterAPI) ListenUsers(v url.Values) (*TwitterUserListener, error) {
 		}
 		v.Set("follow", strings.Join(userids, ","))
 		stream := a.api.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a}, nil
+		return &TwitterUserListener{stream, a, vis, lang, slack, cache}, nil
 	}
 }
 
@@ -393,14 +398,13 @@ type TwitterDMListener struct {
 	api    *TwitterAPI
 }
 
-func (l *TwitterDMListener) Listen(ctx context.Context) error {
+func (l *TwitterDMListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
 	for {
 		select {
 		case msg := <-l.stream.C:
 			switch c := msg.(type) {
 			case anaconda.DirectMessage:
-				fmt.Printf("DM[%s] created by %s at %s\n", c.IdStr, c.Sender.ScreenName, c.CreatedAt)
-
+				outChan <- NewReceivedEvent(TwitterEventType, "DM", c)
 				// TODO: Handle direct messages in the same way as the other sources
 				id := l.api.cache.GetLatestDMID()
 				if id < c.Id {
@@ -444,11 +448,14 @@ func CheckTwitterError(err error) bool {
 
 	switch twitterErr := err.(type) {
 	case *anaconda.TwitterError:
+		// https://developer.twitter.com/ja/docs/basics/response-codes
 		// 130: Over capacity
+		// 131: Internal error
+		// 139: You have already favorited this status.
 		// 187: The status text has already been Tweeted by the authenticated account.
 		// 327: You have already retweeted this tweet.
 		switch twitterErr.Code {
-		case 130, 131, 187, 327:
+		case 130, 131, 139, 187, 327:
 			return false
 		}
 	case anaconda.TwitterError:

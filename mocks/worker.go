@@ -34,17 +34,17 @@ func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 }
 
 // Start mocks base method
-func (m *MockWorker) Start(ctx context.Context) error {
+func (m *MockWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", ctx)
+	ret := m.ctrl.Call(m, "Start", ctx, outChan)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (mr *MockWorkerMockRecorder) Start(ctx interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) Start(ctx, outChan interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), ctx, outChan)
 }
 
 // Name mocks base method

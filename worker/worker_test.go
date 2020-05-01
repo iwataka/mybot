@@ -20,21 +20,20 @@ type testWorker struct {
 	count *int32
 	// totalCount is how many times this has started.
 	totalCount *int32
-	outChan    chan bool
 }
 
 func newTestWorker() *testWorker {
 	var count int32 = 0
 	var totalCount int32 = 0
-	return &testWorker{&count, &totalCount, make(chan bool)}
+	return &testWorker{&count, &totalCount}
 }
 
-func (w *testWorker) Start(ctx context.Context) error {
+func (w *testWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	atomic.AddInt32(w.count, 1)
 	atomic.AddInt32(w.totalCount, 1)
 	defer func() { atomic.AddInt32(w.count, -1) }()
 	// To notify Start() processing is finished.
-	w.outChan <- true
+	outChan <- true
 	<-ctx.Done()
 	return nil
 }
@@ -51,7 +50,7 @@ func TestKeepSingleWorkerProcessAsItIsWhenMultipleStartSignalSent(t *testing.T) 
 		wm.Send(StartSignal)
 		if i == 0 {
 			checkStatus(t, StatusStarted, wm)
-			<-w.outChan
+			require.Equal(t, true, wm.Receive())
 		}
 	}
 	require.EqualValues(t, 1, *w.count)
@@ -68,7 +67,7 @@ func TestStopAndStartSignalSentAlternately(t *testing.T) {
 		if i%2 == 0 {
 			wm.Send(StartSignal)
 			checkStatus(t, StatusStarted, wm)
-			<-w.outChan
+			require.Equal(t, true, wm.Receive())
 		} else {
 			wm.Send(StopSignal)
 			checkStatus(t, StatusStopped, wm)
@@ -84,7 +83,7 @@ func TestStopSignal(t *testing.T) {
 	defer wm.Close()
 	wm.Send(StartSignal)
 	checkStatus(t, StatusStarted, wm)
-	<-w.outChan
+	require.Equal(t, true, wm.Receive())
 	wm.Send(StopSignal)
 	checkStatus(t, StatusStopped, wm)
 	require.EqualValues(t, 0, *w.count)
@@ -99,12 +98,12 @@ func TestRestartSignalForWorker(t *testing.T) {
 	var i int32 = 0
 	wm.Send(StartSignal)
 	checkStatus(t, StatusStarted, wm)
-	<-w.outChan
+	require.Equal(t, true, wm.Receive())
 	for ; i < totalCount; i++ {
 		wm.Send(RestartSignal)
 		checkStatus(t, StatusStopped, wm)
 		checkStatus(t, StatusStarted, wm)
-		<-w.outChan
+		require.Equal(t, true, wm.Receive())
 	}
 	require.EqualValues(t, 1, *w.count)
 	require.EqualValues(t, totalCount+1, *w.totalCount)
@@ -126,7 +125,7 @@ func TestMultipleRandomWorkerSignals(t *testing.T) {
 		}
 		if started {
 			checkStatus(t, StatusStarted, wm)
-			<-w.outChan
+			require.Equal(t, true, wm.Receive())
 		}
 		isActive = signal != StopSignal
 	}
@@ -143,7 +142,7 @@ func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	w := mocks.NewMockWorker(ctrl)
 	err := errors.New("foo")
-	w.EXPECT().Start(gomock.Any()).Return(err)
+	w.EXPECT().Start(gomock.Any(), gomock.Any()).Return(err)
 	wm := NewWorkerManager(w, 0)
 	defer wm.Close()
 	wm.Send(StartSignal)
@@ -161,7 +160,7 @@ func testStrategicRestarter(t *testing.T, suppressError bool) {
 	ctrl := gomock.NewController(t)
 	w := mocks.NewMockWorker(ctrl)
 	err := errors.New("error")
-	w.EXPECT().Start(gomock.Any()).Times(5).Return(err)
+	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(5).Return(err)
 	interval, _ := time.ParseDuration("60m")
 	l := NewStrategicRestarter(interval, 5, suppressError)
 	wm := NewWorkerManager(w, 0, l)
@@ -189,8 +188,8 @@ func testStrategicRestarterWithSmallInterval(t *testing.T, suppressError bool) {
 	ctrl := gomock.NewController(t)
 	w := mocks.NewMockWorker(ctrl)
 	err := errors.New("error")
-	w.EXPECT().Start(gomock.Any()).Times(7).Return(err)
-	w.EXPECT().Start(gomock.Any()).Times(1).Return(nil)
+	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(7).Return(err)
+	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(1).Return(nil)
 	interval, _ := time.ParseDuration("0ns")
 	l := NewStrategicRestarter(interval, 5, suppressError)
 	wm := NewWorkerManager(w, 0, l)

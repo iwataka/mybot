@@ -36,6 +36,8 @@ import (
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
+	logger              = log.New(os.Stdout, "", log.LstdFlags)
+	errLogger           = log.New(os.Stderr, "", log.LstdFlags)
 
 	// Global-scope data
 	twitterApp    oauth.OAuthApp
@@ -449,42 +451,34 @@ func startUserSpecificData(userID string, data *userSpecificData, bufSize int, l
 	var w models.Worker
 
 	w = newTwitterDMWorker(data.twitterAPI, userID)
-	activateWorkerAndStart(
-		twitterDMRoutineKey,
-		data.workerMgrs,
+	data.workerMgrs[twitterDMRoutineKey] = activateWorkerAndStart(
 		w,
-		workerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
 		layers...,
 	)
 
 	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID)
-	activateWorkerAndStart(
-		twitterUserRoutineKey,
-		data.workerMgrs,
+	data.workerMgrs[twitterUserRoutineKey] = activateWorkerAndStart(
 		w,
-		workerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
 		layers...,
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
 	w = newTwitterPeriodicWorker(r, data.cache, data.config, userID)
-	activateWorkerAndStart(
-		twitterPeriodicRoutineKey,
-		data.workerMgrs,
+	data.workerMgrs[twitterPeriodicRoutineKey] = activateWorkerAndStart(
 		w,
-		workerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
 		layers...,
 	)
 
 	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
-	activateWorkerAndStart(
-		slackRoutineKey,
-		data.workerMgrs,
+	data.workerMgrs[slackRoutineKey] = activateWorkerAndStart(
 		w,
-		workerMessageLogger{w.Name()},
+		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
 		layers...,
 	)
@@ -562,7 +556,7 @@ func beforeValidating(c *cli.Context) error {
 	}
 	for _, userID := range userIDs {
 		err := initForUser(c, dbSession, userID)
-		fmt.Printf("Initialize for user %s\n", userID)
+		logger.Printf("Initialize for user %s\n", userID)
 		if err != nil {
 			return utils.WithStack(err)
 		}

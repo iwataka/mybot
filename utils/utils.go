@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -171,8 +170,7 @@ func GenerateRandString(n int) string {
 // ExitIfError prints error message and exits with error code 1 if error exists.
 func ExitIfError(err error) {
 	if err != nil {
-		log.Printf("%+v\n", err)
-		os.Exit(1)
+		log.Fatalf("%+v\n", err)
 	}
 }
 

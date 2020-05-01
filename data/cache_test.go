@@ -125,9 +125,7 @@ func testCacheLatestDMID(t *testing.T, c Cache) {
 	var dmID int64 = 1
 	c.SetLatestDMID(dmID)
 	id := c.GetLatestDMID()
-	if id != dmID {
-		t.Fatalf("%v expected but %v found", dmID, id)
-	}
+	require.Equal(t, dmID, id)
 }
 
 func TestFileCache_TweetAction(t *testing.T) {
@@ -164,10 +162,10 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 	c.SetTweetAction(tweetID, action)
 	a := c.GetTweetAction(tweetID)
 	if !reflect.DeepEqual(action.Twitter, a.Twitter) {
-		t.Fatalf("%v expected but %v found", action.Twitter, a.Twitter)
+		t.Fatalf("%#v expected but %#v found", action.Twitter, a.Twitter)
 	}
 	if !reflect.DeepEqual(action.Slack, a.Slack) {
-		t.Fatalf("%v expected but %v found", action.Slack, a.Slack)
+		t.Fatalf("%#v expected but %#v found", action.Slack, a.Slack)
 	}
 }
 

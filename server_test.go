@@ -77,7 +77,7 @@ func init() {
 	if _, err := os.Stat(screenshotsDir); err != nil {
 		err := os.Mkdir(screenshotsDir, os.FileMode(0755))
 		if err != nil {
-			fmt.Printf("Failed to make `%s` directory\n", screenshotsDir)
+			fmt.Fprintf(os.Stderr, "Failed to make `%s` directory\n", screenshotsDir)
 			os.Exit(1)
 		}
 	}

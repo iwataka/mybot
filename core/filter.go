@@ -33,7 +33,7 @@ func NewFilter() Filter {
 func (f Filter) Validate() error {
 	flag := !f.Vision.IsEmpty() && (f.RetweetedThreshold != nil || f.FavoriteThreshold != nil)
 	if flag {
-		return fmt.Errorf("%v use both of Vision API and retweeted/favorite threshold", f)
+		return fmt.Errorf("Do not use both Vision API and retweeted/favorite threshold: %#v", f)
 	}
 	return nil
 }

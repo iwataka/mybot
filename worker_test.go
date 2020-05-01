@@ -17,13 +17,19 @@ import (
 
 func TestTwitterPeriodicWorker_Start(t *testing.T) {
 	errMsg := "expected error"
-	times := 50
+	times := 5
 	duration := "0.01s"
 	id := "id"
 	worker := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	err := worker.Start(ctx)
+	outChan := make(chan interface{})
+	defer close(outChan)
+	go func() {
+		for range outChan {
+		}
+	}()
+	err := worker.Start(ctx, outChan)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }
@@ -34,12 +40,10 @@ func TestManageTwitterPeriodicWorker(t *testing.T) {
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, nil, nil)
 
-	key := 0
-	workerMgrs := make(map[int]*worker.WorkerManager)
-	activateWorkerAndStart(key, workerMgrs, w, nil, defaultWorkerBufSize)
-	defer workerMgrs[key].Close()
-	workerMgrs[key].Send(worker.RestartSignal)
-	workerMgrs[key].Send(worker.RestartSignal)
+	wm := activateWorkerAndStart(w, nil, defaultWorkerBufSize)
+	defer wm.Close()
+	wm.Send(worker.RestartSignal)
+	wm.Send(worker.RestartSignal)
 }
 
 func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
@@ -49,12 +53,10 @@ func TestManageTwitterPeriodicWorkerWithVerificationFailure(t *testing.T) {
 	id := "id"
 	w := generatePeriodicWorker(t, times, duration, id, fmt.Errorf(errMsg), fmt.Errorf(errMsg))
 
-	key := 0
-	workerMgrs := make(map[int]*worker.WorkerManager)
-	activateWorkerAndStart(key, workerMgrs, w, nil, defaultWorkerBufSize)
-	defer workerMgrs[key].Close()
-	workerMgrs[key].Send(worker.RestartSignal)
-	workerMgrs[key].Send(worker.RestartSignal)
+	wm := activateWorkerAndStart(w, nil, defaultWorkerBufSize)
+	defer wm.Close()
+	wm.Send(worker.RestartSignal)
+	wm.Send(worker.RestartSignal)
 }
 
 func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
@@ -66,7 +68,9 @@ func TestTwitterPeriodicWorkerStartWithVerificationFalure(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	err := w.Start(ctx)
+	outChan := make(chan interface{})
+	defer close(outChan)
+	err := w.Start(ctx, outChan)
 	require.Error(t, err)
 	require.Equal(t, errMsg, err.Error())
 }
@@ -84,11 +88,11 @@ func generateRunner(ctrl *gomock.Controller, times int, runErr error, verifyErr 
 	runner := mocks.NewMockBatchRunner(ctrl)
 	var runCall *gomock.Call
 	if times < 0 {
-		runCall = runner.EXPECT().Run().AnyTimes().Return(nil)
+		runCall = runner.EXPECT().Run().AnyTimes().Return(nil, nil, nil)
 	} else {
-		runCall = runner.EXPECT().Run().Times(times).Return(nil)
+		runCall = runner.EXPECT().Run().Times(times).Return(nil, nil, nil)
 	}
-	runner.EXPECT().Run().After(runCall).Return(runErr)
+	runner.EXPECT().Run().After(runCall).Return(nil, nil, runErr)
 	if times < 0 {
 		runner.EXPECT().IsAvailable().AnyTimes().Return(verifyErr)
 	} else {

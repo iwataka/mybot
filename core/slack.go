@@ -12,7 +12,6 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -147,7 +146,8 @@ func (a *SlackAPI) processMsgEvent(
 	vis VisionMatcher,
 	lang LanguageMatcher,
 	twitterAPI *TwitterAPI,
-) error {
+) ([]data.Action, error) {
+	processedActions := []data.Action{}
 	msgs := a.config.GetSlackMessages()
 	for _, msg := range msgs {
 		if !utils.CheckStringContained(msg.Channels, ch) {
@@ -155,16 +155,17 @@ func (a *SlackAPI) processMsgEvent(
 		}
 		match, err := msg.Filter.CheckSlackMsg(ev, vis, lang, a.cache)
 		if err != nil {
-			return utils.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 		if match {
 			err := a.processMsgEventWithAction(ch, ev, msg.Action, twitterAPI)
 			if err != nil {
-				return utils.WithStack(err)
+				return nil, utils.WithStack(err)
 			}
+			processedActions = append(processedActions, msg.Action)
 		}
 	}
-	return nil
+	return processedActions, nil
 }
 
 func (a *SlackAPI) processMsgEventWithAction(
@@ -179,21 +180,18 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Println("Pin the message")
 	}
 	if action.Slack.Star {
 		err := a.api.AddStar(ev.Channel, item)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Println("Star the message")
 	}
 	for _, r := range action.Slack.Reactions {
 		err := a.api.AddReaction(r, item)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Println("React to the message")
 	}
 	for _, c := range action.Slack.Channels {
 		if ch == c {
@@ -206,7 +204,6 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Printf("Send the message to %s\n", c)
 	}
 
 	if action.Twitter.Tweet {
@@ -214,7 +211,6 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if CheckTwitterError(err) {
 			return utils.WithStack(err)
 		}
-		fmt.Println("Tweet the message")
 	}
 	return nil
 }
@@ -233,20 +229,18 @@ func (a *SlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
 	return nil, errors.New("Slack API is not available")
 }
 
-func (a *SlackAPI) Listen() *SlackListener {
-	return &SlackListener{a}
+func (a *SlackAPI) Listen(vis VisionMatcher, lang LanguageMatcher, twitterAPI *TwitterAPI) *SlackListener {
+	return &SlackListener{a, vis, lang, twitterAPI}
 }
 
 type SlackListener struct {
-	api *SlackAPI
+	api        *SlackAPI
+	vis        VisionMatcher
+	lang       LanguageMatcher
+	twitterAPI *TwitterAPI
 }
 
-func (l *SlackListener) Start(
-	ctx context.Context,
-	vis VisionMatcher,
-	lang LanguageMatcher,
-	twitterAPI *TwitterAPI,
-) error {
+func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) error {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
 	defer func() { _ = rtm.Disconnect() }()
@@ -256,13 +250,13 @@ func (l *SlackListener) Start(
 		case msg := <-rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.ChannelJoinedEvent:
-				fmt.Printf("Joined to %s\n", ev.Channel.Name)
+				outChan <- NewReceivedEvent(SlackEventType, "channel joined", ev)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return utils.WithStack(err)
 				}
 			case *slack.GroupJoinedEvent:
-				fmt.Printf("Joined to %s\n", ev.Channel.Name)
+				outChan <- NewReceivedEvent(SlackEventType, "group joined", ev)
 				err := l.api.sendMsgQueues(ev.Channel.Name)
 				if err != nil {
 					return utils.WithStack(err)
@@ -280,20 +274,23 @@ func (l *SlackListener) Start(
 					return utils.WithStack(err)
 				}
 				if len(ch) > 0 {
-					fmt.Printf("Receive message sent to %s by %s\n", ch, ev.User)
-					err = l.api.processMsgEvent(ch, ev, vis, lang, twitterAPI)
+					outChan <- NewReceivedEvent(SlackEventType, "message", ev)
+					processedActions, err := l.api.processMsgEvent(ch, ev, l.vis, l.lang, l.twitterAPI)
 					if err != nil {
 						return utils.WithStack(err)
+					}
+					for _, a := range processedActions {
+						outChan <- NewActionEvent(a, ev)
 					}
 				}
 			case *slack.RTMError:
 				return utils.WithStack(ev)
 			case *slack.ConnectionErrorEvent:
-				log.Println(ev)
+				outChan <- NewReceivedEvent(SlackEventType, "connection error", ev)
 				// Continue because ConnectionErrorEvent is treated as recoverable
 				continue
 			case *slack.InvalidAuthEvent:
-				return fmt.Errorf("Invalid slack authentication")
+				return fmt.Errorf(NewReceivedEvent("Slack", "invalid auth", ev).String())
 			}
 		case <-ctx.Done():
 			return utils.NewStreamInterruptedError()
@@ -328,12 +325,8 @@ func CheckSlackError(err error) bool {
 		return false
 	}
 
-	if err.Error() == "invalid_name" {
-		log.Printf("%+v\n", err)
-		return false
-	}
-	if err.Error() == "already_reacted" {
-		log.Printf("%+v\n", err)
+	switch err.Error() {
+	case "already_reacted", "already_pinned", "already_starred", "internal_error":
 		return false
 	}
 	return true

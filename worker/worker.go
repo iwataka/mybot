@@ -163,12 +163,7 @@ func (wm *WorkerManager) HandleOutput(h WorkerManagerOutHandler) {
 	for out := range wm.outChan {
 		wm.setStatus(out)
 		if h != nil {
-			switch o := out.(type) {
-			case WorkerStatus:
-				h.HandleWorkerStatus(o)
-			case error:
-				h.HandleError(o)
-			}
+			h.Handle(out)
 		}
 	}
 }
@@ -184,8 +179,7 @@ func (wm *WorkerManager) Status() WorkerStatus {
 }
 
 type WorkerManagerOutHandler interface {
-	HandleWorkerStatus(s WorkerStatus)
-	HandleError(err error)
+	Handle(out interface{})
 }
 
 // ActivateWorker activates worker, which means worker gets ready to receive
@@ -248,7 +242,7 @@ func activateWorker(worker models.Worker, bufSize int) (chan<- WorkerSignal, <-c
 
 func startWorkerAndNotify(ctx context.Context, w models.Worker, outChan chan<- interface{}) {
 	outChan <- StatusStarted
-	err := w.Start(ctx)
+	err := w.Start(ctx, outChan)
 	if err != nil {
 		outChan <- err
 	}

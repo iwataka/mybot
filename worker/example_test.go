@@ -13,7 +13,7 @@ func NewMyWorker(name string) *MyWorker {
 	return &MyWorker{name}
 }
 
-func (w *MyWorker) Start(ctx context.Context) error {
+func (w *MyWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
 	<-ctx.Done()
 	return nil
 }

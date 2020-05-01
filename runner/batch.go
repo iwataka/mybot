@@ -2,6 +2,7 @@ package runner
 
 import (
 	"github.com/iwataka/mybot/core"
+	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/utils"
 
 	"fmt"
@@ -10,7 +11,7 @@ import (
 
 // BatchRunner wraps a batch process and provides a feature to run it.
 type BatchRunner interface {
-	Run() error
+	Run() ([]interface{}, []data.Action, error)
 	// IsAvailable returns true if this runner is available.
 	// You should check the availability by calling this and if this
 	// returns false, you can't call Run.
@@ -41,7 +42,9 @@ func NewBatchRunnerUsedWithStream(
 
 // Run processes Twitter search/favorite API result and then makes notifications
 // of it based on r.config.
-func (r BatchRunnerUsedWithStream) Run() error {
+func (r BatchRunnerUsedWithStream) Run() ([]interface{}, []data.Action, error) {
+	processedTweets := []interface{}{}
+	processedActions := []data.Action{}
 	for _, a := range r.config.GetTwitterSearches() {
 		v := url.Values{}
 		if a.Count != nil {
@@ -51,7 +54,7 @@ func (r BatchRunnerUsedWithStream) Run() error {
 			v.Set("result_type", a.ResultType)
 		}
 		for _, query := range a.Queries {
-			_, err := r.twitterAPI.ProcessSearch(
+			tweets, actions, err := r.twitterAPI.ProcessSearch(
 				query,
 				v,
 				a.Filter,
@@ -61,8 +64,12 @@ func (r BatchRunnerUsedWithStream) Run() error {
 				a.Action,
 			)
 			if err != nil {
-				return utils.WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
+			for _, t := range tweets {
+				processedTweets = append(processedTweets, t)
+			}
+			processedActions = append(processedActions, actions...)
 		}
 	}
 
@@ -72,7 +79,7 @@ func (r BatchRunnerUsedWithStream) Run() error {
 			v.Set("count", fmt.Sprintf("%d", *a.Count))
 		}
 		for _, name := range a.ScreenNames {
-			_, err := r.twitterAPI.ProcessFavorites(
+			tweets, actions, err := r.twitterAPI.ProcessFavorites(
 				name,
 				v,
 				a.Filter,
@@ -82,12 +89,16 @@ func (r BatchRunnerUsedWithStream) Run() error {
 				a.Action,
 			)
 			if err != nil {
-				return utils.WithStack(err)
+				return nil, nil, utils.WithStack(err)
 			}
+			for _, t := range tweets {
+				processedTweets = append(processedTweets, t)
+			}
+			processedActions = append(processedActions, actions...)
 		}
 	}
 
-	return nil
+	return processedTweets, processedActions, nil
 }
 
 // IsAvailable returns true if Twitter API is available because it is data

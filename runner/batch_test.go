@@ -46,7 +46,10 @@ func TestBatchRunnerUsedWithStream_Run(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	r := generateBatchRunnerUsedWithStream(t, ctrl)
-	require.NoError(t, r.Run())
+	processedTweets, processedActions, err := r.Run()
+	require.Len(t, processedTweets, 2)
+	require.Len(t, processedActions, 2)
+	require.NoError(t, err)
 }
 
 func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *BatchRunnerUsedWithStream {

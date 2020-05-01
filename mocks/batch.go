@@ -6,6 +6,7 @@ package mocks
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	data "github.com/iwataka/mybot/data"
 	reflect "reflect"
 )
 
@@ -33,11 +34,13 @@ func (m *MockBatchRunner) EXPECT() *MockBatchRunnerMockRecorder {
 }
 
 // Run mocks base method
-func (m *MockBatchRunner) Run() error {
+func (m *MockBatchRunner) Run() ([]interface{}, []data.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]interface{})
+	ret1, _ := ret[1].([]data.Action)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // Run indicates an expected call of Run
