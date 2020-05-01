@@ -25,7 +25,6 @@ Run the below commands:
 ```sh
 $ go get -d github.com/iwataka/mybot
 $ cd $GOPATH/src/github.com/iwataka/mybot
-$ go mod download
 $ go build
 $ ./mybot s(erve)
 ```

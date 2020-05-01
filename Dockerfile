@@ -7,7 +7,6 @@ RUN git config --global http.https://gopkg.in.followRedirects true
 WORKDIR $GOPATH/src/github.com/iwataka/mybot
 
 COPY go.* ./
-RUN go mod download
 
 COPY . .
 RUN go build

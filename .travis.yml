@@ -7,9 +7,8 @@ os:
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y sqlite3 phantomjs
+  - sudo apt-get install -y phantomjs
   - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
-  - go mod download
 script:
   - make
 
