@@ -253,9 +253,9 @@ func main() {
 		EnvVar: "MYBOT_WORKER_BUFFER_SIZE",
 	}
 
-	workerRestartDurationFlag := cli.StringFlag{
+	workerRestartDurationFlag := cli.DurationFlag{
 		Name:   workerRestartDurationFlagName,
-		Value:  "15m",
+		Value:  15 * time.Minute,
 		Usage:  "Worker restart duration",
 		EnvVar: "MYBOT_WORKER_RESTART_DURATION",
 	}
@@ -405,6 +405,8 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	slackID, _ := userData.slackAuth.GetCreds()
 	userData.slackAPI = core.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 
+	startUserSpecificData(c, userData, userID)
+
 	return userData, nil
 }
 
@@ -447,7 +449,12 @@ func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCr
 	return creds, nil
 }
 
-func startUserSpecificData(userID string, data *userSpecificData, bufSize int, layers ...worker.WorkerChannelLayer) {
+func startUserSpecificData(c models.Context, data *userSpecificData, userID string) {
+	restartDuration := c.Duration(workerRestartDurationFlagName)
+	restartLimit := c.Int(workerRestartLimitFlagName)
+	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, false)
+	bufSize := c.Int(workerBufSizeFlagName)
+
 	var w models.Worker
 
 	w = newTwitterDMWorker(data.twitterAPI, userID)
@@ -455,7 +462,7 @@ func startUserSpecificData(userID string, data *userSpecificData, bufSize int, l
 		w,
 		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
-		layers...,
+		restarter,
 	)
 
 	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID)
@@ -463,7 +470,7 @@ func startUserSpecificData(userID string, data *userSpecificData, bufSize int, l
 		w,
 		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
-		layers...,
+		restarter,
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
@@ -472,7 +479,7 @@ func startUserSpecificData(userID string, data *userSpecificData, bufSize int, l
 		w,
 		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
-		layers...,
+		restarter,
 	)
 
 	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
@@ -480,7 +487,7 @@ func startUserSpecificData(userID string, data *userSpecificData, bufSize int, l
 		w,
 		workerMessageLogger{w.Name(), logger, errLogger},
 		bufSize,
-		layers...,
+		restarter,
 	)
 }
 
@@ -508,12 +515,8 @@ func beforeServing(c *cli.Context) error {
 
 	err := beforeValidating(c)
 	utils.ExitIfError(err)
-	restartDuration, err := time.ParseDuration(c.String(workerRestartDurationFlagName))
-	utils.ExitIfError(err)
-	restartLimit := c.Int(workerRestartLimitFlagName)
-	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, false)
 	for userID, data := range userSpecificDataMap {
-		startUserSpecificData(userID, data, c.Int(workerBufSizeFlagName), restarter)
+		startUserSpecificData(c, data, userID)
 	}
 	return nil
 }

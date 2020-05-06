@@ -7,6 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+	time "time"
 )
 
 // MockContext is a mock of Context interface
@@ -58,4 +59,32 @@ func (m *MockContext) Bool(key string) bool {
 func (mr *MockContextMockRecorder) Bool(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bool", reflect.TypeOf((*MockContext)(nil).Bool), key)
+}
+
+// Int mocks base method
+func (m *MockContext) Int(key string) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Int", key)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Int indicates an expected call of Int
+func (mr *MockContextMockRecorder) Int(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Int", reflect.TypeOf((*MockContext)(nil).Int), key)
+}
+
+// Duration mocks base method
+func (m *MockContext) Duration(key string) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Duration", key)
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// Duration indicates an expected call of Duration
+func (mr *MockContextMockRecorder) Duration(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Duration", reflect.TypeOf((*MockContext)(nil).Duration), key)
 }

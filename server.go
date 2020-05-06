@@ -436,7 +436,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twit
 	defer func() {
 		if err == nil {
 			err = config.Save()
-			if err != nil {
+			if err == nil {
 				go restartWorkers(twitterUserIDPrefix + twitterUser.UserID)
 			}
 		} else {
