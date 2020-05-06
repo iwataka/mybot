@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
@@ -72,6 +71,7 @@ func (w *twitterDMWorker) Start(ctx context.Context, outChan chan<- interface{})
 	if err != nil {
 		return utils.WithStack(err)
 	}
+	defer w.listener.Stop()
 	if err := w.listener.Listen(ctx, outChan); err != nil {
 		return utils.WithStack(err)
 	}
@@ -113,6 +113,7 @@ func (w *twitterUserWorker) Start(ctx context.Context, outChan chan<- interface{
 	if err != nil {
 		return utils.WithStack(err)
 	}
+	defer w.listener.Stop()
 	if err := w.listener.Listen(ctx, outChan); err != nil {
 		return utils.WithStack(err)
 	}
@@ -128,7 +129,6 @@ type twitterPeriodicWorker struct {
 	cache  utils.Savable
 	config core.Config
 	id     string
-	stream *anaconda.Stream
 }
 
 func newTwitterPeriodicWorker(
@@ -137,7 +137,7 @@ func newTwitterPeriodicWorker(
 	config core.Config,
 	id string,
 ) *twitterPeriodicWorker {
-	return &twitterPeriodicWorker{runner, cache, config, id, nil}
+	return &twitterPeriodicWorker{runner, cache, config, id}
 }
 
 func (w *twitterPeriodicWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
@@ -165,7 +165,7 @@ func (w *twitterPeriodicWorker) Start(ctx context.Context, outChan chan<- interf
 				return utils.WithStack(err)
 			}
 		case <-ctx.Done():
-			return utils.NewStreamInterruptedError()
+			return nil
 		}
 	}
 }

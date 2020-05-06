@@ -313,7 +313,7 @@ func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) e
 				return fmt.Errorf(NewReceivedEvent("Slack", "invalid auth", ev).String())
 			}
 		case <-ctx.Done():
-			return utils.NewStreamInterruptedError()
+			return nil
 		}
 	}
 }

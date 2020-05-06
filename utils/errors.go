@@ -17,27 +17,9 @@ func WithStack(err error) error {
 	switch err.(type) {
 	case StackTracer:
 		return err
-	case *StreamInterruptedError:
-		return err
 	default:
 		return errors.WithStack(err)
 	}
-}
-
-// StreamInterruptedError is an error indicating that a stream processing is
-// interrupted.
-type StreamInterruptedError struct {
-	msg string
-}
-
-// NewStreamInterruptedError returns a new StreamInterruptedError.
-func NewStreamInterruptedError() error {
-	return &StreamInterruptedError{"Interrupted"}
-}
-
-// Error returns a message of this error.
-func (e StreamInterruptedError) Error() string {
-	return e.msg
 }
 
 // TomlUndecodedKeysError is an error indicating that there are some undecoded

@@ -6,12 +6,6 @@ import (
 	"fmt"
 )
 
-func ExampleStreamInterruptedError() {
-	err := NewStreamInterruptedError()
-	fmt.Println(err.Error())
-	// Output: Interrupted
-}
-
 func ExampleTomlUndecodedKeysError() {
 	err := TomlUndecodedKeysError{[]toml.Key{[]string{"foo"}}, "foo.toml"}
 	fmt.Println(err.Error())

@@ -17,8 +17,4 @@ func Test_WithStack(t *testing.T) {
 
 	sTracer := WithStack(err)
 	require.Equal(t, err, sTracer)
-
-	err = NewStreamInterruptedError()
-	_, ok = WithStack(err).(StackTracer)
-	require.False(t, ok)
 }

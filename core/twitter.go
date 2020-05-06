@@ -311,6 +311,36 @@ type TwitterUserListener struct {
 	cache  data.Cache
 }
 
+// ListenUsers listens timelines of the friends
+func (a *TwitterAPI) ListenUsers(
+	v url.Values,
+	vis VisionMatcher,
+	lang LanguageMatcher,
+	slack *SlackAPI,
+	cache data.Cache,
+) (*TwitterUserListener, error) {
+	if v == nil {
+		v = url.Values{}
+	}
+	names := a.config.GetTwitterScreenNames()
+	usernames := strings.Join(names, ",")
+	if len(usernames) == 0 {
+		return nil, errors.New("No user specified")
+	} else {
+		users, err := a.api.GetUsersLookup(usernames, nil)
+		if err != nil {
+			return nil, utils.WithStack(err)
+		}
+		userids := []string{}
+		for _, u := range users {
+			userids = append(userids, u.IdStr)
+		}
+		v.Set("follow", strings.Join(userids, ","))
+		stream := a.api.PublicStreamFilter(v)
+		return &TwitterUserListener{stream, a, vis, lang, slack, cache}, nil
+	}
+}
+
 func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
 	for {
 		select {
@@ -348,9 +378,13 @@ func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interfa
 				}
 			}
 		case <-ctx.Done():
-			return utils.NewStreamInterruptedError()
+			return nil
 		}
 	}
+}
+
+func (l *TwitterUserListener) Stop() {
+	l.stream.Stop()
 }
 
 func checkTweetByTimelineConfig(t anaconda.Tweet, c TimelineConfig) bool {
@@ -363,39 +397,22 @@ func checkTweetByTimelineConfig(t anaconda.Tweet, c TimelineConfig) bool {
 	return true
 }
 
-// ListenUsers listens timelines of the friends
-func (a *TwitterAPI) ListenUsers(
-	v url.Values,
-	vis VisionMatcher,
-	lang LanguageMatcher,
-	slack *SlackAPI,
-	cache data.Cache,
-) (*TwitterUserListener, error) {
-	if v == nil {
-		v = url.Values{}
-	}
-	names := a.config.GetTwitterScreenNames()
-	usernames := strings.Join(names, ",")
-	if len(usernames) == 0 {
-		return nil, errors.New("No user specified")
-	} else {
-		users, err := a.api.GetUsersLookup(usernames, nil)
-		if err != nil {
-			return nil, utils.WithStack(err)
-		}
-		userids := []string{}
-		for _, u := range users {
-			userids = append(userids, u.IdStr)
-		}
-		v.Set("follow", strings.Join(userids, ","))
-		stream := a.api.PublicStreamFilter(v)
-		return &TwitterUserListener{stream, a, vis, lang, slack, cache}, nil
-	}
-}
-
 type TwitterDMListener struct {
 	stream *anaconda.Stream
 	api    *TwitterAPI
+}
+
+// ListenMyself listens to the authenticated user by Twitter's User Streaming
+// API and reacts with direct messages.
+func (a *TwitterAPI) ListenMyself(v url.Values) (*TwitterDMListener, error) {
+	ok, err := a.VerifyCredentials()
+	if err != nil {
+		return nil, utils.WithStack(err)
+	} else if !ok {
+		return nil, errors.New("Twitter Account Verification failed")
+	}
+	stream := a.api.UserStream(v)
+	return &TwitterDMListener{stream, a}, nil
 }
 
 func (l *TwitterDMListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
@@ -416,22 +433,13 @@ func (l *TwitterDMListener) Listen(ctx context.Context, outChan chan<- interface
 				}
 			}
 		case <-ctx.Done():
-			return utils.NewStreamInterruptedError()
+			return nil
 		}
 	}
 }
 
-// ListenMyself listens to the authenticated user by Twitter's User Streaming
-// API and reacts with direct messages.
-func (a *TwitterAPI) ListenMyself(v url.Values) (*TwitterDMListener, error) {
-	ok, err := a.VerifyCredentials()
-	if err != nil {
-		return nil, utils.WithStack(err)
-	} else if !ok {
-		return nil, errors.New("Twitter Account Verification failed")
-	}
-	stream := a.api.UserStream(v)
-	return &TwitterDMListener{stream, a}, nil
+func (l *TwitterDMListener) Stop() {
+	l.stream.Stop()
 }
 
 // TweetChecker function checks if the specified tweet is acceptable, which means it
