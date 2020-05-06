@@ -1,6 +1,5 @@
 duration: 30m
 twitter:
-  debug: false
   timelines:
     - name: Golang Release
       screen_names:

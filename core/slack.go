@@ -1,8 +1,6 @@
 package core
 
 import (
-	"context"
-
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
@@ -10,10 +8,12 @@ import (
 	"github.com/iwataka/slack"
 
 	"container/list"
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,8 +21,19 @@ type SlackAPI struct {
 	api      models.SlackAPI
 	config   Config
 	cache    data.Cache
-	msgQueue map[string]*list.List
+	msgQueue map[string]*concurrentQueue
 	user     *slack.AuthTestResponse
+}
+
+type concurrentQueue struct {
+	*list.List
+	sync.Mutex
+}
+
+func newConcurrentQueue() *concurrentQueue {
+	return &concurrentQueue{
+		List: list.New(),
+	}
 }
 
 func NewSlackAPIWithAuth(token string, config Config, cache data.Cache) *SlackAPI {
@@ -34,7 +45,7 @@ func NewSlackAPIWithAuth(token string, config Config, cache data.Cache) *SlackAP
 }
 
 func NewSlackAPI(api models.SlackAPI, config Config, cache data.Cache) *SlackAPI {
-	return &SlackAPI{api, config, cache, make(map[string]*list.List), nil}
+	return &SlackAPI{api, config, cache, make(map[string]*concurrentQueue), nil}
 }
 
 func (a *SlackAPI) Enabled() bool {
@@ -53,14 +64,20 @@ type SlackMsg struct {
 
 func (a *SlackAPI) enqueueMsg(ch, text string, params *slack.PostMessageParameters) {
 	if a.msgQueue[ch] == nil {
-		a.msgQueue[ch] = list.New()
+		a.msgQueue[ch] = newConcurrentQueue()
 	}
-	a.msgQueue[ch].PushBack(&SlackMsg{text, params})
+
+	q := a.msgQueue[ch]
+	q.Lock()
+	defer q.Unlock()
+	q.PushBack(&SlackMsg{text, params})
 }
 
 func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 	q := a.msgQueue[ch]
 	if q != nil {
+		q.Lock()
+		defer q.Unlock()
 		front := q.Front()
 		if front != nil {
 			return q.Remove(front).(*SlackMsg)
@@ -129,6 +146,9 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 	if q == nil {
 		return nil
 	}
+
+	q.Lock()
+	defer q.Unlock()
 	for e := q.Front(); e != nil; e = e.Next() {
 		m := e.Value.(*SlackMsg)
 		err := a.PostMessage(ch, m.text, m.params, false)
@@ -136,7 +156,7 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 			return utils.WithStack(err)
 		}
 	}
-	a.msgQueue[ch] = list.New()
+	a.msgQueue[ch] = newConcurrentQueue()
 	return nil
 }
 

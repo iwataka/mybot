@@ -11,14 +11,17 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // TODO: move this module to data package
 
+// Config provides a set of funtions to access cofiguration of this
+// application.
 type Config interface {
 	utils.Savable
 	utils.Loadable
-	GetProperties() *ConfigProperties
+	GetProperties() ConfigProperties
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
 	GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig
@@ -49,100 +52,6 @@ type FileConfig struct {
 	File string `json:"-" toml:"-" bson:"-" yaml:"-"`
 }
 
-type ConfigProperties struct {
-	// Twitter is a configuration related to Twitter.
-	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter" yaml:"twitter"`
-	// Slack is a configuration related to Slack
-	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack" yaml:"slack"`
-	// Duration is a duration for some periodic jobs such as fetching
-	// users' favorites and searching by the specified condition.
-	Duration string `json:"duration" toml:"duration" bson:"duration" yaml:"duration"`
-}
-
-func newConfigProperties() ConfigProperties {
-	return ConfigProperties{
-		Twitter:  NewTwitterConfig(),
-		Slack:    NewSlackConfig(),
-		Duration: "10m",
-	}
-}
-
-func (c *ConfigProperties) GetProperties() *ConfigProperties {
-	return c
-}
-
-func (c *ConfigProperties) GetTwitterScreenNames() []string {
-	return c.Twitter.GetScreenNames()
-}
-
-func (c *ConfigProperties) GetTwitterTimelines() []TimelineConfig {
-	return c.Twitter.Timelines
-}
-
-func (c *ConfigProperties) GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig {
-	result := []TimelineConfig{}
-	for _, t := range c.GetTwitterTimelines() {
-		for _, n := range t.ScreenNames {
-			if n == screenName {
-				result = append(result, t)
-			}
-		}
-	}
-	return result
-}
-
-func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {
-	c.Twitter.Timelines = timelines
-}
-
-func (c *ConfigProperties) AddTwitterTimeline(timeline TimelineConfig) {
-	c.Twitter.Timelines = append(c.Twitter.Timelines, timeline)
-}
-
-func (c *ConfigProperties) GetTwitterFavorites() []FavoriteConfig {
-	return c.Twitter.Favorites
-}
-
-func (c *ConfigProperties) SetTwitterFavorites(favorites []FavoriteConfig) {
-	c.Twitter.Favorites = favorites
-}
-
-func (c *ConfigProperties) AddTwitterFavorite(favorite FavoriteConfig) {
-	c.Twitter.Favorites = append(c.Twitter.Favorites, favorite)
-}
-
-func (c *ConfigProperties) GetTwitterSearches() []SearchConfig {
-	return c.Twitter.Searches
-}
-
-func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
-	c.Twitter.Searches = searches
-}
-
-func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
-	c.Twitter.Searches = append(c.Twitter.Searches, search)
-}
-
-func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
-	return c.Slack.Messages
-}
-
-func (c *ConfigProperties) SetSlackMessages(msgs []MessageConfig) {
-	c.Slack.Messages = msgs
-}
-
-func (c *ConfigProperties) AddSlackMessage(msg MessageConfig) {
-	c.Slack.Messages = append(c.Slack.Messages, msg)
-}
-
-func (c *ConfigProperties) GetPollingDuration() string {
-	return c.Duration
-}
-
-func (c *ConfigProperties) SetPollingDuration(dur string) {
-	c.Duration = dur
-}
-
 // NewFileConfig takes the configuration file path and returns a configuration
 // instance.
 func NewFileConfig(path string) (*FileConfig, error) {
@@ -160,9 +69,236 @@ func NewFileConfig(path string) (*FileConfig, error) {
 	return c, nil
 }
 
+// Save saves the specified configuration to the source file.
+func (c *FileConfig) Save() error {
+	c.ConfigProperties.RLock()
+	defer c.ConfigProperties.RUnlock()
+
+	// Make a directory before all.
+	err := os.MkdirAll(filepath.Dir(c.File), 0751)
+	if err != nil {
+		return utils.WithStack(err)
+	}
+	if c != nil {
+		bs, err := c.Marshal(filepath.Ext(c.File))
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		err = ioutil.WriteFile(c.File, bs, 0640)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	return nil
+}
+
+// Load loads the configuration from the source file. If the specified source
+// file doesn't exist, this method does nothing and returns nil.
+func (c *FileConfig) Load() error {
+	c.ConfigProperties.Lock()
+	defer c.ConfigProperties.Unlock()
+
+	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
+		bytes, err := ioutil.ReadFile(c.File)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		err = utils.Decode(filepath.Ext(c.File), bytes, c)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	return nil
+}
+
+type DBConfig struct {
+	ConfigProperties `yaml:",inline"`
+	col              *mgo.Collection
+	ID               string `json:"id" toml:"id" bson:"id" yaml:"id"`
+}
+
+func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
+	c := &DBConfig{newConfigProperties(), col, id}
+	err := c.Load()
+	return c, utils.WithStack(err)
+}
+
+func (c *DBConfig) Load() error {
+	c.ConfigProperties.Lock()
+	defer c.ConfigProperties.Unlock()
+
+	query := c.col.Find(bson.M{"id": c.ID})
+	count, err := query.Count()
+	if err != nil {
+		return utils.WithStack(err)
+	}
+	if count > 0 {
+		tmpCol := c.col
+		err := query.One(c)
+		c.col = tmpCol
+		return utils.WithStack(err)
+	}
+	return nil
+}
+
+func (c *DBConfig) Save() error {
+	c.ConfigProperties.RLock()
+	defer c.ConfigProperties.RUnlock()
+
+	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
+	return utils.WithStack(err)
+}
+
+// ConfigProperties represents a collection of Config properties.
+// All functions of this struct are thread-safe.
+type ConfigProperties struct {
+	sync.RWMutex `json:"-" toml:"-" bson:"-" yaml:"-"`
+	// Twitter is a configuration related to Twitter.
+	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter" yaml:"twitter"`
+	// Slack is a configuration related to Slack
+	Slack SlackConfig `json:"slack" toml:"slack" bson:"slack" yaml:"slack"`
+	// Duration is a duration for some periodic jobs such as fetching
+	// users' favorites and searching by the specified condition.
+	Duration string `json:"duration" toml:"duration" bson:"duration" yaml:"duration"`
+}
+
+func newConfigProperties() ConfigProperties {
+	return ConfigProperties{
+		Twitter:  NewTwitterConfig(),
+		Slack:    NewSlackConfig(),
+		Duration: "10m",
+	}
+}
+
+// GetProperties returns a copy of ConfigProperties itself.
+func (c *ConfigProperties) GetProperties() ConfigProperties {
+	c.RLock()
+	defer c.RUnlock()
+	return ConfigProperties{
+		Twitter:  c.Twitter,
+		Slack:    c.Slack,
+		Duration: c.Duration,
+	}
+}
+
+// GetTwitterScreenNames returns a list of all screen names in Twitter
+// configuration.
+func (c *ConfigProperties) GetTwitterScreenNames() []string {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Twitter.GetScreenNames()
+}
+
+// GetTwitterTimelines returns a copy of Twitter timeline configuration list.
+func (c *ConfigProperties) GetTwitterTimelines() []TimelineConfig {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Twitter.Timelines[:]
+}
+
+// GetTwitterTimelinesByScreenName returns timeline configurations including a
+// specified screen name.
+func (c *ConfigProperties) GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig {
+	c.RLock()
+	defer c.RUnlock()
+	result := []TimelineConfig{}
+	for _, t := range c.Twitter.Timelines {
+		for _, n := range t.ScreenNames {
+			if n == screenName {
+				result = append(result, t)
+			}
+		}
+	}
+	return result
+}
+
+func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Timelines = timelines
+}
+
+func (c *ConfigProperties) AddTwitterTimeline(timeline TimelineConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Timelines = append(c.Twitter.Timelines, timeline)
+}
+
+// GetTwitterFavorites returns a copy of Twitter favorite configuration list.
+func (c *ConfigProperties) GetTwitterFavorites() []FavoriteConfig {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Twitter.Favorites[:]
+}
+
+func (c *ConfigProperties) SetTwitterFavorites(favorites []FavoriteConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Favorites = favorites
+}
+
+func (c *ConfigProperties) AddTwitterFavorite(favorite FavoriteConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Favorites = append(c.Twitter.Favorites, favorite)
+}
+
+// GetTwitterSearches returns a copy of Twitter search configuration list.
+func (c *ConfigProperties) GetTwitterSearches() []SearchConfig {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Twitter.Searches[:]
+}
+
+func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Searches = searches
+}
+
+func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Twitter.Searches = append(c.Twitter.Searches, search)
+}
+
+// GetSlackMessages returns a copy of Slack message configuration list.
+func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Slack.Messages[:]
+}
+
+func (c *ConfigProperties) SetSlackMessages(msgs []MessageConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Slack.Messages = msgs
+}
+
+func (c *ConfigProperties) AddSlackMessage(msg MessageConfig) {
+	c.Lock()
+	defer c.Unlock()
+	c.Slack.Messages = append(c.Slack.Messages, msg)
+}
+
+func (c *ConfigProperties) GetPollingDuration() string {
+	c.RLock()
+	defer c.RUnlock()
+	return c.Duration
+}
+
+func (c *ConfigProperties) SetPollingDuration(dur string) {
+	c.Lock()
+	defer c.Unlock()
+	c.Duration = dur
+}
+
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
 func (c *ConfigProperties) Validate() error {
+	c.RLock()
+	defer c.RUnlock()
+
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
 		if err := timeline.Validate(); err != nil {
@@ -193,7 +329,12 @@ func (c *ConfigProperties) Validate() error {
 	return nil
 }
 
+// ValidateWithAPI validates ConfigProperties with external API access.
+// This function is exclusive with Validate function.
 func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
+	c.RLock()
+	defer c.RUnlock()
+
 	for _, name := range c.Twitter.GetScreenNames() {
 		_, err := api.GetUsersShow(name, nil)
 		if err != nil {
@@ -207,48 +348,16 @@ func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
 func (c *ConfigProperties) Marshal(ext string) ([]byte, error) {
+	c.RLock()
+	defer c.RUnlock()
 	return utils.Encode(ext, c)
 }
 
 // TODO: Make error message clearer
 func (c *ConfigProperties) Unmarshal(ext string, bytes []byte) error {
+	c.Lock()
+	defer c.Unlock()
 	return utils.Decode(ext, bytes, c)
-}
-
-// Save saves the specified configuration to the source file.
-func (c *FileConfig) Save() error {
-	// Make a directory before all.
-	err := os.MkdirAll(filepath.Dir(c.File), 0751)
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	if c != nil {
-		bs, err := c.Marshal(filepath.Ext(c.File))
-		if err != nil {
-			return utils.WithStack(err)
-		}
-		err = ioutil.WriteFile(c.File, bs, 0640)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
-	return nil
-}
-
-// Load loads the configuration from the source file. If the specified source
-// file doesn't exist, this method does nothing and returns nil.
-func (c *FileConfig) Load() error {
-	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
-		bytes, err := ioutil.ReadFile(c.File)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-		err = c.Unmarshal(filepath.Ext(c.File), bytes)
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
-	return nil
 }
 
 // Source is a configuration for common data sources such as Twitter's
@@ -289,9 +398,6 @@ type TwitterConfig struct {
 	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines" yaml:"timelines"`
 	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites" yaml:"favorites"`
 	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches" yaml:"searches"`
-	// Debug is a flag for debugging, if it is true, additional information
-	// is outputted.
-	Debug bool `json:"debug" toml:"debug" bson:"debug" yaml:"debug"`
 }
 
 func NewTwitterConfig() TwitterConfig {
@@ -428,89 +534,4 @@ func NewMessageConfig() MessageConfig {
 	return MessageConfig{
 		Source: NewSource(),
 	}
-}
-
-// TwitterNotification contains some notification settings.
-type TwitterNotification struct {
-	Place NotificationProperties
-}
-
-// NewTwitterNotification returns a new empty Notification.
-func NewTwitterNotification() TwitterNotification {
-	return TwitterNotification{
-		Place: NotificationProperties{},
-	}
-}
-
-type NotificationProperties struct {
-	TwitterAllowSelf bool     `json:"twitter_allow_self" toml:"twitter_allow_self" bson:"twitter_allow_self" yaml:"twitter_allow_self"`
-	TwitterUsers     []string `json:"twitter_users,omitempty" toml:"twitter_users,omitempty" bson:"twitter_users,omitempty" yaml:"twitter_users,omitempty"`
-	SlackChannels    []string `json:"slack_channels,omitempty" toml:"slack_channels,omitempty" bson:"slack_channels,omitempty" yaml:"slack_channels,omitempty"`
-}
-
-// Notify sends a specified messages to certain users according to properties p.
-// This returns false if sending the messages to no one.
-func (p NotificationProperties) Notify(twitterAPI *TwitterAPI, slackAPI *SlackAPI, msg string) (bool, error) {
-	sendsSomeone := false
-	allowSelf := p.TwitterAllowSelf
-	users := p.TwitterUsers
-	for _, user := range users {
-		_, err := twitterAPI.api.PostDMToScreenName(msg, user)
-		if err != nil {
-			return sendsSomeone, utils.WithStack(err)
-		}
-		sendsSomeone = true
-	}
-	if allowSelf {
-		self, err := twitterAPI.GetSelf()
-		if err != nil {
-			return sendsSomeone, utils.WithStack(err)
-		}
-		_, err = twitterAPI.api.PostDMToScreenName(msg, self.ScreenName)
-		if err != nil {
-			return sendsSomeone, utils.WithStack(err)
-		}
-		sendsSomeone = true
-	}
-	chans := p.SlackChannels
-	for _, ch := range chans {
-		err := slackAPI.PostMessage(ch, msg, nil, false)
-		if err != nil {
-			return sendsSomeone, utils.WithStack(err)
-		}
-		sendsSomeone = true
-	}
-	return sendsSomeone, nil
-}
-
-type DBConfig struct {
-	ConfigProperties `yaml:",inline"`
-	col              *mgo.Collection
-	ID               string `json:"id" toml:"id" bson:"id" yaml:"id"`
-}
-
-func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
-	c := &DBConfig{newConfigProperties(), col, id}
-	err := c.Load()
-	return c, utils.WithStack(err)
-}
-
-func (c *DBConfig) Load() error {
-	query := c.col.Find(bson.M{"id": c.ID})
-	count, err := query.Count()
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	if count > 0 {
-		tmpCol := c.col
-		err := query.One(c)
-		c.col = tmpCol
-		return utils.WithStack(err)
-	}
-	return nil
-}
-
-func (c *DBConfig) Save() error {
-	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
-	return utils.WithStack(err)
 }

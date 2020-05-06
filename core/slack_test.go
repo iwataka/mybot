@@ -1,7 +1,6 @@
 package core
 
 import (
-	"container/list"
 	"errors"
 	"testing"
 
@@ -58,7 +57,7 @@ func TestSlackAPI_PostMessage_WithPrivateChannel(t *testing.T) {
 func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 	ctrl := gomock.NewController(t)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
-	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
+	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*concurrentQueue)}
 
 	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", errors.New("channel_not_found"))
 	if channelIsOpen {
@@ -81,7 +80,7 @@ func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 func TestSlackAPI_sendMsgQueues(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
-	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*list.List)}
+	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*concurrentQueue)}
 	ch := "channel"
 
 	err := slackAPI.sendMsgQueues(ch)

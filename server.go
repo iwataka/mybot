@@ -723,7 +723,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config core.Config
 		slackURL,
 		googleEnabled(),
 		msg,
-		*config.GetProperties(),
+		config.GetProperties(),
 	}
 
 	buf := new(bytes.Buffer)

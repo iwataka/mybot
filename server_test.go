@@ -310,7 +310,7 @@ func testPostConfigWithoutModification(
 	configProps := serverTestUserSpecificData.config.GetProperties()
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
-	require.Nil(t, deep.Equal(cProps, configProps))
+	require.Nil(t, deep.Equal(&cProps, &configProps))
 }
 
 func TestPostConfigDelete(t *testing.T) {
@@ -389,8 +389,7 @@ func testPostConfigDoubleDelete(
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	require.Nil(t, deep.Equal(cProps.Slack, configProps.Slack))
-	require.Nil(t, deep.Equal(cProps.Twitter, configProps.Twitter))
+	require.Nil(t, deep.Equal(&cProps, &configProps))
 }
 
 func TestPostConfigNameError(t *testing.T) {
@@ -437,7 +436,7 @@ func testPostConfigNameError(
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	require.Nil(t, deep.Equal(cProps, configProps))
+	require.Nil(t, deep.Equal(&cProps, &configProps))
 }
 
 func TestPostConfigTagsInput(t *testing.T) {

@@ -43,14 +43,13 @@ func Test_NewConfig(t *testing.T) {
 	require.Equal(t, "foo", msg.Name)
 	require.Equal(t, "foo", msg.Channels[0])
 
-	clone := *c
-	require.NoError(t, clone.Validate())
-	require.Equal(t, &clone, c)
+	require.NoError(t, c.Validate())
 }
 
 func TestConfig_GetConfigProperties(t *testing.T) {
 	c := NewTestFileConfig(defaultTestConfigFilePath, t)
-	require.Equal(t, c.ConfigProperties, *c.GetProperties())
+	props := c.GetProperties()
+	require.Equal(t, &c.ConfigProperties, &props)
 }
 
 func TestConfig_GetTwitterScreenNames(t *testing.T) {
@@ -173,8 +172,10 @@ func TestConfig_SaveLoad(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	jsonCfg := *c
-	jsonCfg.File = filepath.Join(dir, "config.json")
+	jsonCfg := FileConfig{
+		ConfigProperties: c.GetProperties(),
+		File:             filepath.Join(dir, "config.json"),
+	}
 	err = jsonCfg.Save()
 	require.NoError(t, err)
 	err = jsonCfg.Load()
@@ -182,8 +183,10 @@ func TestConfig_SaveLoad(t *testing.T) {
 	jsonCfg.File = c.File
 	require.Equal(t, &jsonCfg, c)
 
-	tomlCfg := *c
-	tomlCfg.File = filepath.Join(dir, "config.toml")
+	tomlCfg := FileConfig{
+		ConfigProperties: c.GetProperties(),
+		File:             filepath.Join(dir, "config.toml"),
+	}
 	err = tomlCfg.Save()
 	require.NoError(t, err)
 	err = tomlCfg.Load()
