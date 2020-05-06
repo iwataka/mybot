@@ -54,8 +54,8 @@ func NewFileCache(path string) (*FileCache, error) {
 
 // Save saves the cache data to the specified file
 func (c *FileCache) Save() error {
-	c.CacheProperties.RLock()
-	defer c.CacheProperties.RUnlock()
+	c.CacheProperties.m.RLock()
+	defer c.CacheProperties.m.RUnlock()
 	err := os.MkdirAll(filepath.Dir(c.File), 0600)
 	if err != nil {
 		return utils.WithStack(err)
@@ -83,18 +83,20 @@ func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {
 		return nil, utils.WithStack(err)
 	}
 	if count > 0 {
+		// query.One overrides m so temporarily backup it.
+		tmpMutex := c.m //nolint: vet
 		err := query.One(c)
 		if err != nil {
 			return nil, utils.WithStack(err)
 		}
-		c.col = col
+		c.col, c.m = col, tmpMutex //nolint: vet
 	}
 	return c, utils.WithStack(err)
 }
 
 func (c *DBCache) Save() error {
-	c.CacheProperties.RLock()
-	defer c.CacheProperties.RUnlock()
+	c.CacheProperties.m.RLock()
+	defer c.CacheProperties.m.RUnlock()
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return utils.WithStack(err)
 }
@@ -103,7 +105,7 @@ func (c *DBCache) Save() error {
 // embedded into other structs.
 // All functions of this struct are thread-safe.
 type CacheProperties struct {
-	sync.RWMutex `json:"-" toml:"-" bson:"-" yaml:"-"`
+	m sync.RWMutex
 	// LatestTweetID associates Twitter screen name with the latest tweet
 	// ID in timeline.
 	LatestTweetID map[string]int64 `json:"latest_tweet_id" toml:"latest_tweet_id" bson:"latest_tweet_id" yaml:"latest_tweet_id"`
@@ -135,8 +137,8 @@ func newCacheProperties() CacheProperties {
 // timeline. If there is no ID of screenName in c , this returns 0 (tweet ID
 // can't be 0, which is known by Twitter API specification).
 func (c *CacheProperties) GetLatestTweetID(screenName string) int64 {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	id, exists := c.LatestTweetID[screenName]
 	if exists {
 		return id
@@ -147,8 +149,8 @@ func (c *CacheProperties) GetLatestTweetID(screenName string) int64 {
 // SetLatestTweetID stores id as the latest tweet ID and associates it with
 // screenName.
 func (c *CacheProperties) SetLatestTweetID(screenName string, id int64) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.LatestTweetID[screenName] = id
 }
 
@@ -156,8 +158,8 @@ func (c *CacheProperties) SetLatestTweetID(screenName string, id int64) {
 // If there is no ID of screenName in c, this returns 0 (tweet ID can't be 0,
 // which is known by Twitter API specification).
 func (c *CacheProperties) GetLatestFavoriteID(screenName string) int64 {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	id, exists := c.LatestFavoriteID[screenName]
 	if exists {
 		return id
@@ -168,30 +170,30 @@ func (c *CacheProperties) GetLatestFavoriteID(screenName string) int64 {
 // SetLatestFavoriteID stores id as the latest favorite tweet ID and associates
 // it with screeName.
 func (c *CacheProperties) SetLatestFavoriteID(screenName string, id int64) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.LatestFavoriteID[screenName] = id
 }
 
 // GetLatestDMID returns latest direct message ID of the authenticated user.
 func (c *CacheProperties) GetLatestDMID() int64 {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.LatestDMID
 }
 
 // SetLatestDMID sets id as the latest direct message ID of the authenticated
 // user.
 func (c *CacheProperties) SetLatestDMID(id int64) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.LatestDMID = id
 }
 
 // GetTweetAction returns Mybot action associated with tweetID.
 func (c *CacheProperties) GetTweetAction(tweetID int64) Action {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is too large
 	key := strconv.FormatInt(tweetID, 10)
@@ -201,8 +203,8 @@ func (c *CacheProperties) GetTweetAction(tweetID int64) Action {
 
 // SetTweetAction associates action with tweetID.
 func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	// Do not use string(tweetID) because it returns broken characters if
 	// tweetID is enough large
 	key := strconv.FormatInt(tweetID, 10)
@@ -211,8 +213,8 @@ func (c *CacheProperties) SetTweetAction(tweetID int64, action Action) {
 
 // GetLatestImages returns the num latest pieces of cache image data.
 func (c *CacheProperties) GetLatestImages(num int) []models.ImageCacheData {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	if len(c.Images) >= num && num > 0 {
 		return c.Images[len(c.Images)-num:]
 	} else {
@@ -222,7 +224,7 @@ func (c *CacheProperties) GetLatestImages(num int) []models.ImageCacheData {
 
 // SetImage sets data as the latest image cache data.
 func (c *CacheProperties) SetImage(data models.ImageCacheData) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Images = append(c.Images, data)
 }

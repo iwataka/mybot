@@ -71,8 +71,8 @@ func NewFileConfig(path string) (*FileConfig, error) {
 
 // Save saves the specified configuration to the source file.
 func (c *FileConfig) Save() error {
-	c.ConfigProperties.RLock()
-	defer c.ConfigProperties.RUnlock()
+	c.ConfigProperties.m.RLock()
+	defer c.ConfigProperties.m.RUnlock()
 
 	// Make a directory before all.
 	err := os.MkdirAll(filepath.Dir(c.File), 0751)
@@ -95,8 +95,8 @@ func (c *FileConfig) Save() error {
 // Load loads the configuration from the source file. If the specified source
 // file doesn't exist, this method does nothing and returns nil.
 func (c *FileConfig) Load() error {
-	c.ConfigProperties.Lock()
-	defer c.ConfigProperties.Unlock()
+	c.ConfigProperties.m.Lock()
+	defer c.ConfigProperties.m.Unlock()
 
 	if info, err := os.Stat(c.File); err == nil && !info.IsDir() {
 		bytes, err := ioutil.ReadFile(c.File)
@@ -124,8 +124,8 @@ func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
 }
 
 func (c *DBConfig) Load() error {
-	c.ConfigProperties.Lock()
-	defer c.ConfigProperties.Unlock()
+	c.ConfigProperties.m.Lock()
+	defer c.ConfigProperties.m.Unlock()
 
 	query := c.col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()
@@ -133,17 +133,18 @@ func (c *DBConfig) Load() error {
 		return utils.WithStack(err)
 	}
 	if count > 0 {
-		tmpCol := c.col
+		// query.One overrides col and m so temporarily backup them.
+		tmpCol, tmpMutex := c.col, c.m //nolint: vet
 		err := query.One(c)
-		c.col = tmpCol
+		c.col, c.m = tmpCol, tmpMutex //nolint: vet
 		return utils.WithStack(err)
 	}
 	return nil
 }
 
 func (c *DBConfig) Save() error {
-	c.ConfigProperties.RLock()
-	defer c.ConfigProperties.RUnlock()
+	c.ConfigProperties.m.RLock()
+	defer c.ConfigProperties.m.RUnlock()
 
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return utils.WithStack(err)
@@ -152,7 +153,7 @@ func (c *DBConfig) Save() error {
 // ConfigProperties represents a collection of Config properties.
 // All functions of this struct are thread-safe.
 type ConfigProperties struct {
-	sync.RWMutex `json:"-" toml:"-" bson:"-" yaml:"-"`
+	m sync.RWMutex
 	// Twitter is a configuration related to Twitter.
 	Twitter TwitterConfig `json:"twitter" toml:"twitter" bson:"twitter" yaml:"twitter"`
 	// Slack is a configuration related to Slack
@@ -172,8 +173,8 @@ func newConfigProperties() ConfigProperties {
 
 // GetProperties returns a copy of ConfigProperties itself.
 func (c *ConfigProperties) GetProperties() ConfigProperties {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return ConfigProperties{
 		Twitter:  c.Twitter,
 		Slack:    c.Slack,
@@ -184,23 +185,23 @@ func (c *ConfigProperties) GetProperties() ConfigProperties {
 // GetTwitterScreenNames returns a list of all screen names in Twitter
 // configuration.
 func (c *ConfigProperties) GetTwitterScreenNames() []string {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Twitter.GetScreenNames()
 }
 
 // GetTwitterTimelines returns a copy of Twitter timeline configuration list.
 func (c *ConfigProperties) GetTwitterTimelines() []TimelineConfig {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Twitter.Timelines[:]
 }
 
 // GetTwitterTimelinesByScreenName returns timeline configurations including a
 // specified screen name.
 func (c *ConfigProperties) GetTwitterTimelinesByScreenName(screenName string) []TimelineConfig {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	result := []TimelineConfig{}
 	for _, t := range c.Twitter.Timelines {
 		for _, n := range t.ScreenNames {
@@ -213,91 +214,91 @@ func (c *ConfigProperties) GetTwitterTimelinesByScreenName(screenName string) []
 }
 
 func (c *ConfigProperties) SetTwitterTimelines(timelines []TimelineConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Timelines = timelines
 }
 
 func (c *ConfigProperties) AddTwitterTimeline(timeline TimelineConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Timelines = append(c.Twitter.Timelines, timeline)
 }
 
 // GetTwitterFavorites returns a copy of Twitter favorite configuration list.
 func (c *ConfigProperties) GetTwitterFavorites() []FavoriteConfig {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Twitter.Favorites[:]
 }
 
 func (c *ConfigProperties) SetTwitterFavorites(favorites []FavoriteConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Favorites = favorites
 }
 
 func (c *ConfigProperties) AddTwitterFavorite(favorite FavoriteConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Favorites = append(c.Twitter.Favorites, favorite)
 }
 
 // GetTwitterSearches returns a copy of Twitter search configuration list.
 func (c *ConfigProperties) GetTwitterSearches() []SearchConfig {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Twitter.Searches[:]
 }
 
 func (c *ConfigProperties) SetTwitterSearches(searches []SearchConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Searches = searches
 }
 
 func (c *ConfigProperties) AddTwitterSearch(search SearchConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Twitter.Searches = append(c.Twitter.Searches, search)
 }
 
 // GetSlackMessages returns a copy of Slack message configuration list.
 func (c *ConfigProperties) GetSlackMessages() []MessageConfig {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Slack.Messages[:]
 }
 
 func (c *ConfigProperties) SetSlackMessages(msgs []MessageConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Slack.Messages = msgs
 }
 
 func (c *ConfigProperties) AddSlackMessage(msg MessageConfig) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Slack.Messages = append(c.Slack.Messages, msg)
 }
 
 func (c *ConfigProperties) GetPollingDuration() string {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return c.Duration
 }
 
 func (c *ConfigProperties) SetPollingDuration(dur string) {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	c.Duration = dur
 }
 
 // Validate tries to validate the specified configuration. If invalid values
 // are detected, this returns an error.
 func (c *ConfigProperties) Validate() error {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 
 	// Validate timeline configurations
 	for _, timeline := range c.Twitter.Timelines {
@@ -332,8 +333,8 @@ func (c *ConfigProperties) Validate() error {
 // ValidateWithAPI validates ConfigProperties with external API access.
 // This function is exclusive with Validate function.
 func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 
 	for _, name := range c.Twitter.GetScreenNames() {
 		_, err := api.GetUsersShow(name, nil)
@@ -348,15 +349,15 @@ func (c *ConfigProperties) ValidateWithAPI(api models.TwitterAPI) error {
 // encoding, this returns an empty string. This return value is not same as the
 // source file's content.
 func (c *ConfigProperties) Marshal(ext string) ([]byte, error) {
-	c.RLock()
-	defer c.RUnlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return utils.Encode(ext, c)
 }
 
 // TODO: Make error message clearer
 func (c *ConfigProperties) Unmarshal(ext string, bytes []byte) error {
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 	return utils.Decode(ext, bytes, c)
 }
 
@@ -395,6 +396,8 @@ func (c *Source) String() string {
 
 // TwitterConfig is a configuration related to Twitter.
 type TwitterConfig struct {
+	// no usage but keep this due to backward compatibility
+	Debug     bool             `json:"debug" toml:"debug" bson:"debug" yaml:"debug"`
 	Timelines []TimelineConfig `json:"timelines" toml:"timelines" bson:"timelines" yaml:"timelines"`
 	Favorites []FavoriteConfig `json:"favorites" toml:"favorites" bson:"favorites" yaml:"favorites"`
 	Searches  []SearchConfig   `json:"searches" toml:"searches" bson:"searches" yaml:"searches"`
