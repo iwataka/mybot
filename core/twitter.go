@@ -324,7 +324,7 @@ func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interfa
 				}
 
 				for _, timeline := range timelines {
-					if checkTweetByTimelineConfig(m, timeline) {
+					if !checkTweetByTimelineConfig(m, timeline) {
 						continue
 					}
 					match, err := timeline.Filter.CheckTweet(m, l.vis, l.lang, l.cache)
