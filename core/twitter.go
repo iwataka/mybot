@@ -357,7 +357,7 @@ func checkTweetByTimelineConfig(t anaconda.Tweet, c TimelineConfig) bool {
 	if c.ExcludeReplies && t.InReplyToScreenName != "" {
 		return false
 	}
-	if c.IncludeRts && t.RetweetedStatus != nil {
+	if !c.IncludeRts && t.RetweetedStatus != nil {
 		return false
 	}
 	return true
