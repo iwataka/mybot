@@ -1110,6 +1110,11 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		err = startUserSpecificData(cliContext, data, id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		userSpecificDataMap[id] = data
 	}
 

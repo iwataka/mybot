@@ -405,8 +405,6 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	slackID, _ := userData.slackAuth.GetCreds()
 	userData.slackAPI = core.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 
-	startUserSpecificData(c, userData, userID)
-
 	return userData, nil
 }
 
@@ -449,46 +447,50 @@ func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCr
 	return creds, nil
 }
 
-func startUserSpecificData(c models.Context, data *userSpecificData, userID string) {
+func startUserSpecificData(c models.Context, data *userSpecificData, userID string) error {
+	if len(data.workerMgrs) > 0 {
+		return fmt.Errorf("%s's workers already started", userID)
+	}
+
 	restartDuration := c.Duration(workerRestartDurationFlagName)
 	restartLimit := c.Int(workerRestartLimitFlagName)
 	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, false)
 	bufSize := c.Int(workerBufSizeFlagName)
 
-	var w models.Worker
-
-	w = newTwitterDMWorker(data.twitterAPI, userID)
+	twitterDMWorker := newTwitterDMWorker(data.twitterAPI, userID)
 	data.workerMgrs[twitterDMRoutineKey] = activateWorkerAndStart(
-		w,
-		workerMessageLogger{w.Name(), logger, errLogger},
+		twitterDMWorker,
+		workerMessageLogger{twitterDMWorker.Name(), logger, errLogger},
 		bufSize,
 		restarter,
 	)
 
-	w = newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID)
+	twitterUserWorker := newTwitterUserWorker(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.cache, userID)
 	data.workerMgrs[twitterUserRoutineKey] = activateWorkerAndStart(
-		w,
-		workerMessageLogger{w.Name(), logger, errLogger},
+		twitterUserWorker,
+		workerMessageLogger{twitterUserWorker.Name(), logger, errLogger},
 		bufSize,
 		restarter,
 	)
 
 	r := runner.NewBatchRunnerUsedWithStream(data.twitterAPI, data.slackAPI, visionAPI, languageAPI, data.config)
-	w = newTwitterPeriodicWorker(r, data.cache, data.config, userID)
+	twitterPeriodicWorker := newTwitterPeriodicWorker(r, data.cache, data.config, userID)
 	data.workerMgrs[twitterPeriodicRoutineKey] = activateWorkerAndStart(
-		w,
-		workerMessageLogger{w.Name(), logger, errLogger},
+		twitterPeriodicWorker,
+		workerMessageLogger{twitterPeriodicWorker.Name(), logger, errLogger},
 		bufSize,
 		restarter,
 	)
 
-	w = newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
+	slackWorker := newSlackWorker(data.slackAPI, data.twitterAPI, visionAPI, languageAPI, userID)
 	data.workerMgrs[slackRoutineKey] = activateWorkerAndStart(
-		w,
-		workerMessageLogger{w.Name(), logger, errLogger},
+		slackWorker,
+		workerMessageLogger{slackWorker.Name(), logger, errLogger},
 		bufSize,
 		restarter,
 	)
+
+	return nil
 }
 
 func serve(c *cli.Context) error {
@@ -515,9 +517,11 @@ func beforeServing(c *cli.Context) error {
 
 	err := beforeValidating(c)
 	utils.ExitIfError(err)
-	for userID, data := range userSpecificDataMap {
-		startUserSpecificData(c, data, userID)
+	for userID, userData := range userSpecificDataMap {
+		err := startUserSpecificData(c, userData, userID)
+		utils.ExitIfError(err)
 	}
+
 	return nil
 }
 
