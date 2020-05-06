@@ -511,7 +511,7 @@ func beforeServing(c *cli.Context) error {
 	restartDuration, err := time.ParseDuration(c.String(workerRestartDurationFlagName))
 	utils.ExitIfError(err)
 	restartLimit := c.Int(workerRestartLimitFlagName)
-	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, true)
+	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, false)
 	for userID, data := range userSpecificDataMap {
 		startUserSpecificData(userID, data, c.Int(workerBufSizeFlagName), restarter)
 	}
