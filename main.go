@@ -354,6 +354,25 @@ func (d *userSpecificData) statuses() map[int]bool {
 	return s
 }
 
+func (d *userSpecificData) delete() error {
+	for _, wm := range d.workerMgrs {
+		wm.Close()
+	}
+	for _, del := range []utils.Deletable{d.config, d.cache, d.twitterAuth, d.slackAuth} {
+		err := del.Delete()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *userSpecificData) restart() {
+	for _, ch := range d.workerMgrs {
+		ch.Send(worker.RestartSignal)
+	}
+}
+
 func newUserSpecificData(c models.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
@@ -389,6 +408,11 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
+	// saving twitter auth means user-register
+	err = userData.twitterAuth.Save()
+	if err != nil {
+		return nil, utils.WithStack(err)
+	}
 
 	if session == nil {
 		userData.slackAuth, err = newFileOAuthCreds(c, slackFlagName, userID)
@@ -401,7 +425,6 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	}
 
 	userData.twitterAPI = core.NewTwitterAPIWithAuth(userData.twitterAuth, userData.config, userData.cache)
-
 	slackID, _ := userData.slackAuth.GetCreds()
 	userData.slackAPI = core.NewSlackAPIWithAuth(slackID, userData.config, userData.cache)
 

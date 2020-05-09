@@ -43,14 +43,6 @@ func activateWorkerAndStart(
 	return wm
 }
 
-// TODO: implement this to userSpecificDataMap struct
-func restartWorkers(userID string) {
-	data := userSpecificDataMap[userID]
-	for _, ch := range data.workerMgrs {
-		ch.Send(worker.RestartSignal)
-	}
-}
-
 type twitterDMWorker struct {
 	twitterAPI *core.TwitterAPI
 	id         string

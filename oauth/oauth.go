@@ -6,6 +6,8 @@ package oauth
 // TODO: Encrypt credential information
 
 import (
+	"os"
+
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/mybot/utils"
 	"gopkg.in/mgo.v2"
@@ -17,6 +19,7 @@ import (
 type OAuthCreds interface {
 	utils.Savable
 	utils.Loadable
+	utils.Deletable
 	SetCreds(at, ats string)
 	GetCreds() (string, string)
 }
@@ -37,6 +40,10 @@ func (a *FileOAuthCreds) Load() error {
 // Save saves the credential information in a into a.File.
 func (a *FileOAuthCreds) Save() error {
 	return utils.EncodeFile(a.File, a)
+}
+
+func (a *FileOAuthCreds) Delete() error {
+	return os.RemoveAll(a.File)
 }
 
 // NewFileOAuthCreds returns a new FileOAuthCreds with file.
@@ -84,6 +91,10 @@ func (a *DBOAuthCreds) Save() error {
 	return utils.WithStack(err)
 }
 
+func (a *DBOAuthCreds) Delete() error {
+	return a.col.Remove(bson.M{"id": a.ID})
+}
+
 // OAuthCredsProps contains actual variables for user credential information.
 type OAuthCredsProps struct {
 	AccessToken       string `json:"access_token" toml:"access_token" bson:"access_token" yaml:"access_token"`
@@ -110,6 +121,7 @@ func (a *OAuthCredsProps) GetCreds() (string, string) {
 type OAuthApp interface {
 	utils.Savable
 	utils.Loadable
+	utils.Deletable
 	SetCreds(ck, cs string)
 	GetCreds() (string, string)
 }
@@ -194,6 +206,10 @@ func (a *FileOAuthApp) Save() error {
 	return utils.EncodeFile(a.File, tmp)
 }
 
+func (a *FileOAuthApp) Delete() error {
+	return os.RemoveAll(a.File)
+}
+
 // DBOAuthApp is OAuthApp associated with a specified database.
 type DBOAuthApp struct {
 	OAuthAppProps
@@ -241,4 +257,8 @@ func (a *DBOAuthApp) Save() error {
 	tmp := &DefaultOAuthAppProps{ck, cs}
 	_, err := a.col.Upsert(nil, tmp)
 	return utils.WithStack(err)
+}
+
+func (a *DBOAuthApp) Delete() error {
+	return a.col.Remove(nil)
 }

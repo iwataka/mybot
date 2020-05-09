@@ -28,8 +28,9 @@ import (
 
 const (
 	assetsDir           = "assets"
-	twitterUserIDPrefix = "twitter-"
-	sessNameForProvider = "mybot-%s-session"
+	appUserIDFormat     = "%s-%s"
+	sessionKeyForUser   = "mybot_user"
+	sessionName         = "_mybot_sess"
 	trueValue           = "true"
 	defaultConfigFormat = ".json"
 )
@@ -66,12 +67,9 @@ func (a *Authenticator) SetProvider(name string, r *http.Request) {
 }
 
 // InitProvider initializes a provider and makes it to be used.
-func (a *Authenticator) InitProvider(host, name, callback string) {
-	if callback == "" {
-		callback = fmt.Sprintf("http://%s/auth/%s/callback", host, name)
-	}
+func (a *Authenticator) InitProvider(provider, callback string) {
 	var p goth.Provider
-	switch name {
+	switch provider {
 	case "twitter":
 		ck, cs := twitterApp.GetCreds()
 		p = twitter.New(
@@ -95,49 +93,62 @@ func (a *Authenticator) InitProvider(host, name, callback string) {
 
 // CompleteUserAuth executes user authentication and returns the user
 // information.
-func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error) {
-	sessKey := "mybot-user"
-	sess, err := serverSession.Get(r, fmt.Sprintf(sessNameForProvider, provider))
+func (a *Authenticator) CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (user goth.User, err error) {
+	a.SetProvider(provider, r)
+	q := r.URL.Query()
+	q.Add("state", "state")
+	r.URL.RawQuery = q.Encode()
+	user, err = gothic.CompleteUserAuth(w, r)
+	return
+}
+
+func (a *Authenticator) Login(user goth.User, w http.ResponseWriter, r *http.Request) error {
+	sess, err := serverSession.Get(r, sessionName)
+	if err != nil {
+		return utils.WithStack(err)
+	}
+	user.RawData = nil // RawData cannot be converted into session data currently
+	sess.Values[sessionKeyForUser] = user
+	err = sess.Save(r, w)
+	if err != nil {
+		return utils.WithStack(err)
+	}
+	return nil
+}
+
+func (a *Authenticator) GetLoginUser(r *http.Request) (goth.User, error) {
+	sess, err := serverSession.Get(r, sessionName)
 	if err != nil {
 		return goth.User{}, utils.WithStack(err)
 	}
-	val, exists := sess.Values[sessKey]
+	val, exists := sess.Values[sessionKeyForUser]
 	if exists {
 		if user, ok := val.(goth.User); ok {
 			return user, nil
 		}
 	}
-
-	a.SetProvider(provider, r)
-	q := r.URL.Query()
-	q.Add("state", "state")
-	r.URL.RawQuery = q.Encode()
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err == nil {
-		user.RawData = nil // RawData cannot be converted into session data currently
-		sess.Values[sessKey] = user
-		err = sess.Save(r, w)
-		if err != nil {
-			return goth.User{}, utils.WithStack(err)
-		}
-	}
-	return user, utils.WithStack(err)
+	return goth.User{}, fmt.Errorf("No login user")
 }
 
 // Logout executes logout operation of the current login-user.
-func (a *Authenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
-	sess, err := serverSession.Get(r, fmt.Sprintf(sessNameForProvider, provider))
+func (a *Authenticator) Logout(w http.ResponseWriter, r *http.Request) error {
+	sess, err := serverSession.Get(r, sessionName)
 	if err != nil {
 		return utils.WithStack(err)
 	}
-	sess.Options.MaxAge = -1
-	err = sess.Save(r, w)
-	if err != nil {
-		return utils.WithStack(err)
+	val, exists := sess.Values[sessionKeyForUser]
+	if exists {
+		if user, ok := val.(goth.User); ok {
+			sess.Options.MaxAge = -1
+			err = sess.Save(r, w)
+			if err != nil {
+				return utils.WithStack(err)
+			}
+			a.SetProvider(user.Provider, r)
+			return gothic.Logout(w, r)
+		}
 	}
-
-	a.SetProvider(provider, r)
-	return gothic.Logout(w, r)
+	return fmt.Errorf("No login user")
 }
 
 func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
@@ -152,8 +163,8 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if _, err := authenticator.CompleteUserAuth("twitter", w, r); err != nil {
-			http.Redirect(w, r, "/auth/twitter/", http.StatusSeeOther)
+		if _, err := authenticator.GetLoginUser(r); err != nil {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 
@@ -162,11 +173,17 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func startServer(host, port, cert, key string) error {
-	var err error
 	gothic.Store = serverSession
+	gothic.GetProviderName = func(r *http.Request) (string, error) {
+		if n := r.URL.Query().Get("provider"); len(n) > 0 {
+			return n, nil
+		}
+		return "", fmt.Errorf("no provider name given")
+	}
 
 	// View endpoints
 	http.HandleFunc("/", wrapHandler(indexHandler))
+	http.HandleFunc("/account/delete", wrapHandler(accountDeleteHandler)) // currently hidden endpoint
 	http.HandleFunc("/twitter-collections/", wrapHandler(twitterColsHandler))
 	http.HandleFunc("/config/", wrapHandler(configHandler))
 	http.HandleFunc("/config/file/", wrapHandler(configFileHandler))
@@ -176,18 +193,18 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/config/messages/add", wrapHandler(configMessageAddHandler))
 	http.HandleFunc("/assets/css/", getAssetsCSS)
 	http.HandleFunc("/assets/js/", getAssetsJS)
-	http.HandleFunc("/auth/twitter/", getAuthTwitter)
-	http.HandleFunc("/auth/slack", getAuthSlack)
-	http.HandleFunc("/auth/twitter/callback", getAuthTwitterCallback)
-	http.HandleFunc("/auth/slack/callback", getAuthSlackCallback)
+	http.HandleFunc("/auth/", authHandler)
+	http.HandleFunc("/auth/callback", authCallbackHandler)
+	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/setup/", setupHandler)
-	http.HandleFunc("/logout/twitter/", twitterLogoutHandler)
+	http.HandleFunc("/logout/", logoutHandler)
 	// For Twitter user auto-completion usage
 	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
+	var err error
 	if certErr == nil && keyErr == nil {
 		logger.Printf("Listen on %s://%s\n", "https", addr)
 		err = http.ListenAndServeTLS(addr, cert, key, nil)
@@ -223,17 +240,44 @@ func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template,
 	return template, nil
 }
 
+func accountDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		user, err := authenticator.GetLoginUser(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		userID := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
+		data := userSpecificDataMap[userID]
+		err = data.delete()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		delete(userSpecificDataMap, userID)
+		err = authenticator.Logout(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, "/login/", http.StatusSeeOther)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	user, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)]
 
 	switch r.URL.Path {
 	case "/":
-		getIndex(w, data.cache, data.slackAPI, twitterUser, data.statuses())
+		getIndex(w, data.cache, data.slackAPI, data.twitterAPI, data.statuses())
 	default:
 		http.NotFound(w, r)
 	}
@@ -243,9 +287,10 @@ func getIndex(
 	w http.ResponseWriter,
 	cache data.Cache,
 	slackAPI *core.SlackAPI,
-	twitterUser goth.User,
+	twitterAPI *core.TwitterAPI,
 	statuses map[int]bool,
 ) {
+	_, twitterScreenName := getTwitterInfo(twitterAPI)
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 	imgURL, imgSrc, imgAnalysisResult, imgAnalysisDate := imageAnalysis(cache)
 
@@ -265,7 +310,7 @@ func getIndex(
 		SlackListenerStatus      bool
 	}{
 		"",
-		twitterUser.NickName,
+		twitterScreenName,
 		slackTeam,
 		slackURL,
 		googleEnabled(),
@@ -319,25 +364,28 @@ func imageAnalysis(cache data.Cache) (string, string, string, string) {
 }
 
 func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	switch r.Method {
 	case http.MethodGet:
-		getTwitterCols(w, data.slackAPI, data.twitterAPI, twitterUser)
+		getTwitterCols(w, data.slackAPI, data.twitterAPI)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI, twitterUser goth.User) {
+func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
+	twitterID, twitterScreenName := getTwitterInfo(twitterAPI)
+	slackTeam, slackURL := getSlackInfo(slackAPI)
+
 	colMap := make(map[string]string)
 	activeCol := ""
-	id, err := strconv.ParseInt(twitterUser.UserID, 10, 64)
+	id, err := strconv.ParseInt(twitterID, 10, 64)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -354,7 +402,6 @@ func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *
 		activeCol = names[0]
 	}
 
-	slackTeam, slackURL := getSlackInfo(slackAPI)
 	data := &struct {
 		NavbarName       string
 		TwitterName      string
@@ -365,7 +412,7 @@ func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *
 		ActiveCollection string
 	}{
 		"TwitterCols",
-		twitterUser.NickName,
+		twitterScreenName,
 		slackTeam,
 		slackURL,
 		googleEnabled(),
@@ -413,18 +460,18 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bo
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	switch r.Method {
 	case http.MethodPost:
 		postConfig(w, r, data.config, twitterUser)
 	case http.MethodGet:
-		getConfig(w, r, data.config, data.slackAPI, twitterUser)
+		getConfig(w, r, data.config, data.slackAPI, data.twitterAPI)
 	default:
 		http.NotFound(w, r)
 	}
@@ -437,7 +484,8 @@ func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twit
 		if err == nil {
 			err = config.Save()
 			if err == nil {
-				go restartWorkers(twitterUserIDPrefix + twitterUser.UserID)
+				userID := fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)
+				go userSpecificDataMap[userID].restart()
 			}
 		} else {
 			// TODO: add load error to cookie if any
@@ -682,7 +730,7 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (data.Ac
 	return action, nil
 }
 
-func getConfig(w http.ResponseWriter, r *http.Request, config core.Config, slackAPI *core.SlackAPI, twitterUser goth.User) {
+func getConfig(w http.ResponseWriter, r *http.Request, config core.Config, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -695,8 +743,9 @@ func getConfig(w http.ResponseWriter, r *http.Request, config core.Config, slack
 		http.SetCookie(w, msgCookie)
 	}
 
+	_, twitterScreenName := getTwitterInfo(twitterAPI)
 	slackTeam, slackURL := getSlackInfo(slackAPI)
-	bs, err := configPage(twitterUser.NickName, slackTeam, slackURL, msg, config)
+	bs, err := configPage(twitterScreenName, slackTeam, slackURL, msg, config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -740,12 +789,12 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config core.Config
 }
 
 func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
 		postConfigTimelineAdd(w, r, data.config)
@@ -762,12 +811,12 @@ func addTimelineConfig(config core.Config) {
 }
 
 func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
 		postConfigFavoriteAdd(w, r, data.config)
@@ -784,12 +833,12 @@ func addFavoriteConfig(config core.Config) {
 }
 
 func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
 		postConfigSearchAdd(w, r, data.config)
@@ -808,12 +857,12 @@ func addSearchConfig(config core.Config) {
 }
 
 func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
 		postConfigMessageAdd(w, r, data.config)
@@ -830,12 +879,12 @@ func addMessageConfig(config core.Config) {
 }
 
 func configFileHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	switch r.Method {
 	case http.MethodPost:
@@ -1055,13 +1104,55 @@ func getSetup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getLogin(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getLogin(w http.ResponseWriter, _ *http.Request) {
+	data := &struct {
+		NavbarName    string
+		TwitterName   string
+		SlackTeam     string
+		SlackURL      string
+		GoogleEnabled bool
+	}{
+		"",
+		"",
+		"",
+		"",
+		googleEnabled(),
+	}
+
+	buf := new(bytes.Buffer)
+	tmpl, err := generateHTMLTemplate()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
+	err = tmpl.ExecuteTemplate(buf, "login", data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(buf.Bytes())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {
+	twitterUser, err := authenticator.GetLoginUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	switch r.Method {
 	case http.MethodGet:
@@ -1096,29 +1187,85 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *co
 	}
 }
 
-func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
+func authCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		q := r.URL.Query()
+		provider := q.Get("provider")
+		login, err := getLoginFlag(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		switch provider {
+		case "twitter":
+			getAuthTwitterCallback(w, r, login)
+		case "slack":
+			getAuthSlackCallback(w, r, login)
+		default:
+			http.NotFound(w, r)
+		}
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func getLoginFlag(r *http.Request) (bool, error) {
+	loginStr := r.URL.Query().Get("login")
+	if len(loginStr) == 0 {
+		loginStr = "false"
+	}
+	login, err := strconv.ParseBool(loginStr)
+	if err != nil {
+		return false, err
+	}
+	return login, nil
+}
+
+func getAuthCallback(w http.ResponseWriter, r *http.Request, login bool) (goth.User, *userSpecificData, error) {
 	user, err := authenticator.CompleteUserAuth("twitter", w, r)
+	if err != nil {
+		return goth.User{}, nil, err
+	}
+
+	if login {
+		err = authenticator.Login(user, w, r)
+		if err != nil {
+			return goth.User{}, nil, err
+		}
+
+		id := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
+		data, exists := userSpecificDataMap[id]
+		if exists {
+			return user, data, nil
+		} else {
+			data, err := newUserSpecificData(cliContext, dbSession, id)
+			if err != nil {
+				return goth.User{}, nil, err
+			}
+			err = startUserSpecificData(cliContext, data, id)
+			if err != nil {
+				return goth.User{}, nil, err
+			}
+			userSpecificDataMap[id] = data
+			return user, data, nil
+		}
+	}
+
+	loginUser, err := authenticator.GetLoginUser(r)
+	if err != nil {
+		return goth.User{}, nil, err
+	}
+	id := fmt.Sprintf(appUserIDFormat, loginUser.Provider, loginUser.UserID)
+	return user, userSpecificDataMap[id], nil
+}
+
+func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request, login bool) {
+	user, data, err := getAuthCallback(w, r, login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	id := twitterUserIDPrefix + user.UserID
-	data, exists := userSpecificDataMap[id]
-	if !exists {
-		data, err = newUserSpecificData(cliContext, dbSession, id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = startUserSpecificData(cliContext, data, id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		userSpecificDataMap[id] = data
-	}
-
 	data.twitterAuth.SetCreds(user.AccessToken, user.AccessTokenSecret)
 	err = data.twitterAuth.Save()
 	if err != nil {
@@ -1126,24 +1273,15 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	*data.twitterAPI = *core.NewTwitterAPIWithAuth(data.twitterAuth, data.config, data.cache)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
-	user, err := authenticator.CompleteUserAuth("slack", w, r)
+func getAuthSlackCallback(w http.ResponseWriter, r *http.Request, login bool) {
+	user, data, err := getAuthCallback(w, r, login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	twitterUser, err := authenticator.CompleteUserAuth("twitter", w, r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	data := userSpecificDataMap[twitterUserIDPrefix+twitterUser.UserID]
-
 	data.slackAuth.SetCreds(user.AccessToken, user.AccessTokenSecret)
 	err = data.slackAuth.Save()
 	if err != nil {
@@ -1151,41 +1289,61 @@ func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	*data.slackAPI = *core.NewSlackAPIWithAuth(user.AccessToken, data.config, data.cache)
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func getAuthTwitter(w http.ResponseWriter, r *http.Request) {
-	getAuth("twitter", w, r)
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		q := r.URL.Query()
+		provider := q.Get("provider")
+		login, err := getLoginFlag(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		getAuth(w, r, provider, login)
+	default:
+		http.NotFound(w, r)
+	}
 }
 
-func getAuthSlack(w http.ResponseWriter, r *http.Request) {
-	getAuth("slack", w, r)
-}
-
-func getAuth(provider string, w http.ResponseWriter, r *http.Request) {
+func getAuth(w http.ResponseWriter, r *http.Request, provider string, login bool) {
 	callback := r.URL.Query().Get("callback")
 	authenticator.SetProvider(provider, r)
-	authenticator.InitProvider(r.Host, provider, callback)
+	if len(callback) == 0 {
+		callback = fmt.Sprintf("http://%s/auth/callback?provider=%s&login=%s", r.Host, provider, strconv.FormatBool(login))
+	}
+	authenticator.InitProvider(provider, callback)
 	gothic.BeginAuthHandler(w, r)
 }
 
-func twitterLogoutHandler(w http.ResponseWriter, r *http.Request) {
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getTwitterLogout(w, r)
+		getLogout(w, r)
 	default:
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
-func getTwitterLogout(w http.ResponseWriter, r *http.Request) {
-	err := authenticator.Logout("twitter", w, r)
+func getLogout(w http.ResponseWriter, r *http.Request) {
+	err := authenticator.Logout(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func getTwitterInfo(twitterAPI *core.TwitterAPI) (id, screenName string) {
+	if twitterAPI != nil {
+		user, err := twitterAPI.GetSelf()
+		if err == nil {
+			return user.IdStr, user.ScreenName
+		}
+	}
+	return "", ""
 }
 
 func getSlackInfo(slackAPI *core.SlackAPI) (string, string) {

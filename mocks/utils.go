@@ -82,3 +82,40 @@ func (mr *MockLoadableMockRecorder) Load() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockLoadable)(nil).Load))
 }
+
+// MockDeletable is a mock of Deletable interface
+type MockDeletable struct {
+	ctrl     *gomock.Controller
+	recorder *MockDeletableMockRecorder
+}
+
+// MockDeletableMockRecorder is the mock recorder for MockDeletable
+type MockDeletableMockRecorder struct {
+	mock *MockDeletable
+}
+
+// NewMockDeletable creates a new mock instance
+func NewMockDeletable(ctrl *gomock.Controller) *MockDeletable {
+	mock := &MockDeletable{ctrl: ctrl}
+	mock.recorder = &MockDeletableMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockDeletable) EXPECT() *MockDeletableMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method
+func (m *MockDeletable) Delete() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockDeletableMockRecorder) Delete() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeletable)(nil).Delete))
+}

@@ -32,6 +32,10 @@ type Loadable interface {
 	Load() error
 }
 
+type Deletable interface {
+	Delete() error
+}
+
 func Decode(ext string, bs []byte, v interface{}) error {
 	switch ext {
 	case ".toml":

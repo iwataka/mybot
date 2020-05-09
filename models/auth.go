@@ -8,7 +8,9 @@ import (
 
 type Authenticator interface {
 	SetProvider(name string, r *http.Request)
-	InitProvider(host, name, callback string)
+	InitProvider(provider, callback string)
 	CompleteUserAuth(provider string, w http.ResponseWriter, r *http.Request) (goth.User, error)
-	Logout(provider string, w http.ResponseWriter, r *http.Request) error
+	Login(user goth.User, w http.ResponseWriter, r *http.Request) error
+	GetLoginUser(r *http.Request) (goth.User, error)
+	Logout(w http.ResponseWriter, r *http.Request) error
 }

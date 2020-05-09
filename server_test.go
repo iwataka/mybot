@@ -30,14 +30,19 @@ import (
 )
 
 const (
-	serverTestTwitterUserID = "123456"
-	screenshotsDir          = "screenshots"
+	serverTestTwitterScreenName = "foo"
+	serverTestUserProvider      = "provider"
+	serverTestUserID            = "123456"
+	screenshotsDir              = "screenshots"
 )
 
 var (
 	serverTestUserSpecificData *userSpecificData
-	serverTestTwitterUser      = goth.User{Name: "foo", NickName: "bar", UserID: serverTestTwitterUserID}
-	driver                     *agouti.WebDriver
+	serverTestTwitterUser      = goth.User{
+		UserID:   serverTestUserID,
+		Provider: serverTestUserProvider,
+	}
+	driver *agouti.WebDriver
 )
 
 func TestMain(m *testing.M) {
@@ -72,7 +77,7 @@ func init() {
 	}
 	serverTestUserSpecificData.workerMgrs = map[int]*worker.WorkerManager{}
 	serverTestUserSpecificData.slackAPI = core.NewSlackAPIWithAuth("", serverTestUserSpecificData.config, nil)
-	userSpecificDataMap[twitterUserIDPrefix+serverTestTwitterUserID] = serverTestUserSpecificData
+	userSpecificDataMap[fmt.Sprintf(appUserIDFormat, serverTestUserProvider, serverTestUserID)] = serverTestUserSpecificData
 
 	if _, err := os.Stat(screenshotsDir); err != nil {
 		err := os.Mkdir(screenshotsDir, os.FileMode(0755))
@@ -135,7 +140,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -155,6 +160,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 		"barID": barCol,
 	}
 	twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Times(2).Return(listResult, nil)
+	twitterAPIMock.EXPECT().GetSelf(gomock.Any()).AnyTimes().Return(anaconda.User{ScreenName: serverTestTwitterScreenName, IdStr: serverTestUserID}, nil)
 	tmpTwitterAPI := serverTestUserSpecificData.twitterAPI
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
@@ -169,7 +175,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 func TestGetConfig(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -203,7 +209,7 @@ func TestGetSetupTwitter(t *testing.T) {
 func TestGetConfigFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -253,7 +259,7 @@ func checkHTTPResponse(res *http.Response) error {
 func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync.WaitGroup)) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -269,7 +275,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
 				wg.Done()
 			} else if r.Method == http.MethodGet {
-				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestTwitterUser)
+				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
 			}
 		}
 	}
@@ -505,7 +511,7 @@ func testPostConfigAdd(
 ) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -586,7 +592,7 @@ func generateTwitterAPIMock(t *testing.T, user anaconda.User, userErr error) *mo
 func testIndex(t *testing.T, f func(url string) error) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Times(2).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
@@ -607,7 +613,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 func TestGetTwitterUserSearch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	authMock := mocks.NewMockAuthenticator(ctrl)
-	authMock.EXPECT().CompleteUserAuth(gomock.Any(), gomock.Any(), gomock.Any()).Return(serverTestTwitterUser, nil)
+	authMock.EXPECT().GetLoginUser(gomock.Any()).Return(serverTestTwitterUser, nil)
 	tmpAuth := authenticator
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock

@@ -15,6 +15,7 @@ import (
 // Cache provides a set of functions to access cache of this application.
 type Cache interface {
 	utils.Savable
+	utils.Deletable
 	GetLatestTweetID(screenName string) int64
 	SetLatestTweetID(screenName string, id int64)
 	GetLatestFavoriteID(screenName string) int64
@@ -69,6 +70,10 @@ func (c *FileCache) Save() error {
 	return nil
 }
 
+func (c *FileCache) Delete() error {
+	return os.RemoveAll(c.File)
+}
+
 type DBCache struct {
 	CacheProperties `yaml:",inline"`
 	col             *mgo.Collection
@@ -99,6 +104,10 @@ func (c *DBCache) Save() error {
 	defer c.CacheProperties.m.RUnlock()
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return utils.WithStack(err)
+}
+
+func (c *DBCache) Delete() error {
+	return c.col.Remove(bson.M{"id": c.ID})
 }
 
 // CacheProperties contains common actual cache variables and is intended to be

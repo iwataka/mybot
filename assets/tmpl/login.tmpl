@@ -1,0 +1,17 @@
+{{{define "login"}}}
+<!DOCTYPE html>
+<html lang="en">
+    {{{template "header" .}}}
+    <body>
+        <div class="container">
+            {{{template "navbar" .}}}
+            <div class="jumbotron">
+                <h1>Login</h1>
+                <h2 class="lead">login with social account</h2>
+            </div>
+            <a class="btn btn-default btn-lg btn-block fa fa-lg fa-twitter" href="/auth/?provider=twitter&login=true" role="button">Login with Twitter</a>
+            <a class="btn btn-default btn-lg btn-block fa fa-lg fa-slack" href="/auth/?provider=slack&login=true" role="button">Login with Slack</a>
+        </div>
+    </body>
+</html>
+{{{end}}}

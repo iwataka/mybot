@@ -47,15 +47,15 @@ func (mr *MockAuthenticatorMockRecorder) SetProvider(name, r interface{}) *gomoc
 }
 
 // InitProvider mocks base method
-func (m *MockAuthenticator) InitProvider(host, name, callback string) {
+func (m *MockAuthenticator) InitProvider(provider, callback string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InitProvider", host, name, callback)
+	m.ctrl.Call(m, "InitProvider", provider, callback)
 }
 
 // InitProvider indicates an expected call of InitProvider
-func (mr *MockAuthenticatorMockRecorder) InitProvider(host, name, callback interface{}) *gomock.Call {
+func (mr *MockAuthenticatorMockRecorder) InitProvider(provider, callback interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitProvider", reflect.TypeOf((*MockAuthenticator)(nil).InitProvider), host, name, callback)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitProvider", reflect.TypeOf((*MockAuthenticator)(nil).InitProvider), provider, callback)
 }
 
 // CompleteUserAuth mocks base method
@@ -73,16 +73,45 @@ func (mr *MockAuthenticatorMockRecorder) CompleteUserAuth(provider, w, r interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteUserAuth", reflect.TypeOf((*MockAuthenticator)(nil).CompleteUserAuth), provider, w, r)
 }
 
-// Logout mocks base method
-func (m *MockAuthenticator) Logout(provider string, w http.ResponseWriter, r *http.Request) error {
+// Login mocks base method
+func (m *MockAuthenticator) Login(user goth.User, w http.ResponseWriter, r *http.Request) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logout", provider, w, r)
+	ret := m.ctrl.Call(m, "Login", user, w, r)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Login indicates an expected call of Login
+func (mr *MockAuthenticatorMockRecorder) Login(user, w, r interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockAuthenticator)(nil).Login), user, w, r)
+}
+
+// GetLoginUser mocks base method
+func (m *MockAuthenticator) GetLoginUser(r *http.Request) (goth.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLoginUser", r)
+	ret0, _ := ret[0].(goth.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetLoginUser indicates an expected call of GetLoginUser
+func (mr *MockAuthenticatorMockRecorder) GetLoginUser(r interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLoginUser", reflect.TypeOf((*MockAuthenticator)(nil).GetLoginUser), r)
+}
+
+// Logout mocks base method
+func (m *MockAuthenticator) Logout(w http.ResponseWriter, r *http.Request) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logout", w, r)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Logout indicates an expected call of Logout
-func (mr *MockAuthenticatorMockRecorder) Logout(provider, w, r interface{}) *gomock.Call {
+func (mr *MockAuthenticatorMockRecorder) Logout(w, r interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockAuthenticator)(nil).Logout), provider, w, r)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockAuthenticator)(nil).Logout), w, r)
 }

@@ -34,6 +34,20 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 	return m.recorder
 }
 
+// Delete mocks base method
+func (m *MockCache) Delete() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockCacheMockRecorder) Delete() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCache)(nil).Delete))
+}
+
 // GetLatestDMID mocks base method
 func (m *MockCache) GetLatestDMID() int64 {
 	m.ctrl.T.Helper()

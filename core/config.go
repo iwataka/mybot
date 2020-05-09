@@ -21,6 +21,7 @@ import (
 type Config interface {
 	utils.Savable
 	utils.Loadable
+	utils.Deletable
 	GetProperties() ConfigProperties
 	GetTwitterScreenNames() []string
 	GetTwitterTimelines() []TimelineConfig
@@ -111,6 +112,10 @@ func (c *FileConfig) Load() error {
 	return nil
 }
 
+func (c *FileConfig) Delete() error {
+	return os.RemoveAll(c.File)
+}
+
 type DBConfig struct {
 	ConfigProperties `yaml:",inline"`
 	col              *mgo.Collection
@@ -148,6 +153,10 @@ func (c *DBConfig) Save() error {
 
 	_, err := c.col.Upsert(bson.M{"id": c.ID}, c)
 	return utils.WithStack(err)
+}
+
+func (c *DBConfig) Delete() error {
+	return c.col.Remove(bson.M{"id": c.ID})
 }
 
 // ConfigProperties represents a collection of Config properties.
