@@ -27,7 +27,10 @@ type TwitterAPI struct {
 // returns TwitterAPI instance for that user
 func NewTwitterAPIWithAuth(auth oauth.OAuthCreds, config Config, cache data.Cache) *TwitterAPI {
 	at, ats := auth.GetCreds()
-	api := anaconda.NewTwitterApi(at, ats)
+	var api models.TwitterAPI
+	if len(at) > 0 && len(ats) > 0 {
+		api = anaconda.NewTwitterApi(at, ats)
+	}
 	return NewTwitterAPI(api, config, cache)
 }
 
@@ -40,11 +43,10 @@ func (a *TwitterAPI) BaseAPI() models.TwitterAPI {
 }
 
 func (a *TwitterAPI) VerifyCredentials() (bool, error) {
-	if a.api == nil {
-		return false, fmt.Errorf("Twitter API is not available")
-	} else {
+	if a.Enabled() {
 		return a.api.VerifyCredentials()
 	}
+	return false, fmt.Errorf("Twitter API is not available")
 }
 
 func (a *TwitterAPI) PostSlackMsg(text string, atts []slack.Attachment) (anaconda.Tweet, error) {
@@ -54,14 +56,22 @@ func (a *TwitterAPI) PostSlackMsg(text string, atts []slack.Attachment) (anacond
 // GetSelf gets the authenticated user's information and stores it as a cache,
 // then returns it.
 func (a *TwitterAPI) GetSelf() (anaconda.User, error) {
-	if a.self == nil {
+	if a.self != nil {
+		return *a.self, nil
+	}
+	if a.Enabled() {
 		self, err := a.api.GetSelf(nil)
 		if err != nil {
 			return anaconda.User{}, utils.WithStack(err)
 		}
 		a.self = &self
+		return self, nil
 	}
-	return *a.self, nil
+	return anaconda.User{}, fmt.Errorf("Twitter API is not available")
+}
+
+func (a *TwitterAPI) Enabled() bool {
+	return a.api != nil
 }
 
 // CheckUser cheks if user is matched for the given allowSelf and users
