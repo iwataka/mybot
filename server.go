@@ -440,6 +440,7 @@ func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twit
 				go restartWorkers(twitterUserIDPrefix + twitterUser.UserID)
 			}
 		} else {
+			// TODO: add load error to cookie if any
 			_ = config.Load()
 		}
 

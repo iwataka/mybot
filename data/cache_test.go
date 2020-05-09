@@ -45,7 +45,7 @@ func TestFileCache_Save(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(path)
 	require.NoError(t, os.Chmod(path, 0555))
-	defer func() { _ = os.Chmod(path, 0755) }()
+	defer func() { require.NoError(t, os.Chmod(path, 0755)) }()
 	c, err = NewFileCache(path)
 	require.NoError(t, err)
 	require.Error(t, c.Save())

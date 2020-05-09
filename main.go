@@ -512,6 +512,7 @@ func validate(c *cli.Context) {
 }
 
 func beforeServing(c *cli.Context) error {
+	// ignore error at first initialization
 	visionAPI, _ = core.NewVisionMatcher(c.String(gcloudFlagName))
 	languageAPI, _ = core.NewLanguageMatcher(c.String(gcloudFlagName))
 

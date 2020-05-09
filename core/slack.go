@@ -260,10 +260,10 @@ type SlackListener struct {
 	twitterAPI *TwitterAPI
 }
 
-func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) error {
+func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) (err error) {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
-	defer func() { _ = rtm.Disconnect() }()
+	defer func() { err = rtm.Disconnect() }()
 
 	for {
 		select {
