@@ -107,7 +107,8 @@ func (c *DBCache) Save() error {
 }
 
 func (c *DBCache) Delete() error {
-	return c.col.Remove(bson.M{"id": c.ID})
+	_, err := c.col.RemoveAll(bson.M{"id": c.ID})
+	return err
 }
 
 // CacheProperties contains common actual cache variables and is intended to be

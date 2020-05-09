@@ -156,7 +156,8 @@ func (c *DBConfig) Save() error {
 }
 
 func (c *DBConfig) Delete() error {
-	return c.col.Remove(bson.M{"id": c.ID})
+	_, err := c.col.RemoveAll(bson.M{"id": c.ID})
+	return err
 }
 
 // ConfigProperties represents a collection of Config properties.

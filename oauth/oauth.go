@@ -92,7 +92,8 @@ func (a *DBOAuthCreds) Save() error {
 }
 
 func (a *DBOAuthCreds) Delete() error {
-	return a.col.Remove(bson.M{"id": a.ID})
+	_, err := a.col.RemoveAll(bson.M{"id": a.ID})
+	return err
 }
 
 // OAuthCredsProps contains actual variables for user credential information.
@@ -260,5 +261,6 @@ func (a *DBOAuthApp) Save() error {
 }
 
 func (a *DBOAuthApp) Delete() error {
-	return a.col.Remove(nil)
+	_, err := a.col.RemoveAll(nil)
+	return err
 }

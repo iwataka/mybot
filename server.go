@@ -145,7 +145,7 @@ func (a *Authenticator) Logout(w http.ResponseWriter, r *http.Request) error {
 				return utils.WithStack(err)
 			}
 			a.SetProvider(user.Provider, r)
-			return gothic.Logout(w, r)
+			return nil
 		}
 	}
 	return fmt.Errorf("No login user")
