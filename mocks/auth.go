@@ -47,15 +47,15 @@ func (mr *MockAuthenticatorMockRecorder) SetProvider(name, r interface{}) *gomoc
 }
 
 // InitProvider mocks base method
-func (m *MockAuthenticator) InitProvider(provider, callback string) {
+func (m *MockAuthenticator) InitProvider(provider, callback, consumerKey, consumerSecret string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InitProvider", provider, callback)
+	m.ctrl.Call(m, "InitProvider", provider, callback, consumerKey, consumerSecret)
 }
 
 // InitProvider indicates an expected call of InitProvider
-func (mr *MockAuthenticatorMockRecorder) InitProvider(provider, callback interface{}) *gomock.Call {
+func (mr *MockAuthenticatorMockRecorder) InitProvider(provider, callback, consumerKey, consumerSecret interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitProvider", reflect.TypeOf((*MockAuthenticator)(nil).InitProvider), provider, callback)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitProvider", reflect.TypeOf((*MockAuthenticator)(nil).InitProvider), provider, callback, consumerKey, consumerSecret)
 }
 
 // CompleteUserAuth mocks base method

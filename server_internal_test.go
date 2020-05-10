@@ -109,6 +109,26 @@ func TestAuthenticator_SetProvider(t *testing.T) {
 	require.Equal(t, expectedProvider, unchangedProvider)
 }
 
+func TestAuthenticator_InitProvider(t *testing.T) {
+	defer goth.ClearProviders()
+	auth := Authenticator{}
+	provider := "twitter"
+	callback := "http://example.com/callback"
+	ck, cs := "key", "secret"
+	auth.InitProvider(provider, callback, ck, cs)
+	p, err := goth.GetProvider(provider)
+	require.NoError(t, err)
+	require.Equal(t, provider, p.Name())
+}
+
+func TestAuthenticator_InitProvider_withUnknownProvider(t *testing.T) {
+	auth := Authenticator{}
+	callback := "http://example.com/callback"
+	ck, cs := "key", "secret"
+	auth.InitProvider("foo", callback, ck, cs)
+	require.Len(t, goth.GetProviders(), 0)
+}
+
 func TestTwitterColsPage(t *testing.T) {
 	skipIfDialTimeout(t, "twitter.com", "https", 30*time.Second)
 	testTwitterCols(t, testTwitterColsPage)

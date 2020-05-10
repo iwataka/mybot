@@ -46,7 +46,7 @@ var (
 	visionAPI     core.VisionMatcher
 	languageAPI   core.LanguageMatcher
 	cliContext    *cli.Context
-	dbSession     *mgo.Session
+	database      *mgo.Database
 	serverSession sessions.Store
 )
 
@@ -85,7 +85,9 @@ const (
 )
 
 const (
-	defaultWorkerBufSize = 10
+	defaultWorkerBufSize  = 10
+	twitterCollectionName = "twitter-app-auth"
+	slackCollectionName   = "slack-app-auth"
 )
 
 func workerKeys() []int {
@@ -93,14 +95,50 @@ func workerKeys() []int {
 }
 
 func main() {
-	home, err := homedir.Dir()
-	utils.ExitIfError(err)
-
 	log.SetFlags(0)
 
+	home, err := homedir.Dir()
+	if err != nil {
+		panic(err)
+	}
 	configDir := filepath.Join(home, ".config", "mybot")
 	cacheDir := filepath.Join(home, ".cache", "mybot")
 
+	commonFlags := getCommonFlags(configDir, cacheDir)
+	serveFlags := append(commonFlags, getServeSpecificFlags(configDir)...)
+	validateFlags := append(commonFlags, getValidateSpecificFlags()...)
+
+	app := cli.NewApp()
+	app.Name = "mybot"
+	app.Usage = "Automatically collect and broadcast information based on your configuration"
+	app.Author = "iwataka"
+
+	serveCmd := cli.Command{
+		Name:    "serve",
+		Aliases: []string{"s"},
+		Usage:   "Runs the all functions (both interactive and non-interactive) periodically",
+		Flags:   serveFlags,
+		Before:  beforeServing,
+		Action:  serve,
+	}
+
+	validateCmd := cli.Command{
+		Name:    "validate",
+		Aliases: []string{"v"},
+		Usage:   "Validates the user configuration",
+		Flags:   validateFlags,
+		Before:  beforeValidating,
+		Action:  validate,
+	}
+
+	app.Commands = []cli.Command{serveCmd, validateCmd}
+	err = app.Run(os.Args)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getCommonFlags(configDir, cacheDir string) []cli.Flag {
 	configFlag := cli.StringFlag{
 		Name:   configFlagName,
 		Value:  filepath.Join(configDir, "config"),
@@ -115,12 +153,6 @@ func main() {
 		EnvVar: "MYBOT_CACHE_PATH",
 	}
 
-	gcloudFlag := cli.StringFlag{
-		Name:   gcloudFlagName,
-		Usage:  "Credential file for Google Cloud Platform",
-		EnvVar: "MYBOT_GCLOUD_CREDENTIAL",
-	}
-
 	twitterFlag := cli.StringFlag{
 		Name:   twitterFlagName,
 		Value:  filepath.Join(configDir, "twitter_auth"),
@@ -133,34 +165,6 @@ func main() {
 		Value:  filepath.Join(configDir, "slack_auth"),
 		Usage:  "Slack credential directory",
 		EnvVar: "MYBOT_SLACK_CREDENTIAL",
-	}
-
-	certFlag := cli.StringFlag{
-		Name:   certFlagName,
-		Value:  filepath.Join(configDir, "mybot.crt"),
-		Usage:  "Certification file for server",
-		EnvVar: "MYBOT_SSL_CERT",
-	}
-
-	keyFlag := cli.StringFlag{
-		Name:   keyFlagName,
-		Value:  filepath.Join(configDir, "mybot.key"),
-		Usage:  "Key file for server",
-		EnvVar: "MYBOT_SSL_KEY",
-	}
-
-	hostFlag := cli.StringFlag{
-		Name:   strings.Join([]string{hostFlagName, "H"}, ","),
-		Value:  "localhost",
-		Usage:  "Host this server listen on",
-		EnvVar: "MYBOT_HOST",
-	}
-
-	portFlag := cli.StringFlag{
-		Name:   strings.Join([]string{portFlagName, "P"}, ","),
-		Value:  "8080",
-		Usage:  "Port this server listen on",
-		EnvVar: "MYBOT_PORT",
 	}
 
 	dbAddrFlag := cli.StringFlag{
@@ -233,16 +237,64 @@ func main() {
 		EnvVar: "MYBOT_SLACK_APP",
 	}
 
+	return []cli.Flag{
+		configFlag,
+		cacheFlag,
+		twitterFlag,
+		slackFlag,
+		dbAddrFlag,
+		dbUserFlag,
+		dbPassFlag,
+		dbNameFlag,
+		twitterConsumerKeyFlag,
+		twitterConsumerSecretFlag,
+		twitterConsumerFileFlag,
+		slackClientIDFlag,
+		slackClientSecretFlag,
+		slackClientFileFlag,
+	}
+}
+
+func getServeSpecificFlags(configDir string) []cli.Flag {
+	gcloudFlag := cli.StringFlag{
+		Name:   gcloudFlagName,
+		Usage:  "Credential file for Google Cloud Platform",
+		EnvVar: "MYBOT_GCLOUD_CREDENTIAL",
+	}
+
+	certFlag := cli.StringFlag{
+		Name:   certFlagName,
+		Value:  filepath.Join(configDir, "mybot.crt"),
+		Usage:  "Certification file for server",
+		EnvVar: "MYBOT_SSL_CERT",
+	}
+
+	keyFlag := cli.StringFlag{
+		Name:   keyFlagName,
+		Value:  filepath.Join(configDir, "mybot.key"),
+		Usage:  "Key file for server",
+		EnvVar: "MYBOT_SSL_KEY",
+	}
+
+	hostFlag := cli.StringFlag{
+		Name:   strings.Join([]string{hostFlagName, "H"}, ","),
+		Value:  "localhost",
+		Usage:  "Host this server listen on",
+		EnvVar: "MYBOT_HOST",
+	}
+
+	portFlag := cli.StringFlag{
+		Name:   strings.Join([]string{portFlagName, "P"}, ","),
+		Value:  "8080",
+		Usage:  "Port this server listen on",
+		EnvVar: "MYBOT_PORT",
+	}
+
 	sessionDomainFlag := cli.StringFlag{
 		Name:   sessionDomainFlagName,
 		Value:  "",
 		Usage:  "Session domain",
 		EnvVar: "MYBOT_SESSION_DOMAIN",
-	}
-
-	apiFlag := cli.BoolFlag{
-		Name:  apiFlagName,
-		Usage: "Use API to validate configuration",
 	}
 
 	workerBufSizeFlag := cli.IntFlag{
@@ -266,24 +318,7 @@ func main() {
 		EnvVar: "MYBOT_WORKER_RESTART_LIMIT",
 	}
 
-	commonFlags := []cli.Flag{
-		configFlag,
-		cacheFlag,
-		twitterFlag,
-		slackFlag,
-		dbAddrFlag,
-		dbUserFlag,
-		dbPassFlag,
-		dbNameFlag,
-		twitterConsumerKeyFlag,
-		twitterConsumerSecretFlag,
-		twitterConsumerFileFlag,
-		slackClientIDFlag,
-		slackClientSecretFlag,
-		slackClientFileFlag,
-	}
-
-	serveFlags := []cli.Flag{
+	return []cli.Flag{
 		gcloudFlag,
 		certFlag,
 		keyFlag,
@@ -294,40 +329,15 @@ func main() {
 		workerRestartDurationFlag,
 		workerRestartLimitFlag,
 	}
-	// All `run` flags should be `serve` flag
-	serveFlags = append(serveFlags, commonFlags...)
+}
 
-	validateFlags := []cli.Flag{apiFlag}
-	// All `run` flags should be `validate` flag
-	validateFlags = append(validateFlags, commonFlags...)
-
-	app := cli.NewApp()
-	app.Name = "mybot"
-	app.Version = "0.1"
-	app.Usage = "Automatically collect and broadcast information based on your configuration"
-	app.Author = "iwataka"
-
-	serveCmd := cli.Command{
-		Name:    "serve",
-		Aliases: []string{"s"},
-		Usage:   "Runs the all functions (both interactive and non-interactive) periodically",
-		Flags:   serveFlags,
-		Before:  beforeServing,
-		Action:  serve,
+func getValidateSpecificFlags() []cli.Flag {
+	apiFlag := cli.BoolFlag{
+		Name:  apiFlagName,
+		Usage: "Use API to validate configuration",
 	}
 
-	validateCmd := cli.Command{
-		Name:    "validate",
-		Aliases: []string{"v"},
-		Usage:   "Validates the user configuration",
-		Flags:   validateFlags,
-		Before:  beforeValidating,
-		Action:  validate,
-	}
-
-	app.Commands = []cli.Command{serveCmd, validateCmd}
-	err = app.Run(os.Args)
-	utils.ExitIfError(err)
+	return []cli.Flag{apiFlag}
 }
 
 type userSpecificData struct {
@@ -359,9 +369,11 @@ func (d *userSpecificData) delete() error {
 		delete(d.workerMgrs, k)
 	}
 	for _, del := range []utils.Deletable{d.config, d.cache, d.twitterAuth, d.slackAuth} {
-		err := del.Delete()
-		if err != nil {
-			return err
+		if del != nil {
+			err := del.Delete()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -373,36 +385,35 @@ func (d *userSpecificData) restart() {
 	}
 }
 
-func newUserSpecificData(c models.Context, session *mgo.Session, userID string) (*userSpecificData, error) {
+func newUserSpecificData(c models.Context, database *mgo.Database, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
 	userData.workerMgrs = map[int]*worker.WorkerManager{}
-	dbName := c.String(dbNameFlagName)
 
-	if session == nil {
+	if database == nil {
 		userData.cache, err = newFileCache(c, userID)
 	} else {
-		col := models.NewMgoCollection(session.DB(dbName).C("cache"))
+		col := models.NewMgoCollection(database.C("cache"))
 		userData.cache, err = data.NewDBCache(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
 
-	if session == nil {
+	if database == nil {
 		userData.config, err = newFileConfig(c, userID)
 	} else {
-		col := models.NewMgoCollection(session.DB(dbName).C("config"))
+		col := models.NewMgoCollection(database.C("config"))
 		userData.config, err = core.NewDBConfig(col, userID)
 	}
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
 
-	if session == nil {
+	if database == nil {
 		userData.twitterAuth, err = newFileOAuthCreds(c, twitterFlagName, userID)
 	} else {
-		col := models.NewMgoCollection(session.DB(dbName).C("twitter-user-auth"))
+		col := models.NewMgoCollection(database.C("twitter-user-auth"))
 		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
@@ -414,10 +425,10 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 		return nil, utils.WithStack(err)
 	}
 
-	if session == nil {
+	if database == nil {
 		userData.slackAuth, err = newFileOAuthCreds(c, slackFlagName, userID)
 	} else {
-		col := models.NewMgoCollection(session.DB(dbName).C("slack-user-auth"))
+		col := models.NewMgoCollection(database.C("slack-user-auth"))
 		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
@@ -517,21 +528,27 @@ func startUserSpecificData(c models.Context, data *userSpecificData, userID stri
 }
 
 func serve(c *cli.Context) error {
-	go httpServer(c)
-	var ch chan interface{}
-	<-ch
+	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func validate(c *cli.Context) {
+func validate(c *cli.Context) error {
 	for _, data := range userSpecificDataMap {
 		err := data.config.Validate()
-		utils.ExitIfError(err)
+		if err != nil {
+			return err
+		}
 		if c.Bool(apiFlagName) {
 			err := data.config.ValidateWithAPI(data.twitterAPI.BaseAPI())
-			utils.ExitIfError(err)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func beforeServing(c *cli.Context) error {
@@ -540,10 +557,14 @@ func beforeServing(c *cli.Context) error {
 	languageAPI, _ = core.NewLanguageMatcher(c.String(gcloudFlagName))
 
 	err := beforeValidating(c)
-	utils.ExitIfError(err)
+	if err != nil {
+		return err
+	}
 	for userID, userData := range userSpecificDataMap {
 		err := startUserSpecificData(c, userData, userID)
-		utils.ExitIfError(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -563,126 +584,116 @@ func beforeValidating(c *cli.Context) error {
 		info.Username = dbUser
 		info.Password = dbPasswd
 		info.Database = dbName
-		dbSession, err = mgo.DialWithInfo(info)
-	}
-	if err != nil {
-		return utils.WithStack(err)
-	}
-
-	initSession(c, dbName)
-
-	err = initTwitterApp(c, dbName)
-	if err != nil {
-		return err
+		dbSession, err := mgo.DialWithInfo(info)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		database = dbSession.DB(dbName)
 	}
 
-	err = initSlackApp(c, dbName)
+	serverSession = newSessionStore(c, database)
+
+	twitterApp, err = newTwitterApp(c, database, twitterCollectionName)
 	if err != nil {
 		return err
 	}
 
-	userIDs, err := getUserIDs(c, dbSession, dbName)
+	slackApp, err = newSlackApp(c, database, slackCollectionName)
+	if err != nil {
+		return err
+	}
+
+	userIDs, err := getUserIDs(c, database)
 	if err != nil {
 		return utils.WithStack(err)
 	}
 	for _, userID := range userIDs {
-		err := initForUser(c, dbSession, userID)
-		logger.Printf("Initialize for user %s\n", userID)
+		data, err := newUserSpecificData(c, database, userID)
 		if err != nil {
 			return utils.WithStack(err)
 		}
+		userSpecificDataMap[userID] = data
 	}
 	return nil
 }
 
-func initSession(c *cli.Context, dbName string) {
+func newSessionStore(c models.Context, database *mgo.Database) sessions.Store {
 	sessionDomain := c.String(sessionDomainFlagName)
-	if dbSession == nil {
+	if database == nil {
 		sess := sessions.NewCookieStore(
 			[]byte("mybot_session_key"),
 		)
 		if sessionDomain != "" {
 			sess.Options.Domain = sessionDomain
 		}
-		serverSession = sess
-	} else {
-		sess := mongostore.NewMongoStore(
-			dbSession.DB(dbName).C("user-session"),
-			86400*30,
-			true,
-			[]byte("mybot_session_key"),
-		)
-		if sessionDomain != "" {
-			sess.Options.Domain = sessionDomain
-		}
-		serverSession = sess
+		return sess
 	}
+	sess := mongostore.NewMongoStore(
+		database.C("user-session"),
+		86400*30,
+		true,
+		[]byte("mybot_session_key"),
+	)
+	if sessionDomain != "" {
+		sess.Options.Domain = sessionDomain
+	}
+	return sess
 }
 
-func initTwitterApp(c models.Context, dbName string) error {
+func newTwitterApp(c models.Context, database *mgo.Database, colName string) (oauth.OAuthApp, error) {
+	ck := c.String(twitterConsumerKeyFlagName)
+	cs := c.String(twitterConsumerSecretFlagName)
+	fpath := c.String(twitterConsumerFileFlagName)
+	col := newMgoCollection(database, colName)
+	return newOAuthApp(ck, cs, fpath, col, oauth.NewFileTwitterOAuthApp, oauth.NewDBTwitterOAuthApp)
+}
+
+func newSlackApp(c models.Context, database *mgo.Database, colName string) (oauth.OAuthApp, error) {
+	ck := c.String(slackClientIDFlagName)
+	cs := c.String(slackClientSecretFlagName)
+	fpath := c.String(slackClientFileFlagName)
+	col := newMgoCollection(database, colName)
+	return newOAuthApp(ck, cs, fpath, col, oauth.NewFileOAuthApp, oauth.NewDBOAuthApp)
+}
+
+func newMgoCollection(database *mgo.Database, colName string) models.MgoCollection {
+	if database != nil {
+		return models.NewMgoCollection(database.C(colName))
+	}
+	return nil
+}
+
+func newOAuthApp(
+	ck, cs, fpath string,
+	col models.MgoCollection,
+	newFile func(string) (oauth.OAuthApp, error),
+	newDB func(models.MgoCollection) (oauth.OAuthApp, error),
+) (oauth.OAuthApp, error) {
+	var app oauth.OAuthApp
 	var err error
-
-	twitterCk := c.String(twitterConsumerKeyFlagName)
-	twitterCs := c.String(twitterConsumerSecretFlagName)
-	if dbSession == nil {
-		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String(twitterConsumerFileFlagName))
+	if col == nil {
+		app, err = newFile(fpath)
 	} else {
-		col := models.NewMgoCollection(dbSession.DB(dbName).C("twitter-app-auth"))
-		twitterApp, err = oauth.NewDBTwitterOAuthApp(col)
+		app, err = newDB(col)
 	}
 	if err != nil {
-		return utils.WithStack(err)
+		return nil, utils.WithStack(err)
 	}
 
-	if twitterCk != "" && twitterCs != "" {
-		twitterApp.SetCreds(twitterCk, twitterCs)
-		err = twitterApp.Save()
+	if len(ck) > 0 && len(cs) > 0 {
+		app.SetCreds(ck, cs)
+		err = app.Save()
 		if err != nil {
-			return utils.WithStack(err)
+			return nil, utils.WithStack(err)
 		}
 	}
 
-	return nil
-}
-
-func initSlackApp(c models.Context, dbName string) error {
-	var err error
-
-	slackCk := c.String(slackClientIDFlagName)
-	slackCs := c.String(slackClientSecretFlagName)
-	if dbSession == nil {
-		slackApp, err = oauth.NewFileOAuthApp(c.String(slackClientFileFlagName))
-	} else {
-		col := models.NewMgoCollection(dbSession.DB(dbName).C("slack-app-auth"))
-		slackApp, err = oauth.NewDBOAuthApp(col)
-	}
-	if err != nil {
-		return utils.WithStack(err)
-	}
-
-	if slackCk != "" && slackCs != "" {
-		slackApp.SetCreds(slackCk, slackCs)
-		err = slackApp.Save()
-		if err != nil {
-			return utils.WithStack(err)
-		}
-	}
-
-	return nil
-}
-
-func initForUser(c models.Context, session *mgo.Session, userID string) error {
-	data, err := newUserSpecificData(c, session, userID)
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	userSpecificDataMap[userID] = data
-	return nil
+	return app, nil
 }
 
 // getUserIDs returns all user IDs by checking Twitter user athentication data.
-func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string, error) {
-	if session == nil {
+func getUserIDs(c models.Context, database *mgo.Database) ([]string, error) {
+	if database == nil {
 		dir, err := argValueWithMkdir(c, twitterFlagName)
 		if err != nil {
 			return nil, utils.WithStack(err)
@@ -700,7 +711,7 @@ func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string
 		return userIDs, nil
 	}
 
-	col := session.DB(dbName).C("twitter-user-auth")
+	col := database.C("twitter-user-auth")
 	auths := []map[string]interface{}{}
 	err := col.Find(nil).All(&auths)
 	if err != nil {
@@ -714,11 +725,6 @@ func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string
 		}
 	}
 	return userIDs, nil
-}
-
-func httpServer(c models.Context) {
-	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
-	utils.ExitIfError(err)
 }
 
 func argValueWithMkdir(c models.Context, key string) (string, error) {

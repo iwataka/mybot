@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"path/filepath"
 	"time"
@@ -169,13 +168,6 @@ func GenerateRandString(n int) string {
 		b[i] = chars[rand.Intn(len(chars))]
 	}
 	return string(b)
-}
-
-// ExitIfError prints error message and exits with error code 1 if error exists.
-func ExitIfError(err error) {
-	if err != nil {
-		log.Fatalf("%+v\n", err)
-	}
 }
 
 // TruePtr returns a pointer of true value.

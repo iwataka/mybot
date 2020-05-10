@@ -67,18 +67,16 @@ func (a *Authenticator) SetProvider(name string, r *http.Request) {
 }
 
 // InitProvider initializes a provider and makes it to be used.
-func (a *Authenticator) InitProvider(provider, callback string) {
+func (a *Authenticator) InitProvider(provider, callback, ck, cs string) {
 	var p goth.Provider
 	switch provider {
 	case "twitter":
-		ck, cs := twitterApp.GetCreds()
 		p = twitter.New(
 			ck,
 			cs,
 			callback,
 		)
 	case "slack":
-		ck, cs := slackApp.GetCreds()
 		p = slack.New(
 			ck,
 			cs,
@@ -210,10 +208,7 @@ func startServer(host, port, cert, key string) error {
 		logger.Printf("Listen on %s://%s\n", "http", addr)
 		err = http.ListenAndServe(addr, nil)
 	}
-	if err != nil {
-		return utils.WithStack(err)
-	}
-	return nil
+	return utils.WithStack(err)
 }
 
 func generateHTMLTemplate() (*template.Template, error) {
@@ -1241,7 +1236,7 @@ func getAuthCallback(w http.ResponseWriter, r *http.Request, login bool) (goth.U
 		if exists {
 			return user, data, nil
 		} else {
-			data, err := newUserSpecificData(cliContext, dbSession, id)
+			data, err := newUserSpecificData(cliContext, database, id)
 			if err != nil {
 				return goth.User{}, nil, err
 			}
@@ -1316,7 +1311,14 @@ func getAuth(w http.ResponseWriter, r *http.Request, provider string, login bool
 	if len(callback) == 0 {
 		callback = fmt.Sprintf("http://%s/auth/callback?provider=%s&login=%s", r.Host, provider, strconv.FormatBool(login))
 	}
-	authenticator.InitProvider(provider, callback)
+	ck, cs := "", ""
+	switch provider {
+	case "twitter":
+		ck, cs = twitterApp.GetCreds()
+	case "slack":
+		ck, cs = slackApp.GetCreds()
+	}
+	authenticator.InitProvider(provider, callback, ck, cs)
 	gothic.BeginAuthHandler(w, r)
 }
 

@@ -118,10 +118,6 @@ func Test_GenerateRandString(t *testing.T) {
 	require.Len(t, utils.GenerateRandString(10), 10)
 }
 
-func Test_ExitIfError_ErrorNotFound(t *testing.T) {
-	utils.ExitIfError(nil)
-}
-
 func Test_TruePtr(t *testing.T) {
 	require.True(t, *utils.TruePtr())
 }

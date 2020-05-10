@@ -178,14 +178,14 @@ type FileOAuthApp struct {
 }
 
 // NewFileOAuthApp returns a new FileOAuthApp with file.
-func NewFileOAuthApp(file string) (*FileOAuthApp, error) {
+func NewFileOAuthApp(file string) (OAuthApp, error) {
 	a := &FileOAuthApp{&DefaultOAuthAppProps{}, file}
 	err := a.Load()
 	return a, utils.WithStack(err)
 }
 
 // NewFileTwitterOAuthApp returns a new FileTwitterOAuthApp with file.
-func NewFileTwitterOAuthApp(file string) (*FileOAuthApp, error) {
+func NewFileTwitterOAuthApp(file string) (OAuthApp, error) {
 	a := &FileOAuthApp{newTwitterOAuthAppProps(), file}
 	err := a.Load()
 	return a, utils.WithStack(err)
@@ -219,7 +219,7 @@ type DBOAuthApp struct {
 
 // NewDBOAuthApp returns a new DBOAuthApp with a specified MongoDB collection.
 // Currently only supported database is MongoDB.
-func NewDBOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
+func NewDBOAuthApp(col models.MgoCollection) (OAuthApp, error) {
 	a := &DBOAuthApp{&DefaultOAuthAppProps{}, col}
 	err := a.Load()
 	return a, utils.WithStack(err)
@@ -227,7 +227,7 @@ func NewDBOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
 
 // NewDBTwitterOAuthApp returns a new DBTwitterOAuthApp with a specified
 // MongoDB collection.
-func NewDBTwitterOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
+func NewDBTwitterOAuthApp(col models.MgoCollection) (OAuthApp, error) {
 	a := &DBOAuthApp{newTwitterOAuthAppProps(), col}
 	err := a.Load()
 	return a, utils.WithStack(err)
