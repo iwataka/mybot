@@ -181,7 +181,6 @@ func startServer(host, port, cert, key string) error {
 		return "", fmt.Errorf("no provider name given")
 	}
 
-	// View endpoints
 	http.HandleFunc("/", wrapHandler(indexHandler))
 	http.HandleFunc("/account/delete", wrapHandler(accountDeleteHandler)) // currently hidden endpoint
 	http.HandleFunc("/twitter-collections/", wrapHandler(twitterColsHandler))
@@ -198,8 +197,7 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/login/", loginHandler)
 	http.HandleFunc("/setup/", setupHandler)
 	http.HandleFunc("/logout/", logoutHandler)
-	// For Twitter user auto-completion usage
-	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler))
+	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler)) // For Twitter user auto-completion usage
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -243,28 +241,32 @@ func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template,
 func accountDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		user, err := authenticator.GetLoginUser(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		userID := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
-		data := userSpecificDataMap[userID]
-		err = data.delete()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		delete(userSpecificDataMap, userID)
-		err = authenticator.Logout(w, r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, "/login/", http.StatusSeeOther)
+		getAccountDelete(w, r)
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func getAccountDelete(w http.ResponseWriter, r *http.Request) {
+	user, err := authenticator.GetLoginUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	userID := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
+	data := userSpecificDataMap[userID]
+	err = data.delete()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	delete(userSpecificDataMap, userID)
+	err = authenticator.Logout(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {

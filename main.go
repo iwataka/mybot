@@ -47,7 +47,6 @@ var (
 	cliContext    *cli.Context
 	dbSession     *mgo.Session
 	serverSession sessions.Store
-	sessionDomain string
 )
 
 const (
@@ -234,11 +233,10 @@ func main() {
 	}
 
 	sessionDomainFlag := cli.StringFlag{
-		Name:        sessionDomainFlagName,
-		Value:       "",
-		Usage:       "Session domain",
-		EnvVar:      "MYBOT_SESSION_DOMAIN",
-		Destination: &sessionDomain,
+		Name:   sessionDomainFlagName,
+		Value:  "",
+		Usage:  "Session domain",
+		EnvVar: "MYBOT_SESSION_DOMAIN",
 	}
 
 	apiFlag := cli.BoolFlag{
@@ -355,8 +353,9 @@ func (d *userSpecificData) statuses() map[int]bool {
 }
 
 func (d *userSpecificData) delete() error {
-	for _, wm := range d.workerMgrs {
+	for k, wm := range d.workerMgrs {
 		wm.Close()
+		delete(d.workerMgrs, k)
 	}
 	for _, del := range []utils.Deletable{d.config, d.cache, d.twitterAuth, d.slackAuth} {
 		err := del.Delete()
@@ -569,7 +568,7 @@ func beforeValidating(c *cli.Context) error {
 		return utils.WithStack(err)
 	}
 
-	initSession(dbName)
+	initSession(c, dbName)
 
 	err = initTwitterApp(c, dbName)
 	if err != nil {
@@ -595,7 +594,8 @@ func beforeValidating(c *cli.Context) error {
 	return nil
 }
 
-func initSession(dbName string) {
+func initSession(c *cli.Context, dbName string) {
+	sessionDomain := c.String(sessionDomainFlagName)
 	if dbSession == nil {
 		sess := sessions.NewCookieStore(
 			[]byte("mybot_session_key"),
@@ -679,6 +679,7 @@ func initForUser(c models.Context, session *mgo.Session, userID string) error {
 	return nil
 }
 
+// getUserIDs returns all user IDs by checking Twitter user athentication data.
 func getUserIDs(c models.Context, session *mgo.Session, dbName string) ([]string, error) {
 	if session == nil {
 		dir, err := argValueWithMkdir(c, twitterFlagName)
