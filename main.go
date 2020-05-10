@@ -628,7 +628,7 @@ func initTwitterApp(c models.Context, dbName string) error {
 		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String(twitterConsumerFileFlagName))
 	} else {
 		col := models.NewMgoCollection(dbSession.DB(dbName).C("twitter-app-auth"))
-		twitterApp, err = oauth.NewDBOAuthApp(col)
+		twitterApp, err = oauth.NewDBTwitterOAuthApp(col)
 	}
 	if err != nil {
 		return utils.WithStack(err)

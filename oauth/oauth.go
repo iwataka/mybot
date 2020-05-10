@@ -225,6 +225,14 @@ func NewDBOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
 	return a, utils.WithStack(err)
 }
 
+// NewDBTwitterOAuthApp returns a new DBTwitterOAuthApp with a specified
+// MongoDB collection.
+func NewDBTwitterOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
+	a := &DBOAuthApp{newTwitterOAuthAppProps(), col}
+	err := a.Load()
+	return a, utils.WithStack(err)
+}
+
 // Load retrieves credential information from a specified database and stores
 // it.
 func (a *DBOAuthApp) Load() error {
