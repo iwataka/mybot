@@ -3,7 +3,6 @@ package data
 import (
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"os"
@@ -76,11 +75,11 @@ func (c *FileCache) Delete() error {
 
 type DBCache struct {
 	CacheProperties `yaml:",inline"`
-	col             *mgo.Collection
+	col             models.MgoCollection
 	ID              string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
-func NewDBCache(col *mgo.Collection, id string) (*DBCache, error) {
+func NewDBCache(col models.MgoCollection, id string) (*DBCache, error) {
 	c := &DBCache{newCacheProperties(), col, id}
 	query := col.Find(bson.M{"id": c.ID})
 	count, err := query.Count()

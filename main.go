@@ -31,7 +31,8 @@ import (
 //go:generate mockgen -source=runner/batch.go -destination=mocks/batch.go -package=mocks
 //go:generate mockgen -source=models/worker.go -destination=mocks/worker.go -package=mocks
 //go:generate mockgen -source=models/cli.go -destination=mocks/cli.go -package=mocks
-//go:generate mockgen -destination=mocks/cache.go -package=mocks github.com/iwataka/mybot/data Cache
+//go:generate mockgen -source=models/mgo.go -destination=mocks/mgo.go -package=mocks
+//go:generate mockgen -source=data/cache.go -destination=mocks/cache.go -package=mocks
 //TODO: When mockgen Config interface, cyclic dependencies happen.
 
 var (
@@ -381,7 +382,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	if session == nil {
 		userData.cache, err = newFileCache(c, userID)
 	} else {
-		col := session.DB(dbName).C("cache")
+		col := models.NewMgoCollection(session.DB(dbName).C("cache"))
 		userData.cache, err = data.NewDBCache(col, userID)
 	}
 	if err != nil {
@@ -391,7 +392,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	if session == nil {
 		userData.config, err = newFileConfig(c, userID)
 	} else {
-		col := session.DB(dbName).C("config")
+		col := models.NewMgoCollection(session.DB(dbName).C("config"))
 		userData.config, err = core.NewDBConfig(col, userID)
 	}
 	if err != nil {
@@ -401,7 +402,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	if session == nil {
 		userData.twitterAuth, err = newFileOAuthCreds(c, twitterFlagName, userID)
 	} else {
-		col := session.DB(dbName).C("twitter-user-auth")
+		col := models.NewMgoCollection(session.DB(dbName).C("twitter-user-auth"))
 		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
@@ -416,7 +417,7 @@ func newUserSpecificData(c models.Context, session *mgo.Session, userID string) 
 	if session == nil {
 		userData.slackAuth, err = newFileOAuthCreds(c, slackFlagName, userID)
 	} else {
-		col := session.DB(dbName).C("slack-user-auth")
+		col := models.NewMgoCollection(session.DB(dbName).C("slack-user-auth"))
 		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
 	}
 	if err != nil {
@@ -626,8 +627,8 @@ func initTwitterApp(c models.Context, dbName string) error {
 	if dbSession == nil {
 		twitterApp, err = oauth.NewFileTwitterOAuthApp(c.String(twitterConsumerFileFlagName))
 	} else {
-		col := dbSession.DB(dbName).C("twitter-app-auth")
-		twitterApp, err = oauth.NewDBTwitterOAuthApp(col)
+		col := models.NewMgoCollection(dbSession.DB(dbName).C("twitter-app-auth"))
+		twitterApp, err = oauth.NewDBOAuthApp(col)
 	}
 	if err != nil {
 		return utils.WithStack(err)
@@ -652,7 +653,7 @@ func initSlackApp(c models.Context, dbName string) error {
 	if dbSession == nil {
 		slackApp, err = oauth.NewFileOAuthApp(c.String(slackClientFileFlagName))
 	} else {
-		col := dbSession.DB(dbName).C("slack-app-auth")
+		col := models.NewMgoCollection(dbSession.DB(dbName).C("slack-app-auth"))
 		slackApp, err = oauth.NewDBOAuthApp(col)
 	}
 	if err != nil {

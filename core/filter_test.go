@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
@@ -22,7 +23,7 @@ func TestFilter_CheckTweet_PatternsMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "foo is bar",
 	}
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{"foo"},
 	}
 
@@ -37,7 +38,7 @@ func TestFilter_CheckTweet_PatternsMatched(t *testing.T) {
 
 func TestFilter_CheckTweet_PatternsInvalid(t *testing.T) {
 	tweet := anaconda.Tweet{}
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{invalidRegexpPattern},
 	}
 
@@ -53,7 +54,7 @@ func TestFilter_CheckTweet_PatternsUnmatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Text: "fizz buzz",
 	}
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{"foo"},
 	}
 
@@ -68,7 +69,7 @@ func TestFilter_CheckTweet_PatternsUnmatched(t *testing.T) {
 
 func TestFilter_CheckTweet_URLPatternsMatched(t *testing.T) {
 	tweet := generateTweetWithURL()
-	filter := &Filter{
+	filter := &core.Filter{
 		URLPatterns: []string{"http://example.com"},
 	}
 
@@ -83,7 +84,7 @@ func TestFilter_CheckTweet_URLPatternsMatched(t *testing.T) {
 
 func TestFilter_CheckTweet_URLPatternsInvalid(t *testing.T) {
 	tweet := generateTweetWithURL()
-	filter := &Filter{
+	filter := &core.Filter{
 		URLPatterns: []string{invalidRegexpPattern},
 	}
 
@@ -97,7 +98,7 @@ func TestFilter_CheckTweet_URLPatternsInvalid(t *testing.T) {
 
 func TestFilter_CheckTweet_URLPatternsUnmatched(t *testing.T) {
 	tweet := generateTweetWithURL()
-	filter := &Filter{
+	filter := &core.Filter{
 		URLPatterns: []string{"http://example2.com"},
 	}
 
@@ -129,7 +130,7 @@ func generateTweetWithURL() anaconda.Tweet {
 
 func TestFilter_CheckTweet_NotHasMedia(t *testing.T) {
 	tweet := anaconda.Tweet{}
-	filter := &Filter{}
+	filter := &core.Filter{}
 	filter.HasMedia = utils.TruePtr()
 
 	ctrl := gomock.NewController(t)
@@ -145,7 +146,7 @@ func TestFilter_CheckTweet_FavoriteThresholdExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		FavoriteCount: 100,
 	}
-	filter := NewFilter()
+	filter := core.NewFilter()
 	filter.FavoriteThreshold = utils.IntPtr(99)
 
 	ctrl := gomock.NewController(t)
@@ -161,7 +162,7 @@ func TestFilter_CheckTweet_FavoriteThresholdNotExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		FavoriteCount: 100,
 	}
-	filter := NewFilter()
+	filter := core.NewFilter()
 	filter.FavoriteThreshold = utils.IntPtr(101)
 
 	ctrl := gomock.NewController(t)
@@ -177,7 +178,7 @@ func TestFilter_CheckTweet_RetweetedThresholdExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		RetweetCount: 100,
 	}
-	filter := NewFilter()
+	filter := core.NewFilter()
 	filter.RetweetedThreshold = utils.IntPtr(99)
 
 	ctrl := gomock.NewController(t)
@@ -193,7 +194,7 @@ func TestFilter_CheckTweet_RetweetedThresholdNotExceeded(t *testing.T) {
 	tweet := anaconda.Tweet{
 		RetweetCount: 100,
 	}
-	filter := NewFilter()
+	filter := core.NewFilter()
 	filter.RetweetedThreshold = utils.IntPtr(101)
 
 	ctrl := gomock.NewController(t)
@@ -209,7 +210,7 @@ func TestFilter_CheckTweet_LangNotMatched(t *testing.T) {
 	tweet := anaconda.Tweet{
 		Lang: "JP",
 	}
-	filter := &Filter{}
+	filter := &core.Filter{}
 	filter.Lang = "EN"
 
 	ctrl := gomock.NewController(t)
@@ -272,15 +273,15 @@ func generateVisionTweet() anaconda.Tweet {
 	}
 }
 
-func generateVisionFilter() *Filter {
-	return &Filter{
+func generateVisionFilter() *core.Filter {
+	return &core.Filter{
 		Vision: models.VisionCondition{
 			Label: []string{"foo"},
 		},
 	}
 }
 
-func generateVisionMatcher(ctrl *gomock.Controller, match bool, err error) VisionMatcher {
+func generateVisionMatcher(ctrl *gomock.Controller, match bool, err error) core.VisionMatcher {
 	v := mocks.NewMockVisionMatcher(ctrl)
 	v.EXPECT().Enabled().Return(true)
 	v.EXPECT().
@@ -336,8 +337,8 @@ func TestFilter_CheckTweet_LanguageError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func generateLanguageFilter() *Filter {
-	return &Filter{
+func generateLanguageFilter() *core.Filter {
+	return &core.Filter{
 		Language: models.LanguageCondition{
 			MaxSentiment: utils.Float64Ptr(0.5),
 			MinSentiment: utils.Float64Ptr(0.0),
@@ -345,7 +346,7 @@ func generateLanguageFilter() *Filter {
 	}
 }
 
-func generateLanguageMatcher(ctrl *gomock.Controller, match bool, err error) LanguageMatcher {
+func generateLanguageMatcher(ctrl *gomock.Controller, match bool, err error) core.LanguageMatcher {
 	l := mocks.NewMockLanguageMatcher(ctrl)
 	l.EXPECT().Enabled().Return(true)
 	l.EXPECT().
@@ -355,7 +356,7 @@ func generateLanguageMatcher(ctrl *gomock.Controller, match bool, err error) Lan
 }
 
 func TestFilter_CheckSlackMsg_PatternsMatched(t *testing.T) {
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{"foo"},
 	}
 	ev := &slack.MessageEvent{}
@@ -372,7 +373,7 @@ func TestFilter_CheckSlackMsg_PatternsMatched(t *testing.T) {
 
 func TestFilter_CheckSlackMsg_PatternsInvalid(t *testing.T) {
 	ev := &slack.MessageEvent{}
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{invalidRegexpPattern},
 	}
 
@@ -385,7 +386,7 @@ func TestFilter_CheckSlackMsg_PatternsInvalid(t *testing.T) {
 }
 
 func TestFilter_CheckSlackMsg_PatternsUnmatched(t *testing.T) {
-	filter := &Filter{
+	filter := &core.Filter{
 		Patterns: []string{"foo"},
 	}
 	ev := &slack.MessageEvent{}
@@ -403,7 +404,7 @@ func TestFilter_CheckSlackMsg_PatternsUnmatched(t *testing.T) {
 func TestFilter_CheckSlackMsg_NotHasMedia(t *testing.T) {
 	ev := &slack.MessageEvent{}
 	ev.Attachments = []slack.Attachment{}
-	filter := &Filter{}
+	filter := &core.Filter{}
 	filter.HasMedia = utils.TruePtr()
 
 	ctrl := gomock.NewController(t)
@@ -510,7 +511,7 @@ func generateVisionSlackMessageEvent() *slack.MessageEvent {
 }
 
 func TestFilter_Validate(t *testing.T) {
-	f := NewFilter()
+	f := core.NewFilter()
 	f.FavoriteThreshold = utils.IntPtr(100)
 	f.Vision.Label = []string{"foo"}
 	err := f.Validate()
@@ -518,7 +519,7 @@ func TestFilter_Validate(t *testing.T) {
 }
 
 func TestFilter_ShouldRepeat(t *testing.T) {
-	filter := &Filter{}
+	filter := &core.Filter{}
 
 	require.False(t, filter.ShouldRepeat())
 

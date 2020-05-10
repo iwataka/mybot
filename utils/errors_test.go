@@ -1,6 +1,7 @@
-package utils
+package utils_test
 
 import (
+	"github.com/iwataka/mybot/utils"
 	"github.com/stretchr/testify/require"
 
 	"errors"
@@ -11,10 +12,10 @@ func Test_WithStack(t *testing.T) {
 	var err error
 	var ok bool
 
-	err = WithStack(errors.New(""))
-	_, ok = err.(StackTracer)
+	err = utils.WithStack(errors.New(""))
+	_, ok = err.(utils.StackTracer)
 	require.True(t, ok)
 
-	sTracer := WithStack(err)
+	sTracer := utils.WithStack(err)
 	require.Equal(t, err, sTracer)
 }

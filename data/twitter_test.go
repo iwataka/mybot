@@ -1,17 +1,18 @@
-package data
+package data_test
 
 import (
+	"github.com/iwataka/mybot/data"
 	"github.com/stretchr/testify/require"
 
 	"testing"
 )
 
 func TestTwitterAction(t *testing.T) {
-	a1 := TwitterAction{
+	a1 := data.TwitterAction{
 		Collections: []string{"col1", "col2"},
 	}
 	a1.Retweet = true
-	a2 := TwitterAction{
+	a2 := data.TwitterAction{
 		Collections: []string{"col1", "col3"},
 	}
 	a2.Retweet = true

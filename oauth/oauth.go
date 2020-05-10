@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/iwataka/anaconda"
+	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -57,12 +57,12 @@ func NewFileOAuthCreds(file string) (*FileOAuthCreds, error) {
 // a specified database (currently only MongoDB supported).
 type DBOAuthCreds struct {
 	OAuthCredsProps `yaml:",inline"`
-	col             *mgo.Collection
+	col             models.MgoCollection
 	ID              string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
 // NewDBOAuthCreds returns a new DBOAuthCreds with specified arguments.
-func NewDBOAuthCreds(col *mgo.Collection, id string) (*DBOAuthCreds, error) {
+func NewDBOAuthCreds(col models.MgoCollection, id string) (*DBOAuthCreds, error) {
 	a := &DBOAuthCreds{newOAuthCredsProps(), col, id}
 	err := a.Load()
 	return a, utils.WithStack(err)
@@ -214,21 +214,13 @@ func (a *FileOAuthApp) Delete() error {
 // DBOAuthApp is OAuthApp associated with a specified database.
 type DBOAuthApp struct {
 	OAuthAppProps
-	col *mgo.Collection
+	col models.MgoCollection
 }
 
 // NewDBOAuthApp returns a new DBOAuthApp with a specified MongoDB collection.
 // Currently only supported database is MongoDB.
-func NewDBOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
+func NewDBOAuthApp(col models.MgoCollection) (*DBOAuthApp, error) {
 	a := &DBOAuthApp{&DefaultOAuthAppProps{}, col}
-	err := a.Load()
-	return a, utils.WithStack(err)
-}
-
-// NewDBTwitterOAuthApp returns a new DBTwitterOAuthApp with a specified
-// MongoDB collection.
-func NewDBTwitterOAuthApp(col *mgo.Collection) (*DBOAuthApp, error) {
-	a := &DBOAuthApp{newTwitterOAuthAppProps(), col}
 	err := a.Load()
 	return a, utils.WithStack(err)
 }

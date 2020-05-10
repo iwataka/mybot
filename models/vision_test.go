@@ -1,13 +1,14 @@
-package models
+package models_test
 
 import (
 	"testing"
 
+	"github.com/iwataka/mybot/models"
 	"github.com/stretchr/testify/require"
 )
 
 func TestVisionCondition_VisionFeatures(t *testing.T) {
-	cond := NewVisionCondition()
+	cond := models.NewVisionCondition()
 	cond.Label = []string{"label"}
 	cond.Face.BlurredLikelihood = "VERY_LIKELY"
 	cond.Text = []string{"text"}
@@ -19,7 +20,7 @@ func TestVisionCondition_VisionFeatures(t *testing.T) {
 }
 
 func TestVisionCondition_IsEmpty(t *testing.T) {
-	cond := NewVisionCondition()
+	cond := models.NewVisionCondition()
 	cond.Label = []string{}
 	cond.Face.BlurredLikelihood = ""
 	cond.Text = []string{}

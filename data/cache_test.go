@@ -1,9 +1,13 @@
-package data
+package data_test
 
 import (
+	gomock "github.com/golang/mock/gomock"
+	"github.com/iwataka/mybot/data"
+	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/stretchr/testify/require"
 
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,65 +15,95 @@ import (
 )
 
 func TestNewFileCache_TakesInvalidJson(t *testing.T) {
-	_, err := NewFileCache("testdata/cache_invalid.json")
+	_, err := data.NewFileCache("testdata/cache_invalid.json")
 	require.Error(t, err)
 }
 
 func TestFileCache_Save(t *testing.T) {
-	var err error
-	var path string
-	var c Cache
-	var fname string
 	dir := os.TempDir()
-
-	fname = "cache.json"
-	path = filepath.Join(dir, fname)
-	c, err = NewFileCache(path)
+	fname := "cache.json"
+	fpath := filepath.Join(dir, fname)
+	c, err := data.NewFileCache(fpath)
 	require.NoError(t, err)
 	require.NoError(t, c.Save())
-	defer os.Remove(path)
-	_, err = os.Stat(path)
+	defer func() { require.NoError(t, c.Delete()) }()
+	_, err = os.Stat(fpath)
 	require.NoError(t, err)
 
-	// Invalid path
-	path = filepath.Join(path, fname)
-	c, err = NewFileCache(path)
+	invalidPath := filepath.Join(fpath, fname)
+	invalidCache, err := data.NewFileCache(invalidPath)
 	require.NoError(t, err)
-	require.Error(t, c.Save())
-	defer os.Remove(path)
-
-	// Unwritable file
-	fname = "unwritable.json"
-	path = filepath.Join(dir, fname)
-	_, err = os.Create(path)
-	require.NoError(t, err)
-	defer os.Remove(path)
-	require.NoError(t, os.Chmod(path, 0555))
-	defer func() { require.NoError(t, os.Chmod(path, 0755)) }()
-	c, err = NewFileCache(path)
-	require.NoError(t, err)
-	require.Error(t, c.Save())
+	require.Error(t, invalidCache.Save())
 }
 
-func TestFileCache_LatestTweetID(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+func TestFileCache_Save_withUnwritablePath(t *testing.T) {
+	dir := os.TempDir()
+	unwritableFpath := filepath.Join(dir, "unwritable.json")
+	_, err := os.Create(unwritableFpath)
+	require.NoError(t, err)
+	require.NoError(t, os.Chmod(unwritableFpath, 0555))
+	unwritableCache, err := data.NewFileCache(unwritableFpath)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, unwritableCache.Delete()) }()
+	defer func() { require.NoError(t, os.Chmod(unwritableFpath, 0755)) }()
+	require.Error(t, unwritableCache.Save())
+}
+
+func TestDBCache_Save_Delete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	col := mocks.NewMockMgoCollection(ctrl)
+	query := mocks.NewMockMgoQuery(ctrl)
+	query.EXPECT().Count().Return(0, nil)
+	col.EXPECT().Find(gomock.Any()).Return(query)
+	c, err := data.NewDBCache(col, "foo")
+	require.NoError(t, err)
+	col.EXPECT().Upsert(gomock.Any(), gomock.Any()).Return(nil, nil)
+	require.NoError(t, c.Save())
+	col.EXPECT().RemoveAll(gomock.Any()).Return(nil, nil)
+	require.NoError(t, c.Delete())
+}
+
+func TestNewDBCache_withExistingData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	col := mocks.NewMockMgoCollection(ctrl)
+	query := mocks.NewMockMgoQuery(ctrl)
+	query.EXPECT().Count().Return(1, nil)
+	query.EXPECT().One(gomock.Any()).Return(nil)
+	col.EXPECT().Find(gomock.Any()).Return(query)
+	_, err := data.NewDBCache(col, "foo")
+	require.NoError(t, err)
+}
+
+func TestNewDBCache_withCountError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	col := mocks.NewMockMgoCollection(ctrl)
+	query := mocks.NewMockMgoQuery(ctrl)
+	query.EXPECT().Count().Return(0, errors.New("error"))
+	col.EXPECT().Find(gomock.Any()).Return(query)
+	_, err := data.NewDBCache(col, "foo")
+	require.Error(t, err)
+}
+
+func TestNewDBCache_withQueryError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	col := mocks.NewMockMgoCollection(ctrl)
+	query := mocks.NewMockMgoQuery(ctrl)
+	query.EXPECT().Count().Return(1, nil)
+	query.EXPECT().One(gomock.Any()).Return(errors.New("error"))
+	col.EXPECT().Find(gomock.Any()).Return(query)
+	_, err := data.NewDBCache(col, "foo")
+	require.Error(t, err)
+}
+
+func TestCache_LatestTweetID(t *testing.T) {
+	c, err := data.NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	testCacheLatestTweetID(t, c)
 }
 
-func TestDBCache_LatestTweetID(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheLatestTweetID(t, c)
-}
-
-func testCacheLatestTweetID(t *testing.T, c Cache) {
+func testCacheLatestTweetID(t *testing.T, c data.Cache) {
 	name := "foo"
 	var tweetID int64 = 1
 	c.SetLatestTweetID(name, tweetID)
@@ -77,25 +111,15 @@ func testCacheLatestTweetID(t *testing.T, c Cache) {
 	require.EqualValues(t, 0, c.GetLatestTweetID("bar"))
 }
 
-func TestFileCache_LatestFavoriteID(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+func TestCache_LatestFavoriteID(t *testing.T) {
+	c, err := data.NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	testCacheLatestFavoriteID(t, c)
 }
 
-func TestDBCache_LatestFavoriteID(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheLatestFavoriteID(t, c)
-}
-
-func testCacheLatestFavoriteID(t *testing.T, c Cache) {
+func testCacheLatestFavoriteID(t *testing.T, c data.Cache) {
 	name := "foo"
 	var favoriteID int64 = 1
 	c.SetLatestFavoriteID(name, favoriteID)
@@ -103,56 +127,36 @@ func testCacheLatestFavoriteID(t *testing.T, c Cache) {
 	require.EqualValues(t, 0, c.GetLatestFavoriteID("bar"))
 }
 
-func TestFileCache_LatestDMID(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+func TestCache_LatestDMID(t *testing.T) {
+	c, err := data.NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	testCacheLatestDMID(t, c)
 }
 
-func TestDBCache_LatestDMID(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheLatestDMID(t, c)
-}
-
-func testCacheLatestDMID(t *testing.T, c Cache) {
+func testCacheLatestDMID(t *testing.T, c data.Cache) {
 	var dmID int64 = 1
 	c.SetLatestDMID(dmID)
 	id := c.GetLatestDMID()
 	require.Equal(t, dmID, id)
 }
 
-func TestFileCache_TweetAction(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+func TestCache_TweetAction(t *testing.T) {
+	c, err := data.NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	testCacheTweetAction(t, c)
 }
 
-func TestDBCache_TweetAction(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheTweetAction(t, c)
-}
-
-func testCacheTweetAction(t *testing.T, c Cache) {
+func testCacheTweetAction(t *testing.T, c data.Cache) {
 	var tweetID int64 = 1
-	action := Action{
-		Twitter: TwitterAction{
+	action := data.Action{
+		Twitter: data.TwitterAction{
 			Collections: []string{"foo"},
 		},
-		Slack: SlackAction{
+		Slack: data.SlackAction{
 			Reactions: []string{"smile"},
 			Channels:  []string{"bar"},
 		},
@@ -169,25 +173,15 @@ func testCacheTweetAction(t *testing.T, c Cache) {
 	}
 }
 
-func TestFileCache_Image(t *testing.T) {
-	c, err := NewFileCache("cache.json")
+func TestCache_Image(t *testing.T) {
+	c, err := data.NewFileCache("cache.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	testCacheImage(t, c)
 }
 
-func TestDBCache_Image(t *testing.T) {
-	t.Skip("You must write mocking test for this")
-	c, err := NewDBCache(nil, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove("test.db")
-	testCacheImage(t, c)
-}
-
-func testCacheImage(t *testing.T, c Cache) {
+func testCacheImage(t *testing.T, c data.Cache) {
 	img := models.ImageCacheData{}
 	c.SetImage(img)
 	expected := []models.ImageCacheData{img}

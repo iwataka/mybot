@@ -1,6 +1,8 @@
-package worker
+package worker_test
 
 import (
+	"github.com/iwataka/mybot/worker"
+
 	"context"
 	"fmt"
 )
@@ -24,15 +26,15 @@ func (w *MyWorker) Name() string {
 
 func Example() {
 	w := NewMyWorker("foo")
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
 
 	// Start worker
-	wm.Send(StartSignal)
+	wm.Send(worker.StartSignal)
 	fmt.Printf("Worker Status: %s\n", wm.Receive())
 
 	// Stop worker
-	wm.Send(StopSignal)
+	wm.Send(worker.StopSignal)
 	fmt.Printf("Worker Status: %s\n", wm.Receive())
 
 	// Output: Worker Status: Started

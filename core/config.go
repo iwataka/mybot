@@ -4,7 +4,6 @@ import (
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"fmt"
@@ -75,11 +74,6 @@ func (c *FileConfig) Save() error {
 	c.ConfigProperties.m.RLock()
 	defer c.ConfigProperties.m.RUnlock()
 
-	// Make a directory before all.
-	err := os.MkdirAll(filepath.Dir(c.File), 0751)
-	if err != nil {
-		return utils.WithStack(err)
-	}
 	if c != nil {
 		bs, err := c.Marshal(filepath.Ext(c.File))
 		if err != nil {
@@ -118,11 +112,11 @@ func (c *FileConfig) Delete() error {
 
 type DBConfig struct {
 	ConfigProperties `yaml:",inline"`
-	col              *mgo.Collection
+	col              models.MgoCollection
 	ID               string `json:"id" toml:"id" bson:"id" yaml:"id"`
 }
 
-func NewDBConfig(col *mgo.Collection, id string) (*DBConfig, error) {
+func NewDBConfig(col models.MgoCollection, id string) (*DBConfig, error) {
 	c := &DBConfig{newConfigProperties(), col, id}
 	err := c.Load()
 	return c, utils.WithStack(err)

@@ -1,4 +1,4 @@
-package runner
+package runner_test
 
 import (
 	gomock "github.com/golang/mock/gomock"
@@ -7,6 +7,7 @@ import (
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
+	"github.com/iwataka/mybot/runner"
 	"github.com/stretchr/testify/require"
 
 	"errors"
@@ -18,27 +19,27 @@ func Test_TwitterAPIIsAvailable(t *testing.T) {
 	var twitterAPIMock *mocks.MockTwitterAPI
 	var twitterAPI *core.TwitterAPI
 
-	require.Error(t, TwitterAPIIsAvailable(nil))
+	require.Error(t, runner.TwitterAPIIsAvailable(nil))
 
 	twitterAPI = generateVerifiedTwitterAPI(t)
-	require.NoError(t, TwitterAPIIsAvailable(twitterAPI))
+	require.NoError(t, runner.TwitterAPIIsAvailable(twitterAPI))
 
-	require.Error(t, TwitterAPIIsAvailable(&core.TwitterAPI{}))
+	require.Error(t, runner.TwitterAPIIsAvailable(&core.TwitterAPI{}))
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, nil)
 	twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
-	require.Error(t, TwitterAPIIsAvailable(twitterAPI))
+	require.Error(t, runner.TwitterAPIIsAvailable(twitterAPI))
 
 	twitterAPIMock = mocks.NewMockTwitterAPI(ctrl)
 	twitterAPIMock.EXPECT().VerifyCredentials().Return(false, errors.New(""))
 	twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
-	require.Error(t, TwitterAPIIsAvailable(twitterAPI))
+	require.Error(t, runner.TwitterAPIIsAvailable(twitterAPI))
 }
 
 func TestBatchRunnerUsedWithStream_IsAvailable(t *testing.T) {
 	twitterAPI := generateVerifiedTwitterAPI(t)
-	r := NewBatchRunnerUsedWithStream(twitterAPI, nil, nil, nil, nil)
+	r := runner.NewBatchRunnerUsedWithStream(twitterAPI, nil, nil, nil, nil)
 	require.NoError(t, r.IsAvailable())
 }
 
@@ -52,14 +53,14 @@ func TestBatchRunnerUsedWithStream_Run(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *BatchRunnerUsedWithStream {
+func generateBatchRunnerUsedWithStream(t *testing.T, ctrl *gomock.Controller) *runner.BatchRunnerUsedWithStream {
 	twitterAPIMock := mocks.NewMockTwitterAPI(ctrl)
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	registerProcessSearch(twitterAPIMock, slackAPIMock)
 	return generateBaseRunner(t, twitterAPIMock, slackAPIMock)
 }
 
-func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPIMock models.SlackAPI) *BatchRunnerUsedWithStream {
+func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPIMock models.SlackAPI) *runner.BatchRunnerUsedWithStream {
 	cache, err := data.NewFileCache("")
 	require.NoError(t, err)
 	config, err := core.NewFileConfig("../core/testdata/config.yaml")
@@ -68,7 +69,7 @@ func generateBaseRunner(t *testing.T, twitterAPIMock models.TwitterAPI, slackAPI
 	slackAPI := core.NewSlackAPI(slackAPIMock, config, cache)
 	var visionAPI core.VisionMatcher
 	var languageAPI core.LanguageMatcher
-	return NewBatchRunnerUsedWithStream(twitterAPI, slackAPI, visionAPI, languageAPI, config)
+	return runner.NewBatchRunnerUsedWithStream(twitterAPI, slackAPI, visionAPI, languageAPI, config)
 }
 
 func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *mocks.MockSlackAPI) {

@@ -1,4 +1,4 @@
-package worker
+package worker_test
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/mybot/mocks"
+	"github.com/iwataka/mybot/worker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,12 +45,12 @@ func (w *testWorker) Name() string {
 
 func TestKeepSingleWorkerProcessAsItIsWhenMultipleStartSignalSent(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
 	for i := 0; i < 5; i++ {
-		wm.Send(StartSignal)
+		wm.Send(worker.StartSignal)
 		if i == 0 {
-			checkStatus(t, StatusStarted, wm)
+			checkStatus(t, worker.StatusStarted, wm)
 			require.Equal(t, true, wm.Receive())
 		}
 	}
@@ -59,18 +60,18 @@ func TestKeepSingleWorkerProcessAsItIsWhenMultipleStartSignalSent(t *testing.T) 
 
 func TestStopAndStartSignalSentAlternately(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
 	var totalCount int32 = 5
 	var i int32 = 0
 	for ; i < totalCount*2; i++ {
 		if i%2 == 0 {
-			wm.Send(StartSignal)
-			checkStatus(t, StatusStarted, wm)
+			wm.Send(worker.StartSignal)
+			checkStatus(t, worker.StatusStarted, wm)
 			require.Equal(t, true, wm.Receive())
 		} else {
-			wm.Send(StopSignal)
-			checkStatus(t, StatusStopped, wm)
+			wm.Send(worker.StopSignal)
+			checkStatus(t, worker.StatusStopped, wm)
 		}
 	}
 	require.EqualValues(t, 0, *w.count)
@@ -79,30 +80,30 @@ func TestStopAndStartSignalSentAlternately(t *testing.T) {
 
 func TestStopSignal(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
-	wm.Send(StartSignal)
-	checkStatus(t, StatusStarted, wm)
+	wm.Send(worker.StartSignal)
+	checkStatus(t, worker.StatusStarted, wm)
 	require.Equal(t, true, wm.Receive())
-	wm.Send(StopSignal)
-	checkStatus(t, StatusStopped, wm)
+	wm.Send(worker.StopSignal)
+	checkStatus(t, worker.StatusStopped, wm)
 	require.EqualValues(t, 0, *w.count)
 	require.EqualValues(t, 1, *w.totalCount)
 }
 
 func TestRestartSignalForWorker(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
 	var totalCount int32 = 5
 	var i int32 = 0
-	wm.Send(StartSignal)
-	checkStatus(t, StatusStarted, wm)
+	wm.Send(worker.StartSignal)
+	checkStatus(t, worker.StatusStarted, wm)
 	require.Equal(t, true, wm.Receive())
 	for ; i < totalCount; i++ {
-		wm.Send(RestartSignal)
-		checkStatus(t, StatusStopped, wm)
-		checkStatus(t, StatusStarted, wm)
+		wm.Send(worker.RestartSignal)
+		checkStatus(t, worker.StatusStopped, wm)
+		checkStatus(t, worker.StatusStarted, wm)
 		require.Equal(t, true, wm.Receive())
 	}
 	require.EqualValues(t, 1, *w.count)
@@ -111,31 +112,31 @@ func TestRestartSignalForWorker(t *testing.T) {
 
 func TestMultipleRandomWorkerSignals(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
 	isActive := false
 	for i := 0; i < 100; i++ {
 		signalSign := rand.Intn(3)
-		signal := WorkerSignal(signalSign)
+		signal := worker.WorkerSignal(signalSign)
 		wm.Send(signal)
-		started := signal == RestartSignal || (!isActive && signal == StartSignal)
-		stopped := isActive && (signal == StopSignal || signal == RestartSignal)
+		started := signal == worker.RestartSignal || (!isActive && signal == worker.StartSignal)
+		stopped := isActive && (signal == worker.StopSignal || signal == worker.RestartSignal)
 		if stopped {
-			checkStatus(t, StatusStopped, wm)
+			checkStatus(t, worker.StatusStopped, wm)
 		}
 		if started {
-			checkStatus(t, StatusStarted, wm)
+			checkStatus(t, worker.StatusStarted, wm)
 			require.Equal(t, true, wm.Receive())
 		}
-		isActive = signal != StopSignal
+		isActive = signal != worker.StopSignal
 	}
 }
 
 func TestWorkerFinished(t *testing.T) {
 	w := newTestWorker()
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	wm.Close()
-	require.EqualValues(t, StatusFinished, wm.Receive())
+	require.EqualValues(t, worker.StatusFinished, wm.Receive())
 }
 
 func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
@@ -143,12 +144,12 @@ func TestStartSignalWhenWorkerStartFuncThrowAnError(t *testing.T) {
 	w := mocks.NewMockWorker(ctrl)
 	err := errors.New("foo")
 	w.EXPECT().Start(gomock.Any(), gomock.Any()).Return(err)
-	wm := NewWorkerManager(w, 0)
+	wm := worker.NewWorkerManager(w, 0)
 	defer wm.Close()
-	wm.Send(StartSignal)
-	checkStatus(t, StatusStarted, wm)
+	wm.Send(worker.StartSignal)
+	checkStatus(t, worker.StatusStarted, wm)
 	require.Equal(t, err, wm.Receive())
-	checkStatus(t, StatusStopped, wm)
+	checkStatus(t, worker.StatusStopped, wm)
 }
 
 func TestStrategicRestarter(t *testing.T) {
@@ -162,12 +163,12 @@ func testStrategicRestarter(t *testing.T, suppressError bool) {
 	err := errors.New("error")
 	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(5).Return(err)
 	interval, _ := time.ParseDuration("60m")
-	l := NewStrategicRestarter(interval, 5, suppressError)
-	wm := NewWorkerManager(w, 0, l)
+	l := worker.NewStrategicRestarter(interval, 5, suppressError)
+	wm := worker.NewWorkerManager(w, 0, l)
 	defer wm.Close()
-	wm.Send(StartSignal)
+	wm.Send(worker.StartSignal)
 	for i := 0; i < 5; i++ {
-		checkStatus(t, StatusStarted, wm)
+		checkStatus(t, worker.StatusStarted, wm)
 		if i < 4 {
 			if !suppressError {
 				require.Equal(t, err, wm.Receive())
@@ -175,7 +176,7 @@ func testStrategicRestarter(t *testing.T, suppressError bool) {
 		} else {
 			require.Equal(t, err, wm.Receive())
 		}
-		checkStatus(t, StatusStopped, wm)
+		checkStatus(t, worker.StatusStopped, wm)
 	}
 }
 
@@ -191,22 +192,22 @@ func testStrategicRestarterWithSmallInterval(t *testing.T, suppressError bool) {
 	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(7).Return(err)
 	w.EXPECT().Start(gomock.Any(), gomock.Any()).Times(1).Return(nil)
 	interval, _ := time.ParseDuration("0ns")
-	l := NewStrategicRestarter(interval, 5, suppressError)
-	wm := NewWorkerManager(w, 0, l)
+	l := worker.NewStrategicRestarter(interval, 5, suppressError)
+	wm := worker.NewWorkerManager(w, 0, l)
 	defer wm.Close()
-	wm.Send(StartSignal)
+	wm.Send(worker.StartSignal)
 	for i := 0; i < 7; i++ {
-		checkStatus(t, StatusStarted, wm)
+		checkStatus(t, worker.StatusStarted, wm)
 		if !suppressError {
 			require.Equal(t, err, wm.Receive())
 		}
-		checkStatus(t, StatusStopped, wm)
+		checkStatus(t, worker.StatusStopped, wm)
 	}
-	checkStatus(t, StatusStarted, wm)
-	checkStatus(t, StatusStopped, wm)
+	checkStatus(t, worker.StatusStarted, wm)
+	checkStatus(t, worker.StatusStopped, wm)
 }
 
-func checkStatus(t *testing.T, s WorkerStatus, wm *WorkerManager) {
+func checkStatus(t *testing.T, s worker.WorkerStatus, wm *worker.WorkerManager) {
 	require.Equal(t, s, wm.Receive())
 	require.Equal(t, s, wm.Status())
 }

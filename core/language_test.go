@@ -1,8 +1,9 @@
-package core
+package core_test
 
 import (
 	"testing"
 
+	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
 	"github.com/stretchr/testify/require"
@@ -21,6 +22,6 @@ func TestLanguageCondition_IsEmpty_ReturnsFalse(t *testing.T) {
 }
 
 func TestLanguageAPI_Enabled(t *testing.T) {
-	a := &LanguageAPI{}
+	a := &core.LanguageAPI{}
 	require.False(t, a.Enabled())
 }

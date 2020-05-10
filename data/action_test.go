@@ -1,36 +1,37 @@
-package data
+package data_test
 
 import (
 	"github.com/iwataka/deep"
+	"github.com/iwataka/mybot/data"
 	"github.com/stretchr/testify/require"
 
 	"testing"
 )
 
-var testAction1 = Action{
-	Twitter: TwitterAction{
+var testAction1 = data.Action{
+	Twitter: data.TwitterAction{
 		Collections: []string{"foo"},
 	},
-	Slack: SlackAction{
+	Slack: data.SlackAction{
 		Channels:  []string{"bar"},
 		Reactions: []string{},
 	},
 }
 
-var testAction2 = Action{
-	Twitter: TwitterAction{
+var testAction2 = data.Action{
+	Twitter: data.TwitterAction{
 		Collections: []string{"twitter"},
 	},
-	Slack: SlackAction{
+	Slack: data.SlackAction{
 		Channels: []string{"slack"},
 	},
 }
 
-var testAction3 = Action{
-	Twitter: TwitterAction{
+var testAction3 = data.Action{
+	Twitter: data.TwitterAction{
 		Collections: []string{"facebook"},
 	},
-	Slack: SlackAction{
+	Slack: data.SlackAction{
 		Channels: []string{"mattermost"},
 	},
 }
@@ -42,9 +43,9 @@ func init() {
 }
 
 func TestAction_Add_Empty(t *testing.T) {
-	result1 := NewAction().Add(testAction1)
+	result1 := data.NewAction().Add(testAction1)
 	require.Nil(t, deep.Equal(result1, testAction1))
-	result2 := testAction1.Add(NewAction())
+	result2 := testAction1.Add(data.NewAction())
 	require.Nil(t, deep.Equal(result2, testAction1))
 }
 
@@ -57,9 +58,9 @@ func TestAction_Add(t *testing.T) {
 }
 
 func TestAction_Sub_Empty(t *testing.T) {
-	result1 := NewAction().Sub(testAction1)
-	require.Nil(t, deep.Equal(result1, NewAction()))
-	result2 := testAction1.Sub(NewAction())
+	result1 := data.NewAction().Sub(testAction1)
+	require.Nil(t, deep.Equal(result1, data.NewAction()))
+	result2 := testAction1.Sub(data.NewAction())
 	require.Nil(t, deep.Equal(result2, testAction1))
 }
 
@@ -71,5 +72,5 @@ func TestAction_Sub(t *testing.T) {
 }
 
 func Test_NewAction_ReturnsEmpty(t *testing.T) {
-	require.True(t, NewAction().IsEmpty())
+	require.True(t, data.NewAction().IsEmpty())
 }

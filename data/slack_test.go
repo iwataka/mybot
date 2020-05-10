@@ -1,18 +1,19 @@
-package data
+package data_test
 
 import (
+	"github.com/iwataka/mybot/data"
 	"github.com/stretchr/testify/require"
 
 	"testing"
 )
 
 func TestSlackAction_Add(t *testing.T) {
-	a1 := SlackAction{
+	a1 := data.SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
 	a1.Pin = true
 	a1.Reactions = []string{":smile:"}
-	a2 := SlackAction{
+	a2 := data.SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
 	a2.Reactions = []string{":smile:", ":plane:"}
@@ -26,10 +27,10 @@ func TestSlackAction_Add(t *testing.T) {
 }
 
 func TestSlackAction_Sub(t *testing.T) {
-	a1 := SlackAction{
+	a1 := data.SlackAction{
 		Channels: []string{"foo", "bar"},
 	}
-	a2 := SlackAction{
+	a2 := data.SlackAction{
 		Channels: []string{"foo", "fizz"},
 	}
 
@@ -39,7 +40,7 @@ func TestSlackAction_Sub(t *testing.T) {
 }
 
 func TestSlackAction_IsEmpty(t *testing.T) {
-	a := NewSlackAction()
+	a := data.NewSlackAction()
 	require.True(t, a.IsEmpty())
 
 	a.Channels = []string{"foo"}
