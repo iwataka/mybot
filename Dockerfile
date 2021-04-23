@@ -1,4 +1,4 @@
-FROM golang:1.14-alpine
+FROM golang:1.16-alpine
 
 RUN apk add --no-cache git
 # https://github.com/kubernetes/kubernetes/issues/39583

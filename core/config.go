@@ -71,10 +71,10 @@ func NewFileConfig(path string) (*FileConfig, error) {
 
 // Save saves the specified configuration to the source file.
 func (c *FileConfig) Save() error {
-	c.ConfigProperties.m.RLock()
-	defer c.ConfigProperties.m.RUnlock()
-
 	if c != nil {
+		c.ConfigProperties.m.RLock()
+		defer c.ConfigProperties.m.RUnlock()
+
 		bs, err := c.Marshal(filepath.Ext(c.File))
 		if err != nil {
 			return utils.WithStack(err)

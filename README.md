@@ -16,7 +16,7 @@ Make sure you've already created the following things:
 - Twitter account
 - Slack account
 
-and you've installed Go 1.13.x or 1.14.x.
+and you've installed Go 1.13.x or later.
 
 ## Running from source
 

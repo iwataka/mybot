@@ -1,6 +1,6 @@
 module github.com/iwataka/mybot
 
-go 1.14
+go 1.16
 
 require (
 	cloud.google.com/go v0.17.0

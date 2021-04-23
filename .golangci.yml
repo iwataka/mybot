@@ -7,12 +7,12 @@ issues:
 linters:
   enable:
     - bodyclose
-    - interfacer
     - unconvert
     - dupl
     - gocyclo
     - gocognit
+    - gofmt
     - misspell
     - unparam
-    - scopelint
+    - exportloopref
     - testpackage
