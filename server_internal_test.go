@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 
 func getDriver() *agouti.WebDriver {
 	if driver == nil {
-		driver = agouti.PhantomJS()
+		driver = agouti.ChromeDriver(agouti.ChromeOptions("args", []string{"--headless"}))
 		err := driver.Start()
 		if err != nil {
 			panic(err)
@@ -476,8 +476,6 @@ func testPostConfigTagsInput(
 	page *agouti.Page,
 	wg *sync.WaitGroup,
 ) {
-	t.Skip("Skip because phantom.js doesn't support tagsinput currently.")
-
 	require.NoError(t, page.Navigate(url))
 
 	require.NoError(t, page.Screenshot(filepath.Join(screenshotsDir, "tags_input_config_before_post.png")))

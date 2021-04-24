@@ -24,7 +24,7 @@ jobs:
     - name: Install required packages
       run: |
         sudo apt-get -qq update
-        sudo apt-get install -y phantomjs
+        sudo apt-get install -y chromedriver
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
     - name: Build and test
       run: make
