@@ -24,7 +24,7 @@ jobs:
     - name: Install required packages
       run: |
         curl -fL -o google-chrome-stable.deb http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_90.0.4430.85-1_amd64.deb
-        sudo apt install -y google-chrome-stable.deb
+        sudo apt install -y ./google-chrome-stable.deb
         curl -fL -o chromedriver.zip https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_linux64.zip
         unzip chromedriver.zip
         sudo mv chromedriver /usr/local/bin
