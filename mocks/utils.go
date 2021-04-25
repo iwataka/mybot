@@ -5,34 +5,35 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockSavable is a mock of Savable interface
+// MockSavable is a mock of Savable interface.
 type MockSavable struct {
 	ctrl     *gomock.Controller
 	recorder *MockSavableMockRecorder
 }
 
-// MockSavableMockRecorder is the mock recorder for MockSavable
+// MockSavableMockRecorder is the mock recorder for MockSavable.
 type MockSavableMockRecorder struct {
 	mock *MockSavable
 }
 
-// NewMockSavable creates a new mock instance
+// NewMockSavable creates a new mock instance.
 func NewMockSavable(ctrl *gomock.Controller) *MockSavable {
 	mock := &MockSavable{ctrl: ctrl}
 	mock.recorder = &MockSavableMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSavable) EXPECT() *MockSavableMockRecorder {
 	return m.recorder
 }
 
-// Save mocks base method
+// Save mocks base method.
 func (m *MockSavable) Save() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save")
@@ -40,36 +41,36 @@ func (m *MockSavable) Save() error {
 	return ret0
 }
 
-// Save indicates an expected call of Save
+// Save indicates an expected call of Save.
 func (mr *MockSavableMockRecorder) Save() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockSavable)(nil).Save))
 }
 
-// MockLoadable is a mock of Loadable interface
+// MockLoadable is a mock of Loadable interface.
 type MockLoadable struct {
 	ctrl     *gomock.Controller
 	recorder *MockLoadableMockRecorder
 }
 
-// MockLoadableMockRecorder is the mock recorder for MockLoadable
+// MockLoadableMockRecorder is the mock recorder for MockLoadable.
 type MockLoadableMockRecorder struct {
 	mock *MockLoadable
 }
 
-// NewMockLoadable creates a new mock instance
+// NewMockLoadable creates a new mock instance.
 func NewMockLoadable(ctrl *gomock.Controller) *MockLoadable {
 	mock := &MockLoadable{ctrl: ctrl}
 	mock.recorder = &MockLoadableMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockLoadable) EXPECT() *MockLoadableMockRecorder {
 	return m.recorder
 }
 
-// Load mocks base method
+// Load mocks base method.
 func (m *MockLoadable) Load() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Load")
@@ -77,36 +78,36 @@ func (m *MockLoadable) Load() error {
 	return ret0
 }
 
-// Load indicates an expected call of Load
+// Load indicates an expected call of Load.
 func (mr *MockLoadableMockRecorder) Load() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockLoadable)(nil).Load))
 }
 
-// MockDeletable is a mock of Deletable interface
+// MockDeletable is a mock of Deletable interface.
 type MockDeletable struct {
 	ctrl     *gomock.Controller
 	recorder *MockDeletableMockRecorder
 }
 
-// MockDeletableMockRecorder is the mock recorder for MockDeletable
+// MockDeletableMockRecorder is the mock recorder for MockDeletable.
 type MockDeletableMockRecorder struct {
 	mock *MockDeletable
 }
 
-// NewMockDeletable creates a new mock instance
+// NewMockDeletable creates a new mock instance.
 func NewMockDeletable(ctrl *gomock.Controller) *MockDeletable {
 	mock := &MockDeletable{ctrl: ctrl}
 	mock.recorder = &MockDeletableMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDeletable) EXPECT() *MockDeletableMockRecorder {
 	return m.recorder
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockDeletable) Delete() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete")
@@ -114,7 +115,7 @@ func (m *MockDeletable) Delete() error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockDeletableMockRecorder) Delete() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDeletable)(nil).Delete))

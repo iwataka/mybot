@@ -5,35 +5,167 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	slack "github.com/iwataka/slack"
-	reflect "reflect"
 )
 
-// MockSlackAPI is a mock of SlackAPI interface
+// MockSlackAPI is a mock of SlackAPI interface.
 type MockSlackAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockSlackAPIMockRecorder
 }
 
-// MockSlackAPIMockRecorder is the mock recorder for MockSlackAPI
+// MockSlackAPIMockRecorder is the mock recorder for MockSlackAPI.
 type MockSlackAPIMockRecorder struct {
 	mock *MockSlackAPI
 }
 
-// NewMockSlackAPI creates a new mock instance
+// NewMockSlackAPI creates a new mock instance.
 func NewMockSlackAPI(ctrl *gomock.Controller) *MockSlackAPI {
 	mock := &MockSlackAPI{ctrl: ctrl}
 	mock.recorder = &MockSlackAPIMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSlackAPI) EXPECT() *MockSlackAPIMockRecorder {
 	return m.recorder
 }
 
-// PostMessage mocks base method
+// AddPin mocks base method.
+func (m *MockSlackAPI) AddPin(ch string, item slack.ItemRef) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddPin", ch, item)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPin indicates an expected call of AddPin.
+func (mr *MockSlackAPIMockRecorder) AddPin(ch, item interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPin", reflect.TypeOf((*MockSlackAPI)(nil).AddPin), ch, item)
+}
+
+// AddReaction mocks base method.
+func (m *MockSlackAPI) AddReaction(name string, item slack.ItemRef) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddReaction", name, item)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddReaction indicates an expected call of AddReaction.
+func (mr *MockSlackAPIMockRecorder) AddReaction(name, item interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReaction", reflect.TypeOf((*MockSlackAPI)(nil).AddReaction), name, item)
+}
+
+// AddStar mocks base method.
+func (m *MockSlackAPI) AddStar(ch string, item slack.ItemRef) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddStar", ch, item)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddStar indicates an expected call of AddStar.
+func (mr *MockSlackAPIMockRecorder) AddStar(ch, item interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddStar", reflect.TypeOf((*MockSlackAPI)(nil).AddStar), ch, item)
+}
+
+// AuthTest mocks base method.
+func (m *MockSlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AuthTest")
+	ret0, _ := ret[0].(*slack.AuthTestResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AuthTest indicates an expected call of AuthTest.
+func (mr *MockSlackAPIMockRecorder) AuthTest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthTest", reflect.TypeOf((*MockSlackAPI)(nil).AuthTest))
+}
+
+// CreateChannel mocks base method.
+func (m *MockSlackAPI) CreateChannel(name string) (*slack.Channel, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateChannel", name)
+	ret0, _ := ret[0].(*slack.Channel)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateChannel indicates an expected call of CreateChannel.
+func (mr *MockSlackAPIMockRecorder) CreateChannel(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChannel", reflect.TypeOf((*MockSlackAPI)(nil).CreateChannel), name)
+}
+
+// CreateGroup mocks base method.
+func (m *MockSlackAPI) CreateGroup(group string) (*slack.Group, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateGroup", group)
+	ret0, _ := ret[0].(*slack.Group)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateGroup indicates an expected call of CreateGroup.
+func (mr *MockSlackAPIMockRecorder) CreateGroup(group interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGroup", reflect.TypeOf((*MockSlackAPI)(nil).CreateGroup), group)
+}
+
+// GetChannels mocks base method.
+func (m *MockSlackAPI) GetChannels(excludeArchived bool) ([]slack.Channel, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChannels", excludeArchived)
+	ret0, _ := ret[0].([]slack.Channel)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChannels indicates an expected call of GetChannels.
+func (mr *MockSlackAPIMockRecorder) GetChannels(excludeArchived interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChannels", reflect.TypeOf((*MockSlackAPI)(nil).GetChannels), excludeArchived)
+}
+
+// GetGroups mocks base method.
+func (m *MockSlackAPI) GetGroups(excludeArchived bool) ([]slack.Group, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGroups", excludeArchived)
+	ret0, _ := ret[0].([]slack.Group)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGroups indicates an expected call of GetGroups.
+func (mr *MockSlackAPIMockRecorder) GetGroups(excludeArchived interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroups", reflect.TypeOf((*MockSlackAPI)(nil).GetGroups), excludeArchived)
+}
+
+// NewRTM mocks base method.
+func (m *MockSlackAPI) NewRTM() *slack.RTM {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewRTM")
+	ret0, _ := ret[0].(*slack.RTM)
+	return ret0
+}
+
+// NewRTM indicates an expected call of NewRTM.
+func (mr *MockSlackAPIMockRecorder) NewRTM() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRTM", reflect.TypeOf((*MockSlackAPI)(nil).NewRTM))
+}
+
+// PostMessage mocks base method.
 func (m *MockSlackAPI) PostMessage(ch, msg string, params slack.PostMessageParameters) (string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostMessage", ch, msg, params)
@@ -43,139 +175,8 @@ func (m *MockSlackAPI) PostMessage(ch, msg string, params slack.PostMessageParam
 	return ret0, ret1, ret2
 }
 
-// PostMessage indicates an expected call of PostMessage
+// PostMessage indicates an expected call of PostMessage.
 func (mr *MockSlackAPIMockRecorder) PostMessage(ch, msg, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockSlackAPI)(nil).PostMessage), ch, msg, params)
-}
-
-// CreateChannel mocks base method
-func (m *MockSlackAPI) CreateChannel(name string) (*slack.Channel, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateChannel", name)
-	ret0, _ := ret[0].(*slack.Channel)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateChannel indicates an expected call of CreateChannel
-func (mr *MockSlackAPIMockRecorder) CreateChannel(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateChannel", reflect.TypeOf((*MockSlackAPI)(nil).CreateChannel), name)
-}
-
-// CreateGroup mocks base method
-func (m *MockSlackAPI) CreateGroup(group string) (*slack.Group, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateGroup", group)
-	ret0, _ := ret[0].(*slack.Group)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateGroup indicates an expected call of CreateGroup
-func (mr *MockSlackAPIMockRecorder) CreateGroup(group interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateGroup", reflect.TypeOf((*MockSlackAPI)(nil).CreateGroup), group)
-}
-
-// NewRTM mocks base method
-func (m *MockSlackAPI) NewRTM() *slack.RTM {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewRTM")
-	ret0, _ := ret[0].(*slack.RTM)
-	return ret0
-}
-
-// NewRTM indicates an expected call of NewRTM
-func (mr *MockSlackAPIMockRecorder) NewRTM() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRTM", reflect.TypeOf((*MockSlackAPI)(nil).NewRTM))
-}
-
-// GetChannels mocks base method
-func (m *MockSlackAPI) GetChannels(excludeArchived bool) ([]slack.Channel, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetChannels", excludeArchived)
-	ret0, _ := ret[0].([]slack.Channel)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetChannels indicates an expected call of GetChannels
-func (mr *MockSlackAPIMockRecorder) GetChannels(excludeArchived interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChannels", reflect.TypeOf((*MockSlackAPI)(nil).GetChannels), excludeArchived)
-}
-
-// GetGroups mocks base method
-func (m *MockSlackAPI) GetGroups(excludeArchived bool) ([]slack.Group, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGroups", excludeArchived)
-	ret0, _ := ret[0].([]slack.Group)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGroups indicates an expected call of GetGroups
-func (mr *MockSlackAPIMockRecorder) GetGroups(excludeArchived interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroups", reflect.TypeOf((*MockSlackAPI)(nil).GetGroups), excludeArchived)
-}
-
-// AddPin mocks base method
-func (m *MockSlackAPI) AddPin(ch string, item slack.ItemRef) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddPin", ch, item)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddPin indicates an expected call of AddPin
-func (mr *MockSlackAPIMockRecorder) AddPin(ch, item interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPin", reflect.TypeOf((*MockSlackAPI)(nil).AddPin), ch, item)
-}
-
-// AddStar mocks base method
-func (m *MockSlackAPI) AddStar(ch string, item slack.ItemRef) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddStar", ch, item)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddStar indicates an expected call of AddStar
-func (mr *MockSlackAPIMockRecorder) AddStar(ch, item interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddStar", reflect.TypeOf((*MockSlackAPI)(nil).AddStar), ch, item)
-}
-
-// AddReaction mocks base method
-func (m *MockSlackAPI) AddReaction(name string, item slack.ItemRef) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddReaction", name, item)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddReaction indicates an expected call of AddReaction
-func (mr *MockSlackAPIMockRecorder) AddReaction(name, item interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReaction", reflect.TypeOf((*MockSlackAPI)(nil).AddReaction), name, item)
-}
-
-// AuthTest mocks base method
-func (m *MockSlackAPI) AuthTest() (*slack.AuthTestResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AuthTest")
-	ret0, _ := ret[0].(*slack.AuthTestResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AuthTest indicates an expected call of AuthTest
-func (mr *MockSlackAPIMockRecorder) AuthTest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AuthTest", reflect.TypeOf((*MockSlackAPI)(nil).AuthTest))
 }

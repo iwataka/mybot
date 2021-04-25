@@ -4,7 +4,10 @@ FMT_OPTS = -s -w
 LINT_OPTS =
 TEST_OPTS = -race
 
-all: fmt lint test
+all: gen fmt lint test
+
+gen:
+	go generate
 
 fmt:
 	gofmt $(FMT_OPTS) .

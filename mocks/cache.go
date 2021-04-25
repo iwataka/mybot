@@ -5,50 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	data "github.com/iwataka/mybot/data"
 	models "github.com/iwataka/mybot/models"
-	reflect "reflect"
 )
 
-// MockCache is a mock of Cache interface
+// MockCache is a mock of Cache interface.
 type MockCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheMockRecorder
 }
 
-// MockCacheMockRecorder is the mock recorder for MockCache
+// MockCacheMockRecorder is the mock recorder for MockCache.
 type MockCacheMockRecorder struct {
 	mock *MockCache
 }
 
-// NewMockCache creates a new mock instance
+// NewMockCache creates a new mock instance.
 func NewMockCache(ctrl *gomock.Controller) *MockCache {
 	mock := &MockCache{ctrl: ctrl}
 	mock.recorder = &MockCacheMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 	return m.recorder
 }
 
-// Save mocks base method
-func (m *MockCache) Save() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Save indicates an expected call of Save
-func (mr *MockCacheMockRecorder) Save() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockCache)(nil).Save))
-}
-
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockCache) Delete() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete")
@@ -56,65 +43,13 @@ func (m *MockCache) Delete() error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockCacheMockRecorder) Delete() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCache)(nil).Delete))
 }
 
-// GetLatestTweetID mocks base method
-func (m *MockCache) GetLatestTweetID(screenName string) int64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestTweetID", screenName)
-	ret0, _ := ret[0].(int64)
-	return ret0
-}
-
-// GetLatestTweetID indicates an expected call of GetLatestTweetID
-func (mr *MockCacheMockRecorder) GetLatestTweetID(screenName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestTweetID", reflect.TypeOf((*MockCache)(nil).GetLatestTweetID), screenName)
-}
-
-// SetLatestTweetID mocks base method
-func (m *MockCache) SetLatestTweetID(screenName string, id int64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetLatestTweetID", screenName, id)
-}
-
-// SetLatestTweetID indicates an expected call of SetLatestTweetID
-func (mr *MockCacheMockRecorder) SetLatestTweetID(screenName, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestTweetID", reflect.TypeOf((*MockCache)(nil).SetLatestTweetID), screenName, id)
-}
-
-// GetLatestFavoriteID mocks base method
-func (m *MockCache) GetLatestFavoriteID(screenName string) int64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLatestFavoriteID", screenName)
-	ret0, _ := ret[0].(int64)
-	return ret0
-}
-
-// GetLatestFavoriteID indicates an expected call of GetLatestFavoriteID
-func (mr *MockCacheMockRecorder) GetLatestFavoriteID(screenName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestFavoriteID", reflect.TypeOf((*MockCache)(nil).GetLatestFavoriteID), screenName)
-}
-
-// SetLatestFavoriteID mocks base method
-func (m *MockCache) SetLatestFavoriteID(screenName string, id int64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetLatestFavoriteID", screenName, id)
-}
-
-// SetLatestFavoriteID indicates an expected call of SetLatestFavoriteID
-func (mr *MockCacheMockRecorder) SetLatestFavoriteID(screenName, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestFavoriteID", reflect.TypeOf((*MockCache)(nil).SetLatestFavoriteID), screenName, id)
-}
-
-// GetLatestDMID mocks base method
+// GetLatestDMID mocks base method.
 func (m *MockCache) GetLatestDMID() int64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLatestDMID")
@@ -122,51 +57,27 @@ func (m *MockCache) GetLatestDMID() int64 {
 	return ret0
 }
 
-// GetLatestDMID indicates an expected call of GetLatestDMID
+// GetLatestDMID indicates an expected call of GetLatestDMID.
 func (mr *MockCacheMockRecorder) GetLatestDMID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestDMID", reflect.TypeOf((*MockCache)(nil).GetLatestDMID))
 }
 
-// SetLatestDMID mocks base method
-func (m *MockCache) SetLatestDMID(id int64) {
+// GetLatestFavoriteID mocks base method.
+func (m *MockCache) GetLatestFavoriteID(screenName string) int64 {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetLatestDMID", id)
-}
-
-// SetLatestDMID indicates an expected call of SetLatestDMID
-func (mr *MockCacheMockRecorder) SetLatestDMID(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestDMID", reflect.TypeOf((*MockCache)(nil).SetLatestDMID), id)
-}
-
-// GetTweetAction mocks base method
-func (m *MockCache) GetTweetAction(tweetID int64) data.Action {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTweetAction", tweetID)
-	ret0, _ := ret[0].(data.Action)
+	ret := m.ctrl.Call(m, "GetLatestFavoriteID", screenName)
+	ret0, _ := ret[0].(int64)
 	return ret0
 }
 
-// GetTweetAction indicates an expected call of GetTweetAction
-func (mr *MockCacheMockRecorder) GetTweetAction(tweetID interface{}) *gomock.Call {
+// GetLatestFavoriteID indicates an expected call of GetLatestFavoriteID.
+func (mr *MockCacheMockRecorder) GetLatestFavoriteID(screenName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTweetAction", reflect.TypeOf((*MockCache)(nil).GetTweetAction), tweetID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestFavoriteID", reflect.TypeOf((*MockCache)(nil).GetLatestFavoriteID), screenName)
 }
 
-// SetTweetAction mocks base method
-func (m *MockCache) SetTweetAction(tweetID int64, action data.Action) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetTweetAction", tweetID, action)
-}
-
-// SetTweetAction indicates an expected call of SetTweetAction
-func (mr *MockCacheMockRecorder) SetTweetAction(tweetID, action interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTweetAction", reflect.TypeOf((*MockCache)(nil).SetTweetAction), tweetID, action)
-}
-
-// GetLatestImages mocks base method
+// GetLatestImages mocks base method.
 func (m *MockCache) GetLatestImages(num int) []models.ImageCacheData {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLatestImages", num)
@@ -174,20 +85,110 @@ func (m *MockCache) GetLatestImages(num int) []models.ImageCacheData {
 	return ret0
 }
 
-// GetLatestImages indicates an expected call of GetLatestImages
+// GetLatestImages indicates an expected call of GetLatestImages.
 func (mr *MockCacheMockRecorder) GetLatestImages(num interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestImages", reflect.TypeOf((*MockCache)(nil).GetLatestImages), num)
 }
 
-// SetImage mocks base method
+// GetLatestTweetID mocks base method.
+func (m *MockCache) GetLatestTweetID(screenName string) int64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestTweetID", screenName)
+	ret0, _ := ret[0].(int64)
+	return ret0
+}
+
+// GetLatestTweetID indicates an expected call of GetLatestTweetID.
+func (mr *MockCacheMockRecorder) GetLatestTweetID(screenName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestTweetID", reflect.TypeOf((*MockCache)(nil).GetLatestTweetID), screenName)
+}
+
+// GetTweetAction mocks base method.
+func (m *MockCache) GetTweetAction(tweetID int64) data.Action {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTweetAction", tweetID)
+	ret0, _ := ret[0].(data.Action)
+	return ret0
+}
+
+// GetTweetAction indicates an expected call of GetTweetAction.
+func (mr *MockCacheMockRecorder) GetTweetAction(tweetID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTweetAction", reflect.TypeOf((*MockCache)(nil).GetTweetAction), tweetID)
+}
+
+// Save mocks base method.
+func (m *MockCache) Save() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockCacheMockRecorder) Save() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockCache)(nil).Save))
+}
+
+// SetImage mocks base method.
 func (m *MockCache) SetImage(data models.ImageCacheData) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetImage", data)
 }
 
-// SetImage indicates an expected call of SetImage
+// SetImage indicates an expected call of SetImage.
 func (mr *MockCacheMockRecorder) SetImage(data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetImage", reflect.TypeOf((*MockCache)(nil).SetImage), data)
+}
+
+// SetLatestDMID mocks base method.
+func (m *MockCache) SetLatestDMID(id int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLatestDMID", id)
+}
+
+// SetLatestDMID indicates an expected call of SetLatestDMID.
+func (mr *MockCacheMockRecorder) SetLatestDMID(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestDMID", reflect.TypeOf((*MockCache)(nil).SetLatestDMID), id)
+}
+
+// SetLatestFavoriteID mocks base method.
+func (m *MockCache) SetLatestFavoriteID(screenName string, id int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLatestFavoriteID", screenName, id)
+}
+
+// SetLatestFavoriteID indicates an expected call of SetLatestFavoriteID.
+func (mr *MockCacheMockRecorder) SetLatestFavoriteID(screenName, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestFavoriteID", reflect.TypeOf((*MockCache)(nil).SetLatestFavoriteID), screenName, id)
+}
+
+// SetLatestTweetID mocks base method.
+func (m *MockCache) SetLatestTweetID(screenName string, id int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLatestTweetID", screenName, id)
+}
+
+// SetLatestTweetID indicates an expected call of SetLatestTweetID.
+func (mr *MockCacheMockRecorder) SetLatestTweetID(screenName, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLatestTweetID", reflect.TypeOf((*MockCache)(nil).SetLatestTweetID), screenName, id)
+}
+
+// SetTweetAction mocks base method.
+func (m *MockCache) SetTweetAction(tweetID int64, action data.Action) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTweetAction", tweetID, action)
+}
+
+// SetTweetAction indicates an expected call of SetTweetAction.
+func (mr *MockCacheMockRecorder) SetTweetAction(tweetID, action interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTweetAction", reflect.TypeOf((*MockCache)(nil).SetTweetAction), tweetID, action)
 }
