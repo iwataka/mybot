@@ -29,8 +29,8 @@ jobs:
         unzip chromedriver.zip
         sudo mv chromedriver /usr/local/bin
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
-    - name: Build and test
-      run: make
+    - name: Lint and test
+      run: make lint test
 
   coverage:
     name: Measure coverage
