@@ -23,8 +23,11 @@ jobs:
         go-version: ${{ matrix.go }}
     - name: Install required packages
       run: |
-        sudo apt-get -qq update
-        sudo apt-get install -y chromedriver
+        curl -fL -o google-chrome-stable.deb http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_90.0.4430.85-1_amd64.deb
+        apt install -y google-chrome-stable.deb
+        curl -fL -o chromedriver.zip https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_linux64.zip
+        unzip chromedriver.zip
+        mv chromedriver /usr/local/bin
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
     - name: Build and test
       run: make
