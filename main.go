@@ -386,12 +386,20 @@ func (d *userSpecificData) restart() {
 }
 
 func newUserSpecificData(c models.Context, database *mgo.Database, userID string) (*userSpecificData, error) {
+	cacheDir := c.String(cacheFlagName)
+	configDir := c.String(configFlagName)
+	twitterDir := c.String(twitterFlagName)
+	slackDir := c.String(slackFlagName)
+	return newUserSpecificDataWithoutContext(cacheDir, configDir, twitterDir, slackDir, database, userID)
+}
+
+func newUserSpecificDataWithoutContext(cacheDir, configDir, twitterDir, slackDir string, database *mgo.Database, userID string) (*userSpecificData, error) {
 	var err error
 	userData := &userSpecificData{}
 	userData.workerMgrs = map[int]*worker.WorkerManager{}
 
 	if database == nil {
-		userData.cache, err = newFileCache(c, userID)
+		userData.cache, err = newFileCache(cacheDir, userID)
 	} else {
 		col := models.NewMgoCollection(database.C("cache"))
 		userData.cache, err = data.NewDBCache(col, userID)
@@ -401,7 +409,7 @@ func newUserSpecificData(c models.Context, database *mgo.Database, userID string
 	}
 
 	if database == nil {
-		userData.config, err = newFileConfig(c, userID)
+		userData.config, err = newFileConfig(configDir, userID)
 	} else {
 		col := models.NewMgoCollection(database.C("config"))
 		userData.config, err = core.NewDBConfig(col, userID)
@@ -411,7 +419,7 @@ func newUserSpecificData(c models.Context, database *mgo.Database, userID string
 	}
 
 	if database == nil {
-		userData.twitterAuth, err = newFileOAuthCreds(c, twitterFlagName, userID)
+		userData.twitterAuth, err = newFileOAuthCreds(twitterDir, userID)
 	} else {
 		col := models.NewMgoCollection(database.C("twitter-user-auth"))
 		userData.twitterAuth, err = oauth.NewDBOAuthCreds(col, userID)
@@ -426,7 +434,7 @@ func newUserSpecificData(c models.Context, database *mgo.Database, userID string
 	}
 
 	if database == nil {
-		userData.slackAuth, err = newFileOAuthCreds(c, slackFlagName, userID)
+		userData.slackAuth, err = newFileOAuthCreds(slackDir, userID)
 	} else {
 		col := models.NewMgoCollection(database.C("slack-user-auth"))
 		userData.slackAuth, err = oauth.NewDBOAuthCreds(col, userID)
@@ -442,8 +450,8 @@ func newUserSpecificData(c models.Context, database *mgo.Database, userID string
 	return userData, nil
 }
 
-func newFileCache(c models.Context, userID string) (data.Cache, error) {
-	dir, err := argValueWithMkdir(c, cacheFlagName)
+func newFileCache(dir, userID string) (data.Cache, error) {
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -455,8 +463,8 @@ func newFileCache(c models.Context, userID string) (data.Cache, error) {
 	return cache, nil
 }
 
-func newFileConfig(c models.Context, userID string) (core.Config, error) {
-	dir, err := argValueWithMkdir(c, configFlagName)
+func newFileConfig(dir, userID string) (core.Config, error) {
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -468,8 +476,8 @@ func newFileConfig(c models.Context, userID string) (core.Config, error) {
 	return config, nil
 }
 
-func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCreds, error) {
-	dir, err := argValueWithMkdir(c, flagName)
+func newFileOAuthCreds(dir, userID string) (oauth.OAuthCreds, error) {
+	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return nil, utils.WithStack(err)
 	}
@@ -482,14 +490,17 @@ func newFileOAuthCreds(c models.Context, flagName, userID string) (oauth.OAuthCr
 }
 
 func startUserSpecificData(c models.Context, data *userSpecificData, userID string) error {
+	restartDuration := c.Duration(workerRestartDurationFlagName)
+	restartLimit := c.Int(workerRestartLimitFlagName)
+	bufSize := c.Int(workerBufSizeFlagName)
+	return startUserSpecificDataWithoutContext(restartDuration, restartLimit, bufSize, data, userID)
+}
+
+func startUserSpecificDataWithoutContext(restartDuration time.Duration, restartLimit, bufSize int, data *userSpecificData, userID string) error {
 	if len(data.workerMgrs) > 0 {
 		return fmt.Errorf("%s's workers already started", userID)
 	}
-
-	restartDuration := c.Duration(workerRestartDurationFlagName)
-	restartLimit := c.Int(workerRestartLimitFlagName)
 	restarter := worker.NewStrategicRestarter(restartDuration, restartLimit, false)
-	bufSize := c.Int(workerBufSizeFlagName)
 
 	twitterDMWorker := newTwitterDMWorker(data.twitterAPI, userID)
 	data.workerMgrs[twitterDMRoutineKey] = activateWorkerAndStart(

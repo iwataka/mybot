@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -117,4 +118,35 @@ func Test_userSpecificData_delete_withError(t *testing.T) {
 	c.EXPECT().Delete().Return(errors.New("error"))
 	d := userSpecificData{cache: c}
 	require.Error(t, d.delete())
+}
+
+func Test_newFileCache(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	_, err = newFileCache(dir, "userID")
+	require.NoError(t, err)
+	rmdir(t, dir)
+}
+
+func Test_newFileConfig(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	_, err = newFileConfig(dir, "userID")
+	require.NoError(t, err)
+	rmdir(t, dir)
+}
+
+func Test_newFileOAuthCreds(t *testing.T) {
+	dir, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	_, err = newFileOAuthCreds(dir, "userID")
+	require.NoError(t, err)
+	rmdir(t, dir)
+}
+
+func rmdir(t *testing.T, dir string) {
+	info, err := os.Stat(dir)
+	require.NoError(t, err)
+	require.True(t, info.IsDir())
+	require.NoError(t, os.Remove(dir))
 }
