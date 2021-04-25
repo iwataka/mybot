@@ -334,8 +334,6 @@ func testPostConfigWithoutModification(
 
 	cProps := c.GetProperties()
 	configProps := serverTestUserSpecificData.config.GetProperties()
-	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
-	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
 	require.Nil(t, deep.Equal(&cProps, &configProps))
 }
 
