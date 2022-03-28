@@ -23,10 +23,10 @@ and you've installed Go 1.13.x or later.
 Run the below commands:
 
 ```sh
-$ go get -d github.com/iwataka/mybot
-$ cd $GOPATH/src/github.com/iwataka/mybot
-$ go build
-$ ./mybot s(erve)
+go get -d github.com/iwataka/mybot
+cd $GOPATH/src/github.com/iwataka/mybot
+go build
+./mybot s(erve)
 ```
 
 ## Running by using Docker
@@ -34,13 +34,13 @@ $ ./mybot s(erve)
 1. simplest way
 
     ```sh
-    $ docker run -d -p 8080:8080 iwataka/mybot
+    docker run -d -p 8080:8080 iwataka/mybot
     ```
 
 1. docker with mounting volumes
 
     ```sh
-    $ docker run -d -p 8080:8080 \
+    docker run -d -p 8080:8080 \
         -v ~/.cache/mybot:/root/.cache/mybot \
         -v ~/.config/mybot:/root/.config/mybot \
         -v ~/.config/gcloud:/root/.config/gcloud \
@@ -50,8 +50,15 @@ $ ./mybot s(erve)
 1. docker-compose
 
     ```sh
-    $ curl -fLO https://raw.githubusercontent.com/iwataka/mybot/master/docker-compose.yml
-    $ docker-compose up -d
+    curl -fLO https://raw.githubusercontent.com/iwataka/mybot/master/docker-compose.yml
+    docker-compose up -d
+    ```
+
+1. k8s
+
+    ```sh
+    kubectl create namespace mybot
+    kubectl apply -n mybot -f template.yml
     ```
 
 ## To use Google Cloud APIs
@@ -64,5 +71,5 @@ Mybot uses the following Google Cloud API:
 To get authorized, run the following commands:
 
 ```sh
-$ gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/cloud-vision,https://www.googleapis.com/auth/cloud-language
+gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/cloud-vision,https://www.googleapis.com/auth/cloud-language
 ```
