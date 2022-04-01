@@ -5,36 +5,37 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	models "github.com/iwataka/mybot/models"
 	mgo "gopkg.in/mgo.v2"
-	reflect "reflect"
 )
 
-// MockMgoCollection is a mock of MgoCollection interface
+// MockMgoCollection is a mock of MgoCollection interface.
 type MockMgoCollection struct {
 	ctrl     *gomock.Controller
 	recorder *MockMgoCollectionMockRecorder
 }
 
-// MockMgoCollectionMockRecorder is the mock recorder for MockMgoCollection
+// MockMgoCollectionMockRecorder is the mock recorder for MockMgoCollection.
 type MockMgoCollectionMockRecorder struct {
 	mock *MockMgoCollection
 }
 
-// NewMockMgoCollection creates a new mock instance
+// NewMockMgoCollection creates a new mock instance.
 func NewMockMgoCollection(ctrl *gomock.Controller) *MockMgoCollection {
 	mock := &MockMgoCollection{ctrl: ctrl}
 	mock.recorder = &MockMgoCollectionMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMgoCollection) EXPECT() *MockMgoCollectionMockRecorder {
 	return m.recorder
 }
 
-// Find mocks base method
+// Find mocks base method.
 func (m *MockMgoCollection) Find(query interface{}) models.MgoQuery {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Find", query)
@@ -42,13 +43,13 @@ func (m *MockMgoCollection) Find(query interface{}) models.MgoQuery {
 	return ret0
 }
 
-// Find indicates an expected call of Find
+// Find indicates an expected call of Find.
 func (mr *MockMgoCollectionMockRecorder) Find(query interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockMgoCollection)(nil).Find), query)
 }
 
-// RemoveAll mocks base method
+// RemoveAll mocks base method.
 func (m *MockMgoCollection) RemoveAll(selector interface{}) (*mgo.ChangeInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveAll", selector)
@@ -57,13 +58,13 @@ func (m *MockMgoCollection) RemoveAll(selector interface{}) (*mgo.ChangeInfo, er
 	return ret0, ret1
 }
 
-// RemoveAll indicates an expected call of RemoveAll
+// RemoveAll indicates an expected call of RemoveAll.
 func (mr *MockMgoCollectionMockRecorder) RemoveAll(selector interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockMgoCollection)(nil).RemoveAll), selector)
 }
 
-// Upsert mocks base method
+// Upsert mocks base method.
 func (m *MockMgoCollection) Upsert(selector, update interface{}) (*mgo.ChangeInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upsert", selector, update)
@@ -72,36 +73,36 @@ func (m *MockMgoCollection) Upsert(selector, update interface{}) (*mgo.ChangeInf
 	return ret0, ret1
 }
 
-// Upsert indicates an expected call of Upsert
+// Upsert indicates an expected call of Upsert.
 func (mr *MockMgoCollectionMockRecorder) Upsert(selector, update interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockMgoCollection)(nil).Upsert), selector, update)
 }
 
-// MockMgoQuery is a mock of MgoQuery interface
+// MockMgoQuery is a mock of MgoQuery interface.
 type MockMgoQuery struct {
 	ctrl     *gomock.Controller
 	recorder *MockMgoQueryMockRecorder
 }
 
-// MockMgoQueryMockRecorder is the mock recorder for MockMgoQuery
+// MockMgoQueryMockRecorder is the mock recorder for MockMgoQuery.
 type MockMgoQueryMockRecorder struct {
 	mock *MockMgoQuery
 }
 
-// NewMockMgoQuery creates a new mock instance
+// NewMockMgoQuery creates a new mock instance.
 func NewMockMgoQuery(ctrl *gomock.Controller) *MockMgoQuery {
 	mock := &MockMgoQuery{ctrl: ctrl}
 	mock.recorder = &MockMgoQueryMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMgoQuery) EXPECT() *MockMgoQueryMockRecorder {
 	return m.recorder
 }
 
-// Count mocks base method
+// Count mocks base method.
 func (m *MockMgoQuery) Count() (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Count")
@@ -110,13 +111,13 @@ func (m *MockMgoQuery) Count() (int, error) {
 	return ret0, ret1
 }
 
-// Count indicates an expected call of Count
+// Count indicates an expected call of Count.
 func (mr *MockMgoQueryMockRecorder) Count() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockMgoQuery)(nil).Count))
 }
 
-// One mocks base method
+// One mocks base method.
 func (m *MockMgoQuery) One(result interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "One", result)
@@ -124,7 +125,7 @@ func (m *MockMgoQuery) One(result interface{}) error {
 	return ret0
 }
 
-// One indicates an expected call of One
+// One indicates an expected call of One.
 func (mr *MockMgoQueryMockRecorder) One(result interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "One", reflect.TypeOf((*MockMgoQuery)(nil).One), result)

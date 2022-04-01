@@ -5,49 +5,36 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockContext is a mock of Context interface
+// MockContext is a mock of Context interface.
 type MockContext struct {
 	ctrl     *gomock.Controller
 	recorder *MockContextMockRecorder
 }
 
-// MockContextMockRecorder is the mock recorder for MockContext
+// MockContextMockRecorder is the mock recorder for MockContext.
 type MockContextMockRecorder struct {
 	mock *MockContext
 }
 
-// NewMockContext creates a new mock instance
+// NewMockContext creates a new mock instance.
 func NewMockContext(ctrl *gomock.Controller) *MockContext {
 	mock := &MockContext{ctrl: ctrl}
 	mock.recorder = &MockContextMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockContext) EXPECT() *MockContextMockRecorder {
 	return m.recorder
 }
 
-// String mocks base method
-func (m *MockContext) String(key string) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "String", key)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// String indicates an expected call of String
-func (mr *MockContextMockRecorder) String(key interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockContext)(nil).String), key)
-}
-
-// Bool mocks base method
+// Bool mocks base method.
 func (m *MockContext) Bool(key string) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Bool", key)
@@ -55,27 +42,13 @@ func (m *MockContext) Bool(key string) bool {
 	return ret0
 }
 
-// Bool indicates an expected call of Bool
+// Bool indicates an expected call of Bool.
 func (mr *MockContextMockRecorder) Bool(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bool", reflect.TypeOf((*MockContext)(nil).Bool), key)
 }
 
-// Int mocks base method
-func (m *MockContext) Int(key string) int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Int", key)
-	ret0, _ := ret[0].(int)
-	return ret0
-}
-
-// Int indicates an expected call of Int
-func (mr *MockContextMockRecorder) Int(key interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Int", reflect.TypeOf((*MockContext)(nil).Int), key)
-}
-
-// Duration mocks base method
+// Duration mocks base method.
 func (m *MockContext) Duration(key string) time.Duration {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Duration", key)
@@ -83,8 +56,36 @@ func (m *MockContext) Duration(key string) time.Duration {
 	return ret0
 }
 
-// Duration indicates an expected call of Duration
+// Duration indicates an expected call of Duration.
 func (mr *MockContextMockRecorder) Duration(key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Duration", reflect.TypeOf((*MockContext)(nil).Duration), key)
+}
+
+// Int mocks base method.
+func (m *MockContext) Int(key string) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Int", key)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Int indicates an expected call of Int.
+func (mr *MockContextMockRecorder) Int(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Int", reflect.TypeOf((*MockContext)(nil).Int), key)
+}
+
+// String mocks base method.
+func (m *MockContext) String(key string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "String", key)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// String indicates an expected call of String.
+func (mr *MockContextMockRecorder) String(key interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockContext)(nil).String), key)
 }

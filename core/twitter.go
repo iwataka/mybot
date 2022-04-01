@@ -355,42 +355,50 @@ func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interfa
 	for {
 		select {
 		case msg := <-l.stream.C:
-			switch m := msg.(type) {
-			case anaconda.Tweet:
-				name := m.User.ScreenName
-				timelines := l.api.config.GetTwitterTimelinesByScreenName(name)
-				if len(timelines) != 0 {
-					outChan <- NewReceivedEvent(TwitterEventType, "tweet", m)
-				}
-
-				for _, timeline := range timelines {
-					if !checkTweetByTimelineConfig(m, timeline) {
-						continue
-					}
-					match, err := timeline.Filter.CheckTweet(m, l.vis, l.lang, l.cache)
-					if err != nil {
-						return utils.WithStack(err)
-					}
-					if !match {
-						continue
-					}
-					done := l.api.cache.GetTweetAction(m.Id)
-					undone := timeline.Action.Sub(done)
-					if err := l.api.processTweet(m, undone, l.slack); err != nil {
-						return utils.WithStack(err)
-					}
-					outChan <- NewActionEvent(undone, m)
-					l.api.cache.SetLatestTweetID(name, m.Id)
-				}
-				err := l.api.cache.Save()
-				if err != nil {
-					return utils.WithStack(err)
-				}
+			err := l.processMessage(msg, outChan)
+			if err != nil {
+				return utils.WithStack(err)
 			}
 		case <-ctx.Done():
 			return nil
 		}
 	}
+}
+
+func (l *TwitterUserListener) processMessage(msg interface{}, outChan chan<- interface{}) error {
+	switch m := msg.(type) {
+	case anaconda.Tweet:
+		name := m.User.ScreenName
+		timelines := l.api.config.GetTwitterTimelinesByScreenName(name)
+		if len(timelines) != 0 {
+			outChan <- NewReceivedEvent(TwitterEventType, "tweet", m)
+		}
+
+		for _, timeline := range timelines {
+			if !checkTweetByTimelineConfig(m, timeline) {
+				continue
+			}
+			match, err := timeline.Filter.CheckTweet(m, l.vis, l.lang, l.cache)
+			if err != nil {
+				return utils.WithStack(err)
+			}
+			if !match {
+				continue
+			}
+			done := l.api.cache.GetTweetAction(m.Id)
+			undone := timeline.Action.Sub(done)
+			if err := l.api.processTweet(m, undone, l.slack); err != nil {
+				return utils.WithStack(err)
+			}
+			outChan <- NewActionEvent(undone, m)
+			l.api.cache.SetLatestTweetID(name, m.Id)
+		}
+		err := l.api.cache.Save()
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	}
+	return nil
 }
 
 func (l *TwitterUserListener) Stop() {

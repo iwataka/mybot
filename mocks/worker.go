@@ -6,48 +6,35 @@ package mocks
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockWorker is a mock of Worker interface
+// MockWorker is a mock of Worker interface.
 type MockWorker struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkerMockRecorder
 }
 
-// MockWorkerMockRecorder is the mock recorder for MockWorker
+// MockWorkerMockRecorder is the mock recorder for MockWorker.
 type MockWorkerMockRecorder struct {
 	mock *MockWorker
 }
 
-// NewMockWorker creates a new mock instance
+// NewMockWorker creates a new mock instance.
 func NewMockWorker(ctrl *gomock.Controller) *MockWorker {
 	mock := &MockWorker{ctrl: ctrl}
 	mock.recorder = &MockWorkerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
-func (m *MockWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", ctx, outChan)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start
-func (mr *MockWorkerMockRecorder) Start(ctx, outChan interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), ctx, outChan)
-}
-
-// Name mocks base method
+// Name mocks base method.
 func (m *MockWorker) Name() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Name")
@@ -55,8 +42,22 @@ func (m *MockWorker) Name() string {
 	return ret0
 }
 
-// Name indicates an expected call of Name
+// Name indicates an expected call of Name.
 func (mr *MockWorkerMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockWorker)(nil).Name))
+}
+
+// Start mocks base method.
+func (m *MockWorker) Start(ctx context.Context, outChan chan<- interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start", ctx, outChan)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockWorkerMockRecorder) Start(ctx, outChan interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockWorker)(nil).Start), ctx, outChan)
 }

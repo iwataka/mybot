@@ -5,35 +5,50 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	models "github.com/iwataka/mybot/models"
-	reflect "reflect"
 )
 
-// MockLanguageMatcher is a mock of LanguageMatcher interface
+// MockLanguageMatcher is a mock of LanguageMatcher interface.
 type MockLanguageMatcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockLanguageMatcherMockRecorder
 }
 
-// MockLanguageMatcherMockRecorder is the mock recorder for MockLanguageMatcher
+// MockLanguageMatcherMockRecorder is the mock recorder for MockLanguageMatcher.
 type MockLanguageMatcherMockRecorder struct {
 	mock *MockLanguageMatcher
 }
 
-// NewMockLanguageMatcher creates a new mock instance
+// NewMockLanguageMatcher creates a new mock instance.
 func NewMockLanguageMatcher(ctrl *gomock.Controller) *MockLanguageMatcher {
 	mock := &MockLanguageMatcher{ctrl: ctrl}
 	mock.recorder = &MockLanguageMatcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockLanguageMatcher) EXPECT() *MockLanguageMatcherMockRecorder {
 	return m.recorder
 }
 
-// MatchText mocks base method
+// Enabled mocks base method.
+func (m *MockLanguageMatcher) Enabled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Enabled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Enabled indicates an expected call of Enabled.
+func (mr *MockLanguageMatcherMockRecorder) Enabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enabled", reflect.TypeOf((*MockLanguageMatcher)(nil).Enabled))
+}
+
+// MatchText mocks base method.
 func (m *MockLanguageMatcher) MatchText(arg0 string, arg1 models.LanguageCondition) (string, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MatchText", arg0, arg1)
@@ -43,22 +58,8 @@ func (m *MockLanguageMatcher) MatchText(arg0 string, arg1 models.LanguageConditi
 	return ret0, ret1, ret2
 }
 
-// MatchText indicates an expected call of MatchText
+// MatchText indicates an expected call of MatchText.
 func (mr *MockLanguageMatcherMockRecorder) MatchText(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MatchText", reflect.TypeOf((*MockLanguageMatcher)(nil).MatchText), arg0, arg1)
-}
-
-// Enabled mocks base method
-func (m *MockLanguageMatcher) Enabled() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Enabled")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// Enabled indicates an expected call of Enabled
-func (mr *MockLanguageMatcherMockRecorder) Enabled() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enabled", reflect.TypeOf((*MockLanguageMatcher)(nil).Enabled))
 }

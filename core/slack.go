@@ -268,54 +268,60 @@ func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) (
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			switch ev := msg.Data.(type) {
-			case *slack.ChannelJoinedEvent:
-				outChan <- NewReceivedEvent(SlackEventType, "channel joined", ev)
-				err := l.api.sendMsgQueues(ev.Channel.Name)
-				if err != nil {
-					return utils.WithStack(err)
-				}
-			case *slack.GroupJoinedEvent:
-				outChan <- NewReceivedEvent(SlackEventType, "group joined", ev)
-				err := l.api.sendMsgQueues(ev.Channel.Name)
-				if err != nil {
-					return utils.WithStack(err)
-				}
-			case *slack.MessageEvent:
-				t, err := parseSlackTimestamp(ev.Timestamp)
-				if err != nil {
-					return utils.WithStack(err)
-				}
-				if time.Since(*t)-time.Minute > 0 {
-					continue
-				}
-				ch, err := getChannelNameByID(l.api.api, ev.Channel)
-				if err != nil {
-					return utils.WithStack(err)
-				}
-				if len(ch) > 0 {
-					outChan <- NewReceivedEvent(SlackEventType, "message", ev)
-					processedActions, err := l.api.processMsgEvent(ch, ev, l.vis, l.lang, l.twitterAPI)
-					if err != nil {
-						return utils.WithStack(err)
-					}
-					for _, a := range processedActions {
-						outChan <- NewActionEvent(a, ev)
-					}
-				}
-			case *slack.RTMError:
-				return utils.WithStack(ev)
-			case *slack.ConnectionErrorEvent:
-				outChan <- NewReceivedEvent(SlackEventType, "connection error", ev)
-				// Continue because ConnectionErrorEvent is treated as recoverable
-				continue
-			case *slack.InvalidAuthEvent:
-				return fmt.Errorf(NewReceivedEvent("Slack", "invalid auth", ev).String())
+			err := l.processMsgEvent(msg, outChan)
+			if err != nil {
+				return utils.WithStack(err)
 			}
 		case <-ctx.Done():
 			return nil
 		}
 	}
+}
+
+func (l *SlackListener) processMsgEvent(msg slack.RTMEvent, outChan chan<- interface{}) error {
+	switch ev := msg.Data.(type) {
+	case *slack.ChannelJoinedEvent:
+		outChan <- NewReceivedEvent(SlackEventType, "channel joined", ev)
+		err := l.api.sendMsgQueues(ev.Channel.Name)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	case *slack.GroupJoinedEvent:
+		outChan <- NewReceivedEvent(SlackEventType, "group joined", ev)
+		err := l.api.sendMsgQueues(ev.Channel.Name)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+	case *slack.MessageEvent:
+		t, err := parseSlackTimestamp(ev.Timestamp)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		if time.Since(*t)-time.Minute > 0 {
+			return nil
+		}
+		ch, err := getChannelNameByID(l.api.api, ev.Channel)
+		if err != nil {
+			return utils.WithStack(err)
+		}
+		if len(ch) > 0 {
+			outChan <- NewReceivedEvent(SlackEventType, "message", ev)
+			processedActions, err := l.api.processMsgEvent(ch, ev, l.vis, l.lang, l.twitterAPI)
+			if err != nil {
+				return utils.WithStack(err)
+			}
+			for _, a := range processedActions {
+				outChan <- NewActionEvent(a, ev)
+			}
+		}
+	case *slack.RTMError:
+		return utils.WithStack(ev)
+	case *slack.ConnectionErrorEvent:
+		outChan <- NewReceivedEvent(SlackEventType, "connection error", ev)
+	case *slack.InvalidAuthEvent:
+		return fmt.Errorf(NewReceivedEvent("Slack", "invalid auth", ev).String())
+	}
+	return nil
 }
 
 func getChannelNameByID(api models.SlackAPI, id string) (string, error) {

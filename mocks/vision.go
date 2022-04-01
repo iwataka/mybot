@@ -5,35 +5,50 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	models "github.com/iwataka/mybot/models"
-	reflect "reflect"
 )
 
-// MockVisionMatcher is a mock of VisionMatcher interface
+// MockVisionMatcher is a mock of VisionMatcher interface.
 type MockVisionMatcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockVisionMatcherMockRecorder
 }
 
-// MockVisionMatcherMockRecorder is the mock recorder for MockVisionMatcher
+// MockVisionMatcherMockRecorder is the mock recorder for MockVisionMatcher.
 type MockVisionMatcherMockRecorder struct {
 	mock *MockVisionMatcher
 }
 
-// NewMockVisionMatcher creates a new mock instance
+// NewMockVisionMatcher creates a new mock instance.
 func NewMockVisionMatcher(ctrl *gomock.Controller) *MockVisionMatcher {
 	mock := &MockVisionMatcher{ctrl: ctrl}
 	mock.recorder = &MockVisionMatcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVisionMatcher) EXPECT() *MockVisionMatcherMockRecorder {
 	return m.recorder
 }
 
-// MatchImages mocks base method
+// Enabled mocks base method.
+func (m *MockVisionMatcher) Enabled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Enabled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Enabled indicates an expected call of Enabled.
+func (mr *MockVisionMatcherMockRecorder) Enabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enabled", reflect.TypeOf((*MockVisionMatcher)(nil).Enabled))
+}
+
+// MatchImages mocks base method.
 func (m *MockVisionMatcher) MatchImages(arg0 []string, arg1 models.VisionCondition, arg2 []models.ImageCacheData) ([]string, []bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MatchImages", arg0, arg1, arg2)
@@ -43,22 +58,8 @@ func (m *MockVisionMatcher) MatchImages(arg0 []string, arg1 models.VisionConditi
 	return ret0, ret1, ret2
 }
 
-// MatchImages indicates an expected call of MatchImages
+// MatchImages indicates an expected call of MatchImages.
 func (mr *MockVisionMatcherMockRecorder) MatchImages(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MatchImages", reflect.TypeOf((*MockVisionMatcher)(nil).MatchImages), arg0, arg1, arg2)
-}
-
-// Enabled mocks base method
-func (m *MockVisionMatcher) Enabled() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Enabled")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// Enabled indicates an expected call of Enabled
-func (mr *MockVisionMatcherMockRecorder) Enabled() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enabled", reflect.TypeOf((*MockVisionMatcher)(nil).Enabled))
 }

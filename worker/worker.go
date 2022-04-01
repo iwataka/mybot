@@ -87,46 +87,48 @@ func NewStrategicRestarter(interval time.Duration, count int, suppressError bool
 
 func (sr StrategicRestarter) Apply(ctx context.Context, inChan chan<- WorkerSignal, outChan <-chan interface{}, bufSize int, wg *sync.WaitGroup) (chan<- WorkerSignal, <-chan interface{}) {
 	oc := make(chan interface{}, bufSize)
-	go func() {
-		_wg := &sync.WaitGroup{}
-		errTimestamps := []time.Time{}
-		for {
-			select {
-			case msg := <-outChan:
-				switch msg.(type) {
-				case error:
-					ts := time.Now()
-					errTimestamps = append(errTimestamps, ts)
-					if len(errTimestamps) > sr.count {
-						errTimestamps = errTimestamps[len(errTimestamps)-sr.count:]
-					}
-					if len(errTimestamps) < sr.count || ts.Sub(errTimestamps[0]).Nanoseconds() > sr.interval.Nanoseconds() {
-						_wg.Add(1)
-						go func() {
-							inChan <- RestartSignal
-							_wg.Done()
-						}()
-						if sr.suppressError {
-							continue
-						}
+	go sr.apply(ctx, inChan, outChan, wg, oc)
+	return inChan, oc
+}
+
+func (sr StrategicRestarter) apply(ctx context.Context, inChan chan<- WorkerSignal, outChan <-chan interface{}, wg *sync.WaitGroup, oc chan interface{}) {
+	_wg := &sync.WaitGroup{}
+	errTimestamps := []time.Time{}
+	for {
+		select {
+		case msg := <-outChan:
+			switch msg.(type) {
+			case error:
+				ts := time.Now()
+				errTimestamps = append(errTimestamps, ts)
+				if len(errTimestamps) > sr.count {
+					errTimestamps = errTimestamps[len(errTimestamps)-sr.count:]
+				}
+				if len(errTimestamps) < sr.count || ts.Sub(errTimestamps[0]).Nanoseconds() > sr.interval.Nanoseconds() {
+					_wg.Add(1)
+					go func() {
+						inChan <- RestartSignal
+						_wg.Done()
+					}()
+					if sr.suppressError {
+						continue
 					}
 				}
-				oc <- msg
-			case <-ctx.Done():
-				go func() {
-					defer close(oc)
-					for msg := range outChan {
-						oc <- msg
-					}
-				}()
-				goto done
 			}
+			oc <- msg
+		case <-ctx.Done():
+			go func() {
+				defer close(oc)
+				for msg := range outChan {
+					oc <- msg
+				}
+			}()
+			goto done
 		}
-	done:
-		_wg.Wait()
-		wg.Done()
-	}()
-	return inChan, oc
+	}
+done:
+	_wg.Wait()
+	wg.Done()
 }
 
 type WorkerManager struct {
