@@ -59,13 +59,13 @@ func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 	slackAPIMock := mocks.NewMockSlackAPI(ctrl)
 	slackAPI := SlackAPI{api: slackAPIMock, msgQueue: make(map[string]*concurrentQueue)}
 
-	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", errors.New("channel_not_found"))
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("channel_not_found"))
 	if channelIsOpen {
-		slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(nil, errors.New("user_is_bot"))
+		slackAPIMock.EXPECT().CreateChannel(gomock.Any()).Return(errors.New("user_is_bot"))
 	} else {
-		slackAPIMock.EXPECT().CreateGroup(gomock.Any()).Return(nil, errors.New("user_is_bot"))
+		slackAPIMock.EXPECT().CreateGroup(gomock.Any()).Return(errors.New("user_is_bot"))
 	}
-	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	ch := "channel"
 	text := "text"
@@ -86,7 +86,7 @@ func TestSlackAPI_sendMsgQueues(t *testing.T) {
 	err := slackAPI.sendMsgQueues(ch)
 	require.NoError(t, err)
 
-	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+	slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	text := "text"
 	slackAPI.enqueueMsg(ch, text, nil)

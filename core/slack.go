@@ -92,14 +92,14 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 	if params != nil {
 		ps = *params
 	}
-	_, _, err := a.api.PostMessage(channel, text, ps)
+	err := a.api.PostMessage(channel, text, ps)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
 			// TODO: Prevent from creating multiple channels with the same name
 			if channelIsOpen {
-				_, err = a.api.CreateChannel(channel)
+				err = a.api.CreateChannel(channel)
 			} else {
-				_, err = a.api.CreateGroup(channel)
+				err = a.api.CreateGroup(channel)
 			}
 			if err != nil {
 				if err.Error() == "user_is_bot" {
@@ -112,7 +112,7 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 					return utils.WithStack(err)
 				}
 			}
-			_, _, err = a.api.PostMessage(channel, text, ps)
+			err = a.api.PostMessage(channel, text, ps)
 			if err != nil {
 				return utils.WithStack(err)
 			}
@@ -137,7 +137,7 @@ func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, slack.PostMessagePara
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
 	params := slack.PostMessageParameters{}
 	msg := fmt.Sprintf("Create %s channel and invite me to it", ch)
-	_, _, err := a.api.PostMessage("general", msg, params)
+	err := a.api.PostMessage("general", msg, params)
 	return utils.WithStack(err)
 }
 
@@ -194,21 +194,20 @@ func (a *SlackAPI) processMsgEventWithAction(
 	action data.Action,
 	twitterAPI *TwitterAPI,
 ) error {
-	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
 	if action.Slack.Pin {
-		err := a.api.AddPin(ev.Channel, item)
+		err := a.api.AddPin(ev.Channel, ev.Timestamp)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
 	}
 	if action.Slack.Star {
-		err := a.api.AddStar(ev.Channel, item)
+		err := a.api.AddStar(ev.Channel, ev.Timestamp)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
 	}
 	for _, r := range action.Slack.Reactions {
-		err := a.api.AddReaction(r, item)
+		err := a.api.AddReaction(ev.Channel, ev.Timestamp, r)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
