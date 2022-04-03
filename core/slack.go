@@ -39,7 +39,7 @@ func newConcurrentQueue() *concurrentQueue {
 func NewSlackAPIWithAuth(token string, config Config, cache data.Cache) *SlackAPI {
 	var api models.SlackAPI
 	if token != "" {
-		api = slack.New(token)
+		api = models.NewSlackAPI(token)
 	}
 	return NewSlackAPI(api, config, cache)
 }
