@@ -58,7 +58,7 @@ go build
 
     ```sh
     kubectl create namespace mybot
-    kubectl apply -n mybot -f template.yml
+    kubectl apply -n mybot -f k8s
     ```
 
 ## To use Google Cloud APIs
