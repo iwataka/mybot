@@ -9,7 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	models "github.com/iwataka/mybot/models"
-	slack "github.com/iwataka/slack"
+	slack "github.com/slack-go/slack"
 )
 
 // MockSlackAPI is a mock of SlackAPI interface.
@@ -165,15 +165,15 @@ func (mr *MockSlackAPIMockRecorder) NewRTM() *gomock.Call {
 }
 
 // PostMessage mocks base method.
-func (m *MockSlackAPI) PostMessage(ch, msg string, params slack.PostMessageParameters) error {
+func (m *MockSlackAPI) PostMessage(ch, msg string, opts []slack.MsgOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostMessage", ch, msg, params)
+	ret := m.ctrl.Call(m, "PostMessage", ch, msg, opts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PostMessage indicates an expected call of PostMessage.
-func (mr *MockSlackAPIMockRecorder) PostMessage(ch, msg, params interface{}) *gomock.Call {
+func (mr *MockSlackAPIMockRecorder) PostMessage(ch, msg, opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockSlackAPI)(nil).PostMessage), ch, msg, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockSlackAPI)(nil).PostMessage), ch, msg, opts)
 }

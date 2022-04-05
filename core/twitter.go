@@ -12,7 +12,7 @@ import (
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/oauth"
 	"github.com/iwataka/mybot/utils"
-	"github.com/iwataka/slack"
+	"github.com/slack-go/slack"
 )
 
 // TwitterAPI is a wrapper of anaconda.TwitterApi.

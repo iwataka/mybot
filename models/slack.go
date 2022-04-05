@@ -1,11 +1,11 @@
 package models
 
 import (
-	"github.com/iwataka/slack"
+	"github.com/slack-go/slack"
 )
 
 type SlackAPI interface {
-	PostMessage(ch, msg string, params slack.PostMessageParameters) error
+	PostMessage(ch, msg string, opts []slack.MsgOption) error
 	CreateChannel(name string) error
 	CreateGroup(group string) error
 	NewRTM() *slack.RTM
@@ -32,18 +32,20 @@ func NewSlackAPI(token string) SlackAPI {
 	}
 }
 
-func (s *SlackAPIImpl) PostMessage(ch string, msg string, params slack.PostMessageParameters) error {
-	_, _, err := s.api.PostMessage(ch, msg, params)
+func (s *SlackAPIImpl) PostMessage(ch string, msg string, opts []slack.MsgOption) error {
+	_, _, err := s.api.PostMessage(ch, opts...)
 	return err
 }
 
 func (s *SlackAPIImpl) CreateChannel(name string) error {
-	_, err := s.api.CreateChannel(name)
+	_, err := s.api.CreateConversation(name, false)
 	return err
 }
 
 func (s *SlackAPIImpl) CreateGroup(group string) error {
-	_, err := s.api.CreateGroup(group)
+	_, err := s.api.CreateUserGroup(slack.UserGroup{
+		Name: group,
+	})
 	return err
 }
 
@@ -52,19 +54,27 @@ func (s *SlackAPIImpl) NewRTM() *slack.RTM {
 }
 
 func (s *SlackAPIImpl) GetChannels(excludeArchived bool) ([]Channel, error) {
-	channels, err := s.api.GetChannels(excludeArchived)
-	if err != nil {
-		return nil, err
-	}
-
-	chs := make([]Channel, len(channels))
-	for i, ch := range channels {
-		chs[i] = Channel{
-			ID:   ch.ID,
-			Name: ch.Name,
+	cursor := ""
+	channels := []Channel{}
+	for {
+		chs, cursor, err := s.api.GetConversations(&slack.GetConversationsParameters{
+			Cursor:          cursor,
+			ExcludeArchived: excludeArchived,
+		})
+		for _, ch := range chs {
+			channels = append(channels, Channel{
+				ID:   ch.ID,
+				Name: ch.Name,
+			})
+		}
+		if err != nil {
+			return nil, err
+		}
+		if cursor == "" {
+			break
 		}
 	}
-	return chs, nil
+	return channels, nil
 }
 
 type Channel struct {
@@ -73,7 +83,7 @@ type Channel struct {
 }
 
 func (s *SlackAPIImpl) GetGroups(excludeArchived bool) ([]Group, error) {
-	groups, err := s.api.GetGroups(excludeArchived)
+	groups, err := s.api.GetUserGroups()
 	if err != nil {
 		return nil, err
 	}

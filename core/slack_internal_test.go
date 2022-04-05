@@ -17,11 +17,9 @@ func Test_convertFromTweetToSlackMsg(t *testing.T) {
 			IdStr: "1",
 		},
 	}
-	text, params := convertFromTweetToSlackMsg(tweet)
+	text, _ := convertFromTweetToSlackMsg(tweet)
 
 	require.Equal(t, TwitterStatusURL(tweet), text)
-	require.True(t, params.UnfurlLinks)
-	require.True(t, params.UnfurlMedia)
 }
 
 func Test_NewSlackAPIWithAuth(t *testing.T) {
@@ -39,7 +37,7 @@ func TestSlackAPI_enqueueMsg(t *testing.T) {
 	api := NewSlackAPIWithAuth("", nil, nil)
 	ch := "channel"
 	msg := &SlackMsg{"text", nil}
-	api.enqueueMsg(ch, msg.text, msg.params)
+	api.enqueueMsg(ch, msg.text, msg.opts...)
 	m := api.dequeueMsg(ch)
 
 	require.Equal(t, msg, m)
@@ -70,7 +68,7 @@ func testSlackAPIPostMessage(t *testing.T, channelIsOpen bool) {
 	ch := "channel"
 	text := "text"
 	msg := &SlackMsg{text, nil}
-	err := slackAPI.PostMessage(ch, text, nil, channelIsOpen)
+	err := slackAPI.PostMessage(ch, text, channelIsOpen)
 	require.NoError(t, err)
 	m := slackAPI.dequeueMsg(ch)
 
