@@ -253,14 +253,20 @@ type SlackListener struct {
 func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) (err error) {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
-	defer func() { err = rtm.Disconnect() }()
+	defer func() {
+		e := rtm.Disconnect()
+		if e != nil {
+			err = utils.WithStack(e)
+		}
+	}()
 
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			err := l.processMsgEvent(msg, outChan)
-			if err != nil {
-				return utils.WithStack(err)
+			e := l.processMsgEvent(msg, outChan)
+			if e != nil {
+				err = utils.WithStack(e)
+				return
 			}
 		case <-ctx.Done():
 			return nil
