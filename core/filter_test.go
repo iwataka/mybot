@@ -11,7 +11,7 @@ import (
 	"github.com/iwataka/mybot/mocks"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
-	"github.com/iwataka/slack"
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/require"
 )
 

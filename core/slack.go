@@ -5,7 +5,7 @@ import (
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
 	"github.com/iwataka/mybot/utils"
-	"github.com/iwataka/slack"
+	"github.com/slack-go/slack"
 
 	"container/list"
 	"context"
@@ -39,7 +39,7 @@ func newConcurrentQueue() *concurrentQueue {
 func NewSlackAPIWithAuth(token string, config Config, cache data.Cache) *SlackAPI {
 	var api models.SlackAPI
 	if token != "" {
-		api = slack.New(token)
+		api = models.NewSlackAPI(token)
 	}
 	return NewSlackAPI(api, config, cache)
 }
@@ -53,16 +53,16 @@ func (a *SlackAPI) Enabled() bool {
 }
 
 func (a *SlackAPI) PostTweet(channel string, tweet anaconda.Tweet) error {
-	text, params := convertFromTweetToSlackMsg(tweet)
-	return a.PostMessage(channel, text, &params, false)
+	text, opts := convertFromTweetToSlackMsg(tweet)
+	return a.PostMessage(channel, text, false, opts...)
 }
 
 type SlackMsg struct {
-	text   string
-	params *slack.PostMessageParameters
+	text string
+	opts []slack.MsgOption
 }
 
-func (a *SlackAPI) enqueueMsg(ch, text string, params *slack.PostMessageParameters) {
+func (a *SlackAPI) enqueueMsg(ch, text string, opts ...slack.MsgOption) {
 	if a.msgQueue[ch] == nil {
 		a.msgQueue[ch] = newConcurrentQueue()
 	}
@@ -70,7 +70,7 @@ func (a *SlackAPI) enqueueMsg(ch, text string, params *slack.PostMessageParamete
 	q := a.msgQueue[ch]
 	q.Lock()
 	defer q.Unlock()
-	q.PushBack(&SlackMsg{text, params})
+	q.PushBack(&SlackMsg{text, opts})
 }
 
 func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
@@ -87,32 +87,28 @@ func (a *SlackAPI) dequeueMsg(ch string) *SlackMsg {
 }
 
 // TODO: Prevent infinite message loop
-func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessageParameters, channelIsOpen bool) error {
-	var ps slack.PostMessageParameters
-	if params != nil {
-		ps = *params
-	}
-	_, _, err := a.api.PostMessage(channel, text, ps)
+func (a *SlackAPI) PostMessage(channel, text string, channelIsOpen bool, opts ...slack.MsgOption) error {
+	err := a.api.PostMessage(channel, text, opts)
 	if err != nil {
 		if err.Error() == "channel_not_found" {
 			// TODO: Prevent from creating multiple channels with the same name
 			if channelIsOpen {
-				_, err = a.api.CreateChannel(channel)
+				err = a.api.CreateChannel(channel)
 			} else {
-				_, err = a.api.CreateGroup(channel)
+				err = a.api.CreateGroup(channel)
 			}
 			if err != nil {
 				if err.Error() == "user_is_bot" {
 					err := a.notifyCreateChannel(channel)
 					if err == nil {
-						a.enqueueMsg(channel, text, params)
+						a.enqueueMsg(channel, text, opts...)
 					}
 					return utils.WithStack(err)
 				} else {
 					return utils.WithStack(err)
 				}
 			}
-			_, _, err = a.api.PostMessage(channel, text, ps)
+			err = a.api.PostMessage(channel, text, opts)
 			if err != nil {
 				return utils.WithStack(err)
 			}
@@ -123,21 +119,19 @@ func (a *SlackAPI) PostMessage(channel, text string, params *slack.PostMessagePa
 	return nil
 }
 
-func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, slack.PostMessageParameters) {
+func convertFromTweetToSlackMsg(t anaconda.Tweet) (string, []slack.MsgOption) {
 	text := TwitterStatusURL(t)
-	params := slack.PostMessageParameters{}
-	params.IconURL = t.User.ProfileImageURL
-	params.Username = fmt.Sprintf("%s@%s", t.User.Name, t.User.ScreenName)
-	params.UnfurlLinks = true
-	params.UnfurlMedia = true
-	params.AsUser = false
-	return text, params
+	opts := []slack.MsgOption{}
+	opts = append(opts, slack.MsgOptionIconURL(t.User.ProfileImageURL))
+	opts = append(opts, slack.MsgOptionUsername(fmt.Sprintf("%s@%s", t.User.Name, t.User.ScreenName)))
+	opts = append(opts, slack.MsgOptionEnableLinkUnfurl())
+	opts = append(opts, slack.MsgOptionAsUser(false))
+	return text, opts
 }
 
 func (a *SlackAPI) notifyCreateChannel(ch string) error {
-	params := slack.PostMessageParameters{}
 	msg := fmt.Sprintf("Create %s channel and invite me to it", ch)
-	_, _, err := a.api.PostMessage("general", msg, params)
+	err := a.api.PostMessage("general", msg, []slack.MsgOption{})
 	return utils.WithStack(err)
 }
 
@@ -151,7 +145,7 @@ func (a *SlackAPI) sendMsgQueues(ch string) error {
 	defer q.Unlock()
 	for e := q.Front(); e != nil; e = e.Next() {
 		m := e.Value.(*SlackMsg)
-		err := a.PostMessage(ch, m.text, m.params, false)
+		err := a.PostMessage(ch, m.text, false)
 		if err != nil {
 			return utils.WithStack(err)
 		}
@@ -194,21 +188,20 @@ func (a *SlackAPI) processMsgEventWithAction(
 	action data.Action,
 	twitterAPI *TwitterAPI,
 ) error {
-	item := slack.NewRefToMessage(ev.Channel, ev.Timestamp)
 	if action.Slack.Pin {
-		err := a.api.AddPin(ev.Channel, item)
+		err := a.api.AddPin(ev.Channel, ev.Timestamp)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
 	}
 	if action.Slack.Star {
-		err := a.api.AddStar(ev.Channel, item)
+		err := a.api.AddStar(ev.Channel, ev.Timestamp)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
 	}
 	for _, r := range action.Slack.Reactions {
-		err := a.api.AddReaction(r, item)
+		err := a.api.AddReaction(ev.Channel, ev.Timestamp, r)
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
@@ -217,10 +210,7 @@ func (a *SlackAPI) processMsgEventWithAction(
 		if ch == c {
 			continue
 		}
-		params := slack.PostMessageParameters{
-			Attachments: ev.Attachments,
-		}
-		err := a.PostMessage(c, ev.Text, &params, false)
+		err := a.PostMessage(c, ev.Text, false, slack.MsgOptionAttachments(ev.Attachments...))
 		if CheckSlackError(err) {
 			return utils.WithStack(err)
 		}
@@ -263,14 +253,20 @@ type SlackListener struct {
 func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) (err error) {
 	rtm := l.api.api.NewRTM()
 	go rtm.ManageConnection()
-	defer func() { err = rtm.Disconnect() }()
+	defer func() {
+		e := rtm.Disconnect()
+		if e != nil {
+			err = utils.WithStack(e)
+		}
+	}()
 
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			err := l.processMsgEvent(msg, outChan)
-			if err != nil {
-				return utils.WithStack(err)
+			e := l.processMsgEvent(msg, outChan)
+			if e != nil {
+				err = utils.WithStack(e)
+				return
 			}
 		case <-ctx.Done():
 			return nil

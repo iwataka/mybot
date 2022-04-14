@@ -8,7 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	slack "github.com/iwataka/slack"
+	models "github.com/iwataka/mybot/models"
+	slack "github.com/slack-go/slack"
 )
 
 // MockSlackAPI is a mock of SlackAPI interface.
@@ -35,45 +36,45 @@ func (m *MockSlackAPI) EXPECT() *MockSlackAPIMockRecorder {
 }
 
 // AddPin mocks base method.
-func (m *MockSlackAPI) AddPin(ch string, item slack.ItemRef) error {
+func (m *MockSlackAPI) AddPin(ch, timestamp string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddPin", ch, item)
+	ret := m.ctrl.Call(m, "AddPin", ch, timestamp)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddPin indicates an expected call of AddPin.
-func (mr *MockSlackAPIMockRecorder) AddPin(ch, item interface{}) *gomock.Call {
+func (mr *MockSlackAPIMockRecorder) AddPin(ch, timestamp interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPin", reflect.TypeOf((*MockSlackAPI)(nil).AddPin), ch, item)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPin", reflect.TypeOf((*MockSlackAPI)(nil).AddPin), ch, timestamp)
 }
 
 // AddReaction mocks base method.
-func (m *MockSlackAPI) AddReaction(name string, item slack.ItemRef) error {
+func (m *MockSlackAPI) AddReaction(ch, timestamp, name string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddReaction", name, item)
+	ret := m.ctrl.Call(m, "AddReaction", ch, timestamp, name)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddReaction indicates an expected call of AddReaction.
-func (mr *MockSlackAPIMockRecorder) AddReaction(name, item interface{}) *gomock.Call {
+func (mr *MockSlackAPIMockRecorder) AddReaction(ch, timestamp, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReaction", reflect.TypeOf((*MockSlackAPI)(nil).AddReaction), name, item)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReaction", reflect.TypeOf((*MockSlackAPI)(nil).AddReaction), ch, timestamp, name)
 }
 
 // AddStar mocks base method.
-func (m *MockSlackAPI) AddStar(ch string, item slack.ItemRef) error {
+func (m *MockSlackAPI) AddStar(ch, timestamp string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddStar", ch, item)
+	ret := m.ctrl.Call(m, "AddStar", ch, timestamp)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddStar indicates an expected call of AddStar.
-func (mr *MockSlackAPIMockRecorder) AddStar(ch, item interface{}) *gomock.Call {
+func (mr *MockSlackAPIMockRecorder) AddStar(ch, timestamp interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddStar", reflect.TypeOf((*MockSlackAPI)(nil).AddStar), ch, item)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddStar", reflect.TypeOf((*MockSlackAPI)(nil).AddStar), ch, timestamp)
 }
 
 // AuthTest mocks base method.
@@ -92,12 +93,11 @@ func (mr *MockSlackAPIMockRecorder) AuthTest() *gomock.Call {
 }
 
 // CreateChannel mocks base method.
-func (m *MockSlackAPI) CreateChannel(name string) (*slack.Channel, error) {
+func (m *MockSlackAPI) CreateChannel(name string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateChannel", name)
-	ret0, _ := ret[0].(*slack.Channel)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CreateChannel indicates an expected call of CreateChannel.
@@ -107,12 +107,11 @@ func (mr *MockSlackAPIMockRecorder) CreateChannel(name interface{}) *gomock.Call
 }
 
 // CreateGroup mocks base method.
-func (m *MockSlackAPI) CreateGroup(group string) (*slack.Group, error) {
+func (m *MockSlackAPI) CreateGroup(group string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateGroup", group)
-	ret0, _ := ret[0].(*slack.Group)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CreateGroup indicates an expected call of CreateGroup.
@@ -122,10 +121,10 @@ func (mr *MockSlackAPIMockRecorder) CreateGroup(group interface{}) *gomock.Call 
 }
 
 // GetChannels mocks base method.
-func (m *MockSlackAPI) GetChannels(excludeArchived bool) ([]slack.Channel, error) {
+func (m *MockSlackAPI) GetChannels(excludeArchived bool) ([]models.Channel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetChannels", excludeArchived)
-	ret0, _ := ret[0].([]slack.Channel)
+	ret0, _ := ret[0].([]models.Channel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -137,10 +136,10 @@ func (mr *MockSlackAPIMockRecorder) GetChannels(excludeArchived interface{}) *go
 }
 
 // GetGroups mocks base method.
-func (m *MockSlackAPI) GetGroups(excludeArchived bool) ([]slack.Group, error) {
+func (m *MockSlackAPI) GetGroups(excludeArchived bool) ([]models.Group, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGroups", excludeArchived)
-	ret0, _ := ret[0].([]slack.Group)
+	ret0, _ := ret[0].([]models.Group)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -166,17 +165,15 @@ func (mr *MockSlackAPIMockRecorder) NewRTM() *gomock.Call {
 }
 
 // PostMessage mocks base method.
-func (m *MockSlackAPI) PostMessage(ch, msg string, params slack.PostMessageParameters) (string, string, error) {
+func (m *MockSlackAPI) PostMessage(ch, msg string, opts []slack.MsgOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostMessage", ch, msg, params)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "PostMessage", ch, msg, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // PostMessage indicates an expected call of PostMessage.
-func (mr *MockSlackAPIMockRecorder) PostMessage(ch, msg, params interface{}) *gomock.Call {
+func (mr *MockSlackAPIMockRecorder) PostMessage(ch, msg, opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockSlackAPI)(nil).PostMessage), ch, msg, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostMessage", reflect.TypeOf((*MockSlackAPI)(nil).PostMessage), ch, msg, opts)
 }

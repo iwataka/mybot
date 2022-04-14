@@ -99,14 +99,14 @@ func registerProcessSearch(twitterAPIMock *mocks.MockTwitterAPI, slackAPIMock *m
 		twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(anaconda.CollectionListResult{}, nil),
 		twitterAPIMock.EXPECT().CreateCollection(gomock.Any(), gomock.Any()).Return(anaconda.CollectionShowResult{}, nil),
 		twitterAPIMock.EXPECT().AddEntryToCollection(gomock.Any(), gomock.Any(), gomock.Any()).Return(anaconda.CollectionEntryAddResult{}, nil),
-		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil),
+		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 
 		twitterAPIMock.EXPECT().GetSearch(gomock.Any(), gomock.Any()).Return(barSearchRes, nil),
 		twitterAPIMock.EXPECT().Retweet(gomock.Any(), gomock.Any()).Return(barSearchRes.Statuses[0], nil),
 		twitterAPIMock.EXPECT().GetCollectionListByUserId(gomock.Any(), gomock.Any()).Return(anaconda.CollectionListResult{}, nil),
 		twitterAPIMock.EXPECT().CreateCollection(gomock.Any(), gomock.Any()).Return(anaconda.CollectionShowResult{}, nil),
 		twitterAPIMock.EXPECT().AddEntryToCollection(gomock.Any(), gomock.Any(), gomock.Any()).Return(anaconda.CollectionEntryAddResult{}, nil),
-		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil),
+		slackAPIMock.EXPECT().PostMessage(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil),
 
 		twitterAPIMock.EXPECT().GetFavorites(gomock.Any()).Return([]anaconda.Tweet{}, nil),
 	)
