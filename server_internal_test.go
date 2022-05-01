@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
@@ -67,6 +68,12 @@ func getDriver() *agouti.WebDriver {
 	return driver
 }
 
+func setupRouterWithoutAuth() *gin.Engine {
+	return setupRouterWithWrapper(func(f gin.HandlerFunc) gin.HandlerFunc {
+		return f
+	})
+}
+
 func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
@@ -89,6 +96,8 @@ func init() {
 
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
+
+	gin.SetMode(gin.TestMode)
 }
 
 func TestAuthenticator_SetProvider(t *testing.T) {
@@ -185,10 +194,10 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
-	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	err := f(s.URL)
+	err := f(s.URL + "/twitter-collections/")
 	require.NoError(t, err)
 }
 
@@ -200,15 +209,15 @@ func TestGetConfig(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	err := testGet(s.URL)
+	err := testGet(s.URL + "/config/")
 	require.NoError(t, err)
 }
 
 func TestGetSetupTwitter(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(getSetup))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
@@ -222,7 +231,7 @@ func TestGetSetupTwitter(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { slackApp = tmpSlackApp }()
 
-	err = testGet(s.URL)
+	err = testGet(s.URL + "/setup/")
 	require.NoError(t, err)
 }
 
@@ -234,10 +243,10 @@ func TestGetConfigFile(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configFileHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	res, err := http.Get(s.URL)
+	res, err := http.Get(s.URL + "/config/file/")
 	require.NoError(t, err)
 
 	err = checkHTTPResponse(res)
@@ -285,22 +294,16 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	authenticator = authMock
 
 	wg := new(sync.WaitGroup)
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		if strings.HasPrefix(path, "/assets/js") {
-			getAssetsJS(w, r)
-		} else {
-			if r.Method == http.MethodPost {
-				serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
-				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
-				wg.Done()
-			} else if r.Method == http.MethodGet {
-				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
-			}
-		}
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	router := setupBaseRouter()
+	router.POST("/config/", func(c *gin.Context) {
+		serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
+		postConfig(c.Writer, c.Request, serverTestUserSpecificData.config, serverTestTwitterUser)
+		wg.Done()
+	})
+	router.GET("/config/", func(c *gin.Context) {
+		getConfig(c, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
+	})
+	s := httptest.NewServer(router)
 	defer s.Close()
 
 	page, err := getDriver().NewPage()
@@ -308,7 +311,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 
 	curUserData := serverTestUserSpecificData.config
 	defer func() { serverTestUserSpecificData.config = curUserData }()
-	f(t, s.URL, page, wg)
+	f(t, s.URL+"/config/", page, wg)
 }
 
 func TestPostConfigWithoutModification(t *testing.T) {
@@ -491,7 +494,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterTimelines()) },
-		configTimelineAddHandler,
+		"/config/timelines/add",
 		"message",
 	)
 }
@@ -500,7 +503,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterFavorites()) },
-		configFavoriteAddHandler,
+		"/config/favorites/add",
 		"message",
 	)
 }
@@ -509,7 +512,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterSearches()) },
-		configSearchAddHandler,
+		"/config/searches/add",
 		"message",
 	)
 }
@@ -518,7 +521,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
-		configMessageAddHandler,
+		"/config/messages/add",
 		"message",
 	)
 }
@@ -526,7 +529,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 func testPostConfigAdd(
 	t *testing.T,
 	length func() int,
-	handler func(w http.ResponseWriter, r *http.Request),
+	urlSuffix string,
 	name string,
 ) {
 	ctrl := gomock.NewController(t)
@@ -536,7 +539,7 @@ func testPostConfigAdd(
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	expectedErrMsg := "expected error"
@@ -548,7 +551,7 @@ func testPostConfigAdd(
 			return expectedErr
 		},
 	}
-	res, err := client.Post(s.URL, "", nil)
+	res, err := client.Post(s.URL+urlSuffix, "", nil)
 	require.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
 	cur := length()
 	require.Equal(t, prev+1, cur)
@@ -623,7 +626,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
-	s := httptest.NewServer(http.HandlerFunc(indexHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	err := f(s.URL)
@@ -647,10 +650,10 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
-	s := httptest.NewServer(http.HandlerFunc(twitterUserSearchHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	res, err := http.Get(s.URL)
+	res, err := http.Get(s.URL + "/twitter/users/search/")
 	require.NoError(t, err)
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
