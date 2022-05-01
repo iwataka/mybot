@@ -189,33 +189,22 @@ func startServer(host, port, cert, key string) error {
 	}
 
 	r := gin.Default()
-	r.Any("/", ginWrap(wrapHandler(indexHtmlHandler)))
-	r.Any("/api/data/common", ginWrap(dataCommonJsonHandler))
-	r.Any("/api/data/imageAnalysis", ginWrap(dataImageAnalysisJsonHandler))
-	r.Any("/api/worker/status", ginWrap(workerStatusJsonHandler))
-	r.Any("/account/delete", ginWrap(wrapHandler(accountDeleteHtmlHandler))) // currently hidden endpoint
-	r.Any("/api/account/delete", ginWrap(accountDeleteJsonHandler))
-	r.Any("/twitter-collections/", ginWrap(wrapHandler(twitterColsHtmlHandler)))
-	r.Any("/api/twitter/collections", ginWrap(twitterCollectionsJsonHandler))
-	r.Any("/config/", ginWrap(wrapHandler(configHtmlHandler)))
-	r.Any("/config/file/", ginWrap(wrapHandler(configFileHtmlHandler)))
-	r.Any("/config/timelines/add", ginWrap(wrapHandler(configTimelineAddHtmlHandler)))
-	r.Any("/config/favorites/add", ginWrap(wrapHandler(configFavoriteAddHtmlHandler)))
-	r.Any("/config/searches/add", ginWrap(wrapHandler(configSearchAddHtmlHandler)))
-	r.Any("/config/messages/add", ginWrap(wrapHandler(configMessageAddHtmlHandler)))
-	r.Any("/api/config", ginWrap(configJsonHandler))
+	r.Any("/", ginWrap(wrapHandler(indexHandler)))
+	r.Any("/account/delete", ginWrap(wrapHandler(accountDeleteHandler))) // currently hidden endpoint
+	r.Any("/twitter-collections/", ginWrap(wrapHandler(twitterColsHandler)))
+	r.Any("/config/", ginWrap(wrapHandler(configHandler)))
+	r.Any("/config/file/", ginWrap(wrapHandler(configFileHandler)))
+	r.Any("/config/timelines/add", ginWrap(wrapHandler(configTimelineAddHandler)))
+	r.Any("/config/favorites/add", ginWrap(wrapHandler(configFavoriteAddHandler)))
+	r.Any("/config/searches/add", ginWrap(wrapHandler(configSearchAddHandler)))
+	r.Any("/config/messages/add", ginWrap(wrapHandler(configMessageAddHandler)))
 	r.Static("/assets", "./assets")
 	r.Any("/auth/", ginWrap(authHandler))
-	r.Any("/api/auth", ginWrap(authHandler))
-	r.Any("/auth/callback", ginWrap(authCallbackHtmlHandler))
-	r.Any("/api/auth/callback", ginWrap(authCallbackJsonHandler))
-	r.Any("/login/", ginWrap(loginHtmlHandler))
-	r.Any("/setup/", ginWrap(setupHtmlHandler))
-	r.Any("/api/credentials", ginWrap(credentialsJsonHandler))
-	r.Any("/logout/", ginWrap(logoutHtmlHandler))
-	r.Any("/api/logout", ginWrap(logoutJsonHandler))
+	r.Any("/auth/callback", ginWrap(authCallbackHandler))
+	r.Any("/login/", ginWrap(loginHandler))
+	r.Any("/setup/", ginWrap(setupHandler))
+	r.Any("/logout/", ginWrap(logoutHandler))
 	r.Any("/twitter/users/search/", ginWrap(wrapHandler(twitterUserSearchHandler))) // For Twitter user auto-completion usage
-	r.Any("/api/twitter/users/search", ginWrap(wrapHandler(twitterUserSearchHandler)))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
@@ -251,20 +240,16 @@ func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template,
 	return template, nil
 }
 
-func accountDeleteHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func accountDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getAccountDeleteHtml(w, r)
+		getAccountDelete(w, r)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func accountDeleteJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func getAccountDeleteHtml(w http.ResponseWriter, r *http.Request) {
+func getAccountDelete(w http.ResponseWriter, r *http.Request) {
 	user, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -286,7 +271,7 @@ func getAccountDeleteHtml(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }
 
-func indexHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func indexHandler(w http.ResponseWriter, r *http.Request) {
 	user, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -296,25 +281,13 @@ func indexHtmlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/":
-		getIndexHtml(w, data.cache, data.slackAPI, data.twitterAPI, data.statuses())
+		getIndex(w, data.cache, data.slackAPI, data.twitterAPI, data.statuses())
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func dataCommonJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func dataImageAnalysisJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func workerStatusJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func getIndexHtml(
+func getIndex(
 	w http.ResponseWriter,
 	cache data.Cache,
 	slackAPI *core.SlackAPI,
@@ -394,7 +367,7 @@ func imageAnalysis(cache data.Cache) (string, string, string, string) {
 	return imageURL, imageSource, imageAnalysisResult, imageAnalysisDate
 }
 
-func twitterColsHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -404,17 +377,13 @@ func twitterColsHtmlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		getTwitterColsHtml(w, data.slackAPI, data.twitterAPI)
+		getTwitterCols(w, data.slackAPI, data.twitterAPI)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func twitterCollectionsJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func getTwitterColsHtml(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
+func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
 	twitterID, twitterScreenName := getTwitterInfo(twitterAPI)
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
@@ -494,7 +463,7 @@ func (c *checkboxCounter) returnValue(index int, val map[string][]string, def bo
 	return false
 }
 
-func configHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -504,15 +473,15 @@ func configHtmlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		postConfigHtml(w, r, data.config, twitterUser)
+		postConfig(w, r, data.config, twitterUser)
 	case http.MethodGet:
-		getConfigHtml(w, r, data.config, data.slackAPI, data.twitterAPI)
+		getConfig(w, r, data.config, data.slackAPI, data.twitterAPI)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func postConfigHtml(w http.ResponseWriter, r *http.Request, config core.Config, twitterUser goth.User) {
+func postConfig(w http.ResponseWriter, r *http.Request, config core.Config, twitterUser goth.User) {
 	var err error
 
 	defer func() {
@@ -765,7 +734,7 @@ func postConfigForAction(val map[string][]string, i int, prefix string) (data.Ac
 	return action, nil
 }
 
-func getConfigHtml(w http.ResponseWriter, r *http.Request, config core.Config, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
+func getConfig(w http.ResponseWriter, r *http.Request, config core.Config, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.config.message")
 	if err == nil {
@@ -823,7 +792,7 @@ func configPage(twitterName, slackTeam, slackURL, msg string, config core.Config
 	return buf.Bytes(), nil
 }
 
-func configTimelineAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -832,11 +801,11 @@ func configTimelineAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
-		postConfigTimelineAddHtml(w, r, data.config)
+		postConfigTimelineAdd(w, r, data.config)
 	}
 }
 
-func postConfigTimelineAddHtml(w http.ResponseWriter, r *http.Request, config core.Config) {
+func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addTimelineConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
@@ -845,7 +814,7 @@ func addTimelineConfig(config core.Config) {
 	config.AddTwitterTimeline(core.NewTimelineConfig())
 }
 
-func configFavoriteAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -854,11 +823,11 @@ func configFavoriteAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
-		postConfigFavoriteAddHtml(w, r, data.config)
+		postConfigFavoriteAdd(w, r, data.config)
 	}
 }
 
-func postConfigFavoriteAddHtml(w http.ResponseWriter, r *http.Request, config core.Config) {
+func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addFavoriteConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
@@ -867,7 +836,7 @@ func addFavoriteConfig(config core.Config) {
 	config.AddTwitterFavorite(core.NewFavoriteConfig())
 }
 
-func configSearchAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -876,13 +845,13 @@ func configSearchAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
-		postConfigSearchAddHtml(w, r, data.config)
+		postConfigSearchAdd(w, r, data.config)
 	} else {
 		http.NotFound(w, r)
 	}
 }
 
-func postConfigSearchAddHtml(w http.ResponseWriter, r *http.Request, config core.Config) {
+func postConfigSearchAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
 	addSearchConfig(config)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
@@ -891,7 +860,7 @@ func addSearchConfig(config core.Config) {
 	config.AddTwitterSearch(core.NewSearchConfig())
 }
 
-func configMessageAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -900,11 +869,11 @@ func configMessageAddHtmlHandler(w http.ResponseWriter, r *http.Request) {
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
 
 	if r.Method == http.MethodPost {
-		postConfigMessageAddHtml(w, r, data.config)
+		postConfigMessageAdd(w, r, data.config)
 	}
 }
 
-func postConfigMessageAddHtml(w http.ResponseWriter, r *http.Request, c core.Config) {
+func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c core.Config) {
 	addMessageConfig(c)
 	http.Redirect(w, r, "/config/", http.StatusSeeOther)
 }
@@ -913,7 +882,7 @@ func addMessageConfig(config core.Config) {
 	config.AddSlackMessage(core.NewMessageConfig())
 }
 
-func configFileHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func configFileHandler(w http.ResponseWriter, r *http.Request) {
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -923,15 +892,15 @@ func configFileHtmlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		postConfigFileHtml(w, r, data.config)
+		postConfigFile(w, r, data.config)
 	case http.MethodGet:
-		getConfigFileHtml(w, data.config)
+		getConfigFile(w, data.config)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func postConfigFileHtml(w http.ResponseWriter, r *http.Request, config core.Config) {
+func postConfigFile(w http.ResponseWriter, r *http.Request, config core.Config) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -976,7 +945,7 @@ func postConfigFileHtml(w http.ResponseWriter, r *http.Request, config core.Conf
 	}
 }
 
-func getConfigFileHtml(w http.ResponseWriter, config core.Config) {
+func getConfigFile(w http.ResponseWriter, config core.Config) {
 	ext := defaultConfigFormat
 	w.Header().Add("Content-Type", "application/force-download; charset=utf-8")
 	w.Header().Add("Content-Disposition", `attachment; filename="config`+ext+`"`)
@@ -991,10 +960,6 @@ func getConfigFileHtml(w http.ResponseWriter, config core.Config) {
 		return
 	}
 	w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
-}
-
-func configJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
 }
 
 func getAssetsJS(w http.ResponseWriter, r *http.Request) {
@@ -1016,7 +981,7 @@ func getAssets(w http.ResponseWriter, r *http.Request, contentType string) {
 	}
 }
 
-func setupHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func setupHandler(w http.ResponseWriter, r *http.Request) {
 	twitterCk, twitterCs := twitterApp.GetCreds()
 	slackCk, slackCs := slackApp.GetCreds()
 	if twitterCk != "" && twitterCs != "" && slackCk != "" && slackCs != "" {
@@ -1026,19 +991,15 @@ func setupHtmlHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		postSetupHtml(w, r)
+		postSetup(w, r)
 	case http.MethodGet:
-		getSetupHtml(w, r)
+		getSetup(w, r)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func credentialsJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func postSetupHtml(w http.ResponseWriter, r *http.Request) {
+func postSetup(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	defer func() {
 		if len(msg) != 0 {
@@ -1086,7 +1047,7 @@ func postSetupHtml(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetupHtml(w http.ResponseWriter, r *http.Request) {
+func getSetup(w http.ResponseWriter, r *http.Request) {
 	msg := ""
 	msgCookie, err := r.Cookie("mybot.setup.message")
 	if err == nil && msgCookie != nil {
@@ -1143,16 +1104,16 @@ func getSetupHtml(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loginHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getLoginHtml(w, r)
+		getLogin(w, r)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getLoginHtml(w http.ResponseWriter, _ *http.Request) {
+func getLogin(w http.ResponseWriter, _ *http.Request) {
 	data := &struct {
 		NavbarName    string
 		TwitterName   string
@@ -1226,7 +1187,7 @@ func getTwitterUserSearch(w http.ResponseWriter, r *http.Request, twitterAPI *co
 	}
 }
 
-func authCallbackHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func authCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		q := r.URL.Query()
@@ -1238,19 +1199,15 @@ func authCallbackHtmlHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch provider {
 		case "twitter":
-			getAuthTwitterCallbackHtml(w, r, login)
+			getAuthTwitterCallback(w, r, login)
 		case "slack":
-			getAuthSlackCallbackHtml(w, r, login)
+			getAuthSlackCallback(w, r, login)
 		default:
 			http.NotFound(w, r)
 		}
 	default:
 		http.NotFound(w, r)
 	}
-}
-
-func authCallbackJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
 }
 
 func getLoginFlag(r *http.Request) (bool, error) {
@@ -1303,7 +1260,7 @@ func getAuthCallback(w http.ResponseWriter, r *http.Request, login bool) (goth.U
 	return user, userSpecificDataMap[id], nil
 }
 
-func getAuthTwitterCallbackHtml(w http.ResponseWriter, r *http.Request, login bool) {
+func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request, login bool) {
 	user, data, err := getAuthCallback(w, r, login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1319,7 +1276,7 @@ func getAuthTwitterCallbackHtml(w http.ResponseWriter, r *http.Request, login bo
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func getAuthSlackCallbackHtml(w http.ResponseWriter, r *http.Request, login bool) {
+func getAuthSlackCallback(w http.ResponseWriter, r *http.Request, login bool) {
 	user, data, err := getAuthCallback(w, r, login)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1368,20 +1325,16 @@ func getAuth(w http.ResponseWriter, r *http.Request, provider string, login bool
 	gothic.BeginAuthHandler(w, r)
 }
 
-func logoutHtmlHandler(w http.ResponseWriter, r *http.Request) {
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getLogoutHtml(w, r)
+		getLogout(w, r)
 	default:
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 
-func logoutJsonHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement this
-}
-
-func getLogoutHtml(w http.ResponseWriter, r *http.Request) {
+func getLogout(w http.ResponseWriter, r *http.Request) {
 	err := authenticator.Logout(w, r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -185,7 +185,7 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
-	s := httptest.NewServer(http.HandlerFunc(twitterColsHtmlHandler))
+	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
 	defer s.Close()
 
 	err := f(s.URL)
@@ -200,7 +200,7 @@ func TestGetConfig(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configHtmlHandler))
+	s := httptest.NewServer(http.HandlerFunc(configHandler))
 	defer s.Close()
 
 	err := testGet(s.URL)
@@ -208,7 +208,7 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestGetSetupTwitter(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(getSetupHtml))
+	s := httptest.NewServer(http.HandlerFunc(getSetup))
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
@@ -234,7 +234,7 @@ func TestGetConfigFile(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configFileHtmlHandler))
+	s := httptest.NewServer(http.HandlerFunc(configFileHandler))
 	defer s.Close()
 
 	res, err := http.Get(s.URL)
@@ -292,10 +292,10 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 		} else {
 			if r.Method == http.MethodPost {
 				serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
-				postConfigHtml(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
+				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
 				wg.Done()
 			} else if r.Method == http.MethodGet {
-				getConfigHtml(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
+				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
 			}
 		}
 	}
@@ -491,7 +491,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterTimelines()) },
-		configTimelineAddHtmlHandler,
+		configTimelineAddHandler,
 		"message",
 	)
 }
@@ -500,7 +500,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterFavorites()) },
-		configFavoriteAddHtmlHandler,
+		configFavoriteAddHandler,
 		"message",
 	)
 }
@@ -509,7 +509,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterSearches()) },
-		configSearchAddHtmlHandler,
+		configSearchAddHandler,
 		"message",
 	)
 }
@@ -518,7 +518,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
-		configMessageAddHtmlHandler,
+		configMessageAddHandler,
 		"message",
 	)
 }
@@ -623,7 +623,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
-	s := httptest.NewServer(http.HandlerFunc(indexHtmlHandler))
+	s := httptest.NewServer(http.HandlerFunc(indexHandler))
 	defer s.Close()
 
 	err := f(s.URL)
