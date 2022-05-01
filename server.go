@@ -177,14 +177,14 @@ func setupRouter() *gin.Engine {
 func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.Engine {
 	r := setupBaseRouter()
 	r.GET("/", wrapper(getIndexHandler))
-	r.Any("/account/delete", wrapper(gin.WrapF(accountDeleteHandler))) // currently hidden endpoint
-	r.Any("/twitter-collections/", wrapper(twitterColsHandler))
+	r.GET("/account/delete", wrapper(accountDeleteHandler)) // currently hidden endpoint
+	r.GET("/twitter-collections/", wrapper(twitterColsHandler))
 	r.Any("/config/", wrapper(configHandler))
 	r.Any("/config/file/", wrapper(gin.WrapF(configFileHandler)))
-	r.Any("/config/timelines/add", wrapper(gin.WrapF(configTimelineAddHandler)))
-	r.Any("/config/favorites/add", wrapper(gin.WrapF(configFavoriteAddHandler)))
-	r.Any("/config/searches/add", wrapper(gin.WrapF(configSearchAddHandler)))
-	r.Any("/config/messages/add", wrapper(gin.WrapF(configMessageAddHandler)))
+	r.POST("/config/timelines/add", wrapper(configTimelineAddHandler))
+	r.POST("/config/favorites/add", wrapper(configFavoriteAddHandler))
+	r.POST("/config/searches/add", wrapper(configSearchAddHandler))
+	r.POST("/config/messages/add", wrapper(configMessageAddHandler))
 	r.Any("/auth/", gin.WrapF(authHandler))
 	r.Any("/auth/callback", gin.WrapF(authCallbackHandler))
 	r.Any("/login/", loginHandler)
@@ -232,13 +232,9 @@ func startServer(host, port, cert, key string) error {
 	return utils.WithStack(err)
 }
 
-func accountDeleteHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		getAccountDelete(w, r)
-	default:
-		http.NotFound(w, r)
-	}
+func accountDeleteHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
+	getAccountDelete(w, r)
 }
 
 func getAccountDelete(w http.ResponseWriter, r *http.Request) {
@@ -331,13 +327,7 @@ func twitterColsHandler(c *gin.Context) {
 		return
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
-
-	switch r.Method {
-	case http.MethodGet:
-		getTwitterCols(c, data.slackAPI, data.twitterAPI)
-	default:
-		http.NotFound(w, r)
-	}
+	getTwitterCols(c, data.slackAPI, data.twitterAPI)
 }
 
 func getTwitterCols(c *gin.Context, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
@@ -692,17 +682,14 @@ func getConfig(c *gin.Context, config core.Config, slackAPI *core.SlackAPI, twit
 	c.HTML(http.StatusOK, "config", data)
 }
 
-func configTimelineAddHandler(w http.ResponseWriter, r *http.Request) {
+func configTimelineAddHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
-
-	if r.Method == http.MethodPost {
-		postConfigTimelineAdd(w, r, data.config)
-	}
+	postConfigTimelineAdd(w, r, data.config)
 }
 
 func postConfigTimelineAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
@@ -714,17 +701,14 @@ func addTimelineConfig(config core.Config) {
 	config.AddTwitterTimeline(core.NewTimelineConfig())
 }
 
-func configFavoriteAddHandler(w http.ResponseWriter, r *http.Request) {
+func configFavoriteAddHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
-
-	if r.Method == http.MethodPost {
-		postConfigFavoriteAdd(w, r, data.config)
-	}
+	postConfigFavoriteAdd(w, r, data.config)
 }
 
 func postConfigFavoriteAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
@@ -736,19 +720,14 @@ func addFavoriteConfig(config core.Config) {
 	config.AddTwitterFavorite(core.NewFavoriteConfig())
 }
 
-func configSearchAddHandler(w http.ResponseWriter, r *http.Request) {
+func configSearchAddHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
-
-	if r.Method == http.MethodPost {
-		postConfigSearchAdd(w, r, data.config)
-	} else {
-		http.NotFound(w, r)
-	}
+	postConfigSearchAdd(w, r, data.config)
 }
 
 func postConfigSearchAdd(w http.ResponseWriter, r *http.Request, config core.Config) {
@@ -760,17 +739,14 @@ func addSearchConfig(config core.Config) {
 	config.AddTwitterSearch(core.NewSearchConfig())
 }
 
-func configMessageAddHandler(w http.ResponseWriter, r *http.Request) {
+func configMessageAddHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, twitterUser.Provider, twitterUser.UserID)]
-
-	if r.Method == http.MethodPost {
-		postConfigMessageAdd(w, r, data.config)
-	}
+	postConfigMessageAdd(w, r, data.config)
 }
 
 func postConfigMessageAdd(w http.ResponseWriter, r *http.Request, c core.Config) {

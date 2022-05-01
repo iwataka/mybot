@@ -494,7 +494,7 @@ func TestPostConfigTimelineAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterTimelines()) },
-		configTimelineAddHandler,
+		"/config/timelines/add",
 		"message",
 	)
 }
@@ -503,7 +503,7 @@ func TestPostConfigFavoriteAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterFavorites()) },
-		configFavoriteAddHandler,
+		"/config/favorites/add",
 		"message",
 	)
 }
@@ -512,7 +512,7 @@ func TestPostConfigSearchAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetTwitterSearches()) },
-		configSearchAddHandler,
+		"/config/searches/add",
 		"message",
 	)
 }
@@ -521,7 +521,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 	testPostConfigAdd(
 		t,
 		func() int { return len(serverTestUserSpecificData.config.GetSlackMessages()) },
-		configMessageAddHandler,
+		"/config/messages/add",
 		"message",
 	)
 }
@@ -529,7 +529,7 @@ func TestPostConfigMessageAdd(t *testing.T) {
 func testPostConfigAdd(
 	t *testing.T,
 	length func() int,
-	handler func(w http.ResponseWriter, r *http.Request),
+	urlSuffix string,
 	name string,
 ) {
 	ctrl := gomock.NewController(t)
@@ -539,7 +539,7 @@ func testPostConfigAdd(
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	expectedErrMsg := "expected error"
@@ -551,7 +551,7 @@ func testPostConfigAdd(
 			return expectedErr
 		},
 	}
-	res, err := client.Post(s.URL, "", nil)
+	res, err := client.Post(s.URL+urlSuffix, "", nil)
 	require.True(t, err == nil || strings.HasSuffix(err.Error(), expectedErrMsg))
 	cur := length()
 	require.Equal(t, prev+1, cur)
