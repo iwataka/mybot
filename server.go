@@ -37,8 +37,7 @@ const (
 )
 
 var (
-	htmlTemplateDir = filepath.Join(assetsDir, "tmpl")
-	htmlTemplate    *template.Template
+	htmlTemplateDir                      = filepath.Join(assetsDir, "tmpl")
 	authenticator   models.Authenticator = &Authenticator{}
 )
 
@@ -179,7 +178,7 @@ func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.
 	r := setupBaseRouter()
 	r.GET("/", wrapper(getIndexHandler))
 	r.Any("/account/delete", wrapper(gin.WrapF(accountDeleteHandler))) // currently hidden endpoint
-	r.Any("/twitter-collections/", wrapper(gin.WrapF(twitterColsHandler)))
+	r.Any("/twitter-collections/", wrapper(twitterColsHandler))
 	r.Any("/config/", wrapper(configHandler))
 	r.Any("/config/file/", wrapper(gin.WrapF(configFileHandler)))
 	r.Any("/config/timelines/add", wrapper(gin.WrapF(configTimelineAddHandler)))
@@ -188,8 +187,8 @@ func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.
 	r.Any("/config/messages/add", wrapper(gin.WrapF(configMessageAddHandler)))
 	r.Any("/auth/", gin.WrapF(authHandler))
 	r.Any("/auth/callback", gin.WrapF(authCallbackHandler))
-	r.Any("/login/", gin.WrapF(loginHandler))
-	r.Any("/setup/", gin.WrapF(setupHandler))
+	r.Any("/login/", loginHandler)
+	r.Any("/setup/", setupHandler)
 	r.Any("/logout/", gin.WrapF(logoutHandler))
 	r.Any("/twitter/users/search/", wrapper(gin.WrapF(twitterUserSearchHandler))) // For Twitter user auto-completion usage
 	return r
@@ -231,28 +230,6 @@ func startServer(host, port, cert, key string) error {
 		err = r.Run(addr)
 	}
 	return utils.WithStack(err)
-}
-
-func generateHTMLTemplate() (*template.Template, error) {
-	if htmlTemplate != nil {
-		return htmlTemplate, nil
-	}
-	tmpl := template.New("mybot_template_root").Funcs(templateFuncMap).Delims("{{{", "}}}")
-	var err error
-	htmlTemplate, err = generateHTMLTemplateFromFiles(tmpl)
-	return htmlTemplate, err
-}
-
-func generateHTMLTemplateFromFiles(tmpl *template.Template) (*template.Template, error) {
-	tmplFiles, err := zglob.Glob(filepath.Join(htmlTemplateDir, "**", "*.tmpl"))
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-	template, err := tmpl.ParseFiles(tmplFiles...)
-	if err != nil {
-		return nil, utils.WithStack(err)
-	}
-	return template, nil
 }
 
 func accountDeleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -346,7 +323,8 @@ func imageAnalysis(cache data.Cache) (string, string, string, string) {
 	return imageURL, imageSource, imageAnalysisResult, imageAnalysisDate
 }
 
-func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
+func twitterColsHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	twitterUser, err := authenticator.GetLoginUser(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -356,13 +334,13 @@ func twitterColsHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		getTwitterCols(w, data.slackAPI, data.twitterAPI)
+		getTwitterCols(c, data.slackAPI, data.twitterAPI)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
+func getTwitterCols(c *gin.Context, slackAPI *core.SlackAPI, twitterAPI *core.TwitterAPI) {
 	twitterID, twitterScreenName := getTwitterInfo(twitterAPI)
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 
@@ -370,8 +348,7 @@ func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *
 	activeCol := ""
 	id, err := strconv.ParseInt(twitterID, 10, 64)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	colList, err := twitterAPI.BaseAPI().GetCollectionListByUserId(id, nil)
 	if err == nil && len(colList.Objects.Timelines) != 0 {
@@ -385,40 +362,16 @@ func getTwitterCols(w http.ResponseWriter, slackAPI *core.SlackAPI, twitterAPI *
 		activeCol = names[0]
 	}
 
-	data := &struct {
-		NavbarName       string
-		TwitterName      string
-		SlackTeam        string
-		SlackURL         string
-		GoogleEnabled    bool
-		CollectionMap    map[string]string
-		ActiveCollection string
-	}{
-		"TwitterCols",
-		twitterScreenName,
-		slackTeam,
-		slackURL,
-		googleEnabled(),
-		colMap,
-		activeCol,
+	data := gin.H{
+		"NavbarName":       "TwitterCols",
+		"TwitterName":      twitterScreenName,
+		"SlackTeam":        slackTeam,
+		"SlackURL":         slackURL,
+		"GoogleEnabled":    googleEnabled(),
+		"CollectionMap":    colMap,
+		"ActiveCollection": activeCol,
 	}
-
-	buf := new(bytes.Buffer)
-	tmpl, err := generateHTMLTemplate()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.ExecuteTemplate(buf, "twitterCols", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = buf.WriteTo(w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.HTML(http.StatusOK, "twitterCols", data)
 }
 
 type checkboxCounter struct {
@@ -909,19 +862,20 @@ func getConfigFile(w http.ResponseWriter, config core.Config) {
 	w.Header().Add("Content-Length", strconv.FormatInt(int64(len), 16))
 }
 
-func setupHandler(w http.ResponseWriter, r *http.Request) {
+func setupHandler(c *gin.Context) {
 	twitterCk, twitterCs := twitterApp.GetCreds()
 	slackCk, slackCs := slackApp.GetCreds()
 	if twitterCk != "" && twitterCs != "" && slackCk != "" && slackCs != "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		c.Redirect(http.StatusSeeOther, "/")
 		return
 	}
 
-	switch r.Method {
+	w, r := c.Writer, c.Request
+	switch c.Request.Method {
 	case http.MethodPost:
 		postSetup(w, r)
 	case http.MethodGet:
-		getSetup(w, r)
+		getSetup(c)
 	default:
 		http.NotFound(w, r)
 	}
@@ -975,103 +929,56 @@ func postSetup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getSetup(w http.ResponseWriter, r *http.Request) {
+func getSetup(c *gin.Context) {
 	msg := ""
-	msgCookie, err := r.Cookie("mybot.setup.message")
+	msgCookie, err := c.Request.Cookie("mybot.setup.message")
 	if err == nil && msgCookie != nil {
 		msg = msgCookie.Value
 	}
 
 	twitterCk, twitterCs := twitterApp.GetCreds()
 	slackCk, slackCs := slackApp.GetCreds()
-	data := &struct {
-		NavbarName            string
-		TwitterName           string
-		SlackTeam             string
-		SlackURL              string
-		GoogleEnabled         bool
-		TwitterConsumerKey    string
-		TwitterConsumerSecret string
-		SlackClientID         string
-		SlackClientSecret     string
-		Message               string
-	}{
-		"",
-		"",
-		"",
-		"",
-		googleEnabled(),
-		twitterCk,
-		twitterCs,
-		slackCk,
-		slackCs,
-		msg,
+	data := gin.H{
+		"NavbarName":            "",
+		"TwitterName":           "",
+		"SlackTeam":             "",
+		"SlackURL":              "",
+		"GoogleEnabled":         googleEnabled(),
+		"TwitterConsumerKey":    twitterCk,
+		"TwitterConsumerSecret": twitterCs,
+		"SlackClientID":         slackCk,
+		"SlackClientSecret":     slackCs,
+		"Message":               msg,
 	}
 
 	if msgCookie != nil {
 		msgCookie.Value = ""
 		msgCookie.Path = "/setup/"
-		http.SetCookie(w, msgCookie)
+		http.SetCookie(c.Writer, msgCookie)
 	}
 
-	buf := new(bytes.Buffer)
-	tmpl, err := generateHTMLTemplate()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.ExecuteTemplate(buf, "setup", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(buf.Bytes())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.HTML(http.StatusOK, "setup", data)
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func loginHandler(c *gin.Context) {
+	w, r := c.Writer, c.Request
 	switch r.Method {
 	case http.MethodGet:
-		getLogin(w, r)
+		getLogin(c)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getLogin(w http.ResponseWriter, _ *http.Request) {
-	data := &struct {
-		NavbarName    string
-		TwitterName   string
-		SlackTeam     string
-		SlackURL      string
-		GoogleEnabled bool
-	}{
-		"",
-		"",
-		"",
-		"",
-		googleEnabled(),
+func getLogin(c *gin.Context) {
+	data := gin.H{
+		"NavbarName":    "",
+		"TwitterName":   "",
+		"SlackTeam":     "",
+		"SlackURL":      "",
+		"GoogleEnabled": googleEnabled(),
 	}
-
-	buf := new(bytes.Buffer)
-	tmpl, err := generateHTMLTemplate()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.ExecuteTemplate(buf, "login", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(buf.Bytes())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.HTML(http.StatusOK, "login", data)
 }
 
 func twitterUserSearchHandler(w http.ResponseWriter, r *http.Request) {

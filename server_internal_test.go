@@ -194,10 +194,10 @@ func testTwitterCols(t *testing.T, f func(url string) error) {
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
-	s := httptest.NewServer(http.HandlerFunc(twitterColsHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	err := f(s.URL)
+	err := f(s.URL + "/twitter-collections/")
 	require.NoError(t, err)
 }
 
@@ -217,7 +217,7 @@ func TestGetConfig(t *testing.T) {
 }
 
 func TestGetSetupTwitter(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(getSetup))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	tmpTwitterApp := twitterApp
@@ -231,7 +231,7 @@ func TestGetSetupTwitter(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { slackApp = tmpSlackApp }()
 
-	err = testGet(s.URL)
+	err = testGet(s.URL + "/setup/")
 	require.NoError(t, err)
 }
 
