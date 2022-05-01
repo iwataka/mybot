@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
 	"github.com/iwataka/mybot/models"
@@ -170,6 +171,14 @@ func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// TODO: remove this method, use full-featured gin framework
+func ginWrap(f http.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		w, r := c.Writer, c.Request
+		f(w, r)
+	}
+}
+
 func startServer(host, port, cert, key string) error {
 	gothic.Store = serverSession
 	gothic.GetProviderName = func(r *http.Request) (string, error) {
@@ -179,45 +188,43 @@ func startServer(host, port, cert, key string) error {
 		return "", fmt.Errorf("no provider name given")
 	}
 
-	http.HandleFunc("/", wrapHandler(indexHtmlHandler))
-	http.HandleFunc("/api/data/common", dataCommonJsonHandler)
-	http.HandleFunc("/api/data/imageAnalysis", dataImageAnalysisJsonHandler)
-	http.HandleFunc("/api/worker/status", workerStatusJsonHandler)
-	http.HandleFunc("/account/delete", wrapHandler(accountDeleteHtmlHandler)) // currently hidden endpoint
-	http.HandleFunc("/api/account/delete", accountDeleteJsonHandler)
-	http.HandleFunc("/twitter-collections/", wrapHandler(twitterColsHtmlHandler))
-	http.HandleFunc("/api/twitter/collections", twitterCollectionsJsonHandler)
-	http.HandleFunc("/config/", wrapHandler(configHtmlHandler))
-	http.HandleFunc("/config/file/", wrapHandler(configFileHtmlHandler))
-	http.HandleFunc("/config/timelines/add", wrapHandler(configTimelineAddHtmlHandler))
-	http.HandleFunc("/config/favorites/add", wrapHandler(configFavoriteAddHtmlHandler))
-	http.HandleFunc("/config/searches/add", wrapHandler(configSearchAddHtmlHandler))
-	http.HandleFunc("/config/messages/add", wrapHandler(configMessageAddHtmlHandler))
-	http.HandleFunc("/api/config", configJsonHandler)
-	http.HandleFunc("/assets/css/", getAssetsCSS)
-	http.HandleFunc("/assets/js/", getAssetsJS)
-	http.HandleFunc("/auth/", authHandler)
-	http.HandleFunc("/api/auth", authHandler)
-	http.HandleFunc("/auth/callback", authCallbackHtmlHandler)
-	http.HandleFunc("/api/auth/callback", authCallbackJsonHandler)
-	http.HandleFunc("/login/", loginHtmlHandler)
-	http.HandleFunc("/setup/", setupHtmlHandler)
-	http.HandleFunc("/api/initialization", initializationJsonHandler)
-	http.HandleFunc("/logout/", logoutHtmlHandler)
-	http.HandleFunc("/api/logout", logoutJsonHandler)
-	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler)) // For Twitter user auto-completion usage
-	http.HandleFunc("/api/twitter/users/search", wrapHandler(twitterUserSearchHandler))
+	r := gin.Default()
+	r.Any("/", ginWrap(wrapHandler(indexHtmlHandler)))
+	r.Any("/api/data/common", ginWrap(dataCommonJsonHandler))
+	r.Any("/api/data/imageAnalysis", ginWrap(dataImageAnalysisJsonHandler))
+	r.Any("/api/worker/status", ginWrap(workerStatusJsonHandler))
+	r.Any("/account/delete", ginWrap(wrapHandler(accountDeleteHtmlHandler))) // currently hidden endpoint
+	r.Any("/api/account/delete", ginWrap(accountDeleteJsonHandler))
+	r.Any("/twitter-collections/", ginWrap(wrapHandler(twitterColsHtmlHandler)))
+	r.Any("/api/twitter/collections", ginWrap(twitterCollectionsJsonHandler))
+	r.Any("/config/", ginWrap(wrapHandler(configHtmlHandler)))
+	r.Any("/config/file/", ginWrap(wrapHandler(configFileHtmlHandler)))
+	r.Any("/config/timelines/add", ginWrap(wrapHandler(configTimelineAddHtmlHandler)))
+	r.Any("/config/favorites/add", ginWrap(wrapHandler(configFavoriteAddHtmlHandler)))
+	r.Any("/config/searches/add", ginWrap(wrapHandler(configSearchAddHtmlHandler)))
+	r.Any("/config/messages/add", ginWrap(wrapHandler(configMessageAddHtmlHandler)))
+	r.Any("/api/config", ginWrap(configJsonHandler))
+	r.Static("/assets", "./assets")
+	r.Any("/auth/", ginWrap(authHandler))
+	r.Any("/api/auth", ginWrap(authHandler))
+	r.Any("/auth/callback", ginWrap(authCallbackHtmlHandler))
+	r.Any("/api/auth/callback", ginWrap(authCallbackJsonHandler))
+	r.Any("/login/", ginWrap(loginHtmlHandler))
+	r.Any("/setup/", ginWrap(setupHtmlHandler))
+	r.Any("/api/credentials", ginWrap(credentialsJsonHandler))
+	r.Any("/logout/", ginWrap(logoutHtmlHandler))
+	r.Any("/api/logout", ginWrap(logoutJsonHandler))
+	r.Any("/twitter/users/search/", ginWrap(wrapHandler(twitterUserSearchHandler))) // For Twitter user auto-completion usage
+	r.Any("/api/twitter/users/search", ginWrap(wrapHandler(twitterUserSearchHandler)))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
 	var err error
 	if certErr == nil && keyErr == nil {
-		logger.Printf("Listen on %s://%s\n", "https", addr)
-		err = http.ListenAndServeTLS(addr, cert, key, nil)
+		err = r.RunTLS(addr, cert, key)
 	} else {
-		logger.Printf("Listen on %s://%s\n", "http", addr)
-		err = http.ListenAndServe(addr, nil)
+		err = r.Run(addr)
 	}
 	return utils.WithStack(err)
 }
@@ -994,10 +1001,6 @@ func getAssetsJS(w http.ResponseWriter, r *http.Request) {
 	getAssets(w, r, "application/javascript")
 }
 
-func getAssetsCSS(w http.ResponseWriter, r *http.Request) {
-	getAssets(w, r, "text/css")
-}
-
 func getAssets(w http.ResponseWriter, r *http.Request, contentType string) {
 	path := r.URL.Path[len("/"):]
 	data, err := ioutil.ReadFile(path)
@@ -1031,7 +1034,7 @@ func setupHtmlHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func initializationJsonHandler(w http.ResponseWriter, r *http.Request) {
+func credentialsJsonHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: implement this
 }
 
