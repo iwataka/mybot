@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/iwataka/anaconda"
 	"github.com/iwataka/deep"
@@ -67,6 +68,12 @@ func getDriver() *agouti.WebDriver {
 	return driver
 }
 
+func setupRouterWithoutAuth() *gin.Engine {
+	return setupRouterWithWrapper(func(f gin.HandlerFunc) gin.HandlerFunc {
+		return f
+	})
+}
+
 func init() {
 	var err error
 	serverTestUserSpecificData = &userSpecificData{}
@@ -89,6 +96,8 @@ func init() {
 
 	deep.IgnoreDifferenceBetweenEmptyMapAndNil = true
 	deep.IgnoreDifferenceBetweenEmptySliceAndNil = true
+
+	gin.SetMode(gin.TestMode)
 }
 
 func TestAuthenticator_SetProvider(t *testing.T) {
@@ -623,7 +632,7 @@ func testIndex(t *testing.T, f func(url string) error) {
 	img := models.ImageCacheData{}
 	serverTestUserSpecificData.cache.SetImage(img)
 
-	s := httptest.NewServer(http.HandlerFunc(indexHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
 	err := f(s.URL)

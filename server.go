@@ -150,33 +150,59 @@ func (a *Authenticator) Logout(w http.ResponseWriter, r *http.Request) error {
 	return fmt.Errorf("No login user")
 }
 
-func wrapHandler(f http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func wrapHandler(f gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		if ck, cs := twitterApp.GetCreds(); ck == "" || cs == "" {
-			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+			c.Redirect(http.StatusSeeOther, "/setup/")
 			return
 		}
 
 		if ck, cs := slackApp.GetCreds(); ck == "" || cs == "" {
-			http.Redirect(w, r, "/setup/", http.StatusSeeOther)
+			c.Redirect(http.StatusSeeOther, "/setup/")
 			return
 		}
 
-		if _, err := authenticator.GetLoginUser(r); err != nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+		if _, err := authenticator.GetLoginUser(c.Request); err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
 			return
 		}
 
-		f(w, r)
+		f(c)
 	}
 }
 
-// TODO: remove this method, use full-featured gin framework
-func ginWrap(f http.HandlerFunc) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		w, r := c.Writer, c.Request
-		f(w, r)
+func setupRouter() *gin.Engine {
+	return setupRouterWithWrapper(wrapHandler)
+}
+
+func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Static("/assets", "./assets")
+	r.Delims("{{{", "}}}")
+	r.SetFuncMap(templateFuncMap)
+	tmplFiles, err := zglob.Glob(filepath.Join(htmlTemplateDir, "**", "*.tmpl"))
+	if err != nil {
+		panic(err)
 	}
+	r.LoadHTMLFiles(tmplFiles...)
+	r.GET("/", wrapper(getIndexHandler))
+	r.Any("/account/delete", wrapper(gin.WrapF(accountDeleteHandler))) // currently hidden endpoint
+	r.Any("/twitter-collections/", wrapper(gin.WrapF(twitterColsHandler)))
+	r.Any("/config/", wrapper(gin.WrapF(configHandler)))
+	r.Any("/config/file/", wrapper(gin.WrapF(configFileHandler)))
+	r.Any("/config/timelines/add", wrapper(gin.WrapF(configTimelineAddHandler)))
+	r.Any("/config/favorites/add", wrapper(gin.WrapF(configFavoriteAddHandler)))
+	r.Any("/config/searches/add", wrapper(gin.WrapF(configSearchAddHandler)))
+	r.Any("/config/messages/add", wrapper(gin.WrapF(configMessageAddHandler)))
+	r.Any("/auth/", gin.WrapF(authHandler))
+	r.Any("/auth/callback", gin.WrapF(authCallbackHandler))
+	r.Any("/login/", gin.WrapF(loginHandler))
+	r.Any("/setup/", gin.WrapF(setupHandler))
+	r.Any("/logout/", gin.WrapF(logoutHandler))
+	r.Any("/twitter/users/search/", wrapper(gin.WrapF(twitterUserSearchHandler))) // For Twitter user auto-completion usage
+	return r
 }
 
 func startServer(host, port, cert, key string) error {
@@ -188,27 +214,11 @@ func startServer(host, port, cert, key string) error {
 		return "", fmt.Errorf("no provider name given")
 	}
 
-	r := gin.Default()
-	r.Any("/", ginWrap(wrapHandler(indexHandler)))
-	r.Any("/account/delete", ginWrap(wrapHandler(accountDeleteHandler))) // currently hidden endpoint
-	r.Any("/twitter-collections/", ginWrap(wrapHandler(twitterColsHandler)))
-	r.Any("/config/", ginWrap(wrapHandler(configHandler)))
-	r.Any("/config/file/", ginWrap(wrapHandler(configFileHandler)))
-	r.Any("/config/timelines/add", ginWrap(wrapHandler(configTimelineAddHandler)))
-	r.Any("/config/favorites/add", ginWrap(wrapHandler(configFavoriteAddHandler)))
-	r.Any("/config/searches/add", ginWrap(wrapHandler(configSearchAddHandler)))
-	r.Any("/config/messages/add", ginWrap(wrapHandler(configMessageAddHandler)))
-	r.Static("/assets", "./assets")
-	r.Any("/auth/", ginWrap(authHandler))
-	r.Any("/auth/callback", ginWrap(authCallbackHandler))
-	r.Any("/login/", ginWrap(loginHandler))
-	r.Any("/setup/", ginWrap(setupHandler))
-	r.Any("/logout/", ginWrap(logoutHandler))
-	r.Any("/twitter/users/search/", ginWrap(wrapHandler(twitterUserSearchHandler))) // For Twitter user auto-completion usage
-
+	r := setupRouter()
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
 	_, keyErr := os.Stat(key)
+
 	var err error
 	if certErr == nil && keyErr == nil {
 		err = r.RunTLS(addr, cert, key)
@@ -271,24 +281,17 @@ func getAccountDelete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login/", http.StatusSeeOther)
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	user, err := authenticator.GetLoginUser(r)
+func getIndexHandler(c *gin.Context) {
+	user, err := authenticator.GetLoginUser(c.Request)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err)
 	}
 	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)]
-
-	switch r.URL.Path {
-	case "/":
-		getIndex(w, data.cache, data.slackAPI, data.twitterAPI, data.statuses())
-	default:
-		http.NotFound(w, r)
-	}
+	getIndex(c, data.cache, data.slackAPI, data.twitterAPI, data.statuses())
 }
 
 func getIndex(
-	w http.ResponseWriter,
+	c *gin.Context,
 	cache data.Cache,
 	slackAPI *core.SlackAPI,
 	twitterAPI *core.TwitterAPI,
@@ -298,52 +301,23 @@ func getIndex(
 	slackTeam, slackURL := getSlackInfo(slackAPI)
 	imgURL, imgSrc, imgAnalysisResult, imgAnalysisDate := imageAnalysis(cache)
 
-	data := &struct {
-		NavbarName               string
-		TwitterName              string
-		SlackTeam                string
-		SlackURL                 string
-		GoogleEnabled            bool
-		ImageURL                 string
-		ImageSource              string
-		ImageAnalysisResult      string
-		ImageAnalysisDate        string
-		TwitterListenDMStatus    bool
-		TwitterListenUsersStatus bool
-		TwitterPeriodicStatus    bool
-		SlackListenerStatus      bool
-	}{
-		"",
-		twitterScreenName,
-		slackTeam,
-		slackURL,
-		googleEnabled(),
-		imgURL,
-		imgSrc,
-		imgAnalysisResult,
-		imgAnalysisDate,
-		statuses[twitterDMRoutineKey],
-		statuses[twitterUserRoutineKey],
-		statuses[twitterPeriodicRoutineKey],
-		statuses[slackRoutineKey],
+	data := gin.H{
+		"NavbarName":               "",
+		"TwitterName":              twitterScreenName,
+		"SlackTeam":                slackTeam,
+		"SlackURL":                 slackURL,
+		"GoogleEnabled":            googleEnabled(),
+		"ImageURL":                 imgURL,
+		"ImageSource":              imgSrc,
+		"ImageAnalysisResult":      imgAnalysisResult,
+		"ImageAnalysisDate":        imgAnalysisDate,
+		"TwitterListenDMStatus":    statuses[twitterDMRoutineKey],
+		"TwitterListenUsersStatus": statuses[twitterUserRoutineKey],
+		"TwitterPeriodicStatus":    statuses[twitterPeriodicRoutineKey],
+		"SlackListenerStatus":      statuses[slackRoutineKey],
 	}
 
-	buf := new(bytes.Buffer)
-	tmpl, err := generateHTMLTemplate()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.ExecuteTemplate(buf, "index", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = buf.WriteTo(w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.HTML(http.StatusOK, "index", data)
 }
 
 func imageAnalysis(cache data.Cache) (string, string, string, string) {
