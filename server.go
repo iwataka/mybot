@@ -185,7 +185,7 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/api/worker/status", workerStatusJsonHandler)
 	http.HandleFunc("/account/delete", wrapHandler(accountDeleteHtmlHandler)) // currently hidden endpoint
 	http.HandleFunc("/api/account/delete", accountDeleteJsonHandler)
-	http.HandleFunc("/twitter-collections", wrapHandler(twitterColsHtmlHandler))
+	http.HandleFunc("/twitter-collections/", wrapHandler(twitterColsHtmlHandler))
 	http.HandleFunc("/api/twitter/collections", twitterCollectionsJsonHandler)
 	http.HandleFunc("/config/", wrapHandler(configHtmlHandler))
 	http.HandleFunc("/config/file/", wrapHandler(configFileHtmlHandler))
@@ -197,7 +197,7 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/assets/css/", getAssetsCSS)
 	http.HandleFunc("/assets/js/", getAssetsJS)
 	http.HandleFunc("/auth/", authHandler)
-	http.HandleFunc("/api/auth/", authHandler)
+	http.HandleFunc("/api/auth", authHandler)
 	http.HandleFunc("/auth/callback", authCallbackHtmlHandler)
 	http.HandleFunc("/api/auth/callback", authCallbackJsonHandler)
 	http.HandleFunc("/login/", loginHtmlHandler)
@@ -205,8 +205,8 @@ func startServer(host, port, cert, key string) error {
 	http.HandleFunc("/api/initialization", initializationJsonHandler)
 	http.HandleFunc("/logout/", logoutHtmlHandler)
 	http.HandleFunc("/api/logout", logoutJsonHandler)
-	http.HandleFunc("/twitter/users/search", wrapHandler(twitterUserSearchHandler))     // For Twitter user auto-completion usage
-	http.HandleFunc("/api/twitter/users/search", wrapHandler(twitterUserSearchHandler)) // For Twitter user auto-completion usage
+	http.HandleFunc("/twitter/users/search/", wrapHandler(twitterUserSearchHandler)) // For Twitter user auto-completion usage
+	http.HandleFunc("/api/twitter/users/search", wrapHandler(twitterUserSearchHandler))
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	_, certErr := os.Stat(cert)
