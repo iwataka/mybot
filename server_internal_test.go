@@ -243,10 +243,10 @@ func TestGetConfigFile(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configFileHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	res, err := http.Get(s.URL)
+	res, err := http.Get(s.URL + "/config/file/")
 	require.NoError(t, err)
 
 	err = checkHTTPResponse(res)
@@ -650,10 +650,10 @@ func TestGetTwitterUserSearch(t *testing.T) {
 	defer func() { serverTestUserSpecificData.twitterAPI = tmpTwitterAPI }()
 	serverTestUserSpecificData.twitterAPI = core.NewTwitterAPI(twitterAPIMock, nil, nil)
 
-	s := httptest.NewServer(http.HandlerFunc(twitterUserSearchHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	res, err := http.Get(s.URL)
+	res, err := http.Get(s.URL + "/twitter/users/search/")
 	require.NoError(t, err)
 	defer res.Body.Close()
 	bs, err := ioutil.ReadAll(res.Body)
