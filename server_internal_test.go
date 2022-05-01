@@ -209,10 +209,10 @@ func TestGetConfig(t *testing.T) {
 	defer func() { authenticator = tmpAuth }()
 	authenticator = authMock
 
-	s := httptest.NewServer(http.HandlerFunc(configHandler))
+	s := httptest.NewServer(setupRouterWithoutAuth())
 	defer s.Close()
 
-	err := testGet(s.URL)
+	err := testGet(s.URL + "/config/")
 	require.NoError(t, err)
 }
 
@@ -294,22 +294,16 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 	authenticator = authMock
 
 	wg := new(sync.WaitGroup)
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		if strings.HasPrefix(path, "/assets/js") {
-			getAssetsJS(w, r)
-		} else {
-			if r.Method == http.MethodPost {
-				serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
-				postConfig(w, r, serverTestUserSpecificData.config, serverTestTwitterUser)
-				wg.Done()
-			} else if r.Method == http.MethodGet {
-				getConfig(w, r, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
-			}
-		}
-	}
-
-	s := httptest.NewServer(http.HandlerFunc(handler))
+	router := setupBaseRouter()
+	router.POST("/config/", func(c *gin.Context) {
+		serverTestUserSpecificData.config = core.NewTestFileConfig("", t)
+		postConfig(c.Writer, c.Request, serverTestUserSpecificData.config, serverTestTwitterUser)
+		wg.Done()
+	})
+	router.GET("/config/", func(c *gin.Context) {
+		getConfig(c, serverTestUserSpecificData.config, serverTestUserSpecificData.slackAPI, serverTestUserSpecificData.twitterAPI)
+	})
+	s := httptest.NewServer(router)
 	defer s.Close()
 
 	page, err := getDriver().NewPage()
@@ -317,7 +311,7 @@ func testPostConfig(t *testing.T, f func(*testing.T, string, *agouti.Page, *sync
 
 	curUserData := serverTestUserSpecificData.config
 	defer func() { serverTestUserSpecificData.config = curUserData }()
-	f(t, s.URL, page, wg)
+	f(t, s.URL+"/config/", page, wg)
 }
 
 func TestPostConfigWithoutModification(t *testing.T) {
