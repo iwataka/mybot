@@ -33,6 +33,7 @@ func NewSlackAPI(token string) SlackAPI {
 }
 
 func (s *SlackAPIImpl) PostMessage(ch string, msg string, opts []slack.MsgOption) error {
+	opts = append(opts, slack.MsgOptionText(msg, false))
 	_, _, err := s.api.PostMessage(ch, opts...)
 	return err
 }
