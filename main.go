@@ -37,8 +37,8 @@ import (
 
 var (
 	userSpecificDataMap = make(map[string]*userSpecificData)
-	logger              = log.New(os.Stdout, "", log.LstdFlags)
-	errLogger           = log.New(os.Stderr, "", log.LstdFlags)
+	logger              = log.New(os.Stdout, "[mybot] ", log.LstdFlags)
+	errLogger           = log.New(os.Stderr, "[mybot] ", log.LstdFlags)
 
 	// Global-scope data
 	twitterApp    oauth.OAuthApp
