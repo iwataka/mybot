@@ -185,8 +185,8 @@ func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.
 	r.POST("/config/favorites/add", wrapper(configFavoriteAddHandler))
 	r.POST("/config/searches/add", wrapper(configSearchAddHandler))
 	r.POST("/config/messages/add", wrapper(configMessageAddHandler))
-	r.GET("/auth/", authHandler)
-	r.GET("/auth/callback", authCallbackHandler)
+	r.GET("/auth/:provider", authHandler)
+	r.GET("/auth/callback/:provider", authCallbackHandler)
 	r.GET("/login/", loginHandler)
 	r.Any("/setup/", setupHandler)
 	r.GET("/logout/", logoutHandler)
@@ -966,74 +966,48 @@ func getTwitterUserSearch(c *gin.Context, twitterAPI *core.TwitterAPI) {
 
 func authCallbackHandler(c *gin.Context) {
 	w, r := c.Writer, c.Request
-	q := r.URL.Query()
-	provider := q.Get("provider")
-	login, err := getLoginFlag(r)
-	if err != nil {
-		panic(err)
-	}
+	provider := c.Param("provider")
 	switch provider {
 	case "twitter":
-		getAuthTwitterCallback(w, r, login)
+		getAuthTwitterCallback(w, r)
 	case "slack":
-		getAuthSlackCallback(w, r, login)
+		getAuthSlackCallback(w, r)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func getLoginFlag(r *http.Request) (bool, error) {
-	loginStr := r.URL.Query().Get("login")
-	if len(loginStr) == 0 {
-		loginStr = "false"
-	}
-	login, err := strconv.ParseBool(loginStr)
-	if err != nil {
-		return false, err
-	}
-	return login, nil
-}
-
-func getAuthCallback(w http.ResponseWriter, r *http.Request, login bool) (goth.User, *userSpecificData, error) {
+func getAuthCallback(w http.ResponseWriter, r *http.Request) (goth.User, *userSpecificData, error) {
 	user, err := authenticator.CompleteUserAuth("twitter", w, r)
 	if err != nil {
 		return goth.User{}, nil, err
 	}
 
-	if login {
-		err = authenticator.Login(user, w, r)
-		if err != nil {
-			return goth.User{}, nil, err
-		}
-
-		id := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
-		data, exists := userSpecificDataMap[id]
-		if exists {
-			return user, data, nil
-		} else {
-			data, err := newUserSpecificData(cliContext, database, id)
-			if err != nil {
-				return goth.User{}, nil, err
-			}
-			err = startUserSpecificData(cliContext, data, id)
-			if err != nil {
-				return goth.User{}, nil, err
-			}
-			userSpecificDataMap[id] = data
-			return user, data, nil
-		}
-	}
-
-	loginUser, err := authenticator.GetLoginUser(r)
+	err = authenticator.Login(user, w, r)
 	if err != nil {
 		return goth.User{}, nil, err
 	}
-	id := fmt.Sprintf(appUserIDFormat, loginUser.Provider, loginUser.UserID)
-	return user, userSpecificDataMap[id], nil
+
+	id := fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)
+	data, exists := userSpecificDataMap[id]
+	if exists {
+		return user, data, nil
+	}
+
+	data, err = newUserSpecificData(cliContext, database, id)
+	if err != nil {
+		return goth.User{}, nil, err
+	}
+	err = startUserSpecificData(cliContext, data, id)
+	if err != nil {
+		return goth.User{}, nil, err
+	}
+	userSpecificDataMap[id] = data
+	return user, data, nil
 }
 
-func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request, login bool) {
-	user, data, err := getAuthCallback(w, r, login)
+func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request) {
+	user, data, err := getAuthCallback(w, r)
 	if err != nil {
 		panic(err)
 	}
@@ -1046,8 +1020,8 @@ func getAuthTwitterCallback(w http.ResponseWriter, r *http.Request, login bool) 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func getAuthSlackCallback(w http.ResponseWriter, r *http.Request, login bool) {
-	user, data, err := getAuthCallback(w, r, login)
+func getAuthSlackCallback(w http.ResponseWriter, r *http.Request) {
+	user, data, err := getAuthCallback(w, r)
 	if err != nil {
 		panic(err)
 	}
@@ -1062,20 +1036,15 @@ func getAuthSlackCallback(w http.ResponseWriter, r *http.Request, login bool) {
 
 func authHandler(c *gin.Context) {
 	w, r := c.Writer, c.Request
-	q := r.URL.Query()
-	provider := q.Get("provider")
-	login, err := getLoginFlag(r)
-	if err != nil {
-		panic(err)
-	}
-	getAuth(w, r, provider, login)
+	provider := c.Param("provider")
+	getAuth(w, r, provider)
 }
 
-func getAuth(w http.ResponseWriter, r *http.Request, provider string, login bool) {
+func getAuth(w http.ResponseWriter, r *http.Request, provider string) {
 	callback := r.URL.Query().Get("callback")
 	authenticator.SetProvider(provider, r)
 	if len(callback) == 0 {
-		callback = fmt.Sprintf("http://%s/auth/callback?provider=%s&login=%s", r.Host, provider, strconv.FormatBool(login))
+		callback = fmt.Sprintf("http://%s/auth/callback/%s", r.Host, provider)
 	}
 	ck, cs := "", ""
 	switch provider {
