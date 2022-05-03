@@ -1,30 +1,25 @@
-import React from 'react';
-import Container from 'react-bootstrap/Container';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import 'bootstrap/dist/css/bootstrap.css';
-import Navbar from 'react-bootstrap/Navbar';
-import Nav from 'react-bootstrap/Nav';
-import { LinkContainer } from 'react-router-bootstrap';
-import { FaGithub, FaTwitter, FaSlack } from 'react-icons/fa';
-import Table from 'react-bootstrap/Table';
-import Badge from 'react-bootstrap/Badge';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Figure from 'react-bootstrap/Figure';
-import Alert from 'react-bootstrap/Alert';
-import Accordion from 'react-bootstrap/Accordion';
-import Form from 'react-bootstrap/Form';
-import Button from 'react-bootstrap/Button';
-import update from 'immutability-helper';
-import './App.css'
+import React from "react";
+import Container from "react-bootstrap/Container";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.css";
+import Navbar from "react-bootstrap/Navbar";
+import Nav from "react-bootstrap/Nav";
+import { LinkContainer } from "react-router-bootstrap";
+import { FaGithub, FaTwitter, FaSlack } from "react-icons/fa";
+import Table from "react-bootstrap/Table";
+import Badge from "react-bootstrap/Badge";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+import Figure from "react-bootstrap/Figure";
+import Alert from "react-bootstrap/Alert";
+import Accordion from "react-bootstrap/Accordion";
+import Form from "react-bootstrap/Form";
+import Button from "react-bootstrap/Button";
+import update from "immutability-helper";
+import "./App.css";
 
-const httpStatusNotAuthenticated = 498
-const httpStatusNotSetup = 499
+const httpStatusNotAuthenticated = 498;
+const httpStatusNotSetup = 499;
 
 class App extends React.Component<{}, any> {
   constructor(props: {}) {
@@ -32,7 +27,7 @@ class App extends React.Component<{}, any> {
     this.state = {
       auth: {
         status: 0,
-      }
+      },
     };
     this.requireAuth = this.requireAuth.bind(this);
     this.setAuthStatus = this.setAuthStatus.bind(this);
@@ -43,35 +38,36 @@ class App extends React.Component<{}, any> {
     let auth = this.state.auth;
 
     if (auth.status === 0) {
-      fetch('/api/auth/status', {
-        'credentials': 'same-origin',
-      })
-        .then(res => {
-          this.setAuthStatus(res.status);
-        })
+      fetch("/api/auth/status", {
+        credentials: "same-origin",
+      }).then((res) => {
+        this.setAuthStatus(res.status);
+      });
     }
 
     if (auth.status === httpStatusNotSetup) {
-      return <Navigate to="/web/setup" replace />
+      return <Navigate to="/web/setup" replace />;
     }
     if (auth.status === httpStatusNotAuthenticated) {
-      return <Navigate to="/web/login" replace />
+      return <Navigate to="/web/login" replace />;
     }
     if (200 <= auth.status && auth.status < 300) {
       return children;
     }
     if (auth.status === 0) {
-      return <Loading />
+      return <Loading />;
     }
-    return <Error />
+    return <Error />;
   }
 
   setAuthStatus(status: number) {
-    this.setState(update(this.state, {
-      auth: {
-        status: { $set: status },
-      },
-    }));
+    this.setState(
+      update(this.state, {
+        auth: {
+          status: { $set: status },
+        },
+      })
+    );
   }
 
   resetAuthStatus() {
@@ -102,20 +98,21 @@ class App extends React.Component<{}, any> {
           <Routes>
             <Route path="/web" element={this.requireAuth(<Home />)} />
             <Route path="/web/config" element={this.requireAuth(<Config />)} />
-            <Route path="/web/setup" element={<Setup resetAuthStatus={this.resetAuthStatus} />} />
+            <Route
+              path="/web/setup"
+              element={<Setup resetAuthStatus={this.resetAuthStatus} />}
+            />
             <Route path="/web/login" element={<Login />} />
           </Routes>
         </Container>
       </BrowserRouter>
-    )
+    );
   }
 }
 
 class Loading extends React.Component<{}, {}> {
   render() {
-    return (
-      <div>Loading...</div>
-    )
+    return <div>Loading...</div>;
   }
 }
 
@@ -135,25 +132,27 @@ class Home extends React.Component<HomeProps, any> {
         analysis_result: "",
         analysis_date: "",
       },
-      error: '',
+      error: "",
     };
   }
 
   componentDidMount() {
-    fetch('/api/worker/status', {
-      'credentials': 'same-origin',
+    fetch("/api/worker/status", {
+      credentials: "same-origin",
     })
-      .then(res => {
+      .then((res) => {
         if (res.ok) {
-          res.json().then(statuses => {
+          res.json().then((statuses) => {
             this.setState({ statuses: statuses });
-          })
+          });
         } else {
-          res.text().then(t => { this.setState({ error: t }) });
+          res.text().then((t) => {
+            this.setState({ error: t });
+          });
         }
       })
-      .catch(err => {
-        this.setState({ error: err })
+      .catch((err) => {
+        this.setState({ error: err });
       });
   }
 
@@ -175,43 +174,39 @@ class Home extends React.Component<HomeProps, any> {
           <Col>
             <h3>Image</h3>
             <Figure>
-              <Figure.Image
-                src={this.state.imageAnalysisResult.url}
-              />
+              <Figure.Image src={this.state.imageAnalysisResult.url} />
             </Figure>
           </Col>
           <Col>
             <h3>Analysis result</h3>
             <Alert variant="secondary">
-              <pre>
-                {this.state.imageAnalysisResult.analysis_result}
-              </pre>
+              <pre>{this.state.imageAnalysisResult.analysis_result}</pre>
             </Alert>
           </Col>
         </Row>
-      )
+      );
     } else {
-      analysisResult = (
-        <Alert variant="info">
-          Nothing to show currently
-        </Alert>
-      )
+      analysisResult = <Alert variant="info">Nothing to show currently</Alert>;
     }
 
     return (
       <div>
         <h1>Mybot</h1>
-        <p className="lead">automatically collect and transfer any kinds of information for you</p>
-        <h2 className="mt-5">Feature Status</h2>
+        <p className="lead">
+          automatically collect and transfer any kinds of information for you
+        </p>
+        <h2 className="mt-5">Process Status</h2>
         <p>
-          Mybot has the following features.<br />
-          If you find <Badge bg="danger">Inactive</Badge> feature, please check your configuration or notify to administrators.
+          Mybot has the following processes.
+          <br />
+          If you find <Badge bg="danger">Inactive</Badge> process, please check
+          your configuration or notify to administrators.
         </p>
         <Table responsive>
           <thead>
             <tr>
               <th>Category</th>
-              <th>Feature</th>
+              <th>Process</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -225,92 +220,82 @@ class Home extends React.Component<HomeProps, any> {
             </tr>
             <tr>
               <td>Timeline</td>
-              <td>
-                {this.statusBadge(this.state.statuses.twitter_timeline)}
-              </td>
+              <td>{this.statusBadge(this.state.statuses.twitter_timeline)}</td>
             </tr>
             <tr>
               <td>Polling (Search and Favorite)</td>
-              <td>
-                {this.statusBadge(this.state.statuses.twitter_polling)}
-              </td>
+              <td>{this.statusBadge(this.state.statuses.twitter_polling)}</td>
             </tr>
             <tr>
               <td>Slack</td>
               <td>Channel Events</td>
-              <td>
-                {this.statusBadge(this.state.statuses.slack_channel)}
-              </td>
-            </tr>
-            <tr>
-              <td>Google</td>
-              <td>Vision API</td>
-              <td>
-                {this.statusBadge(this.state.statuses.google_vision_api)}
-              </td>
+              <td>{this.statusBadge(this.state.statuses.slack_channel)}</td>
             </tr>
           </tbody>
         </Table>
         <h2 className="mt-5">Image Analysis Result</h2>
         <p>
-          Mybot has a feature to analyze image by AI (currently only Google Vision API is supported).<br />
+          Mybot has a feature to analyze image by AI (currently only Google
+          Vision API is supported).
+          <br />
           You can check the latest analysis result here.
         </p>
         {analysisResult}
       </div>
-    )
+    );
   }
 }
 
-type HomeProps = {}
+type HomeProps = {};
 
 class Config extends React.Component<ConfigProps, any> {
   constructor(props: ConfigProps) {
     super(props);
     this.state = {
       config: {},
-    }
+    };
   }
 
   render() {
-    let config = this.state.config
+    let config = this.state.config;
 
-    let timelines = []
+    let timelines = [];
     if (config.twitter != null && config.twitter.timelines != null) {
       for (let [i, val] of this.state.config.twitter.timelines.entries()) {
-        timelines.push(
-          <TimelineConfig
-            eventKey={i}
-            config={val}
-          />
-        )
+        timelines.push(<TimelineConfig eventKey={i} config={val} />);
       }
     }
     return (
       <div>
         <h1>Config</h1>
         <p className="lead">Customize your own bot as you want</p>
-        <h2 className="mt-5"><FaTwitter /> Timeline</h2>
-        <Accordion>
-          {timelines}
-        </Accordion>
-        <h2 className="mt-5"><FaTwitter /> Favorite</h2>
-        <h2 className="mt-5"><FaTwitter /> Search</h2>
-        <h2 className="mt-5"><FaSlack /> Message</h2>
+        <h2 className="mt-5">
+          <FaTwitter /> Timeline
+        </h2>
+        <Accordion>{timelines}</Accordion>
+        <h2 className="mt-5">
+          <FaTwitter /> Favorite
+        </h2>
+        <h2 className="mt-5">
+          <FaTwitter /> Search
+        </h2>
+        <h2 className="mt-5">
+          <FaSlack /> Message
+        </h2>
         <h2 className="mt-5">General</h2>
       </div>
-    )
+    );
   }
 }
 
-type ConfigProps = {}
+type ConfigProps = {};
 
 class TimelineConfig extends React.Component<TimelineConfigProps, any> {
   constructor(props: TimelineConfigProps) {
     super(props);
     this.state = {
       config: props.config,
-    }
+    };
   }
 
   render() {
@@ -320,76 +305,73 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
       <div>
         <Accordion.Item eventKey={this.props.eventKey}>
           <Accordion.Header>{config.name}</Accordion.Header>
-          <Accordion.Body>
-          </Accordion.Body>
+          <Accordion.Body></Accordion.Body>
         </Accordion.Item>
       </div>
-    )
+    );
   }
 }
 
 type TimelineConfigProps = {
-  eventKey: string,
-  config: any,
-}
+  eventKey: string;
+  config: any;
+};
 
 class Setup extends React.Component<SetupProps, any> {
-
   constructor(props: SetupProps) {
     super(props);
     this.state = {
       credential: {
         twitter: {
-          consumer_key: '',
-          consumer_secret: '',
+          consumer_key: "",
+          consumer_secret: "",
         },
         slack: {
-          consumer_key: '',
-          consumer_secret: '',
+          consumer_key: "",
+          consumer_secret: "",
         },
       },
-      error: '',
+      error: "",
     };
     this.submit = this.submit.bind(this);
   }
 
   submit() {
-    fetch('/api/credential', {
-      'credentials': 'same-origin',
-      'body': JSON.stringify(this.state.credential),
-      'method': 'POST',
+    fetch("/api/credential", {
+      credentials: "same-origin",
+      body: JSON.stringify(this.state.credential),
+      method: "POST",
     })
-      .then(res => {
+      .then((res) => {
         if (!res.ok) {
-          res.text().then(t => this.setState({ error: t }));
+          res.text().then((t) => this.setState({ error: t }));
         } else {
           this.props.resetAuthStatus();
         }
       })
-      .catch(err => {
+      .catch((err) => {
         this.setState({ error: err });
-      })
+      });
   }
 
   render() {
     let errorAlert = null;
     if (this.state.error) {
-      errorAlert = (
-        <Alert variant="danger">
-          {this.state.error}
-        </Alert>
-      );
+      errorAlert = <Alert variant="danger">{this.state.error}</Alert>;
     }
     return (
       <div>
         <h1>Setup</h1>
-        <p className="lead">You need to register Application information first</p>
+        <p className="lead">
+          You need to register Application information first
+        </p>
         {errorAlert}
 
         <Form>
           <h2 className="mt-5">Twitter</h2>
           <p>
-            refer to the Twitter App page <a href="https://apps.twitter.com/">here</a>
+            refer to the Twitter App page{" "}
+            <a href="https://apps.twitter.com/">here</a>
           </p>
           <Form.Group className="mb-3">
             <Form.Label>Consumer Key</Form.Label>
@@ -398,13 +380,15 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer key"
               value={this.state.consumer_key}
               onChange={(e) => {
-                this.setState(update(this.state, {
-                  credential: {
-                    twitter: {
-                      consumer_key: { $set: e.target.value },
+                this.setState(
+                  update(this.state, {
+                    credential: {
+                      twitter: {
+                        consumer_key: { $set: e.target.value },
+                      },
                     },
-                  },
-                }))
+                  })
+                );
               }}
             />
           </Form.Group>
@@ -415,20 +399,23 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer secret"
               value={this.state.consumer_secret}
               onChange={(e) => {
-                this.setState(update(this.state, {
-                  credential: {
-                    twitter: {
-                      consumer_secret: { $set: e.target.value },
+                this.setState(
+                  update(this.state, {
+                    credential: {
+                      twitter: {
+                        consumer_secret: { $set: e.target.value },
+                      },
                     },
-                  },
-                }))
+                  })
+                );
               }}
             />
           </Form.Group>
 
           <h2 className="mt-5">Slack</h2>
           <p>
-            refer to the Slack App page <a href="https://api.slack.com/apps">here</a>
+            refer to the Slack App page{" "}
+            <a href="https://api.slack.com/apps">here</a>
           </p>
           <Form.Group className="mb-3">
             <Form.Label>Consumer Key</Form.Label>
@@ -437,13 +424,15 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer key"
               value={this.state.consumer_key}
               onChange={(e) => {
-                this.setState(update(this.state, {
-                  credential: {
-                    slack: {
-                      consumer_key: { $set: e.target.value },
+                this.setState(
+                  update(this.state, {
+                    credential: {
+                      slack: {
+                        consumer_key: { $set: e.target.value },
+                      },
                     },
-                  },
-                }))
+                  })
+                );
               }}
             />
           </Form.Group>
@@ -454,13 +443,15 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer secret"
               value={this.state.consumer_secret}
               onChange={(e) => {
-                this.setState(update(this.state, {
-                  credential: {
-                    slack: {
-                      consumer_secret: { $set: e.target.value },
+                this.setState(
+                  update(this.state, {
+                    credential: {
+                      slack: {
+                        consumer_secret: { $set: e.target.value },
+                      },
                     },
-                  },
-                }))
+                  })
+                );
               }}
             />
           </Form.Group>
@@ -470,16 +461,15 @@ class Setup extends React.Component<SetupProps, any> {
           </Button>
         </Form>
       </div>
-    )
+    );
   }
 }
 
 type SetupProps = {
-  resetAuthStatus: VoidFunction,
-}
+  resetAuthStatus: VoidFunction;
+};
 
 class Login extends React.Component<{}, {}> {
-
   createCallbackURL(provider: string) {
     let location = window.location;
     let proto = location.protocol;
@@ -496,32 +486,33 @@ class Login extends React.Component<{}, {}> {
         <p className="lead">Login with your social account</p>
         <Button
           className="me-3"
-          href={`/api/auth/twitter?callback=${this.createCallbackURL("twitter")}`}>
+          href={`/api/auth/twitter?callback=${this.createCallbackURL(
+            "twitter"
+          )}`}
+        >
           <FaTwitter /> Login with Twitter
         </Button>
         <Button
           className="me-3"
-          href={`/api/auth/slack?callback=${this.createCallbackURL("slack")}`}>
+          href={`/api/auth/slack?callback=${this.createCallbackURL("slack")}`}
+        >
           <FaSlack /> Login with Slack
         </Button>
       </div>
-    )
+    );
   }
 }
 
 class Error extends React.Component<{}, {}> {
-
   render() {
     return (
       <div>
         <Alert variant="danger">
           <Alert.Heading>Sorry, something went wrong.</Alert.Heading>
-          <p>
-            Please contact to administrators.
-          </p>
+          <p>Please contact to administrators.</p>
         </Alert>
       </div>
-    )
+    );
   }
 }
 

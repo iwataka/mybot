@@ -8,6 +8,7 @@ all: fmt lint test
 
 fmt:
 	gofmt $(FMT_OPTS) .
+	yarn --cwd ./web format
 
 lint:
 	$(GOLINT) run $(LINT_OPTS) ./...
