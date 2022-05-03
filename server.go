@@ -35,6 +35,11 @@ const (
 	defaultConfigFormat = ".json"
 )
 
+const (
+	httpStatusNotAuthenticated = 498
+	httpStatusNotSetup         = 499
+)
+
 var (
 	htmlTemplateDir                      = filepath.Join(assetsDir, "tmpl")
 	authenticator   models.Authenticator = &Authenticator{}
@@ -169,11 +174,35 @@ func wrapHandler(f gin.HandlerFunc) gin.HandlerFunc {
 	}
 }
 
-func setupRouter() *gin.Engine {
-	return setupRouterWithWrapper(wrapHandler)
+func apiWrapHandler(f gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if ck, cs := twitterApp.GetCreds(); ck == "" || cs == "" {
+			c.Status(httpStatusNotSetup)
+			return
+		}
+
+		if ck, cs := slackApp.GetCreds(); ck == "" || cs == "" {
+			c.Status(httpStatusNotSetup)
+			return
+		}
+
+		if _, err := authenticator.GetLoginUser(c.Request); err != nil {
+			c.Status(httpStatusNotAuthenticated)
+			return
+		}
+
+		f(c)
+	}
 }
 
-func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.Engine {
+func setupRouter() *gin.Engine {
+	return setupRouterWithWrapper(wrapHandler, apiWrapHandler)
+}
+
+func setupRouterWithWrapper(
+	wrapper func(gin.HandlerFunc) gin.HandlerFunc,
+	apiWrapper func(gin.HandlerFunc) gin.HandlerFunc,
+) *gin.Engine {
 	r := setupBaseRouter()
 	r.GET("/", wrapper(getIndexHandler))
 	r.GET("/account/delete", wrapper(accountDeleteHandler)) // currently hidden endpoint
@@ -190,6 +219,15 @@ func setupRouterWithWrapper(wrapper func(gin.HandlerFunc) gin.HandlerFunc) *gin.
 	r.Any("/setup/", setupHandler)
 	r.GET("/logout/", logoutHandler)
 	r.GET("/twitter/users/search/", wrapper(twitterUserSearchHandler)) // For Twitter user auto-completion usage
+
+	r.GET("/api/worker/status", apiWrapper(apiWorkerStatusHandler))
+	r.GET("/api/analysis/image", apiWrapper(apiAnalysisImageHandler))
+	r.GET("/api/auth/status", apiWrapHandler(apiAuthStatus))
+	r.POST("/api/credential", apiCredential)
+	r.GET("/api/auth/:provider", authHandler)
+	r.GET("/api/auth/callback/:provider", authCallbackHandler)
+
+	r.Static("/web", "./web/build")
 	return r
 }
 
@@ -1050,6 +1088,77 @@ func getTwitterInfo(twitterAPI *core.TwitterAPI) (id, screenName string) {
 		}
 	}
 	return "", ""
+}
+
+func apiWorkerStatusHandler(c *gin.Context) {
+	user, err := authenticator.GetLoginUser(c.Request)
+	if err != nil {
+		panic(err)
+	}
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)]
+	statuses := data.statuses()
+	c.JSON(http.StatusOK, map[string]bool{
+		"twitter_direct_message": statuses[twitterDMRoutineKey],
+		"twitter_timeline":       statuses[twitterUserRoutineKey],
+		"twitter_polling":        statuses[twitterPeriodicRoutineKey],
+		"slack_channel":          statuses[slackRoutineKey],
+	})
+}
+
+func apiAnalysisImageHandler(c *gin.Context) {
+	user, err := authenticator.GetLoginUser(c.Request)
+	if err != nil {
+		panic(err)
+	}
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)]
+	images := data.cache.GetLatestImages(1)
+	if len(images) == 0 {
+		c.JSON(http.StatusOK, models.ImageCacheData{})
+	}
+	c.JSON(http.StatusOK, images[0])
+}
+
+func apiAuthStatus(c *gin.Context) {
+	c.Status(http.StatusOK)
+}
+
+type Credential struct {
+	Twitter struct {
+		ConsumerKey    string `json:"consumer_key"`
+		ConsumerSecret string `json:"consumer_secret"`
+	} `json:"twitter"`
+	Slack struct {
+		ConsumerKey    string `json:"consumer_key"`
+		ConsumerSecret string `json:"consumer_secret"`
+	} `json:"slack"`
+}
+
+func apiCredential(c *gin.Context) {
+	var body Credential
+	err := c.BindJSON(&body)
+	if err != nil {
+		panic(err)
+	}
+	twitter := body.Twitter
+	slack := body.Slack
+
+	if twitter.ConsumerKey == "" || twitter.ConsumerSecret == "" || slack.ConsumerKey == "" || slack.ConsumerSecret == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "any credential must not be empty"})
+		return
+	}
+
+	twitterApp.SetCreds(twitter.ConsumerKey, twitter.ConsumerSecret)
+	err = twitterApp.Save()
+	if err != nil {
+		panic(err)
+	}
+	slackApp.SetCreds(slack.ConsumerKey, slack.ConsumerSecret)
+	err = slackApp.Save()
+	if err != nil {
+		panic(err)
+	}
+
+	c.Status(http.StatusOK)
 }
 
 func getSlackInfo(slackAPI *core.SlackAPI) (string, string) {

@@ -68,10 +68,12 @@ func getDriver() *agouti.WebDriver {
 	return driver
 }
 
+func idWrapHandler(f gin.HandlerFunc) gin.HandlerFunc {
+	return f
+}
+
 func setupRouterWithoutAuth() *gin.Engine {
-	return setupRouterWithWrapper(func(f gin.HandlerFunc) gin.HandlerFunc {
-		return f
-	})
+	return setupRouterWithWrapper(idWrapHandler, idWrapHandler)
 }
 
 func init() {

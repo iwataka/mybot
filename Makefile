@@ -14,3 +14,8 @@ lint:
 
 test:
 	$(GO) test $(TEST_OPTS) ./...
+	yarn --cwd ./web test --watchAll=false
+
+build:
+	go build
+	yarn --cwd ./web build
