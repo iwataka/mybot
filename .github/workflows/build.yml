@@ -21,11 +21,15 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
     - name: Install required packages
       run: |
         sudo apt-get -qq update
         sudo apt-get install -y phantomjs
         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.45.2
+        yarn --cwd ./web install
     - name: Build and test
       run: make
 
