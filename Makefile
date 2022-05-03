@@ -11,6 +11,7 @@ fmt:
 
 lint:
 	$(GOLINT) run $(LINT_OPTS) ./...
+	yarn --cwd ./web lint
 
 test:
 	$(GO) test $(TEST_OPTS) ./...

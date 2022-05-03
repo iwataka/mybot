@@ -101,6 +101,7 @@ class App extends React.Component<{}, any> {
         <Container>
           <Routes>
             <Route path="/web" element={this.requireAuth(<Home />)} />
+            <Route path="/web/config" element={this.requireAuth(<Config />)} />
             <Route path="/web/setup" element={<Setup resetAuthStatus={this.resetAuthStatus} />} />
             <Route path="/web/login" element={<Login />} />
           </Routes>
@@ -201,16 +202,16 @@ class Home extends React.Component<HomeProps, any> {
       <div>
         <h1>Mybot</h1>
         <p className="lead">automatically collect and transfer any kinds of information for you</p>
-        <h2 className="mt-5">Process Status</h2>
+        <h2 className="mt-5">Feature Status</h2>
         <p>
-          Mybot has the following processes.<br />
-          If you find <Badge bg="danger">Inactive</Badge> process, please check your configuration or notify to administrators.
+          Mybot has the following features.<br />
+          If you find <Badge bg="danger">Inactive</Badge> feature, please check your configuration or notify to administrators.
         </p>
         <Table responsive>
           <thead>
             <tr>
               <th>Category</th>
-              <th>Process</th>
+              <th>Feature</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -239,6 +240,13 @@ class Home extends React.Component<HomeProps, any> {
               <td>Channel Events</td>
               <td>
                 {this.statusBadge(this.state.statuses.slack_channel)}
+              </td>
+            </tr>
+            <tr>
+              <td>Google</td>
+              <td>Vision API</td>
+              <td>
+                {this.statusBadge(this.state.statuses.google_vision_api)}
               </td>
             </tr>
           </tbody>
@@ -470,11 +478,7 @@ type SetupProps = {
   resetAuthStatus: VoidFunction,
 }
 
-class Login extends React.Component<LoginProps, {}> {
-
-  constructor(props: LoginProps) {
-    super(props);
-  }
+class Login extends React.Component<{}, {}> {
 
   createCallbackURL(provider: string) {
     let location = window.location;
@@ -505,13 +509,7 @@ class Login extends React.Component<LoginProps, {}> {
   }
 }
 
-type LoginProps = {}
-
-class Error extends React.Component<ErrorProps, {}> {
-
-  constructor(props: ErrorProps) {
-    super(props);
-  }
+class Error extends React.Component<{}, {}> {
 
   render() {
     return (
@@ -526,7 +524,5 @@ class Error extends React.Component<ErrorProps, {}> {
     )
   }
 }
-
-type ErrorProps = {}
 
 export default App;
