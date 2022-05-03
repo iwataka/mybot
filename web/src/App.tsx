@@ -219,26 +219,26 @@ class Home extends React.Component<HomeProps, any> {
               <td rowSpan={3}>Twitter</td>
               <td>Direct Message</td>
               <td>
-                {this.statusBadge(this.state.statuses.twitterDirectMessage)}
+                {this.statusBadge(this.state.statuses.twitter_direct_message)}
               </td>
             </tr>
             <tr>
               <td>Timeline</td>
               <td>
-                {this.statusBadge(this.state.statuses.twitterTimeline)}
+                {this.statusBadge(this.state.statuses.twitter_timeline)}
               </td>
             </tr>
             <tr>
               <td>Polling (Search and Favorite)</td>
               <td>
-                {this.statusBadge(this.state.statuses.twitterPolling)}
+                {this.statusBadge(this.state.statuses.twitter_polling)}
               </td>
             </tr>
             <tr>
               <td>Slack</td>
               <td>Channel Events</td>
               <td>
-                {this.statusBadge(this.state.statuses.slackChannel)}
+                {this.statusBadge(this.state.statuses.slack_channel)}
               </td>
             </tr>
           </tbody>
