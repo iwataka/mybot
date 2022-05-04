@@ -334,6 +334,7 @@ class Setup extends React.Component<SetupProps, any> {
       error: "",
     };
     this.submit = this.submit.bind(this);
+    this.updateState = this.updateState.bind(this);
   }
 
   submit() {
@@ -352,6 +353,18 @@ class Setup extends React.Component<SetupProps, any> {
       .catch((err) => {
         this.setState({ error: err });
       });
+  }
+
+  updateState(typ: string, field: string, value: string) {
+    this.setState(
+      update(this.state, {
+        credential: {
+          [typ]: {
+            [field]: { $set: value },
+          },
+        },
+      })
+    );
   }
 
   render() {
@@ -380,15 +393,7 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer key"
               value={this.state.consumer_key}
               onChange={(e) => {
-                this.setState(
-                  update(this.state, {
-                    credential: {
-                      twitter: {
-                        consumer_key: { $set: e.target.value },
-                      },
-                    },
-                  })
-                );
+                this.updateState("twitter", "consumer_key", e.target.value);
               }}
             />
           </Form.Group>
@@ -399,15 +404,7 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer secret"
               value={this.state.consumer_secret}
               onChange={(e) => {
-                this.setState(
-                  update(this.state, {
-                    credential: {
-                      twitter: {
-                        consumer_secret: { $set: e.target.value },
-                      },
-                    },
-                  })
-                );
+                this.updateState("twitter", "consumer_secret", e.target.value);
               }}
             />
           </Form.Group>
@@ -424,15 +421,7 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer key"
               value={this.state.consumer_key}
               onChange={(e) => {
-                this.setState(
-                  update(this.state, {
-                    credential: {
-                      slack: {
-                        consumer_key: { $set: e.target.value },
-                      },
-                    },
-                  })
-                );
+                this.updateState("slack", "consumer_key", e.target.value);
               }}
             />
           </Form.Group>
@@ -443,15 +432,7 @@ class Setup extends React.Component<SetupProps, any> {
               placeholder="Enter consumer secret"
               value={this.state.consumer_secret}
               onChange={(e) => {
-                this.setState(
-                  update(this.state, {
-                    credential: {
-                      slack: {
-                        consumer_secret: { $set: e.target.value },
-                      },
-                    },
-                  })
-                );
+                this.updateState("slack", "consumer_secret", e.target.value);
               }}
             />
           </Form.Group>
