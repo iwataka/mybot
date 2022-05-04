@@ -120,7 +120,7 @@ class Home extends React.Component<HomeProps, any> {
   constructor(props: HomeProps) {
     super(props);
     this.state = {
-      statuses: {
+      workerStatus: {
         twitter_direct_message: null,
         twitter_timeline: null,
         twitter_polling: null,
@@ -137,13 +137,18 @@ class Home extends React.Component<HomeProps, any> {
   }
 
   componentDidMount() {
-    fetch("/api/worker/status", {
+    this.fetchAndSet("/api/worker/status", "workerStatus")
+    this.fetchAndSet("/api/analysis/image", "imageAnalysisResult")
+  }
+
+  fetchAndSet(path: string, key: string) {
+    fetch(path, {
       credentials: "same-origin",
     })
       .then((res) => {
         if (res.ok) {
-          res.json().then((statuses) => {
-            this.setState({ statuses: statuses });
+          res.json().then((data) => {
+            this.setState({ [key]: data });
           });
         } else {
           res.text().then((t) => {
@@ -215,21 +220,21 @@ class Home extends React.Component<HomeProps, any> {
               <td rowSpan={3}>Twitter</td>
               <td>Direct Message</td>
               <td>
-                {this.statusBadge(this.state.statuses.twitter_direct_message)}
+                {this.statusBadge(this.state.workerStatus.twitter_direct_message)}
               </td>
             </tr>
             <tr>
               <td>Timeline</td>
-              <td>{this.statusBadge(this.state.statuses.twitter_timeline)}</td>
+              <td>{this.statusBadge(this.state.workerStatus.twitter_timeline)}</td>
             </tr>
             <tr>
               <td>Polling (Search and Favorite)</td>
-              <td>{this.statusBadge(this.state.statuses.twitter_polling)}</td>
+              <td>{this.statusBadge(this.state.workerStatus.twitter_polling)}</td>
             </tr>
             <tr>
               <td>Slack</td>
               <td>Channel Events</td>
-              <td>{this.statusBadge(this.state.statuses.slack_channel)}</td>
+              <td>{this.statusBadge(this.state.workerStatus.slack_channel)}</td>
             </tr>
           </tbody>
         </Table>

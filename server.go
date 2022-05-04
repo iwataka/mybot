@@ -1114,6 +1114,7 @@ func apiAnalysisImageHandler(c *gin.Context) {
 	images := data.cache.GetLatestImages(1)
 	if len(images) == 0 {
 		c.JSON(http.StatusOK, models.ImageCacheData{})
+		return
 	}
 	c.JSON(http.StatusOK, images[0])
 }
