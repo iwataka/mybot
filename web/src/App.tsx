@@ -21,7 +21,17 @@ import "./App.css";
 const httpStatusNotAuthenticated = 498;
 const httpStatusNotSetup = 499;
 
-class App extends React.Component<{}, any> {
+class App extends React.Component<{}, {}> {
+  render() {
+    return (
+      <BrowserRouter>
+        <AppWithoutRouter />
+      </BrowserRouter>
+    );
+  }
+}
+
+class AppWithoutRouter extends React.Component<{}, any> {
   constructor(props: {}) {
     super(props);
     this.state = {
@@ -76,7 +86,7 @@ class App extends React.Component<{}, any> {
 
   render() {
     return (
-      <BrowserRouter>
+      <div>
         <Navbar>
           <Container>
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -108,7 +118,7 @@ class App extends React.Component<{}, any> {
             <Route path="/web/login" element={<Login />} />
           </Routes>
         </Container>
-      </BrowserRouter>
+      </div>
     );
   }
 }
@@ -279,13 +289,25 @@ class Config extends React.Component<ConfigProps, any> {
     };
   }
 
+  componentDidMount() {
+    fetch("/api/config", {
+      credentials: "same-origin",
+    }).then((res) => {
+      if (res.ok) {
+        res.json().then((data) => {
+          this.setState({ config: data });
+        });
+      }
+    });
+  }
+
   render() {
     let config = this.state.config;
 
     let timelines = [];
     if (config.twitter != null && config.twitter.timelines != null) {
-      for (let [i, val] of this.state.config.twitter.timelines.entries()) {
-        timelines.push(<TimelineConfig eventKey={i} config={val} />);
+      for (let [i, val] of config.twitter.timelines.entries()) {
+        timelines.push(<TimelineConfig key={i} eventKey={i} config={val} />);
       }
     }
     return (
@@ -314,21 +336,179 @@ class Config extends React.Component<ConfigProps, any> {
 type ConfigProps = {};
 
 class TimelineConfig extends React.Component<TimelineConfigProps, any> {
-  constructor(props: TimelineConfigProps) {
-    super(props);
-    this.state = {
-      config: props.config,
-    };
+  static readonly timelineSchema = {
+    // exclude because this is a special value
+    // name: null,
+    //
+    // null means end sign of schema
+    screen_names: null,
+    exclude_replies: null,
+    include_rts: null,
+    count: null,
+    filter: {
+      has_media: null,
+      favorite_threshold: null,
+      retweet_threshold: null,
+      lang: null,
+      patterns: null,
+      url_patterns: null,
+      vision: {
+        label: null,
+        face: {
+          anger_likelihood: null,
+          bluerred_likelihood: null,
+          headwear_likelihood: null,
+          joy_likelihood: null,
+        },
+        text: null,
+        landmark: null,
+        logo: null,
+      },
+      language: {
+        min_sentiment: null,
+        max_sentiment: null,
+      },
+    },
+    action: {
+      twitter: {
+        tweet: null,
+        retweet: null,
+        favorite: null,
+        collections: null,
+      },
+      slack: {
+        pin: null,
+        star: null,
+        reactions: null,
+        channels: null,
+      },
+    },
+  };
+
+  calcDepth(schema: any, depth: number) {
+    if (schema == null) {
+      return depth;
+    }
+    let result = 0;
+    for (let value of Object.values(schema)) {
+      let d = this.calcDepth(value, depth + 1);
+      if (d > result) {
+        result = d;
+      }
+    }
+    return result;
+  }
+
+  calcRowSpans(
+    schemaStack: Array<string>,
+    curSchema: any
+  ): Map<string, number> {
+    if (curSchema === null) {
+      let result = new Map();
+      result.set(schemaStack.join("."), 1);
+      return result;
+    }
+
+    let result = new Map();
+    let rowSpan = 0;
+    for (const [key, value] of Object.entries(curSchema)) {
+      let newStack = schemaStack.slice();
+      newStack.push(key);
+      let schemaToRowSpan = this.calcRowSpans(newStack, value);
+      rowSpan += Math.max(...Array.from(schemaToRowSpan.values()));
+      result = new Map([
+        ...Object.entries(result),
+        ...Object.entries(schemaToRowSpan),
+      ]);
+    }
+    if (schemaStack.length > 0) {
+      result.set(schemaStack.join("."), rowSpan);
+    }
+    return result;
+  }
+
+  renderConfigRows(
+    schemaStack: Array<string>,
+    curSchema: any,
+    schemaToRowSpan: Map<string, number>,
+    schemaIsRendered: Map<string, boolean>,
+    config: any,
+    numOfFieldCols: number
+  ) {
+    if (curSchema === null) {
+      let schema: Array<string> = [];
+      let field_cols = schemaStack.map((key, index) => {
+        schema.push(key);
+        let isRendered = schemaIsRendered.get(schema.join(".")) || false;
+        if (isRendered) {
+          return null;
+        }
+        let colSpan = 1;
+        let rowSpan = schemaToRowSpan.get(schema.join("."));
+        if (index === schemaStack.length - 1) {
+          colSpan = numOfFieldCols - schemaStack.length + 1;
+        }
+        schemaIsRendered.set(schema.join("."), true);
+        return (
+          <td key={key} colSpan={colSpan} rowSpan={rowSpan}>
+            {key}
+          </td>
+        );
+      });
+      let field_name = schemaStack.join(".");
+      return [
+        <tr key={field_name}>
+          {field_cols}
+          <td>{config}</td>
+        </tr>,
+      ];
+    }
+
+    let result = [];
+    for (const [key, value] of Object.entries(curSchema)) {
+      let new_schema_stack = schemaStack.slice();
+      new_schema_stack.push(key);
+      let rows: Array<JSX.Element> = this.renderConfigRows(
+        new_schema_stack,
+        value,
+        schemaToRowSpan,
+        schemaIsRendered,
+        config[key],
+        numOfFieldCols
+      );
+      result.push(...rows);
+    }
+    return result;
   }
 
   render() {
-    let config = this.state.config;
+    let config = this.props.config;
+    let numOfFieldCols = this.calcDepth(TimelineConfig.timelineSchema, 0);
 
     return (
       <div>
         <Accordion.Item eventKey={this.props.eventKey}>
           <Accordion.Header>{config.name}</Accordion.Header>
-          <Accordion.Body></Accordion.Body>
+          <Accordion.Body>
+            <Table>
+              <thead>
+                <tr>
+                  <th colSpan={numOfFieldCols}>config item</th>
+                  <th>value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {this.renderConfigRows(
+                  [],
+                  TimelineConfig.timelineSchema,
+                  this.calcRowSpans([], TimelineConfig.timelineSchema),
+                  new Map(),
+                  config,
+                  numOfFieldCols
+                )}
+              </tbody>
+            </Table>
+          </Accordion.Body>
         </Accordion.Item>
       </div>
     );
@@ -520,4 +700,4 @@ class Error extends React.Component<{}, {}> {
   }
 }
 
-export default App;
+export { App as default, AppWithoutRouter };

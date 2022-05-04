@@ -227,6 +227,7 @@ func setupRouterWithWrapper(
 	r.POST("/api/auth/credential", apiCredential)
 	r.GET("/api/auth/:provider", authHandler)
 	r.GET("/api/auth/callback/:provider", authCallbackHandler)
+	r.GET("/api/config", apiWrapper(apiConfigHandler))
 
 	r.Static("/web", "./web/build")
 	return r
@@ -1167,6 +1168,15 @@ func apiCredential(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func apiConfigHandler(c *gin.Context) {
+	user, err := authenticator.GetLoginUser(c.Request)
+	if err != nil {
+		panic(err)
+	}
+	data := userSpecificDataMap[fmt.Sprintf(appUserIDFormat, user.Provider, user.UserID)]
+	c.JSON(http.StatusOK, data.config)
 }
 
 func getSlackInfo(slackAPI *core.SlackAPI) (string, string) {
