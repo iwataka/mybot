@@ -54,5 +54,8 @@
     "@types/react-router-bootstrap": "^0.24.5",
     "eslint": "^8.14.0",
     "prettier": "2.6.2"
+  },
+  "resolutions": {
+    "autoprefixer": "10.4.5"
   }
 }
