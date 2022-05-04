@@ -434,26 +434,30 @@ func (a *TwitterAPI) ListenMyself(v url.Values) (*TwitterDMListener, error) {
 }
 
 func (l *TwitterDMListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
-	for {
-		select {
-		case msg := <-l.stream.C:
-			switch c := msg.(type) {
-			case anaconda.DirectMessage:
-				outChan <- NewReceivedEvent(TwitterEventType, "DM", c)
-				// TODO: Handle direct messages in the same way as the other sources
-				id := l.api.cache.GetLatestDMID()
-				if id < c.Id {
-					l.api.cache.SetLatestDMID(c.Id)
-				}
-				err := l.api.cache.Save()
-				if err != nil {
-					return utils.WithStack(err)
-				}
-			}
-		case <-ctx.Done():
-			return nil
-		}
-	}
+	// TODO: Twitter User Stream API has been retired, so I temporarily disable this feature.
+	// Later I completely remove this feature.
+	// https://developer.twitter.com/en/docs/twitter-api/enterprise/account-activity-api/migration/us-ss-migration-guide
+	return nil
+	// for {
+	// 	select {
+	// 	case msg := <-l.stream.C:
+	// 		switch c := msg.(type) {
+	// 		case anaconda.DirectMessage:
+	// 			outChan <- NewReceivedEvent(TwitterEventType, "DM", c)
+	// 			// TODO: Handle direct messages in the same way as the other sources
+	// 			id := l.api.cache.GetLatestDMID()
+	// 			if id < c.Id {
+	// 				l.api.cache.SetLatestDMID(c.Id)
+	// 			}
+	// 			err := l.api.cache.Save()
+	// 			if err != nil {
+	// 				return utils.WithStack(err)
+	// 			}
+	// 		}
+	// 	case <-ctx.Done():
+	// 		return nil
+	// 	}
+	// }
 }
 
 func (l *TwitterDMListener) Stop() {
