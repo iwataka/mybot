@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/sessions"
@@ -17,6 +22,7 @@ import (
 	"github.com/iwataka/mybot/utils"
 	"github.com/iwataka/mybot/worker"
 	"github.com/kidstuff/mongostore"
+	"github.com/markbates/goth/gothic"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli"
 	"gopkg.in/mgo.v2"
@@ -528,9 +534,51 @@ func startUserSpecificData(c models.Context, data *userSpecificData, userID stri
 }
 
 func serve(c *cli.Context) error {
-	err := startServer(c.String(hostFlagName), c.String(portFlagName), c.String(certFlagName), c.String(keyFlagName))
-	if err != nil {
-		return err
+	gothic.Store = serverSession
+
+	host, port := c.String(hostFlagName), c.String(portFlagName)
+	addr := fmt.Sprintf("%s:%s", host, port)
+	cert, key := c.String(certFlagName), c.String(keyFlagName)
+	_, certErr := os.Stat(cert)
+	_, keyErr := os.Stat(key)
+
+	r := setupRouter()
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
+	}
+
+	// Graceful shutdown
+	// https://github.com/gin-gonic/gin#graceful-shutdown-or-restart
+	go func() {
+		var err error
+		if certErr == nil && keyErr == nil {
+			err = srv.ListenAndServeTLS(cert, key)
+		} else {
+			err = srv.ListenAndServe()
+		}
+		if err != nil && errors.Is(err, http.ErrServerClosed) {
+			logger.Printf("listen: %s\n", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal)
+	// kill (no param) default send syscall.SIGTERM
+	// kill -2 is syscall.SIGINT
+	// kill -9 is syscall.SIGKILL but can't be caught, so don't need to add it
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM) //nolint:staticcheck
+	<-quit
+	logger.Println("Shutting down server...")
+
+	// The context is used to inform the server it has 5 seconds to finish
+	// the request it is currently handling
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("Server force to shutdown: %s", err)
 	}
 	return nil
 }

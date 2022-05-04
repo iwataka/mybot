@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -207,29 +206,6 @@ func setupBaseRouter() *gin.Engine {
 	}
 	r.LoadHTMLFiles(tmplFiles...)
 	return r
-}
-
-func startServer(host, port, cert, key string) error {
-	gothic.Store = serverSession
-	gothic.GetProviderName = func(r *http.Request) (string, error) {
-		if n := r.URL.Query().Get("provider"); len(n) > 0 {
-			return n, nil
-		}
-		return "", fmt.Errorf("no provider name given")
-	}
-
-	r := setupRouter()
-	addr := fmt.Sprintf("%s:%s", host, port)
-	_, certErr := os.Stat(cert)
-	_, keyErr := os.Stat(key)
-
-	var err error
-	if certErr == nil && keyErr == nil {
-		err = r.RunTLS(addr, cert, key)
-	} else {
-		err = r.Run(addr)
-	}
-	return utils.WithStack(err)
 }
 
 func accountDeleteHandler(c *gin.Context) {
