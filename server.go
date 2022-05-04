@@ -221,9 +221,10 @@ func setupRouterWithWrapper(
 	r.GET("/twitter/users/search/", wrapper(twitterUserSearchHandler)) // For Twitter user auto-completion usage
 
 	r.GET("/api/worker/status", apiWrapper(apiWorkerStatusHandler))
-	r.GET("/api/analysis/image", apiWrapper(apiAnalysisImageHandler))
+	r.GET("/api/analysis/image/result", apiWrapper(apiAnalysisImageResultHandler))
+	r.GET("/api/analysis/image/status", apiWrapper(apiAnalysisImageStatusHandler))
 	r.GET("/api/auth/status", apiWrapHandler(apiAuthStatus))
-	r.POST("/api/credential", apiCredential)
+	r.POST("/api/auth/credential", apiCredential)
 	r.GET("/api/auth/:provider", authHandler)
 	r.GET("/api/auth/callback/:provider", authCallbackHandler)
 
@@ -1105,7 +1106,7 @@ func apiWorkerStatusHandler(c *gin.Context) {
 	})
 }
 
-func apiAnalysisImageHandler(c *gin.Context) {
+func apiAnalysisImageResultHandler(c *gin.Context) {
 	user, err := authenticator.GetLoginUser(c.Request)
 	if err != nil {
 		panic(err)
@@ -1117,6 +1118,12 @@ func apiAnalysisImageHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, images[0])
+}
+
+func apiAnalysisImageStatusHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"google": googleEnabled(),
+	})
 }
 
 func apiAuthStatus(c *gin.Context) {

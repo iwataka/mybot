@@ -85,6 +85,9 @@ class App extends React.Component<{}, any> {
                 <LinkContainer to="/web">
                   <Nav.Link>Home</Nav.Link>
                 </LinkContainer>
+                <LinkContainer to="/web/config">
+                  <Nav.Link>Config</Nav.Link>
+                </LinkContainer>
               </Nav>
               <Nav>
                 <Nav.Link href="https://github.com/iwataka/mybot">
@@ -126,6 +129,9 @@ class Home extends React.Component<HomeProps, any> {
         twitter_polling: null,
         slack_channel: null,
       },
+      imageAnalysisStatus: {
+        google: null,
+      },
       imageAnalysisResult: {
         url: "",
         src: "",
@@ -137,8 +143,9 @@ class Home extends React.Component<HomeProps, any> {
   }
 
   componentDidMount() {
-    this.fetchAndSet("/api/worker/status", "workerStatus")
-    this.fetchAndSet("/api/analysis/image", "imageAnalysisResult")
+    this.fetchAndSet("/api/worker/status", "workerStatus");
+    this.fetchAndSet("/api/analysis/image/status", "imageAnalysisStatus");
+    this.fetchAndSet("/api/analysis/image/result", "imageAnalysisResult");
   }
 
   fetchAndSet(path: string, key: string) {
@@ -200,41 +207,52 @@ class Home extends React.Component<HomeProps, any> {
         <p className="lead">
           automatically collect and transfer any kinds of information for you
         </p>
-        <h2 className="mt-5">Process Status</h2>
+        <h2 className="mt-5">Feature Status</h2>
         <p>
-          Mybot has the following processes.
+          Mybot mainly has the following features.
           <br />
-          If you find <Badge bg="danger">Inactive</Badge> process, please check
+          If you find <Badge bg="danger">Inactive</Badge> feature, please check
           your configuration or notify to administrators.
         </p>
         <Table responsive>
           <thead>
             <tr>
               <th>Category</th>
-              <th>Process</th>
+              <th>Feature</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td rowSpan={3}>Twitter</td>
-              <td>Direct Message</td>
+              <td>Direct Message (retired by Twitter)</td>
               <td>
-                {this.statusBadge(this.state.workerStatus.twitter_direct_message)}
+                {this.statusBadge(
+                  this.state.workerStatus.twitter_direct_message
+                )}
               </td>
             </tr>
             <tr>
               <td>Timeline</td>
-              <td>{this.statusBadge(this.state.workerStatus.twitter_timeline)}</td>
+              <td>
+                {this.statusBadge(this.state.workerStatus.twitter_timeline)}
+              </td>
             </tr>
             <tr>
               <td>Polling (Search and Favorite)</td>
-              <td>{this.statusBadge(this.state.workerStatus.twitter_polling)}</td>
+              <td>
+                {this.statusBadge(this.state.workerStatus.twitter_polling)}
+              </td>
             </tr>
             <tr>
               <td>Slack</td>
               <td>Channel Events</td>
               <td>{this.statusBadge(this.state.workerStatus.slack_channel)}</td>
+            </tr>
+            <tr>
+              <td>Google</td>
+              <td>Vision API</td>
+              <td>{this.statusBadge(this.state.imageAnalysisStatus.google)}</td>
             </tr>
           </tbody>
         </Table>
@@ -343,7 +361,7 @@ class Setup extends React.Component<SetupProps, any> {
   }
 
   submit() {
-    fetch("/api/credential", {
+    fetch("/api/auth/credential", {
       credentials: "same-origin",
       body: JSON.stringify(this.state.credential),
       method: "POST",
