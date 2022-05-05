@@ -21,53 +21,83 @@ import "./App.css";
 const httpStatusNotAuthenticated = 498;
 const httpStatusNotSetup = 499;
 
-const timelineSchema = {
-  // exclude because this is a special value
-  // name: null,
-  //
-  // null means end sign of schema
+const filterSchema = {
+  has_media: null,
+  favorite_threshold: null,
+  retweet_threshold: null,
+  lang: null,
+  patterns: null,
+  url_patterns: null,
+  vision: {
+    label: null,
+    face: {
+      anger_likelihood: null,
+      bluerred_likelihood: null,
+      headwear_likelihood: null,
+      joy_likelihood: null,
+    },
+    text: null,
+    landmark: null,
+    logo: null,
+  },
+  language: {
+    min_sentiment: null,
+    max_sentiment: null,
+  },
+};
+
+const actionSchema = {
+  twitter: {
+    tweet: null,
+    retweet: null,
+    favorite: null,
+    collections: null,
+  },
+  slack: {
+    pin: null,
+    star: null,
+    reactions: null,
+    channels: null,
+  },
+};
+
+// null value means end sign of schema
+const twitterTimelineSchema = {
+  name: null,
   screen_names: null,
   exclude_replies: null,
   include_rts: null,
   count: null,
-  filter: {
-    has_media: null,
-    favorite_threshold: null,
-    retweet_threshold: null,
-    lang: null,
-    patterns: null,
-    url_patterns: null,
-    vision: {
-      label: null,
-      face: {
-        anger_likelihood: null,
-        bluerred_likelihood: null,
-        headwear_likelihood: null,
-        joy_likelihood: null,
-      },
-      text: null,
-      landmark: null,
-      logo: null,
-    },
-    language: {
-      min_sentiment: null,
-      max_sentiment: null,
-    },
-  },
-  action: {
-    twitter: {
-      tweet: null,
-      retweet: null,
-      favorite: null,
-      collections: null,
-    },
-    slack: {
-      pin: null,
-      star: null,
-      reactions: null,
-      channels: null,
-    },
-  },
+  filter: filterSchema,
+  action: actionSchema,
+};
+
+const twitterFavoriteSchema = {
+  name: null,
+  screen_names: null,
+  count: null,
+  filter: filterSchema,
+  action: actionSchema,
+};
+
+const twitterSearchSchema = {
+  name: null,
+  queries: null,
+  result_type: null,
+  count: null,
+  filter: filterSchema,
+  action: actionSchema,
+};
+
+const slackMessageSchema = {
+  name: null,
+  channels: null,
+  filter: filterSchema,
+  action: actionSchema,
+};
+
+const generalSchema = {
+  duration: null,
 };
 
 class App extends React.Component<{}, {}> {
@@ -352,20 +382,6 @@ class Config extends React.Component<ConfigProps, any> {
 
   render() {
     let config = this.state.config;
-
-    let timelines = [];
-    if (config.twitter != null && config.twitter.timelines != null) {
-      for (let [i, val] of config.twitter.timelines.entries()) {
-        timelines.push(
-          <ConfigTable
-            key={i}
-            eventKey={i}
-            config={val}
-            schema={timelineSchema}
-          />
-        );
-      }
-    }
     return (
       <div>
         <h1>Config</h1>
@@ -373,17 +389,47 @@ class Config extends React.Component<ConfigProps, any> {
         <h2 className="mt-5">
           <FaTwitter /> Timeline
         </h2>
-        <Accordion>{timelines}</Accordion>
+        {config && config.twitter ? (
+          <ConfigTableList
+            configList={config.twitter.timelines}
+            schema={twitterTimelineSchema}
+          />
+        ) : null}
         <h2 className="mt-5">
           <FaTwitter /> Favorite
         </h2>
+        {config && config.twitter ? (
+          <ConfigTableList
+            configList={config.twitter.favorites}
+            schema={twitterFavoriteSchema}
+          />
+        ) : null}
         <h2 className="mt-5">
           <FaTwitter /> Search
         </h2>
+        {config && config.twitter ? (
+          <ConfigTableList
+            configList={config.twitter.searches}
+            schema={twitterSearchSchema}
+          />
+        ) : null}
         <h2 className="mt-5">
           <FaSlack /> Message
         </h2>
+        {config && config.slack ? (
+          <ConfigTableList
+            configList={config.slack.messages}
+            schema={slackMessageSchema}
+          />
+        ) : null}
         <h2 className="mt-5">General</h2>
+        {config ? (
+          <ConfigTable
+            eventKey="general"
+            config={config}
+            schema={generalSchema}
+          />
+        ) : null}
       </div>
     );
   }
@@ -391,7 +437,39 @@ class Config extends React.Component<ConfigProps, any> {
 
 type ConfigProps = {};
 
-class ConfigTable<S> extends React.Component<ConfigTableProps, S> {
+class ConfigTableList extends React.Component<ConfigTableListProps, any> {
+  render() {
+    let configList: JSX.Element[] = [];
+    if (this.props.configList !== null) {
+      configList = Object.entries(this.props.configList).map(([i, val]) => {
+        return (
+          <Accordion.Item key={i} eventKey={i}>
+            <Accordion.Header>{val.name}</Accordion.Header>
+            <Accordion.Body>
+              <ConfigTable
+                key={i}
+                eventKey={i}
+                config={val}
+                schema={this.props.schema}
+              />
+            </Accordion.Body>
+          </Accordion.Item>
+        );
+      });
+    }
+    if (configList.length > 0) {
+      return <Accordion>{configList}</Accordion>;
+    }
+    return null;
+  }
+}
+
+type ConfigTableListProps = {
+  configList: any[];
+  schema: any;
+};
+
+class ConfigTable extends React.Component<ConfigTableProps, any> {
   renderConfigTable(config: any): JSX.Element {
     let numOfFieldCols = this.calcDepth(this.props.schema, 0);
     let tableRows = this.renderConfigRows(
@@ -416,15 +494,7 @@ class ConfigTable<S> extends React.Component<ConfigTableProps, S> {
   }
 
   render() {
-    let config = this.props.config;
-    return (
-      <div>
-        <Accordion.Item eventKey={this.props.eventKey}>
-          <Accordion.Header>{config.name}</Accordion.Header>
-          <Accordion.Body>{this.renderConfigTable(config)}</Accordion.Body>
-        </Accordion.Item>
-      </div>
-    );
+    return this.renderConfigTable(this.props.config);
   }
 
   private calcDepth(schema: any, depth: number): number {
