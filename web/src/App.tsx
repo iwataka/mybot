@@ -21,6 +21,55 @@ import "./App.css";
 const httpStatusNotAuthenticated = 498;
 const httpStatusNotSetup = 499;
 
+const timelineSchema = {
+  // exclude because this is a special value
+  // name: null,
+  //
+  // null means end sign of schema
+  screen_names: null,
+  exclude_replies: null,
+  include_rts: null,
+  count: null,
+  filter: {
+    has_media: null,
+    favorite_threshold: null,
+    retweet_threshold: null,
+    lang: null,
+    patterns: null,
+    url_patterns: null,
+    vision: {
+      label: null,
+      face: {
+        anger_likelihood: null,
+        bluerred_likelihood: null,
+        headwear_likelihood: null,
+        joy_likelihood: null,
+      },
+      text: null,
+      landmark: null,
+      logo: null,
+    },
+    language: {
+      min_sentiment: null,
+      max_sentiment: null,
+    },
+  },
+  action: {
+    twitter: {
+      tweet: null,
+      retweet: null,
+      favorite: null,
+      collections: null,
+    },
+    slack: {
+      pin: null,
+      star: null,
+      reactions: null,
+      channels: null,
+    },
+  },
+};
+
 class App extends React.Component<{}, {}> {
   render() {
     return (
@@ -307,7 +356,14 @@ class Config extends React.Component<ConfigProps, any> {
     let timelines = [];
     if (config.twitter != null && config.twitter.timelines != null) {
       for (let [i, val] of config.twitter.timelines.entries()) {
-        timelines.push(<TimelineConfig key={i} eventKey={i} config={val} />);
+        timelines.push(
+          <ConfigTable
+            key={i}
+            eventKey={i}
+            config={val}
+            schema={timelineSchema}
+          />
+        );
       }
     }
     return (
@@ -335,57 +391,43 @@ class Config extends React.Component<ConfigProps, any> {
 
 type ConfigProps = {};
 
-class TimelineConfig extends React.Component<TimelineConfigProps, any> {
-  static readonly timelineSchema = {
-    // exclude because this is a special value
-    // name: null,
-    //
-    // null means end sign of schema
-    screen_names: null,
-    exclude_replies: null,
-    include_rts: null,
-    count: null,
-    filter: {
-      has_media: null,
-      favorite_threshold: null,
-      retweet_threshold: null,
-      lang: null,
-      patterns: null,
-      url_patterns: null,
-      vision: {
-        label: null,
-        face: {
-          anger_likelihood: null,
-          bluerred_likelihood: null,
-          headwear_likelihood: null,
-          joy_likelihood: null,
-        },
-        text: null,
-        landmark: null,
-        logo: null,
-      },
-      language: {
-        min_sentiment: null,
-        max_sentiment: null,
-      },
-    },
-    action: {
-      twitter: {
-        tweet: null,
-        retweet: null,
-        favorite: null,
-        collections: null,
-      },
-      slack: {
-        pin: null,
-        star: null,
-        reactions: null,
-        channels: null,
-      },
-    },
-  };
+class ConfigTable<S> extends React.Component<ConfigTableProps, S> {
+  renderConfigTable(config: any): JSX.Element {
+    let numOfFieldCols = this.calcDepth(this.props.schema, 0);
+    let tableRows = this.renderConfigRows(
+      [],
+      this.props.schema,
+      this.calcRowSpans([], this.props.schema),
+      {},
+      config,
+      numOfFieldCols
+    );
+    return (
+      <Table>
+        <thead>
+          <tr>
+            <th colSpan={numOfFieldCols}>config item</th>
+            <th>value</th>
+          </tr>
+        </thead>
+        <tbody>{tableRows}</tbody>
+      </Table>
+    );
+  }
 
-  calcDepth(schema: any, depth: number): number {
+  render() {
+    let config = this.props.config;
+    return (
+      <div>
+        <Accordion.Item eventKey={this.props.eventKey}>
+          <Accordion.Header>{config.name}</Accordion.Header>
+          <Accordion.Body>{this.renderConfigTable(config)}</Accordion.Body>
+        </Accordion.Item>
+      </div>
+    );
+  }
+
+  private calcDepth(schema: any, depth: number): number {
     if (schema == null) {
       return depth;
     }
@@ -394,7 +436,7 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
     );
   }
 
-  calcRowSpans(
+  private calcRowSpans(
     schemaStack: string[],
     curSchema: any
   ): { [key: string]: number } {
@@ -419,7 +461,7 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
     return result;
   }
 
-  renderConfigRows(
+  private renderConfigRows(
     schemaStack: string[],
     curSchema: any,
     schemaToRowSpan: { [key: string]: number },
@@ -467,44 +509,12 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
       );
     });
   }
-
-  render() {
-    let config = this.props.config;
-    let numOfFieldCols = this.calcDepth(TimelineConfig.timelineSchema, 0);
-
-    return (
-      <div>
-        <Accordion.Item eventKey={this.props.eventKey}>
-          <Accordion.Header>{config.name}</Accordion.Header>
-          <Accordion.Body>
-            <Table>
-              <thead>
-                <tr>
-                  <th colSpan={numOfFieldCols}>config item</th>
-                  <th>value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {this.renderConfigRows(
-                  [],
-                  TimelineConfig.timelineSchema,
-                  this.calcRowSpans([], TimelineConfig.timelineSchema),
-                  {},
-                  config,
-                  numOfFieldCols
-                )}
-              </tbody>
-            </Table>
-          </Accordion.Body>
-        </Accordion.Item>
-      </div>
-    );
-  }
 }
 
-type TimelineConfigProps = {
+type ConfigTableProps = {
   eventKey: string;
   config: any;
+  schema: any;
 };
 
 class Setup extends React.Component<SetupProps, any> {
