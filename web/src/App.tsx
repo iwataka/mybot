@@ -22,82 +22,82 @@ const httpStatusNotAuthenticated = 498;
 const httpStatusNotSetup = 499;
 
 const filterSchema = {
-  has_media: null,
-  favorite_threshold: null,
-  retweet_threshold: null,
-  lang: null,
-  patterns: null,
-  url_patterns: null,
+  has_media: "boolean",
+  favorite_threshold: "number",
+  retweet_threshold: "number",
+  lang: "string",
+  patterns: "array<string>",
+  url_patterns: "array<string>",
   vision: {
-    label: null,
+    label: "string",
     face: {
-      anger_likelihood: null,
-      bluerred_likelihood: null,
-      headwear_likelihood: null,
-      joy_likelihood: null,
+      anger_likelihood: "string",
+      bluerred_likelihood: "string",
+      headwear_likelihood: "string",
+      joy_likelihood: "string",
     },
-    text: null,
-    landmark: null,
-    logo: null,
+    text: "array<string>",
+    landmark: "array<string>",
+    logo: "array<string>",
   },
   language: {
-    min_sentiment: null,
-    max_sentiment: null,
+    min_sentiment: "number",
+    max_sentiment: "number",
   },
 };
 
 const actionSchema = {
   twitter: {
-    tweet: null,
-    retweet: null,
-    favorite: null,
-    collections: null,
+    tweet: "boolean",
+    retweet: "boolean",
+    favorite: "boolean",
+    collections: "array<string>",
   },
   slack: {
-    pin: null,
-    star: null,
-    reactions: null,
-    channels: null,
+    pin: "boolean",
+    star: "boolean",
+    reactions: "array<string>",
+    channels: "array<string>",
   },
 };
 
 // null value means end sign of schema
 const twitterTimelineSchema = {
-  name: null,
-  screen_names: null,
-  exclude_replies: null,
-  include_rts: null,
-  count: null,
+  name: "string",
+  screen_names: "array<string>",
+  exclude_replies: "boolean",
+  include_rts: "boolean",
+  count: "number",
   filter: filterSchema,
   action: actionSchema,
 };
 
 const twitterFavoriteSchema = {
-  name: null,
-  screen_names: null,
-  count: null,
+  name: "string",
+  screen_names: "array<string>",
+  count: "number",
   filter: filterSchema,
   action: actionSchema,
 };
 
 const twitterSearchSchema = {
-  name: null,
-  queries: null,
-  result_type: null,
-  count: null,
+  name: "string",
+  queries: "array<string>",
+  result_type: "string",
+  count: "number",
   filter: filterSchema,
   action: actionSchema,
 };
 
 const slackMessageSchema = {
-  name: null,
-  channels: null,
+  name: "string",
+  channels: "array<string>",
   filter: filterSchema,
   action: actionSchema,
 };
 
 const generalSchema = {
-  duration: null,
+  duration: "string",
 };
 
 class App extends React.Component<{}, {}> {
@@ -470,7 +470,11 @@ type ConfigTableListProps = {
 };
 
 class ConfigTable extends React.Component<ConfigTableProps, any> {
-  renderConfigTable(config: any): JSX.Element {
+  render() {
+    return this.renderConfigTable(this.props.config);
+  }
+
+  private renderConfigTable(config: any): JSX.Element {
     let numOfFieldCols = this.calcDepth(this.props.schema, 0);
     let tableRows = this.renderConfigRows(
       [],
@@ -493,12 +497,8 @@ class ConfigTable extends React.Component<ConfigTableProps, any> {
     );
   }
 
-  render() {
-    return this.renderConfigTable(this.props.config);
-  }
-
   private calcDepth(schema: any, depth: number): number {
-    if (schema == null) {
+    if (this.isSchemaEnd(schema)) {
       return depth;
     }
     return Math.max(
@@ -510,7 +510,7 @@ class ConfigTable extends React.Component<ConfigTableProps, any> {
     schemaStack: string[],
     curSchema: any
   ): { [key: string]: number } {
-    if (curSchema === null) {
+    if (this.isSchemaEnd(curSchema)) {
       return { [schemaStack.join(".")]: 1 };
     }
 
@@ -539,7 +539,7 @@ class ConfigTable extends React.Component<ConfigTableProps, any> {
     config: any,
     numOfFieldCols: number
   ): JSX.Element[] {
-    if (curSchema === null) {
+    if (this.isSchemaEnd(curSchema)) {
       let schema: string[] = [];
       let field_cols = schemaStack.map((key, index) => {
         schema.push(key);
@@ -561,7 +561,7 @@ class ConfigTable extends React.Component<ConfigTableProps, any> {
       return [
         <tr key={schemaStack.join(".")}>
           {field_cols}
-          <td>{config}</td>
+          <td>{this.renderValue(config, curSchema)}</td>
         </tr>,
       ];
     }
@@ -578,6 +578,40 @@ class ConfigTable extends React.Component<ConfigTableProps, any> {
         numOfFieldCols
       );
     });
+  }
+
+  private renderValue(value: any, typ: string): JSX.Element {
+    if (typ === "string") {
+      return (
+        <Form.Control value={value ? value : ""} type="text" readOnly={true} />
+      );
+    }
+    if (typ === "boolean") {
+      return <Form.Check type="switch" checked={value} readOnly={true} />;
+    }
+    if (typ === "array<string>") {
+      return (
+        <Form.Control
+          value={value ? value.join(",") : ""}
+          type="text"
+          readOnly={true}
+        />
+      );
+    }
+    if (typ === "number") {
+      return (
+        <Form.Control
+          value={value ? value.toString() : ""}
+          type="number"
+          readOnly={true}
+        />
+      );
+    }
+    return <div>{value}</div>;
+  }
+
+  private isSchemaEnd(value: any): boolean {
+    return value === null || typeof value === "string";
   }
 }
 
