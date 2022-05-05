@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/BurntSushi/toml v0.3.0
+	github.com/gin-contrib/pprof v1.3.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/golang/mock v1.4.3
 	github.com/gorilla/sessions v0.0.0-20160922145804-ca9ada445741

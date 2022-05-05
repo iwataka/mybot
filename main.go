@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/pprof"
 	"github.com/gorilla/sessions"
 	"github.com/iwataka/mybot/core"
 	"github.com/iwataka/mybot/data"
@@ -543,6 +544,7 @@ func serve(c *cli.Context) error {
 	_, keyErr := os.Stat(key)
 
 	r := setupRouter()
+	pprof.Register(r)
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: r,
