@@ -387,26 +387,23 @@ class Config extends React.Component<ConfigProps, any> {
         <h1>Config</h1>
         <p className="lead">Customize your own bot as you want</p>
         <h2 className="mt-5">
-          <FaTwitter /> Timeline
+          <FaTwitter /> Twitter
         </h2>
+        <h3 className="mt-5">Timeline</h3>
         {config && config.twitter ? (
           <ConfigTableList
             configList={config.twitter.timelines}
             schema={twitterTimelineSchema}
           />
         ) : null}
-        <h2 className="mt-5">
-          <FaTwitter /> Favorite
-        </h2>
+        <h3 className="mt-5">Favorite</h3>
         {config && config.twitter ? (
           <ConfigTableList
             configList={config.twitter.favorites}
             schema={twitterFavoriteSchema}
           />
         ) : null}
-        <h2 className="mt-5">
-          <FaTwitter /> Search
-        </h2>
+        <h3 className="mt-5">Search</h3>
         {config && config.twitter ? (
           <ConfigTableList
             configList={config.twitter.searches}
@@ -414,8 +411,9 @@ class Config extends React.Component<ConfigProps, any> {
           />
         ) : null}
         <h2 className="mt-5">
-          <FaSlack /> Message
+          <FaSlack /> Slack
         </h2>
+        <h3 className="mt-5">Message</h3>
         {config && config.slack ? (
           <ConfigTableList
             configList={config.slack.messages}
