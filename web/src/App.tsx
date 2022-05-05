@@ -15,8 +15,8 @@ import Alert from "react-bootstrap/Alert";
 import Accordion from "react-bootstrap/Accordion";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import update from "immutability-helper";
 import "./App.css";
+import produce from "immer";
 
 const httpStatusNotAuthenticated = 498;
 const httpStatusNotSetup = 499;
@@ -151,10 +151,8 @@ class AppWithoutRouter extends React.Component<{}, any> {
 
   setAuthStatus(status: number) {
     this.setState(
-      update(this.state, {
-        auth: {
-          status: { $set: status },
-        },
+      produce(this.state, (draft) => {
+        draft.auth.status = status;
       })
     );
   }
@@ -659,12 +657,8 @@ class Setup extends React.Component<SetupProps, any> {
 
   updateState(typ: string, field: string, value: string) {
     this.setState(
-      update(this.state, {
-        credential: {
-          [typ]: {
-            [field]: { $set: value },
-          },
-        },
+      produce(this.state, (draft) => {
+        draft.credential[typ][field] = value;
       })
     );
   }
