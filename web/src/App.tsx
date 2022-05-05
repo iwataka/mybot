@@ -385,90 +385,79 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
     },
   };
 
-  calcDepth(schema: any, depth: number) {
+  calcDepth(schema: any, depth: number): number {
     if (schema == null) {
       return depth;
     }
-    let result = 0;
-    for (let value of Object.values(schema)) {
-      let d = this.calcDepth(value, depth + 1);
-      if (d > result) {
-        result = d;
-      }
-    }
-    return result;
+    return Math.max(
+      ...Object.values(schema).map((val) => this.calcDepth(val, depth + 1))
+    );
   }
 
   calcRowSpans(
-    schemaStack: Array<string>,
+    schemaStack: string[],
     curSchema: any
-  ): Map<string, number> {
+  ): { [key: string]: number } {
     if (curSchema === null) {
-      let result = new Map();
-      result.set(schemaStack.join("."), 1);
-      return result;
+      return { [schemaStack.join(".")]: 1 };
     }
 
-    let result = new Map();
+    let result: { [key: string]: number } = {};
     let rowSpan = 0;
     for (const [key, value] of Object.entries(curSchema)) {
       let newStack = schemaStack.slice();
       newStack.push(key);
       let schemaToRowSpan = this.calcRowSpans(newStack, value);
-      rowSpan += Math.max(...Array.from(schemaToRowSpan.values()));
-      result = new Map([
-        ...Object.entries(result),
-        ...Object.entries(schemaToRowSpan),
-      ]);
+      rowSpan += Math.max(...Object.values(schemaToRowSpan));
+      for (const [k, v] of Object.entries(schemaToRowSpan)) {
+        result[k] = v;
+      }
     }
     if (schemaStack.length > 0) {
-      result.set(schemaStack.join("."), rowSpan);
+      result[schemaStack.join(".")] = rowSpan;
     }
     return result;
   }
 
   renderConfigRows(
-    schemaStack: Array<string>,
+    schemaStack: string[],
     curSchema: any,
-    schemaToRowSpan: Map<string, number>,
-    schemaIsRendered: Map<string, boolean>,
+    schemaToRowSpan: { [key: string]: number },
+    schemaIsRendered: { [key: string]: boolean },
     config: any,
     numOfFieldCols: number
-  ) {
+  ): JSX.Element[] {
     if (curSchema === null) {
-      let schema: Array<string> = [];
+      let schema: string[] = [];
       let field_cols = schemaStack.map((key, index) => {
         schema.push(key);
-        let isRendered = schemaIsRendered.get(schema.join(".")) || false;
-        if (isRendered) {
+        if (schemaIsRendered[schema.join(".")] || false) {
           return null;
         }
-        let colSpan = 1;
-        let rowSpan = schemaToRowSpan.get(schema.join("."));
-        if (index === schemaStack.length - 1) {
-          colSpan = numOfFieldCols - schemaStack.length + 1;
-        }
-        schemaIsRendered.set(schema.join("."), true);
+        let colSpan =
+          index === schemaStack.length - 1
+            ? numOfFieldCols - schemaStack.length + 1
+            : 1;
+        let rowSpan = schemaToRowSpan[schema.join(".")];
+        schemaIsRendered[schema.join(".")] = true;
         return (
           <td key={key} colSpan={colSpan} rowSpan={rowSpan}>
             {key}
           </td>
         );
       });
-      let field_name = schemaStack.join(".");
       return [
-        <tr key={field_name}>
+        <tr key={schemaStack.join(".")}>
           {field_cols}
           <td>{config}</td>
         </tr>,
       ];
     }
 
-    let result = [];
-    for (const [key, value] of Object.entries(curSchema)) {
+    return Object.entries(curSchema).flatMap(([key, value]) => {
       let new_schema_stack = schemaStack.slice();
       new_schema_stack.push(key);
-      let rows: Array<JSX.Element> = this.renderConfigRows(
+      return this.renderConfigRows(
         new_schema_stack,
         value,
         schemaToRowSpan,
@@ -476,9 +465,7 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
         config[key],
         numOfFieldCols
       );
-      result.push(...rows);
-    }
-    return result;
+    });
   }
 
   render() {
@@ -502,7 +489,7 @@ class TimelineConfig extends React.Component<TimelineConfigProps, any> {
                   [],
                   TimelineConfig.timelineSchema,
                   this.calcRowSpans([], TimelineConfig.timelineSchema),
-                  new Map(),
+                  {},
                   config,
                   numOfFieldCols
                 )}
