@@ -113,9 +113,7 @@ class Setup extends BaseComponent<SetupProps, any> {
             />
           </Form.Group>
 
-          <Button variant="primary" onClick={this.submit}>
-            Submit
-          </Button>
+          <Button variant="primary" onClick={this.submit}>Save</Button>
         </Form>
       </div>
     );
