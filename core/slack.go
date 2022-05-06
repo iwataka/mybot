@@ -262,7 +262,10 @@ func (l *SlackListener) Start(ctx context.Context, outChan chan<- interface{}) (
 
 	for {
 		select {
-		case msg := <-rtm.IncomingEvents:
+		case msg, ok := <-rtm.IncomingEvents:
+			if !ok {
+				return nil
+			}
 			e := l.processMsgEvent(msg, outChan)
 			if e != nil {
 				err = utils.WithStack(e)

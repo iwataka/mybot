@@ -25,6 +25,7 @@ type TwitterAPI interface {
 	UserStream(url.Values) *anaconda.Stream
 	GetUsersShow(string, url.Values) (anaconda.User, error)
 	GetUserSearch(string, url.Values) ([]anaconda.User, error)
+	SetLogger(anaconda.Logger)
 }
 
 type TwitterActionProperties struct {

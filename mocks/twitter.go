@@ -274,6 +274,18 @@ func (mr *MockTwitterAPIMockRecorder) Retweet(arg0, arg1 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retweet", reflect.TypeOf((*MockTwitterAPI)(nil).Retweet), arg0, arg1)
 }
 
+// SetLogger mocks base method.
+func (m *MockTwitterAPI) SetLogger(arg0 anaconda.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLogger", arg0)
+}
+
+// SetLogger indicates an expected call of SetLogger.
+func (mr *MockTwitterAPIMockRecorder) SetLogger(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockTwitterAPI)(nil).SetLogger), arg0)
+}
+
 // UserStream mocks base method.
 func (m *MockTwitterAPI) UserStream(arg0 url.Values) *anaconda.Stream {
 	m.ctrl.T.Helper()

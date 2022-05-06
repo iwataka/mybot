@@ -30,6 +30,7 @@ func NewTwitterAPIWithAuth(auth oauth.OAuthCreds, config Config, cache data.Cach
 	var api models.TwitterAPI
 	if len(at) > 0 && len(ats) > 0 {
 		api = anaconda.NewTwitterApi(at, ats)
+		api.SetLogger(anaconda.BasicLogger)
 	}
 	return NewTwitterAPI(api, config, cache)
 }
@@ -354,7 +355,10 @@ func (a *TwitterAPI) ListenUsers(
 func (l *TwitterUserListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
 	for {
 		select {
-		case msg := <-l.stream.C:
+		case msg, ok := <-l.stream.C:
+			if !ok {
+				return nil
+			}
 			err := l.processMessage(msg, outChan)
 			if err != nil {
 				return utils.WithStack(err)
@@ -434,30 +438,30 @@ func (a *TwitterAPI) ListenMyself(v url.Values) (*TwitterDMListener, error) {
 }
 
 func (l *TwitterDMListener) Listen(ctx context.Context, outChan chan<- interface{}) error {
-	// TODO: Twitter User Stream API has been retired, so I temporarily disable this feature.
-	// Later I completely remove this feature.
-	// https://developer.twitter.com/en/docs/twitter-api/enterprise/account-activity-api/migration/us-ss-migration-guide
-	return nil
-	// for {
-	// 	select {
-	// 	case msg := <-l.stream.C:
-	// 		switch c := msg.(type) {
-	// 		case anaconda.DirectMessage:
-	// 			outChan <- NewReceivedEvent(TwitterEventType, "DM", c)
-	// 			// TODO: Handle direct messages in the same way as the other sources
-	// 			id := l.api.cache.GetLatestDMID()
-	// 			if id < c.Id {
-	// 				l.api.cache.SetLatestDMID(c.Id)
-	// 			}
-	// 			err := l.api.cache.Save()
-	// 			if err != nil {
-	// 				return utils.WithStack(err)
-	// 			}
-	// 		}
-	// 	case <-ctx.Done():
-	// 		return nil
-	// 	}
-	// }
+	// TODO: Twitter User Stream API has been retired, so this feature should be removed
+	for {
+		select {
+		case msg, ok := <-l.stream.C:
+			if !ok {
+				return nil
+			}
+			switch c := msg.(type) {
+			case anaconda.DirectMessage:
+				outChan <- NewReceivedEvent(TwitterEventType, "DM", c)
+				// TODO: Handle direct messages in the same way as the other sources
+				id := l.api.cache.GetLatestDMID()
+				if id < c.Id {
+					l.api.cache.SetLatestDMID(c.Id)
+				}
+				err := l.api.cache.Save()
+				if err != nil {
+					return utils.WithStack(err)
+				}
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func (l *TwitterDMListener) Stop() {
