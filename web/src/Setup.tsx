@@ -22,22 +22,22 @@ class Setup extends BaseComponent<SetupProps, any> {
   }
 
   componentDidMount() {
-    this.getJsonAPI(
+    this.getAPI(
       "/api/auth/credential",
-      (data) => {
-        this.setState({ credential: data });
-      },
-      (err) => this.props.setError(err)
+      (res) => res.json().then((data) => this.setState({ credential: data })),
+      (res) => this.props.handleErrorRespopnse(res),
+      (err) => this.props.handleError(err)
     );
   }
 
   submit() {
-    this.fetchJsonAPI(
+    this.fetchAPI(
       "/api/auth/credential",
       "POST",
       JSON.stringify(this.state.credential),
       (_) => this.props.resetAuthStatus(),
-      (err) => this.props.setError(err)
+      (res) => this.props.handleErrorRespopnse(res),
+      (err) => this.props.handleError(err)
     );
   }
 
@@ -113,7 +113,9 @@ class Setup extends BaseComponent<SetupProps, any> {
             />
           </Form.Group>
 
-          <Button variant="primary" onClick={this.submit}>Save</Button>
+          <Button variant="primary" onClick={this.submit}>
+            Save
+          </Button>
         </Form>
       </div>
     );

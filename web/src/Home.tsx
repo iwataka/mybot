@@ -31,10 +31,11 @@ class Home extends BaseComponent<HomeProps, any> {
   }
 
   fetchAndSet(path: string, key: string) {
-    this.getJsonAPI(
+    this.getAPI(
       path,
-      (data) => this.setState({ [key]: data }),
-      (err) => this.props.setError(err)
+      (res) => res.json().then((data) => this.setState({ [key]: data })),
+      (res) => this.props.handleErrorRespopnse(res),
+      (err) => this.props.handleError(err)
     );
   }
 

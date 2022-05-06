@@ -40,7 +40,8 @@ class AppWithoutRouter extends BaseComponent<{}, any> {
     this.requireAuth = this.requireAuth.bind(this);
     this.setAuthStatus = this.setAuthStatus.bind(this);
     this.resetAuthStatus = this.resetAuthStatus.bind(this);
-    this.setError = this.setError.bind(this);
+    this.handleError = this.handleError.bind(this);
+    this.handleErrorResponse = this.handleErrorResponse.bind(this);
   }
 
   requireAuth(children: JSX.Element) {
@@ -51,7 +52,7 @@ class AppWithoutRouter extends BaseComponent<{}, any> {
         "/api/auth/status",
         (res) => this.setAuthStatus(res.status),
         (res) => this.setAuthStatus(res.status),
-        (err) => this.setError(err)
+        (err) => this.handleError(err)
       );
     }
 
@@ -78,8 +79,20 @@ class AppWithoutRouter extends BaseComponent<{}, any> {
     );
   }
 
-  setError(err: string | Error) {
+  handleError(err: Error) {
     this.setState({ error: err });
+  }
+
+  handleErrorResponse(res: Response) {
+    if (
+      res.status === httpStatusNotAuthenticated ||
+      res.status === httpStatusNotSetup
+    ) {
+      this.setAuthStatus(res.status);
+    }
+    res.text().then((text) => {
+      this.setState({ error: text });
+    });
   }
 
   resetAuthStatus() {
@@ -114,24 +127,40 @@ class AppWithoutRouter extends BaseComponent<{}, any> {
           <Routes>
             <Route
               path="/web"
-              element={this.requireAuth(<Home setError={this.setError} />)}
+              element={this.requireAuth(
+                <Home
+                  handleError={this.handleError}
+                  handleErrorRespopnse={this.handleErrorResponse}
+                />
+              )}
             />
             <Route
               path="/web/config"
-              element={this.requireAuth(<Config setError={this.setError} />)}
+              element={this.requireAuth(
+                <Config
+                  handleError={this.handleError}
+                  handleErrorRespopnse={this.handleErrorResponse}
+                />
+              )}
             />
             <Route
               path="/web/setup"
               element={
                 <Setup
                   resetAuthStatus={this.resetAuthStatus}
-                  setError={this.setError}
+                  handleError={this.handleError}
+                  handleErrorRespopnse={this.handleErrorResponse}
                 />
               }
             />
             <Route
               path="/web/login"
-              element={<Login setError={this.setError} />}
+              element={
+                <Login
+                  handleError={this.handleError}
+                  handleErrorRespopnse={this.handleErrorResponse}
+                />
+              }
             />
           </Routes>
         </Container>

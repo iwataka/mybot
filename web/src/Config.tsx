@@ -91,10 +91,11 @@ class Config extends BaseComponent<ConfigProps, any> {
   }
 
   componentDidMount() {
-    this.getJsonAPI(
+    this.getAPI(
       "/api/config",
-      (data) => this.setState({ config: data }),
-      (err) => this.props.setError(err)
+      (res) => res.json().then((data) => this.setState({ config: data })),
+      (res) => this.props.handleErrorRespopnse(res),
+      (err) => this.props.handleError(err)
     );
   }
 

@@ -13,9 +13,9 @@ export class BaseComponent<P, S> extends React.Component<P, S> {
     endpoint: string,
     method: string,
     body: string | null,
-    ifOK: (res: Response) => void,
-    ifFail: (res: Response) => void,
-    ifError: (err: Error) => void
+    handleResponse: (res: Response) => void,
+    handleErrorResponse: (res: Response) => void,
+    handleError: (err: Error) => void
   ): void {
     fetch(endpoint, {
       credentials: "same-origin",
@@ -24,13 +24,13 @@ export class BaseComponent<P, S> extends React.Component<P, S> {
     })
       .then((res) => {
         if (res.ok) {
-          ifOK(res);
+          handleResponse(res);
         } else {
-          ifFail(res);
+          handleErrorResponse(res);
         }
       })
       .catch((err) => {
-        ifError(err);
+        handleError(err);
       });
   }
 
@@ -42,43 +42,9 @@ export class BaseComponent<P, S> extends React.Component<P, S> {
   ): void {
     this.fetchAPI(endpoint, "GET", null, ifOK, ifFail, ifError);
   }
-
-  fetchJsonAPI(
-    endpoint: string,
-    method: string,
-    body: string | null,
-    setResponseData: (data: any) => void,
-    setError: (err: string | Error) => void
-  ): void {
-    this.fetchAPI(
-      endpoint,
-      method,
-      body,
-      (res) => {
-        res.json().then((data) => {
-          setResponseData(data);
-        });
-      },
-      (res) => {
-        res.text().then((text) => {
-          setError(text);
-        });
-      },
-      (err) => {
-        setError(err);
-      }
-    );
-  }
-
-  getJsonAPI(
-    endpoint: string,
-    setResponseData: (data: any) => void,
-    setError: (err: string | Error) => void
-  ): void {
-    this.fetchJsonAPI(endpoint, "GET", null, setResponseData, setError);
-  }
 }
 
 export type BaseProps = {
-  setError: (err: string | Error) => void;
+  handleErrorRespopnse: (res: Response) => void;
+  handleError: (err: Error) => void;
 };
