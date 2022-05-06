@@ -224,7 +224,8 @@ func setupRouterWithWrapper(
 	r.GET("/api/analysis/image/result", apiWrapper(apiAnalysisImageResultHandler))
 	r.GET("/api/analysis/image/status", apiWrapper(apiAnalysisImageStatusHandler))
 	r.GET("/api/auth/status", apiWrapHandler(apiAuthStatus))
-	r.POST("/api/auth/credential", apiCredential)
+	r.POST("/api/auth/credential", postApiCredential)
+	r.GET("/api/auth/credential", getApiCredential)
 	r.GET("/api/auth/:provider", authHandler)
 	r.GET("/api/auth/callback/:provider", authCallbackHandler)
 	r.GET("/api/config", apiWrapper(apiConfigHandler))
@@ -1142,7 +1143,7 @@ type Credential struct {
 	} `json:"slack"`
 }
 
-func apiCredential(c *gin.Context) {
+func postApiCredential(c *gin.Context) {
 	var body Credential
 	err := c.BindJSON(&body)
 	if err != nil {
@@ -1168,6 +1169,27 @@ func apiCredential(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+func getApiCredential(c *gin.Context) {
+	twitterCk, twitterCs := "", ""
+	if twitterApp != nil {
+		twitterCk, twitterCs = twitterApp.GetCreds()
+	}
+	slackCk, slackCs := "", ""
+	if slackApp != nil {
+		slackCk, slackCs = slackApp.GetCreds()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"twitter": gin.H{
+			"consumer_key":    twitterCk,
+			"consumer_secret": twitterCs,
+		},
+		"slack": gin.H{
+			"consumer_key":    slackCk,
+			"consumer_secret": slackCs,
+		},
+	})
 }
 
 func apiConfigHandler(c *gin.Context) {

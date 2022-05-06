@@ -637,6 +637,24 @@ class Setup extends React.Component<SetupProps, any> {
     this.updateState = this.updateState.bind(this);
   }
 
+  componentDidMount() {
+    fetch("/api/auth/credential", {
+      credentials: "same-origin",
+    })
+      .then((res) => {
+        if (res.ok) {
+          res.json().then((data) => {
+            this.setState({ credential: data });
+          });
+        } else {
+          res.text().then((t) => this.setState({ error: t }));
+        }
+      })
+      .catch((err) => {
+        this.setState({ error: err });
+      });
+  }
+
   submit() {
     fetch("/api/auth/credential", {
       credentials: "same-origin",
@@ -685,9 +703,9 @@ class Setup extends React.Component<SetupProps, any> {
           <Form.Group className="mb-3">
             <Form.Label>Consumer Key</Form.Label>
             <Form.Control
-              type="password"
+              type="text"
               placeholder="Enter consumer key"
-              value={this.state.consumer_key}
+              value={this.state.credential.twitter.consumer_key}
               onChange={(e) => {
                 this.updateState("twitter", "consumer_key", e.target.value);
               }}
@@ -698,7 +716,7 @@ class Setup extends React.Component<SetupProps, any> {
             <Form.Control
               type="password"
               placeholder="Enter consumer secret"
-              value={this.state.consumer_secret}
+              value={this.state.credential.twitter.consumer_secret}
               onChange={(e) => {
                 this.updateState("twitter", "consumer_secret", e.target.value);
               }}
@@ -713,9 +731,9 @@ class Setup extends React.Component<SetupProps, any> {
           <Form.Group className="mb-3">
             <Form.Label>Consumer Key</Form.Label>
             <Form.Control
-              type="password"
+              type="text"
               placeholder="Enter consumer key"
-              value={this.state.consumer_key}
+              value={this.state.credential.slack.consumer_key}
               onChange={(e) => {
                 this.updateState("slack", "consumer_key", e.target.value);
               }}
@@ -726,7 +744,7 @@ class Setup extends React.Component<SetupProps, any> {
             <Form.Control
               type="password"
               placeholder="Enter consumer secret"
-              value={this.state.consumer_secret}
+              value={this.state.credential.slack.consumer_secret}
               onChange={(e) => {
                 this.updateState("slack", "consumer_secret", e.target.value);
               }}
