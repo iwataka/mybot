@@ -1,6 +1,7 @@
 import React from "react";
 import { Accordion, Form, Table } from "react-bootstrap";
 import { FaSlack, FaTwitter } from "react-icons/fa";
+import { BaseComponent, BaseProps } from "./base";
 
 const filterSchema = {
   has_media: "boolean",
@@ -81,7 +82,7 @@ const generalSchema = {
   duration: "string",
 };
 
-class Config extends React.Component<ConfigProps, any> {
+class Config extends BaseComponent<ConfigProps, any> {
   constructor(props: ConfigProps) {
     super(props);
     this.state = {
@@ -90,15 +91,11 @@ class Config extends React.Component<ConfigProps, any> {
   }
 
   componentDidMount() {
-    fetch("/api/config", {
-      credentials: "same-origin",
-    }).then((res) => {
-      if (res.ok) {
-        res.json().then((data) => {
-          this.setState({ config: data });
-        });
-      }
-    });
+    this.getJsonAPI(
+      "/api/config",
+      (data) => this.setState({ config: data }),
+      (err) => this.props.setError(err)
+    );
   }
 
   render() {
@@ -154,7 +151,7 @@ class Config extends React.Component<ConfigProps, any> {
   }
 }
 
-type ConfigProps = {};
+type ConfigProps = {} & BaseProps;
 
 class ConfigTableList extends React.Component<ConfigTableListProps, any> {
   render() {

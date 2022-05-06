@@ -9,6 +9,7 @@ import { FaGithub } from "react-icons/fa";
 import { LinkContainer } from "react-router-bootstrap";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
+import { BaseComponent } from "./base";
 import Config from "./Config";
 import Home from "./Home";
 import Login from "./Login";
@@ -27,28 +28,31 @@ class App extends React.Component<{}, {}> {
   }
 }
 
-class AppWithoutRouter extends React.Component<{}, any> {
+class AppWithoutRouter extends BaseComponent<{}, any> {
   constructor(props: {}) {
     super(props);
     this.state = {
       auth: {
         status: 0,
       },
+      error: "",
     };
     this.requireAuth = this.requireAuth.bind(this);
     this.setAuthStatus = this.setAuthStatus.bind(this);
     this.resetAuthStatus = this.resetAuthStatus.bind(this);
+    this.setError = this.setError.bind(this);
   }
 
   requireAuth(children: JSX.Element) {
     let auth = this.state.auth;
 
     if (auth.status === 0) {
-      fetch("/api/auth/status", {
-        credentials: "same-origin",
-      }).then((res) => {
-        this.setAuthStatus(res.status);
-      });
+      this.getAPI(
+        "/api/auth/status",
+        (res) => this.setAuthStatus(res.status),
+        (res) => this.setAuthStatus(res.status),
+        (err) => this.setError(err)
+      );
     }
 
     if (auth.status === httpStatusNotSetup) {
@@ -63,7 +67,7 @@ class AppWithoutRouter extends React.Component<{}, any> {
     if (auth.status === 0) {
       return <Loading />;
     }
-    return <Error />;
+    return <ErrorView />;
   }
 
   setAuthStatus(status: number) {
@@ -72,6 +76,10 @@ class AppWithoutRouter extends React.Component<{}, any> {
         draft.auth.status = status;
       })
     );
+  }
+
+  setError(err: string | Error) {
+    this.setState({ error: err });
   }
 
   resetAuthStatus() {
@@ -102,14 +110,29 @@ class AppWithoutRouter extends React.Component<{}, any> {
           </Container>
         </Navbar>
         <Container>
+          {this.renderErrorAlert(this.state.error)}
           <Routes>
-            <Route path="/web" element={this.requireAuth(<Home />)} />
-            <Route path="/web/config" element={this.requireAuth(<Config />)} />
+            <Route
+              path="/web"
+              element={this.requireAuth(<Home setError={this.setError} />)}
+            />
+            <Route
+              path="/web/config"
+              element={this.requireAuth(<Config setError={this.setError} />)}
+            />
             <Route
               path="/web/setup"
-              element={<Setup resetAuthStatus={this.resetAuthStatus} />}
+              element={
+                <Setup
+                  resetAuthStatus={this.resetAuthStatus}
+                  setError={this.setError}
+                />
+              }
             />
-            <Route path="/web/login" element={<Login />} />
+            <Route
+              path="/web/login"
+              element={<Login setError={this.setError} />}
+            />
           </Routes>
         </Container>
       </div>
@@ -123,7 +146,8 @@ class Loading extends React.Component<{}, {}> {
   }
 }
 
-class Error extends React.Component<{}, {}> {
+// NOTE: class name "Error" is conflicted with buil-in Error.
+class ErrorView extends React.Component<{}, {}> {
   render() {
     return (
       <div>

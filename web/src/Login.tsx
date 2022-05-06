@@ -1,8 +1,8 @@
-import React from "react";
 import { Button } from "react-bootstrap";
 import { FaTwitter, FaSlack } from "react-icons/fa";
+import { BaseComponent, BaseProps } from "./base";
 
-class Login extends React.Component<{}, {}> {
+class Login extends BaseComponent<LoginProps, {}> {
   createCallbackURL(provider: string) {
     let location = window.location;
     let proto = location.protocol;
@@ -35,5 +35,7 @@ class Login extends React.Component<{}, {}> {
     );
   }
 }
+
+type LoginProps = {} & BaseProps;
 
 export default Login;

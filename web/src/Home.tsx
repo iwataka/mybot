@@ -1,7 +1,7 @@
-import React from "react";
 import { Alert, Badge, Col, Figure, Row, Table } from "react-bootstrap";
+import { BaseComponent, BaseProps } from "./base";
 
-class Home extends React.Component<HomeProps, any> {
+class Home extends BaseComponent<HomeProps, any> {
   constructor(props: HomeProps) {
     super(props);
     this.state = {
@@ -31,23 +31,11 @@ class Home extends React.Component<HomeProps, any> {
   }
 
   fetchAndSet(path: string, key: string) {
-    fetch(path, {
-      credentials: "same-origin",
-    })
-      .then((res) => {
-        if (res.ok) {
-          res.json().then((data) => {
-            this.setState({ [key]: data });
-          });
-        } else {
-          res.text().then((t) => {
-            this.setState({ error: t });
-          });
-        }
-      })
-      .catch((err) => {
-        this.setState({ error: err });
-      });
+    this.getJsonAPI(
+      path,
+      (data) => this.setState({ [key]: data }),
+      (err) => this.props.setError(err)
+    );
   }
 
   statusBadge(status: boolean) {
@@ -151,6 +139,6 @@ class Home extends React.Component<HomeProps, any> {
   }
 }
 
-type HomeProps = {};
+type HomeProps = {} & BaseProps;
 
 export default Home;

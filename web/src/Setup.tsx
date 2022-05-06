@@ -1,8 +1,8 @@
 import produce from "immer";
-import React from "react";
-import { Alert, Button, Form } from "react-bootstrap";
+import { Button, Form } from "react-bootstrap";
+import { BaseComponent, BaseProps } from "./base";
 
-class Setup extends React.Component<SetupProps, any> {
+class Setup extends BaseComponent<SetupProps, any> {
   constructor(props: SetupProps) {
     super(props);
     this.state = {
@@ -16,46 +16,29 @@ class Setup extends React.Component<SetupProps, any> {
           consumer_secret: "",
         },
       },
-      error: "",
     };
     this.submit = this.submit.bind(this);
     this.updateState = this.updateState.bind(this);
   }
 
   componentDidMount() {
-    fetch("/api/auth/credential", {
-      credentials: "same-origin",
-    })
-      .then((res) => {
-        if (res.ok) {
-          res.json().then((data) => {
-            this.setState({ credential: data });
-          });
-        } else {
-          res.text().then((t) => this.setState({ error: t }));
-        }
-      })
-      .catch((err) => {
-        this.setState({ error: err });
-      });
+    this.getJsonAPI(
+      "/api/auth/credential",
+      (data) => {
+        this.setState({ credential: data });
+      },
+      (err) => this.props.setError(err)
+    );
   }
 
   submit() {
-    fetch("/api/auth/credential", {
-      credentials: "same-origin",
-      body: JSON.stringify(this.state.credential),
-      method: "POST",
-    })
-      .then((res) => {
-        if (!res.ok) {
-          res.text().then((t) => this.setState({ error: t }));
-        } else {
-          this.props.resetAuthStatus();
-        }
-      })
-      .catch((err) => {
-        this.setState({ error: err });
-      });
+    this.fetchJsonAPI(
+      "/api/auth/credential",
+      "POST",
+      JSON.stringify(this.state.credential),
+      (_) => this.props.resetAuthStatus(),
+      (err) => this.props.setError(err)
+    );
   }
 
   updateState(typ: string, field: string, value: string) {
@@ -67,18 +50,12 @@ class Setup extends React.Component<SetupProps, any> {
   }
 
   render() {
-    let errorAlert = null;
-    if (this.state.error) {
-      errorAlert = <Alert variant="danger">{this.state.error}</Alert>;
-    }
     return (
       <div>
         <h1>Setup</h1>
         <p className="lead">
           You need to register Application information first
         </p>
-        {errorAlert}
-
         <Form>
           <h2 className="mt-5">Twitter</h2>
           <p>
@@ -147,6 +124,6 @@ class Setup extends React.Component<SetupProps, any> {
 
 type SetupProps = {
   resetAuthStatus: VoidFunction;
-};
+} & BaseProps;
 
 export default Setup;
