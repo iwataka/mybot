@@ -2,9 +2,14 @@ import React from "react";
 import { Alert } from "react-bootstrap";
 
 export class BaseComponent<P, S> extends React.Component<P, S> {
-  renderErrorAlert(error: any) {
+  renderErrorAlert(error: any, onClose: VoidFunction) {
     if (error) {
-      return <Alert variant="danger">{error}</Alert>;
+      return (
+        <Alert variant="danger" onClose={onClose} dismissible>
+          <Alert.Heading>Error</Alert.Heading>
+          <p>{error}</p>
+        </Alert>
+      );
     }
     return null;
   }

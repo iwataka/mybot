@@ -123,7 +123,9 @@ class AppWithoutRouter extends BaseComponent<{}, any> {
           </Container>
         </Navbar>
         <Container>
-          {this.renderErrorAlert(this.state.error)}
+          {this.renderErrorAlert(this.state.error, () =>
+            this.setState({ error: "" })
+          )}
           <Routes>
             <Route
               path="/web"
